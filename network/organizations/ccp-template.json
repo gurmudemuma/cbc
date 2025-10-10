@@ -1,0 +1,50 @@
+{
+    "name": "${ORG}-network",
+    "version": "1.0.0",
+    "client": {
+        "organization": "${ORGMSP}",
+        "connection": {
+            "timeout": {
+                "peer": {
+                    "endorser": "300"
+                },
+                "orderer": "300"
+            }
+        }
+    },
+    "organizations": {
+        "${ORGMSP}": {
+            "mspid": "${ORGMSP}MSP",
+            "peers": [
+                "peer0.${ORG}.coffee-export.com"
+            ],
+            "certificateAuthorities": [
+                "ca.${ORG}.coffee-export.com"
+            ]
+        }
+    },
+    "peers": {
+        "peer0.${ORG}.coffee-export.com": {
+            "url": "grpcs://localhost:${P0PORT}",
+            "tlsCACerts": {
+                "pem": "${PEERPEM}"
+            },
+            "grpcOptions": {
+                "ssl-target-name-override": "peer0.${ORG}.coffee-export.com",
+                "hostnameOverride": "peer0.${ORG}.coffee-export.com"
+            }
+        }
+    },
+    "certificateAuthorities": {
+        "ca.${ORG}.coffee-export.com": {
+            "url": "https://localhost:${P0PORT}",
+            "caName": "ca-${ORG}",
+            "tlsCACerts": {
+                "pem": ["${CAPEM}"]
+            },
+            "httpOptions": {
+                "verify": false
+            }
+        }
+    }
+}

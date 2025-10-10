@@ -1,0 +1,42 @@
+{
+  "name": "coffee-export-consortium-blockchain",
+  "version": "1.0.0",
+  "description": "Consortium blockchain for managing coffee exports using Hyperledger Fabric",
+  "scripts": {
+    "install:all": "npm run install:exporter-bank && npm run install:national-bank && npm run install:ncat && npm run install:shipping-line",
+    "install:exporter-bank": "cd api/exporter-bank && npm install",
+    "install:national-bank": "cd api/national-bank && npm install",
+    "install:ncat": "cd api/ncat && npm install",
+    "install:shipping-line": "cd api/shipping-line && npm install",
+    "build:all": "npm run build:exporter-bank && npm run build:national-bank && npm run build:ncat && npm run build:shipping-line",
+    "build:exporter-bank": "cd api/exporter-bank && npm run build",
+    "build:national-bank": "cd api/national-bank && npm run build",
+    "build:ncat": "cd api/ncat && npm run build",
+    "build:shipping-line": "cd api/shipping-line && npm run build",
+    "network:up": "cd network && ./network.sh up",
+    "network:down": "cd network && ./network.sh down",
+    "network:restart": "cd network && ./network.sh restart",
+    "channel:create": "cd network && ./network.sh createChannel",
+    "chaincode:deploy": "cd network && ./network.sh deployCC",
+    "setup": "npm run install:all && npm run network:up && npm run channel:create && npm run chaincode:deploy",
+    "clean": "npm run network:down && rm -rf api/*/node_modules api/*/dist api/*/wallet"
+  },
+  "keywords": [
+    "hyperledger",
+    "fabric",
+    "blockchain",
+    "coffee",
+    "export",
+    "consortium"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/coffee-export-blockchain"
+  },
+  "dependencies": {
+    "axios": "^1.12.2",
+    "isomorphic-dompurify": "^2.28.0"
+  }
+}

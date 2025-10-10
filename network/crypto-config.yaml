@@ -1,0 +1,39 @@
+OrdererOrgs:
+  - Name: Orderer
+    Domain: coffee-export.com
+    EnableNodeOUs: true
+    Specs:
+      - Hostname: orderer
+
+PeerOrgs:
+  - Name: ExporterBank
+    Domain: exporterbank.coffee-export.com
+    EnableNodeOUs: true
+    Template:
+      Count: 1
+    Users:
+      Count: 1
+
+  - Name: NationalBank
+    Domain: nationalbank.coffee-export.com
+    EnableNodeOUs: true
+    Template:
+      Count: 1
+    Users:
+      Count: 1
+
+  - Name: NCAT
+    Domain: ncat.coffee-export.com
+    EnableNodeOUs: true
+    Template:
+      Count: 1
+    Users:
+      Count: 1
+
+  - Name: ShippingLine
+    Domain: shippingline.coffee-export.com
+    EnableNodeOUs: true
+    Template:
+      Count: 1
+    Users:
+      Count: 1

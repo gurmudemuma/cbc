@@ -1,0 +1,180 @@
+---
+Organizations:
+  - &OrdererOrg
+      Name: OrdererOrg
+      ID: OrdererMSP
+      MSPDir: ../organizations/ordererOrganizations/coffee-export.com/msp
+      Policies:
+        Readers:
+          Type: Signature
+          Rule: "OR('OrdererMSP.member')"
+        Writers:
+          Type: Signature
+          Rule: "OR('OrdererMSP.member')"
+        Admins:
+          Type: Signature
+          Rule: "OR('OrdererMSP.admin')"
+      OrdererEndpoints:
+        - orderer.coffee-export.com:7050
+
+  - &ExporterBank
+      Name: ExporterBankMSP
+      ID: ExporterBankMSP
+      MSPDir: ../organizations/peerOrganizations/exporterbank.coffee-export.com/msp
+      Policies:
+        Readers:
+          Type: Signature
+          Rule: "OR('ExporterBankMSP.admin', 'ExporterBankMSP.peer', 'ExporterBankMSP.client')"
+        Writers:
+          Type: Signature
+          Rule: "OR('ExporterBankMSP.admin', 'ExporterBankMSP.client')"
+        Admins:
+          Type: Signature
+          Rule: "OR('ExporterBankMSP.admin')"
+        Endorsement:
+          Type: Signature
+          Rule: "OR('ExporterBankMSP.peer')"
+
+  - &NationalBank
+      Name: NationalBankMSP
+      ID: NationalBankMSP
+      MSPDir: ../organizations/peerOrganizations/nationalbank.coffee-export.com/msp
+      Policies:
+        Readers:
+          Type: Signature
+          Rule: "OR('NationalBankMSP.admin', 'NationalBankMSP.peer', 'NationalBankMSP.client')"
+        Writers:
+          Type: Signature
+          Rule: "OR('NationalBankMSP.admin', 'NationalBankMSP.client')"
+        Admins:
+          Type: Signature
+          Rule: "OR('NationalBankMSP.admin')"
+        Endorsement:
+          Type: Signature
+          Rule: "OR('NationalBankMSP.peer')"
+
+  - &NCAT
+      Name: NCATMSP
+      ID: NCATMSP
+      MSPDir: ../organizations/peerOrganizations/ncat.coffee-export.com/msp
+      Policies:
+        Readers:
+          Type: Signature
+          Rule: "OR('NCATMSP.admin', 'NCATMSP.peer', 'NCATMSP.client')"
+        Writers:
+          Type: Signature
+          Rule: "OR('NCATMSP.admin', 'NCATMSP.client')"
+        Admins:
+          Type: Signature
+          Rule: "OR('NCATMSP.admin')"
+        Endorsement:
+          Type: Signature
+          Rule: "OR('NCATMSP.peer')"
+
+  - &ShippingLine
+      Name: ShippingLineMSP
+      ID: ShippingLineMSP
+      MSPDir: ../organizations/peerOrganizations/shippingline.coffee-export.com/msp
+      Policies:
+        Readers:
+          Type: Signature
+          Rule: "OR('ShippingLineMSP.admin', 'ShippingLineMSP.peer', 'ShippingLineMSP.client')"
+        Writers:
+          Type: Signature
+          Rule: "OR('ShippingLineMSP.admin', 'ShippingLineMSP.client')"
+        Admins:
+          Type: Signature
+          Rule: "OR('ShippingLineMSP.admin')"
+        Endorsement:
+          Type: Signature
+          Rule: "OR('ShippingLineMSP.peer')"
+
+Capabilities:
+  Channel: &ChannelCapabilities
+    V2_0: true
+  Orderer: &OrdererCapabilities
+    V2_0: true
+  Application: &ApplicationCapabilities
+    V2_5: true
+
+Application: &ApplicationDefaults
+  Organizations:
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Admins"
+    LifecycleEndorsement:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Endorsement"
+    Endorsement:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Endorsement"
+  Capabilities:
+    <<: *ApplicationCapabilities
+
+Orderer: &OrdererDefaults
+  OrdererType: etcdraft
+  Addresses:
+    - orderer.coffee-export.com:7050
+  EtcdRaft:
+    Consenters:
+      - Host: orderer.coffee-export.com
+        Port: 7050
+        ClientTLSCert: ../organizations/ordererOrganizations/coffee-export.com/orderers/orderer.coffee-export.com/tls/server.crt
+        ServerTLSCert: ../organizations/ordererOrganizations/coffee-export.com/orderers/orderer.coffee-export.com/tls/server.crt
+  BatchTimeout: 2s
+  BatchSize:
+    MaxMessageCount: 10
+    AbsoluteMaxBytes: 99 MB
+    PreferredMaxBytes: 512 KB
+  Organizations:
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Admins"
+    BlockValidation:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+
+Channel: &ChannelDefaults
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Admins"
+  Capabilities:
+    <<: *ChannelCapabilities
+
+Profiles:
+  CoffeeExportGenesis:
+    <<: *ChannelDefaults
+    Orderer:
+      <<: *OrdererDefaults
+      Organizations:
+        - *OrdererOrg
+      Capabilities: *OrdererCapabilities
+    Application:
+      <<: *ApplicationDefaults
+      Organizations:
+        - *ExporterBank
+        - *NationalBank
+        - *NCAT
+        - *ShippingLine
+      Capabilities: *ApplicationCapabilities

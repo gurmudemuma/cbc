@@ -1,0 +1,259 @@
+/* Coffee Blockchain Consortium - Color Scheme: GOLDEN, PURPLE, BLACK */
+
+:root {
+  /* Primary Colors */
+  --color-golden: #FFD700;
+  --color-golden-light: #FFE55C;
+  --color-golden-dark: #DAA520;
+  
+  --color-purple: #8B00FF;
+  --color-purple-light: #A64DFF;
+  --color-purple-dark: #6600CC;
+  
+  --color-black: #000000;
+  --color-black-light: #1A1A1A;
+  --color-black-lighter: #2D2D2D;
+  
+  /* Semantic Colors */
+  --color-background: var(--color-black);
+  --color-surface: var(--color-black-light);
+  --color-surface-elevated: var(--color-black-lighter);
+  
+  --color-primary: var(--color-golden);
+  --color-primary-hover: var(--color-golden-light);
+  --color-primary-active: var(--color-golden-dark);
+  
+  --color-secondary: var(--color-purple);
+  --color-secondary-hover: var(--color-purple-light);
+  --color-secondary-active: var(--color-purple-dark);
+  
+  --color-text-primary: var(--color-golden);
+  --color-text-secondary: var(--color-purple-light);
+  --color-text-muted: #999999;
+  
+  --color-border: var(--color-purple-dark);
+  --color-border-light: #444444;
+  
+  /* Status Colors using theme palette */
+  --color-success: var(--color-golden);
+  --color-warning: var(--color-golden-dark);
+  --color-error: var(--color-purple);
+  --color-info: var(--color-purple-light);
+  
+  /* Spacing */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-2xl: 3rem;
+  
+  /* Border Radius */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(139, 0, 255, 0.1);
+  --shadow-md: 0 4px 6px -1px rgba(139, 0, 255, 0.2);
+  --shadow-lg: 0 10px 15px -3px rgba(139, 0, 255, 0.3);
+  --shadow-xl: 0 20px 25px -5px rgba(139, 0, 255, 0.4);
+  
+  /* Transitions */
+  --transition-fast: 150ms ease-in-out;
+  --transition-base: 250ms ease-in-out;
+  --transition-slow: 350ms ease-in-out;
+}
+
+/* Reset and Base Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--color-golden);
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: var(--spacing-md);
+}
+
+h1 {
+  font-size: 2.5rem;
+  background: linear-gradient(135deg, var(--color-golden) 0%, var(--color-golden-light) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+h2 {
+  font-size: 2rem;
+}
+
+h3 {
+  font-size: 1.5rem;
+}
+
+h4 {
+  font-size: 1.25rem;
+}
+
+p {
+  margin-bottom: var(--spacing-md);
+  color: var(--color-text-secondary);
+}
+
+a {
+  color: var(--color-purple-light);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+a:hover {
+  color: var(--color-golden);
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-black-light);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-purple-dark);
+  border-radius: var(--radius-md);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-purple);
+}
+
+/* Selection */
+::selection {
+  background-color: var(--color-purple);
+  color: var(--color-golden);
+}
+
+::-moz-selection {
+  background-color: var(--color-purple);
+  color: var(--color-golden);
+}
+
+/* Focus Styles */
+:focus-visible {
+  outline: 2px solid var(--color-golden);
+  outline-offset: 2px;
+}
+
+/* Utility Classes */
+.container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--spacing-lg);
+}
+
+.container-fluid {
+  width: 100%;
+  padding: 0 var(--spacing-lg);
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-golden {
+  color: var(--color-golden);
+}
+
+.text-purple {
+  color: var(--color-purple);
+}
+
+.bg-surface {
+  background-color: var(--color-surface);
+}
+
+.bg-elevated {
+  background-color: var(--color-surface-elevated);
+}
+
+/* Loading Spinner */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  border: 3px solid var(--color-black-lighter);
+  border-top-color: var(--color-golden);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 0.8s linear infinite;
+}
+
+/* Fade In Animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  html {
+    font-size: 14px;
+  }
+  
+  h1 {
+    font-size: 2rem;
+  }
+  
+  h2 {
+    font-size: 1.5rem;
+  }
+  
+  .container {
+    padding: 0 var(--spacing-md);
+  }
+}

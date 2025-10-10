@@ -1,0 +1,568 @@
+{
+  "info": {
+    "name": "Coffee Export Consortium Blockchain",
+    "description": "API collection for testing the Coffee Export blockchain system",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "exporter_base_url",
+      "value": "http://localhost:3001",
+      "type": "string"
+    },
+    {
+      "key": "national_bank_base_url",
+      "value": "http://localhost:3002",
+      "type": "string"
+    },
+    {
+      "key": "ncat_base_url",
+      "value": "http://localhost:3003",
+      "type": "string"
+    },
+    {
+      "key": "shipping_base_url",
+      "value": "http://localhost:3004",
+      "type": "string"
+    },
+    {
+      "key": "exporter_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "national_bank_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "ncat_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "shipping_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "export_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Exporter Bank",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"exporter1\",\n  \"password\": \"password123\",\n  \"email\": \"exporter1@bank.com\"\n}"
+            },
+            "url": {
+              "raw": "{{exporter_base_url}}/api/auth/register",
+              "host": ["{{exporter_base_url}}"],
+              "path": ["api", "auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set(\"exporter_token\", jsonData.data.token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"exporter1\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{exporter_base_url}}/api/auth/login",
+              "host": ["{{exporter_base_url}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Create Export",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set(\"export_id\", jsonData.data.exportId);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{exporter_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"exporterName\": \"ABC Coffee Exporters\",\n  \"coffeeType\": \"Arabica Premium\",\n  \"quantity\": 5000,\n  \"destinationCountry\": \"United States\",\n  \"estimatedValue\": 75000\n}"
+            },
+            "url": {
+              "raw": "{{exporter_base_url}}/api/exports",
+              "host": ["{{exporter_base_url}}"],
+              "path": ["api", "exports"]
+            }
+          }
+        },
+        {
+          "name": "Get All Exports",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{exporter_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{exporter_base_url}}/api/exports",
+              "host": ["{{exporter_base_url}}"],
+              "path": ["api", "exports"]
+            }
+          }
+        },
+        {
+          "name": "Get Export by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{exporter_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{exporter_base_url}}/api/exports/{{export_id}}",
+              "host": ["{{exporter_base_url}}"],
+              "path": ["api", "exports", "{{export_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Export History",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{exporter_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{exporter_base_url}}/api/exports/{{export_id}}/history",
+              "host": ["{{exporter_base_url}}"],
+              "path": ["api", "exports", "{{export_id}}", "history"]
+            }
+          }
+        },
+        {
+          "name": "Complete Export",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{exporter_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{exporter_base_url}}/api/exports/{{export_id}}/complete",
+              "host": ["{{exporter_base_url}}"],
+              "path": ["api", "exports", "{{export_id}}", "complete"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "National Bank",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"fxofficer1\",\n  \"password\": \"password123\",\n  \"email\": \"fx1@nationalbank.com\"\n}"
+            },
+            "url": {
+              "raw": "{{national_bank_base_url}}/api/auth/register",
+              "host": ["{{national_bank_base_url}}"],
+              "path": ["api", "auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set(\"national_bank_token\", jsonData.data.token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"fxofficer1\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{national_bank_base_url}}/api/auth/login",
+              "host": ["{{national_bank_base_url}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Get Pending Exports",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{national_bank_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{national_bank_base_url}}/api/fx/pending",
+              "host": ["{{national_bank_base_url}}"],
+              "path": ["api", "fx", "pending"]
+            }
+          }
+        },
+        {
+          "name": "Approve FX",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{national_bank_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"exportId\": \"{{export_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{national_bank_base_url}}/api/fx/approve",
+              "host": ["{{national_bank_base_url}}"],
+              "path": ["api", "fx", "approve"]
+            }
+          }
+        },
+        {
+          "name": "Reject FX",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{national_bank_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"exportId\": \"{{export_id}}\",\n  \"rejectionReason\": \"Insufficient documentation\"\n}"
+            },
+            "url": {
+              "raw": "{{national_bank_base_url}}/api/fx/reject",
+              "host": ["{{national_bank_base_url}}"],
+              "path": ["api", "fx", "reject"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "NCAT",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"inspector1\",\n  \"password\": \"password123\",\n  \"email\": \"inspector1@ncat.com\"\n}"
+            },
+            "url": {
+              "raw": "{{ncat_base_url}}/api/auth/register",
+              "host": ["{{ncat_base_url}}"],
+              "path": ["api", "auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set(\"ncat_token\", jsonData.data.token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"inspector1\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{ncat_base_url}}/api/auth/login",
+              "host": ["{{ncat_base_url}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Get Pending Exports",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ncat_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{ncat_base_url}}/api/quality/pending",
+              "host": ["{{ncat_base_url}}"],
+              "path": ["api", "quality", "pending"]
+            }
+          }
+        },
+        {
+          "name": "Issue Quality Certificate",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ncat_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"exportId\": \"{{export_id}}\",\n  \"qualityGrade\": \"Grade A\"\n}"
+            },
+            "url": {
+              "raw": "{{ncat_base_url}}/api/quality/certify",
+              "host": ["{{ncat_base_url}}"],
+              "path": ["api", "quality", "certify"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Shipping Line",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"logistics1\",\n  \"password\": \"password123\",\n  \"email\": \"logistics1@shipping.com\"\n}"
+            },
+            "url": {
+              "raw": "{{shipping_base_url}}/api/auth/register",
+              "host": ["{{shipping_base_url}}"],
+              "path": ["api", "auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set(\"shipping_token\", jsonData.data.token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"logistics1\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{shipping_base_url}}/api/auth/login",
+              "host": ["{{shipping_base_url}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Get Ready Exports",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{shipping_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{shipping_base_url}}/api/shipments/ready",
+              "host": ["{{shipping_base_url}}"],
+              "path": ["api", "shipments", "ready"]
+            }
+          }
+        },
+        {
+          "name": "Schedule Shipment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{shipping_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"exportId\": \"{{export_id}}\",\n  \"vesselName\": \"MV Coffee Carrier\",\n  \"departureDate\": \"2024-02-01\",\n  \"arrivalDate\": \"2024-02-15\"\n}"
+            },
+            "url": {
+              "raw": "{{shipping_base_url}}/api/shipments/schedule",
+              "host": ["{{shipping_base_url}}"],
+              "path": ["api", "shipments", "schedule"]
+            }
+          }
+        },
+        {
+          "name": "Confirm Shipment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{shipping_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"exportId\": \"{{export_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{shipping_base_url}}/api/shipments/confirm",
+              "host": ["{{shipping_base_url}}"],
+              "path": ["api", "shipments", "confirm"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
