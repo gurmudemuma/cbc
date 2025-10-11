@@ -65,7 +65,7 @@ export class FabricGateway {
         identity: "admin",
         discovery: {
           enabled: true,
-          asLocalhost: process.env['NODE_ENV'] !== "production",
+          asLocalhost: true, // Always true for development on Windows/localhost
         },
       });
 
@@ -166,11 +166,13 @@ export class FabricGateway {
     return this.network;
   }
 
-  public getUserContract(): Contract {
+  public async getUserContract(): Promise<Contract> {
     if (!this.network) {
       throw new Error("Network not initialized. Call connect() first.");
     }
-    return this.network.getContract("user-management");
+    // Ensure chaincode is accessible
+    const contract = this.network.getContract("user-management");
+    return contract;
   }
 
   public getExportContract(): Contract {
@@ -178,5 +180,9 @@ export class FabricGateway {
       throw new Error("Export contract not initialized. Call connect() first.");
     }
     return this.coffeeContract;
+  }
+
+  public isConnected(): boolean {
+    return this.gateway !== null && this.network !== null && this.coffeeContract !== null;
   }
 }

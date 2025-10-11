@@ -205,11 +205,13 @@ if ! command -v docker-compose &> /dev/null; then
     MISSING_TOOLS+=("docker-compose")
 fi
 
+# IPFS is optional - only needed for file storage features
 if ! command -v ipfs &> /dev/null; then
-    MISSING_TOOLS+=("IPFS (ipfs)")
+    echo -e "${YELLOW}⚠️ IPFS not found - file storage features will be disabled${NC}"
 fi
 
-if ! command -v lsof &> /dev/null; then
+# lsof is not available on Windows/MINGW - skip this check
+if [[ "$OSTYPE" == "linux-gnu"* ]] && ! command -v lsof &> /dev/null; then
     MISSING_TOOLS+=("lsof")
 fi
 

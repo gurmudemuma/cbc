@@ -67,7 +67,7 @@ export class FabricGateway {
         identity: "admin",
         discovery: {
           enabled: true,
-          asLocalhost: process.env['NODE_ENV'] !== "production",
+          asLocalhost: true, // Always true for development on Windows/localhost
         },
       });
 
@@ -108,18 +108,24 @@ export class FabricGateway {
       const certFile =
         certFiles.find((f) => f.endsWith(".pem")) || certFiles[0];
 
+      if (!certFile) {
+        throw new Error("Certificate file not found in signcerts");
+      }
+
       const certificate = fs
         .readFileSync(path.join(signcertsPath, certFile))
         .toString();
 
+      const keystorePath = path.join(credPath, "keystore");
+      const keyFiles = fs.readdirSync(keystorePath);
+      const keyFile = keyFiles[0];
+
+      if (!keyFile) {
+        throw new Error("Keystore file not found");
+      }
+
       const privateKey = fs
-        .readFileSync(
-          path.join(
-            credPath,
-            "keystore",
-            fs.readdirSync(path.join(credPath, "keystore"))[0],
-          ),
-        )
+        .readFileSync(path.join(keystorePath, keyFile))
         .toString();
 
       const identity: X509Identity = {
@@ -172,5 +178,9 @@ export class FabricGateway {
 
   public getExportContract(): Contract {
     return this.getContract("coffee-export");
+  }
+
+  public isConnected(): boolean {
+    return this.gateway !== null && this.network !== null && this.contract !== null;
   }
 }

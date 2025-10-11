@@ -64,7 +64,7 @@ export class FabricGateway {
         identity: "admin",
         discovery: {
           enabled: true,
-          asLocalhost: process.env['NODE_ENV'] !== "production",
+          asLocalhost: true, // Always true for development on Windows/localhost
         },
       });
 
@@ -168,5 +168,9 @@ export class FabricGateway {
 
   public getExportContract(): Contract {
     return this.getContract("coffee-export");
+  }
+
+  public isConnected(): boolean {
+    return this.gateway !== null && this.network !== null;
   }
 }
