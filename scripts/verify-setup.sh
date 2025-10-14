@@ -83,34 +83,27 @@ check_file "network/docker/docker-compose.yaml" "Docker Compose configuration"
 check_executable "network/network.sh" "Network management script"
 
 echo ""
-echo "Checking API Package Files..."
+echo "Checking Shared API Package File..."
 echo "-----------------------------"
-check_file "api/exporter-bank/package.json" "ExporterBank package.json"
-check_file "api/national-bank/package.json" "NationalBank package.json"
-check_file "api/ncat/package.json" "NCAT package.json"
-check_file "api/shipping-line/package.json" "ShippingLine package.json"
+check_file "api/package.json" "Shared API package.json"
 
 echo ""
-echo "Checking for @types/uuid in package.json files..."
+echo "Checking for @types/uuid in shared package.json..."
 echo "--------------------------------------------------"
 
 check_types_uuid() {
     local file=$1
-    local org=$2
     if grep -q '"@types/uuid"' "$file"; then
-        echo "✅ @types/uuid present in $org"
+        echo "✅ @types/uuid present in shared package.json"
         return 0
     else
-        echo "❌ @types/uuid missing in $org"
+        echo "❌ @types/uuid missing in shared package.json"
         MISSING_FILES=$((MISSING_FILES + 1))
         return 1
     fi
 }
 
-check_types_uuid "api/exporter-bank/package.json" "ExporterBank"
-check_types_uuid "api/national-bank/package.json" "NationalBank"
-check_types_uuid "api/ncat/package.json" "NCAT"
-check_types_uuid "api/shipping-line/package.json" "ShippingLine"
+check_types_uuid "api/package.json"
 
 echo ""
 echo "Checking Chaincode..."

@@ -14,9 +14,10 @@ register_user() {
     local port=$1
     local org_name=$2
     local username=$3
-    local password=$(node -e "console.log(require('crypto').randomBytes(16).toString('hex'))")
+    local password=$(node -e "const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'; const lower = 'abcdefghijklmnopqrstuvwxyz'; const number = '0123456789'; const special = '@$!%*?&'; let pass = upper.charAt(Math.floor(Math.random() * upper.length)) + lower.charAt(Math.floor(Math.random() * lower.length)) + number.charAt(Math.floor(Math.random() * number.length)) + special.charAt(Math.floor(Math.random() * special.length)); const all = upper + lower + number + special; for (let i = 4; i < 16; i++) { pass += all.charAt(Math.floor(Math.random() * all.length)); } console.log(pass.split('').sort(() => Math.random() - 0.5).join(''));")
     
     echo "📝 Registering $username in $org_name..."
+    echo "Generated password: $password"
     
     response=$(curl -s -X POST http://localhost:$port/api/auth/register \
         -H "Content-Type: application/json" \
@@ -24,6 +25,7 @@ register_user() {
     
     if echo "$response" | grep -q '"success":true'; then
         echo "✅ Successfully registered $username"
+        echo "Password: $password"
         echo ""
     else
         echo "❌ Failed to register $username"
@@ -31,12 +33,6 @@ register_user() {
         echo ""
     fi
 }
-
-# Clean up existing test data
-echo "🧹 Cleaning up existing test data..."
-bash "$(dirname "$0")/clean.sh"
-echo "✅ Cleanup complete."
-echo ""
 
 # Register users for each organization
 echo "1️⃣ Registering Exporter Bank User..."

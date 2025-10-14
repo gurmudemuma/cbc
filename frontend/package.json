@@ -10,12 +10,17 @@
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx"
   },
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/material": "^5.18.0",
     "axios": "^1.12.2",
     "date-fns": "^2.30.0",
+    "formik": "^2.4.6",
     "lucide-react": "^0.294.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-router-dom": "^6.20.1"
+    "react-router-dom": "^6.20.1",
+    "yup": "^1.7.1"
   },
   "devDependencies": {
     "@types/react": "^18.2.43",

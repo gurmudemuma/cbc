@@ -89,8 +89,8 @@ main();
 ENROLLSCRIPT
     
     # Run the enrollment script with proper node_modules path
-    cd "$api_path"
-    NODE_PATH="$api_path/node_modules" node "$temp_script" "$cred_path" "$api_path/wallet" "$msp_id"
+    cd "$PROJECT_ROOT/api"
+    NODE_PATH="$PROJECT_ROOT/api/node_modules" node "$temp_script" "$cred_path" "$api_path/wallet" "$msp_id"
     rm "$temp_script"
     
     echo -e "${GREEN}✅ Admin enrolled for ${org_name}${NC}"

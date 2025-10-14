@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { DollarSign, CheckCircle, XCircle, TrendingUp, Search } from 'lucide-react';
-import Card from '../components/Card';
-import Button from '../components/Button';
 import apiClient, { setApiBaseUrl } from '../services/api';
 import { API_ENDPOINTS } from '../config/api.config';
-import './CommonPages.css';
+import {
+  Box, Button, Card, CardContent, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Grid, InputAdornment, MenuItem, Paper, Select, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography, Divider
+} from '@mui/material';
 
 const FXRates = ({ user }) => {
   const [exports, setExports] = useState([]);
@@ -21,7 +21,6 @@ const FXRates = ({ user }) => {
   const [statusFilter, setStatusFilter] = useState('all');
 
   useEffect(() => {
-    // Set API base URL for National Bank
     setApiBaseUrl(API_ENDPOINTS.nationalbank);
     fetchExports();
   }, []);
@@ -42,7 +41,6 @@ const FXRates = ({ user }) => {
   const filterExports = () => {
     let filtered = [...exports];
 
-    // Filter by status
     if (statusFilter === 'pending') {
       filtered = filtered.filter(exp => exp.status === 'PENDING');
     } else if (statusFilter === 'approved') {
@@ -51,7 +49,6 @@ const FXRates = ({ user }) => {
       filtered = filtered.filter(exp => exp.status === 'FX_REJECTED');
     }
 
-    // Filter by search term
     if (searchTerm) {
       filtered = filtered.filter(exp => 
         exp.exportId.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -109,13 +106,13 @@ const FXRates = ({ user }) => {
     }
   };
 
-  const getStatusClass = (status) => {
+  const getStatusColor = (status) => {
     const statusMap = {
-      PENDING: 'status-pending',
-      FX_APPROVED: 'status-certified',
-      FX_REJECTED: 'status-rejected',
+      PENDING: 'warning',
+      FX_APPROVED: 'success',
+      FX_REJECTED: 'error',
     };
-    return statusMap[status] || 'status-pending';
+    return statusMap[status] || 'default';
   };
 
   const calculateFXAmount = (usdAmount) => {
@@ -124,255 +121,254 @@ const FXRates = ({ user }) => {
   };
 
   return (
-    <div className="page-container">
-      <div className="page-header">
-        <div>
-          <h1>Foreign Exchange Approval</h1>
-          <p>Review and approve FX for export transactions</p>
-        </div>
-      </div>
+    <Box sx={{ p: 3 }}>
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={9}>
+          <Typography variant="h4">Foreign Exchange Approval</Typography>
+          <Typography variant="subtitle1" sx={{ mb: 3 }}>Review and approve FX for export transactions</Typography>
 
-      <div className="stats-row">
-        <Card variant="elevated" className="stat-mini">
-          <div className="stat-mini-content">
-            <div className="stat-mini-icon">
-              <DollarSign size={24} />
-            </div>
-            <div>
-              <div className="stat-mini-value">118.45</div>
-              <div className="stat-mini-label">Current FX Rate (KES/USD)</div>
-              <div className="stat-trend positive">
-                <TrendingUp size={14} />
-                <span>+0.5%</span>
-              </div>
-            </div>
-          </div>
-        </Card>
-        <Card variant="elevated" className="stat-mini">
-          <div className="stat-mini-content">
-            <div className="stat-mini-value">
-              {exports.filter(e => e.status === 'PENDING').length}
-            </div>
-            <div className="stat-mini-label">Pending Approval</div>
-          </div>
-        </Card>
-        <Card variant="elevated" className="stat-mini">
-          <div className="stat-mini-content">
-            <div className="stat-mini-value">
-              {exports.filter(e => e.status === 'FX_APPROVED').length}
-            </div>
-            <div className="stat-mini-label">Approved</div>
-          </div>
-        </Card>
-        <Card variant="elevated" className="stat-mini">
-          <div className="stat-mini-content">
-            <div className="stat-mini-value">
-              {exports.filter(e => e.status === 'FX_REJECTED').length}
-            </div>
-            <div className="stat-mini-label">Rejected</div>
-          </div>
-        </Card>
-      </div>
+          <Grid container spacing={2} sx={{ mb: 3 }}>
+            <Grid item xs={3}>
+              <Card>
+                <CardContent>
+                  <Stack direction="row" spacing={2} alignItems="center">
+                    <DollarSign size={24} />
+                    <Box>
+                      <Typography variant="h6">118.45</Typography>
+                      <Typography variant="body2">Current FX Rate (KES/USD)</Typography>
+                      <Stack direction="row" alignItems="center" color="success.main">
+                        <TrendingUp size={14} />
+                        <Typography variant="body2">+0.5%</Typography>
+                      </Stack>
+                    </Box>
+                  </Stack>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={3}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6">{exports.filter(e => e.status === 'PENDING').length}</Typography>
+                  <Typography variant="body2">Pending Approval</Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={3}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6">{exports.filter(e => e.status === 'FX_APPROVED').length}</Typography>
+                  <Typography variant="body2">Approved</Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={3}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6">{exports.filter(e => e.status === 'FX_REJECTED').length}</Typography>
+                  <Typography variant="body2">Rejected</Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
 
-      <Card className="filter-card">
-        <div className="filter-bar">
-          <div className="search-box">
-            <Search size={20} />
-            <input 
-              type="text" 
-              placeholder="Search exports..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <div className="filter-buttons">
-            <select 
-              value={statusFilter} 
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="filter-select"
-            >
-              <option value="all">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-            </select>
-          </div>
-        </div>
-      </Card>
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Grid container spacing={2} alignItems="center">
+                <Grid item xs={6}>
+                  <TextField
+                    fullWidth
+                    placeholder="Search exports..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Search size={20} />
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={6}>
+                  <Select
+                    fullWidth
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                  >
+                    <MenuItem value="all">All Status</MenuItem>
+                    <MenuItem value="pending">Pending</MenuItem>
+                    <MenuItem value="approved">Approved</MenuItem>
+                    <MenuItem value="rejected">Rejected</MenuItem>
+                  </Select>
+                </Grid>
+              </Grid>
+            </CardContent>
+          </Card>
 
-      <div className="table-card">
-        <Card title="FX Approval Requests" icon={<DollarSign size={20} />}>
-          <div className="table-container">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Export ID</th>
-                  <th>Exporter</th>
-                  <th>Destination</th>
-                  <th>USD Amount</th>
-                  <th>KES Amount</th>
-                  <th>Status</th>
-                  <th>Date</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredExports.map(exp => (
-                  <tr key={exp.exportId}>
-                    <td className="font-mono">{exp.exportId}</td>
-                    <td>{exp.exporterName}</td>
-                    <td>{exp.destinationCountry}</td>
-                    <td>${exp.estimatedValue.toLocaleString()}</td>
-                    <td>KES {calculateFXAmount(exp.estimatedValue).toLocaleString()}</td>
-                    <td>
-                      <span className={`status-badge ${getStatusClass(exp.status)}`}>
-                        {exp.status.replace(/_/g, ' ')}
-                      </span>
-                    </td>
-                    <td>{new Date(exp.createdAt).toLocaleDateString()}</td>
-                    <td>
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        {exp.status === 'PENDING' && (
-                          <>
-                            <Button 
-                              variant="success" 
-                              size="small"
-                              icon={<CheckCircle size={16} />}
-                              onClick={() => handleApprove(exp)}
-                            >
-                              Approve
-                            </Button>
-                            <Button 
-                              variant="danger" 
-                              size="small"
-                              icon={<XCircle size={16} />}
-                              onClick={() => handleReject(exp)}
-                            >
-                              Reject
-                            </Button>
-                          </>
-                        )}
-                        {exp.status !== 'PENDING' && (
-                          <Button variant="ghost" size="small">View</Button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {filteredExports.length === 0 && (
-              <div className="empty-state">
-                <DollarSign size={48} style={{ opacity: 0.3 }} />
-                <p>No exports found</p>
-              </div>
-            )}
-          </div>
-        </Card>
-      </div>
-
-      {isModalOpen && (
-        <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>
-                {modalType === 'approve' ? 'Approve Foreign Exchange' : 'Reject FX Request'}
-              </h2>
-              <button className="modal-close" onClick={() => setIsModalOpen(false)}>×</button>
-            </div>
-            
-            <div className="modal-body">
-              <div className="detail-item">
-                <span className="detail-label">Export ID</span>
-                <span className="detail-value font-mono">{selectedExport?.exportId}</span>
-              </div>
-              <div className="detail-item">
-                <span className="detail-label">Exporter</span>
-                <span className="detail-value">{selectedExport?.exporterName}</span>
-              </div>
-              <div className="detail-item">
-                <span className="detail-label">Destination</span>
-                <span className="detail-value">{selectedExport?.destinationCountry}</span>
-              </div>
-              <div className="detail-item">
-                <span className="detail-label">USD Amount</span>
-                <span className="detail-value">${selectedExport?.estimatedValue.toLocaleString()}</span>
-              </div>
-              <div className="detail-item">
-                <span className="detail-label">KES Amount (@ 118.45)</span>
-                <span className="detail-value">
-                  KES {calculateFXAmount(selectedExport?.estimatedValue || 0).toLocaleString()}
-                </span>
-              </div>
-
-              <hr style={{ margin: '1.5rem 0', border: 'none', borderTop: '1px solid var(--color-border)' }} />
-
-              {modalType === 'approve' ? (
-                <>
-                  <div className="form-group">
-                    <label>FX Approval ID *</label>
-                    <input
-                      type="text"
-                      value={formData.fxApprovalId}
-                      onChange={(e) => setFormData({ ...formData, fxApprovalId: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Approved By *</label>
-                    <input
-                      type="text"
-                      value={formData.approvedBy}
-                      onChange={(e) => setFormData({ ...formData, approvedBy: e.target.value })}
-                      required
-                    />
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="form-group">
-                    <label>Rejection Reason *</label>
-                    <textarea
-                      value={formData.rejectionReason}
-                      onChange={(e) => setFormData({ ...formData, rejectionReason: e.target.value })}
-                      rows="4"
-                      placeholder="Provide detailed reason for rejection..."
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Rejected By *</label>
-                    <input
-                      type="text"
-                      value={formData.approvedBy}
-                      onChange={(e) => setFormData({ ...formData, approvedBy: e.target.value })}
-                      required
-                    />
-                  </div>
-                </>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" sx={{ mb: 2 }}>FX Approval Requests</Typography>
+              <TableContainer component={Paper}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Export ID</TableCell>
+                      <TableCell>Exporter</TableCell>
+                      <TableCell>Destination</TableCell>
+                      <TableCell>USD Amount</TableCell>
+                      <TableCell>KES Amount</TableCell>
+                      <TableCell>Status</TableCell>
+                      <TableCell>Date</TableCell>
+                      <TableCell>Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {filteredExports.map(exp => (
+                      <TableRow key={exp.exportId}>
+                        <TableCell>{exp.exportId}</TableCell>
+                        <TableCell>{exp.exporterName}</TableCell>
+                        <TableCell>{exp.destinationCountry}</TableCell>
+                        <TableCell>${exp.estimatedValue.toLocaleString()}</TableCell>
+                        <TableCell>KES {calculateFXAmount(exp.estimatedValue).toLocaleString()}</TableCell>
+                        <TableCell>
+                          <Chip 
+                            label={exp.status.replace(/_/g, ' ')} 
+                            color={getStatusColor(exp.status)}
+                          />
+                        </TableCell>
+                        <TableCell>{new Date(exp.createdAt).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          {exp.status === 'PENDING' ? (
+                            <Grid container spacing={1}>
+                              <Grid item>
+                                <Button variant="contained" color="success" size="small" startIcon={<CheckCircle />} onClick={() => handleApprove(exp)}>
+                                  Approve
+                                </Button>
+                              </Grid>
+                              <Grid item>
+                                <Button variant="contained" color="error" size="small" startIcon={<XCircle />} onClick={() => handleReject(exp)}>
+                                  Reject
+                                </Button>
+                              </Grid>
+                            </Grid>
+                          ) : (
+                            <Button variant="outlined" size="small">View</Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              {filteredExports.length === 0 && (
+                <Box sx={{ textAlign: 'center', p: 3 }}>
+                  <DollarSign size={48} color="action.disabled" />
+                  <Typography>No exports found</Typography>
+                </Box>
               )}
-            </div>
+            </CardContent>
+          </Card>
+        </Grid>
 
-            <div className="modal-actions">
-              <Button variant="outline" onClick={() => setIsModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button 
-                variant={modalType === 'approve' ? 'success' : 'danger'}
-                onClick={handleSubmit}
-                disabled={
-                  modalType === 'approve' 
-                    ? !formData.fxApprovalId || !formData.approvedBy
-                    : !formData.rejectionReason || !formData.approvedBy
-                }
-              >
-                {modalType === 'approve' ? 'Approve FX' : 'Reject Request'}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+        <Grid item xs={12} md={3}>
+          <Card sx={{ height: '100%' }}>
+            <CardContent>
+              <Typography variant="h6" sx={{ mb: 2 }}>Actions</Typography>
+              <Stack spacing={2}>
+                <Button variant="contained">Update FX Rate</Button>
+                <Button variant="outlined">Approve Request</Button>
+                <Button variant="outlined">Generate Report</Button>
+              </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      <Dialog open={isModalOpen} onClose={() => setIsModalOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>{modalType === 'approve' ? 'Approve Foreign Exchange' : 'Reject FX Request'}</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12}>
+              <Typography variant="body1"><strong>Export ID:</strong> {selectedExport?.exportId}</Typography>
+            </Grid>
+            <Grid item xs={12}>
+              <Typography variant="body1"><strong>Exporter:</strong> {selectedExport?.exporterName}</Typography>
+            </Grid>
+            <Grid item xs={12}>
+              <Typography variant="body1"><strong>Destination:</strong> {selectedExport?.destinationCountry}</Typography>
+            </Grid>
+            <Grid item xs={12}>
+              <Typography variant="body1"><strong>USD Amount:</strong> ${selectedExport?.estimatedValue.toLocaleString()}</Typography>
+            </Grid>
+            <Grid item xs={12}>
+              <Typography variant="body1"><strong>KES Amount (@ 118.45):</strong> KES {calculateFXAmount(selectedExport?.estimatedValue || 0).toLocaleString()}</Typography>
+            </Grid>
+            <Grid item xs={12}><Divider sx={{ my: 2 }} /></Grid>
+            {modalType === 'approve' ? (
+              <>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="FX Approval ID"
+                    value={formData.fxApprovalId}
+                    onChange={(e) => setFormData({ ...formData, fxApprovalId: e.target.value })}
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Approved By"
+                    value={formData.approvedBy}
+                    onChange={(e) => setFormData({ ...formData, approvedBy: e.target.value })}
+                    required
+                  />
+                </Grid>
+              </>
+            ) : (
+              <>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    multiline
+                    rows={4}
+                    label="Rejection Reason"
+                    value={formData.rejectionReason}
+                    onChange={(e) => setFormData({ ...formData, rejectionReason: e.target.value })}
+                    placeholder="Provide detailed reason for rejection..."
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Rejected By"
+                    value={formData.approvedBy}
+                    onChange={(e) => setFormData({ ...formData, approvedBy: e.target.value })}
+                    required
+                  />
+                </Grid>
+              </>
+            )}
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIsModalOpen(false)}>Cancel</Button>
+          <Button 
+            onClick={handleSubmit} 
+            variant="contained" 
+            color={modalType === 'approve' ? 'success' : 'error'}
+            disabled={
+              modalType === 'approve' 
+                ? !formData.fxApprovalId || !formData.approvedBy
+                : !formData.rejectionReason || !formData.approvedBy
+            }
+          >
+            {modalType === 'approve' ? 'Approve FX' : 'Reject Request'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
   );
 };
 

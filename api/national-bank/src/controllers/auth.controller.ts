@@ -72,8 +72,8 @@ export class AuthController {
         username,
         password,
         email,
-        organizationId: organizationId || "EXPORTER-BANK-001",
-        role: role || "exporter",
+        organizationId: organizationId || "NATIONAL-BANK-001",
+        role: role || "banker",
       });
 
       // Generate token

@@ -8,6 +8,7 @@ import {
 } from "fabric-network";
 import * as path from "path";
 import * as fs from "fs";
+import { envValidator } from "../../../shared/env.validator";
 
 export class FabricGateway {
   private static instance: FabricGateway;
@@ -26,17 +27,13 @@ export class FabricGateway {
 
   public async connect(): Promise<void> {
     try {
-      // Load connection profile - use environment variable or default path
-      const networkPath =
-        process.env.FABRIC_NETWORK_PATH ||
-        path.join(process.cwd(), "..", "..", "network");
-      const ccpPath = path.join(
-        networkPath,
-        "organizations",
-        "peerOrganizations",
-        "exporterbank.coffee-export.com",
-        "connection-exporterbank.json",
-      );
+      // Use validated environment configuration
+      const config = envValidator.getConfig();
+      
+      // Resolve connection profile path (can be absolute or relative)
+      const ccpPath = path.isAbsolute(config.CONNECTION_PROFILE_PATH)
+        ? config.CONNECTION_PROFILE_PATH
+        : path.join(process.cwd(), config.CONNECTION_PROFILE_PATH);
 
       if (!fs.existsSync(ccpPath)) {
         throw new Error(`Connection profile not found at ${ccpPath}`);
@@ -45,15 +42,18 @@ export class FabricGateway {
       const ccpJSON = fs.readFileSync(ccpPath, "utf8");
       const ccp = JSON.parse(ccpJSON);
 
-      // Create a new file system based wallet for managing identities
-      const walletPath = path.join(process.cwd(), "wallet");
+      // Resolve wallet path (can be absolute or relative)
+      const walletPath = path.isAbsolute(config.WALLET_PATH)
+        ? config.WALLET_PATH
+        : path.join(process.cwd(), config.WALLET_PATH);
+      
       const wallet = await Wallets.newFileSystemWallet(walletPath);
 
       // Check if admin identity exists
       const identity = await wallet.get("admin");
       if (!identity) {
         console.log(
-          "Admin identity not found in wallet. Please enroll admin first.",
+          "Admin identity not found in wallet. Enrolling admin...",
         );
         await this.enrollAdmin(wallet);
       }
@@ -65,19 +65,19 @@ export class FabricGateway {
         identity: "admin",
         discovery: {
           enabled: true,
-          asLocalhost: true, // Always true for development on Windows/localhost
+          asLocalhost: config.NODE_ENV === 'development',
         },
       });
 
       // Get the network (channel)
-      const channelName = process.env.CHANNEL_NAME || "coffeechannel";
-      this.network = await this.gateway.getNetwork(channelName);
+      this.network = await this.gateway.getNetwork(config.CHANNEL_NAME);
 
-      // Get the contract from the network
-      const chaincodeName = process.env.CHAINCODE_NAME || "coffee-export";
-      this.coffeeContract = this.network.getContract(chaincodeName);
+      // Get the contract from the network using validated chaincode name
+      this.coffeeContract = this.network.getContract(config.CHAINCODE_NAME_EXPORT);
 
-      console.log("Successfully connected to Fabric network");
+      console.log(`Successfully connected to Fabric network`);
+      console.log(`  Channel: ${config.CHANNEL_NAME}`);
+      console.log(`  Chaincode: ${config.CHAINCODE_NAME_EXPORT}`);
     } catch (error) {
       console.error(`Failed to connect to Fabric network: ${error}`);
       throw error;
@@ -86,6 +86,9 @@ export class FabricGateway {
 
   private async enrollAdmin(wallet: Wallet): Promise<void> {
     try {
+      // Use validated environment configuration
+      const config = envValidator.getConfig();
+      
       // Load credentials from the file system
       const networkPath =
         process.env.FABRIC_NETWORK_PATH ||
@@ -130,12 +133,12 @@ export class FabricGateway {
           certificate,
           privateKey,
         },
-        mspId: "ExporterBankMSP",
+        mspId: config.MSP_ID,
         type: "X.509",
       };
 
       await wallet.put("admin", identity);
-      console.log("Successfully enrolled admin user and imported into wallet");
+      console.log(`Successfully enrolled admin user and imported into wallet (MSP: ${config.MSP_ID})`);
     } catch (error) {
       console.error(`Failed to enroll admin: ${error}`);
       throw error;
@@ -170,8 +173,9 @@ export class FabricGateway {
     if (!this.network) {
       throw new Error("Network not initialized. Call connect() first.");
     }
-    // Ensure chaincode is accessible
-    const contract = this.network.getContract("user-management");
+    // Use validated chaincode name from config
+    const config = envValidator.getConfig();
+    const contract = this.network.getContract(config.CHAINCODE_NAME_USER);
     return contract;
   }
 

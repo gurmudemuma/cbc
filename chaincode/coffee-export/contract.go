@@ -528,7 +528,8 @@ func (c *CoffeeExportContract) ExportExists(
 func (c *CoffeeExportContract) GetAllExports(
 	ctx contractapi.TransactionContextInterface,
 ) ([]*ExportRequest, error) {
-	resultsIterator, err := ctx.GetStub().GetStateByRange("", "")
+	// Use prefix to only get export records (those starting with "EXP-")
+	resultsIterator, err := ctx.GetStub().GetStateByRange("EXP-", "EXP-~")
 	if err != nil {
 		return nil, err
 	}
@@ -544,7 +545,8 @@ func (c *CoffeeExportContract) GetAllExports(
 		var exportRequest ExportRequest
 		err = json.Unmarshal(queryResponse.Value, &exportRequest)
 		if err != nil {
-			return nil, err
+			// Skip records that can't be unmarshaled as ExportRequest
+			continue
 		}
 		exports = append(exports, &exportRequest)
 	}

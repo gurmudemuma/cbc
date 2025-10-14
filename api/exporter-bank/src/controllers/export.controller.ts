@@ -82,9 +82,23 @@ export class ExportController {
     _next: NextFunction,
   ): Promise<void> => {
     try {
+      // Check if Fabric gateway is connected
+      if (!this.fabricGateway.isConnected()) {
+        console.error("Fabric gateway is not connected");
+        res.status(503).json({
+          success: false,
+          message: "Blockchain network is not available. Please try again later.",
+          error: "Fabric gateway not connected",
+        });
+        return;
+      }
+
       const contract = this.fabricGateway.getExportContract();
       const result = await contract.evaluateTransaction("GetAllExports");
-      const exports = JSON.parse(result.toString());
+      
+      // Handle empty or null responses
+      const resultString = result.toString().trim();
+      const exports = resultString && resultString !== '' ? JSON.parse(resultString) : [];
 
       res.status(200).json({
         success: true,
@@ -94,9 +108,22 @@ export class ExportController {
     } catch (error: unknown) {
       console.error("Error getting all exports:", error);
       const message = error instanceof Error ? error.message : "Unknown error";
-      res.status(500).json({
+      
+      // Provide more specific error messages
+      let statusCode = 500;
+      let userMessage = "Failed to retrieve exports";
+      
+      if (message.includes("not initialized") || message.includes("not connected")) {
+        statusCode = 503;
+        userMessage = "Blockchain network is not available. Please try again later.";
+      } else if (message.includes("ECONNREFUSED") || message.includes("UNAVAILABLE")) {
+        statusCode = 503;
+        userMessage = "Unable to connect to blockchain network";
+      }
+      
+      res.status(statusCode).json({
         success: false,
-        message: "Failed to retrieve exports",
+        message: userMessage,
         error: message,
       });
     }
@@ -152,13 +179,28 @@ export class ExportController {
         res.status(400).json({ success: false, message: "Status is required" });
         return;
       }
+      
+      // Check if Fabric gateway is connected
+      if (!this.fabricGateway.isConnected()) {
+        console.error("Fabric gateway is not connected");
+        res.status(503).json({
+          success: false,
+          message: "Blockchain network is not available. Please try again later.",
+          error: "Fabric gateway not connected",
+        });
+        return;
+      }
+      
       const contract = this.fabricGateway.getExportContract();
 
       const result = await contract.evaluateTransaction(
         "GetExportsByStatus",
         status
       );
-      const exports = JSON.parse(result.toString());
+      
+      // Handle empty or null responses
+      const resultString = result.toString().trim();
+      const exports = resultString && resultString !== '' ? JSON.parse(resultString) : [];
 
       res.status(200).json({
         success: true,
@@ -169,9 +211,22 @@ export class ExportController {
       console.error("Error getting exports by status:", error);
       const message =
         error instanceof Error ? error.message : "Failed to retrieve exports";
-      res.status(500).json({
+      
+      // Provide more specific error messages
+      let statusCode = 500;
+      let userMessage = "Failed to retrieve exports by status";
+      
+      if (message.includes("not initialized") || message.includes("not connected")) {
+        statusCode = 503;
+        userMessage = "Blockchain network is not available. Please try again later.";
+      } else if (message.includes("ECONNREFUSED") || message.includes("UNAVAILABLE")) {
+        statusCode = 503;
+        userMessage = "Unable to connect to blockchain network";
+      }
+      
+      res.status(statusCode).json({
         success: false,
-        message: "Failed to retrieve exports by status",
+        message: userMessage,
         error: message,
       });
     }
@@ -309,11 +364,34 @@ export class ExportController {
         return;
       }
 
-      if (!docType || !["fx", "quality", "shipment"].includes(docType)) {
+      // Map frontend document types to chaincode document categories
+      const docTypeMapping: { [key: string]: string } = {
+        'COMMERCIAL_INVOICE': 'fx',
+        'PACKING_LIST': 'shipment',
+        'CERTIFICATE_OF_ORIGIN': 'quality',
+        'BILL_OF_LADING': 'shipment',
+        'PHYTOSANITARY_CERTIFICATE': 'quality',
+        'QUALITY_REPORT': 'quality',
+        'EXPORT_LICENSE': 'fx',
+        // Legacy support
+        'fx': 'fx',
+        'quality': 'quality',
+        'shipment': 'shipment'
+      };
+
+      if (!docType) {
         res.status(400).json({
           success: false,
-          message:
-            "Invalid or missing docType (must be fx, quality, or shipment)",
+          message: "Document type is required",
+        });
+        return;
+      }
+
+      const mappedDocType = docTypeMapping[docType.toUpperCase()];
+      if (!mappedDocType) {
+        res.status(400).json({
+          success: false,
+          message: `Invalid document type: ${docType}. Supported types: ${Object.keys(docTypeMapping).join(', ')}`,
         });
         return;
       }
@@ -337,7 +415,7 @@ export class ExportController {
       const cid = result.hash;
 
       const contract = this.fabricGateway.getExportContract();
-      await contract.submitTransaction("AddDocument", exportId, docType, cid);
+      await contract.submitTransaction("AddDocument", exportId, mappedDocType, cid);
 
       // Query to get the actual version
       const queryResult = await contract.evaluateTransaction(
@@ -346,7 +424,7 @@ export class ExportController {
       );
       const exportData = JSON.parse(queryResult.toString());
       let version = 1;
-      switch (docType) {
+      switch (mappedDocType) {
         case "fx":
           version = exportData.FXDocuments?.length || 1;
           break;
@@ -361,13 +439,13 @@ export class ExportController {
       // Emit notification
       const ws = getWebSocketService();
       if (ws) {
-        ws.emitDocumentUploaded(exportId, docType, version, cid);
+        ws.emitDocumentUploaded(exportId, mappedDocType, version, cid);
       }
 
       res.status(200).json({
         success: true,
         message: "Document added successfully",
-        data: { exportId, docType, cid },
+        data: { exportId, docType: mappedDocType, originalDocType: docType, cid },
       });
     } catch (error: unknown) {
       console.error("Error adding document:", error);

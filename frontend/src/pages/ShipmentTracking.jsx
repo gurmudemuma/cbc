@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Ship, MapPin, Calendar, CheckCircle, Clock, Search } from 'lucide-react';
-import Card from '../components/Card';
-import Button from '../components/Button';
 import apiClient, { setApiBaseUrl } from '../services/api';
 import { API_ENDPOINTS } from '../config/api.config';
-import './CommonPages.css';
+import {
+  Box, Button, Card, CardContent, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Grid, InputAdornment, MenuItem, Paper, Select, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography
+} from '@mui/material';
 
 const ShipmentTracking = ({ user }) => {
   const [exports, setExports] = useState([]);
@@ -23,7 +23,6 @@ const ShipmentTracking = ({ user }) => {
   const [statusFilter, setStatusFilter] = useState('all');
 
   useEffect(() => {
-    // Set API base URL for Shipping Line
     setApiBaseUrl(API_ENDPOINTS.shipping);
     fetchExports();
   }, []);
@@ -44,7 +43,6 @@ const ShipmentTracking = ({ user }) => {
   const filterExports = () => {
     let filtered = [...exports];
 
-    // Filter by status
     if (statusFilter === 'ready') {
       filtered = filtered.filter(exp => exp.status === 'QUALITY_CERTIFIED');
     } else if (statusFilter === 'scheduled') {
@@ -53,7 +51,6 @@ const ShipmentTracking = ({ user }) => {
       filtered = filtered.filter(exp => exp.status === 'SHIPPED');
     }
 
-    // Filter by search term
     if (searchTerm) {
       filtered = filtered.filter(exp => 
         exp.exportId.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -110,14 +107,14 @@ const ShipmentTracking = ({ user }) => {
     }
   };
 
-  const getStatusClass = (status) => {
+  const getStatusColor = (status) => {
     const statusMap = {
-      QUALITY_CERTIFIED: 'status-pending',
-      SHIPMENT_SCHEDULED: 'status-certified',
-      SHIPPED: 'status-shipped',
-      COMPLETED: 'status-completed',
+      QUALITY_CERTIFIED: 'warning',
+      SHIPMENT_SCHEDULED: 'info',
+      SHIPPED: 'primary',
+      COMPLETED: 'success',
     };
-    return statusMap[status] || 'status-pending';
+    return statusMap[status] || 'default';
   };
 
   const calculateDuration = (departure, arrival) => {
@@ -127,295 +124,288 @@ const ShipmentTracking = ({ user }) => {
   };
 
   return (
-    <div className="page-container">
-      <div className="page-header">
-        <div>
-          <h1>Shipment Tracking</h1>
-          <p>Schedule and track coffee export shipments</p>
-        </div>
-      </div>
+    <Box sx={{ p: 3 }}>
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={9}>
+          <Typography variant="h4">Shipment Tracking</Typography>
+          <Typography variant="subtitle1" sx={{ mb: 3 }}>Schedule and track coffee export shipments</Typography>
 
-      <div className="stats-row">
-        <Card variant="elevated" className="stat-mini">
-          <div className="stat-mini-content">
-            <div className="stat-mini-value">
-              {exports.filter(e => e.status === 'QUALITY_CERTIFIED').length}
-            </div>
-            <div className="stat-mini-label">Ready to Ship</div>
-          </div>
-        </Card>
-        <Card variant="elevated" className="stat-mini">
-          <div className="stat-mini-content">
-            <div className="stat-mini-value">
-              {exports.filter(e => e.status === 'SHIPMENT_SCHEDULED').length}
-            </div>
-            <div className="stat-mini-label">Scheduled</div>
-          </div>
-        </Card>
-        <Card variant="elevated" className="stat-mini">
-          <div className="stat-mini-content">
-            <div className="stat-mini-value">
-              {exports.filter(e => e.status === 'SHIPPED').length}
-            </div>
-            <div className="stat-mini-label">In Transit</div>
-          </div>
-        </Card>
-        <Card variant="elevated" className="stat-mini">
-          <div className="stat-mini-content">
-            <div className="stat-mini-value">
-              {exports.filter(e => e.status === 'COMPLETED').length}
-            </div>
-            <div className="stat-mini-label">Delivered</div>
-          </div>
-        </Card>
-      </div>
+          <Grid container spacing={2} sx={{ mb: 3 }}>
+            <Grid item xs={3}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6">{exports.filter(e => e.status === 'QUALITY_CERTIFIED').length}</Typography>
+                  <Typography variant="body2">Ready to Ship</Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={3}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6">{exports.filter(e => e.status === 'SHIPMENT_SCHEDULED').length}</Typography>
+                  <Typography variant="body2">Scheduled</Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={3}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6">{exports.filter(e => e.status === 'SHIPPED').length}</Typography>
+                  <Typography variant="body2">In Transit</Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={3}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6">{exports.filter(e => e.status === 'COMPLETED').length}</Typography>
+                  <Typography variant="body2">Delivered</Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
 
-      <Card className="filter-card">
-        <div className="filter-bar">
-          <div className="search-box">
-            <Search size={20} />
-            <input 
-              type="text" 
-              placeholder="Search shipments..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <div className="filter-buttons">
-            <select 
-              value={statusFilter} 
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="filter-select"
-            >
-              <option value="all">All Status</option>
-              <option value="ready">Ready to Ship</option>
-              <option value="scheduled">Scheduled</option>
-              <option value="shipped">In Transit</option>
-            </select>
-          </div>
-        </div>
-      </Card>
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Grid container spacing={2} alignItems="center">
+                <Grid item xs={6}>
+                  <TextField
+                    fullWidth
+                    placeholder="Search shipments..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Search size={20} />
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={6}>
+                  <Select
+                    fullWidth
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                  >
+                    <MenuItem value="all">All Status</MenuItem>
+                    <MenuItem value="ready">Ready to Ship</MenuItem>
+                    <MenuItem value="scheduled">Scheduled</MenuItem>
+                    <MenuItem value="shipped">In Transit</MenuItem>
+                  </Select>
+                </Grid>
+              </Grid>
+            </CardContent>
+          </Card>
 
-      <div className="table-card">
-        <Card title="Shipment Records" icon={<Ship size={20} />}>
-          <div className="table-container">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Export ID</th>
-                  <th>Exporter</th>
-                  <th>Destination</th>
-                  <th>Vessel</th>
-                  <th>Departure</th>
-                  <th>Arrival</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredExports.map(exp => (
-                  <tr key={exp.exportId}>
-                    <td className="font-mono">{exp.exportId}</td>
-                    <td>{exp.exporterName}</td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                        <MapPin size={14} />
-                        {exp.destinationCountry}
-                      </div>
-                    </td>
-                    <td>{exp.vesselName || '-'}</td>
-                    <td>
-                      {exp.departureDate ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                          <Calendar size={14} />
-                          {new Date(exp.departureDate).toLocaleDateString()}
-                        </div>
-                      ) : '-'}
-                    </td>
-                    <td>
-                      {exp.arrivalDate ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                          <Calendar size={14} />
-                          {new Date(exp.arrivalDate).toLocaleDateString()}
-                        </div>
-                      ) : '-'}
-                    </td>
-                    <td>
-                      <span className={`status-badge ${getStatusClass(exp.status)}`}>
-                        {exp.status.replace(/_/g, ' ')}
-                      </span>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        {exp.status === 'QUALITY_CERTIFIED' && (
-                          <Button 
-                            variant="primary" 
-                            size="small"
-                            icon={<Ship size={16} />}
-                            onClick={() => handleSchedule(exp)}
-                          >
-                            Schedule
-                          </Button>
-                        )}
-                        {exp.status === 'SHIPMENT_SCHEDULED' && (
-                          <Button 
-                            variant="success" 
-                            size="small"
-                            icon={<CheckCircle size={16} />}
-                            onClick={() => handleConfirm(exp)}
-                          >
-                            Confirm
-                          </Button>
-                        )}
-                        {(exp.status === 'SHIPPED' || exp.status === 'COMPLETED') && (
-                          <Button variant="ghost" size="small">View</Button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {filteredExports.length === 0 && (
-              <div className="empty-state">
-                <Ship size={48} style={{ opacity: 0.3 }} />
-                <p>No shipments found</p>
-              </div>
-            )}
-          </div>
-        </Card>
-      </div>
-
-      {isModalOpen && (
-        <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>
-                {modalType === 'schedule' ? 'Schedule Shipment' : 'Confirm Shipment'}
-              </h2>
-              <button className="modal-close" onClick={() => setIsModalOpen(false)}>×</button>
-            </div>
-            
-            <div className="modal-body">
-              <div className="detail-item">
-                <span className="detail-label">Export ID</span>
-                <span className="detail-value font-mono">{selectedExport?.exportId}</span>
-              </div>
-              <div className="detail-item">
-                <span className="detail-label">Exporter</span>
-                <span className="detail-value">{selectedExport?.exporterName}</span>
-              </div>
-              <div className="detail-item">
-                <span className="detail-label">Coffee Type</span>
-                <span className="detail-value">{selectedExport?.coffeeType}</span>
-              </div>
-              <div className="detail-item">
-                <span className="detail-label">Quantity</span>
-                <span className="detail-value">{selectedExport?.quantity.toLocaleString()} kg</span>
-              </div>
-              <div className="detail-item">
-                <span className="detail-label">Destination</span>
-                <span className="detail-value">{selectedExport?.destinationCountry}</span>
-              </div>
-
-              <hr style={{ margin: '1.5rem 0', border: 'none', borderTop: '1px solid var(--color-border)' }} />
-
-              {modalType === 'schedule' ? (
-                <>
-                  <div className="form-group">
-                    <label>Shipment ID *</label>
-                    <input
-                      type="text"
-                      value={formData.shipmentId}
-                      onChange={(e) => setFormData({ ...formData, shipmentId: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Vessel Name *</label>
-                    <input
-                      type="text"
-                      value={formData.vesselName}
-                      onChange={(e) => setFormData({ ...formData, vesselName: e.target.value })}
-                      placeholder="e.g., MV Coffee Carrier"
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Departure Date *</label>
-                    <input
-                      type="date"
-                      value={formData.departureDate}
-                      onChange={(e) => setFormData({ ...formData, departureDate: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Estimated Arrival Date *</label>
-                    <input
-                      type="date"
-                      value={formData.arrivalDate}
-                      onChange={(e) => setFormData({ ...formData, arrivalDate: e.target.value })}
-                      required
-                    />
-                  </div>
-                  {formData.departureDate && formData.arrivalDate && (
-                    <div className="info-box">
-                      <Clock size={16} />
-                      <span>Transit Duration: {calculateDuration(formData.departureDate, formData.arrivalDate)}</span>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="confirmation-message">
-                  <Ship size={48} style={{ color: 'var(--color-primary)', marginBottom: '1rem' }} />
-                  <h3>Confirm Shipment Departure</h3>
-                  <p>Are you sure you want to confirm that this shipment has departed?</p>
-                  <div className="detail-list" style={{ marginTop: '1.5rem' }}>
-                    <div className="detail-item">
-                      <span className="detail-label">Vessel</span>
-                      <span className="detail-value">{selectedExport?.vesselName}</span>
-                    </div>
-                    <div className="detail-item">
-                      <span className="detail-label">Departure Date</span>
-                      <span className="detail-value">
-                        {selectedExport?.departureDate && new Date(selectedExport.departureDate).toLocaleDateString()}
-                      </span>
-                    </div>
-                    <div className="detail-item">
-                      <span className="detail-label">Expected Arrival</span>
-                      <span className="detail-value">
-                        {selectedExport?.arrivalDate && new Date(selectedExport.arrivalDate).toLocaleDateString()}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" sx={{ mb: 2 }}>Shipment Records</Typography>
+              <TableContainer component={Paper}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Export ID</TableCell>
+                      <TableCell>Exporter</TableCell>
+                      <TableCell>Destination</TableCell>
+                      <TableCell>Vessel</TableCell>
+                      <TableCell>Departure</TableCell>
+                      <TableCell>Arrival</TableCell>
+                      <TableCell>Status</TableCell>
+                      <TableCell>Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {filteredExports.map(exp => (
+                      <TableRow key={exp.exportId}>
+                        <TableCell>{exp.exportId}</TableCell>
+                        <TableCell>{exp.exporterName}</TableCell>
+                        <TableCell>
+                          <Stack direction="row" alignItems="center" spacing={0.5}>
+                            <MapPin size={14} />
+                            {exp.destinationCountry}
+                          </Stack>
+                        </TableCell>
+                        <TableCell>{exp.vesselName || '-'}</TableCell>
+                        <TableCell>
+                          {exp.departureDate ? (
+                            <Stack direction="row" alignItems="center" spacing={0.5}>
+                              <Calendar size={14} />
+                              {new Date(exp.departureDate).toLocaleDateString()}
+                            </Stack>
+                          ) : '-'}
+                        </TableCell>
+                        <TableCell>
+                          {exp.arrivalDate ? (
+                            <Stack direction="row" alignItems="center" spacing={0.5}>
+                              <Calendar size={14} />
+                              {new Date(exp.arrivalDate).toLocaleDateString()}
+                            </Stack>
+                          ) : '-'}
+                        </TableCell>
+                        <TableCell>
+                          <Chip 
+                            label={exp.status.replace(/_/g, ' ')} 
+                            color={getStatusColor(exp.status)}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          {exp.status === 'QUALITY_CERTIFIED' && (
+                            <Button variant="contained" size="small" startIcon={<Ship size={16} />} onClick={() => handleSchedule(exp)}>
+                              Schedule
+                            </Button>
+                          )}
+                          {exp.status === 'SHIPMENT_SCHEDULED' && (
+                            <Button variant="contained" color="success" size="small" startIcon={<CheckCircle size={16} />} onClick={() => handleConfirm(exp)}>
+                              Confirm
+                            </Button>
+                          )}
+                          {(exp.status === 'SHIPPED' || exp.status === 'COMPLETED') && (
+                            <Button variant="outlined" size="small">View</Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              {filteredExports.length === 0 && (
+                <Box sx={{ textAlign: 'center', p: 3 }}>
+                  <Ship size={48} color="action.disabled" />
+                  <Typography>No shipments found</Typography>
+                </Box>
               )}
-            </div>
+            </CardContent>
+          </Card>
+        </Grid>
 
-            <div className="modal-actions">
-              <Button variant="outline" onClick={() => setIsModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button 
-                variant={modalType === 'schedule' ? 'primary' : 'success'}
-                onClick={handleSubmit}
-                disabled={
-                  modalType === 'schedule' && (
-                    !formData.shipmentId || 
-                    !formData.vesselName || 
-                    !formData.departureDate || 
-                    !formData.arrivalDate
-                  )
-                }
-              >
-                {modalType === 'schedule' ? 'Schedule Shipment' : 'Confirm Departure'}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+        <Grid item xs={12} md={3}>
+          <Card sx={{ height: '100%' }}>
+            <CardContent>
+              <Typography variant="h6" sx={{ mb: 2 }}>Actions</Typography>
+              <Stack spacing={2}>
+                <Button variant="contained">Schedule Shipment</Button>
+                <Button variant="outlined">Confirm Departure</Button>
+                <Button variant="outlined">Generate Report</Button>
+              </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      <Dialog open={isModalOpen} onClose={() => setIsModalOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>{modalType === 'schedule' ? 'Schedule Shipment' : 'Confirm Shipment'}</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12}>
+              <Typography variant="body1"><strong>Export ID:</strong> {selectedExport?.exportId}</Typography>
+            </Grid>
+            <Grid item xs={12}>
+              <Typography variant="body1"><strong>Exporter:</strong> {selectedExport?.exporterName}</Typography>
+            </Grid>
+            <Grid item xs={12}>
+              <Typography variant="body1"><strong>Coffee Type:</strong> {selectedExport?.coffeeType}</Typography>
+            </Grid>
+            <Grid item xs={12}>
+              <Typography variant="body1"><strong>Quantity:</strong> {selectedExport?.quantity.toLocaleString()} kg</Typography>
+            </Grid>
+            <Grid item xs={12}>
+              <Typography variant="body1"><strong>Destination:</strong> {selectedExport?.destinationCountry}</Typography>
+            </Grid>
+            <Grid item xs={12}><Divider sx={{ my: 2 }} /></Grid>
+            {modalType === 'schedule' ? (
+              <>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Shipment ID"
+                    value={formData.shipmentId}
+                    onChange={(e) => setFormData({ ...formData, shipmentId: e.target.value })}
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Vessel Name"
+                    value={formData.vesselName}
+                    onChange={(e) => setFormData({ ...formData, vesselName: e.target.value })}
+                    placeholder="e.g., MV Coffee Carrier"
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    type="date"
+                    label="Departure Date"
+                    value={formData.departureDate}
+                    onChange={(e) => setFormData({ ...formData, departureDate: e.target.value })}
+                    InputLabelProps={{ shrink: true }}
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    type="date"
+                    label="Estimated Arrival Date"
+                    value={formData.arrivalDate}
+                    onChange={(e) => setFormData({ ...formData, arrivalDate: e.target.value })}
+                    InputLabelProps={{ shrink: true }}
+                    required
+                  />
+                </Grid>
+                {formData.departureDate && formData.arrivalDate && (
+                  <Grid item xs={12}>
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                      <Clock size={16} />
+                      <Typography variant="body2">Transit Duration: {calculateDuration(formData.departureDate, formData.arrivalDate)}</Typography>
+                    </Stack>
+                  </Grid>
+                )}
+              </>
+            ) : (
+              <Grid item xs={12} sx={{ textAlign: 'center' }}>
+                <Ship size={48} color="primary.main" sx={{ mb: 2 }} />
+                <Typography variant="h6">Confirm Shipment Departure</Typography>
+                <Typography variant="body1" sx={{ my: 2 }}>Are you sure you want to confirm that this shipment has departed?</Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={12}>
+                    <Typography variant="body1"><strong>Vessel:</strong> {selectedExport?.vesselName}</Typography>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Typography variant="body1"><strong>Departure Date:</strong> {selectedExport?.departureDate && new Date(selectedExport.departureDate).toLocaleDateString()}</Typography>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Typography variant="body1"><strong>Expected Arrival:</strong> {selectedExport?.arrivalDate && new Date(selectedExport.arrivalDate).toLocaleDateString()}</Typography>
+                  </Grid>
+                </Grid>
+              </Grid>
+            )}
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIsModalOpen(false)}>Cancel</Button>
+          <Button 
+            onClick={handleSubmit} 
+            variant="contained" 
+            color={modalType === 'schedule' ? 'primary' : 'success'}
+            disabled={
+              modalType === 'schedule' && (
+                !formData.shipmentId || 
+                !formData.vesselName || 
+                !formData.departureDate || 
+                !formData.arrivalDate
+              )
+            }
+          >
+            {modalType === 'schedule' ? 'Schedule Shipment' : 'Confirm Departure'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
   );
 };
 

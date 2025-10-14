@@ -5,6 +5,7 @@ A comprehensive end-to-end consortium blockchain application built with **Hyperl
 ## 📋 Table of Contents
 
 - [Overview](#overview)
+- [Quick Start](#quick-start)
 - [Architecture](#architecture)
 - [Tech Stack](#tech-stack)
 - [Participants](#participants)
@@ -17,10 +18,35 @@ A comprehensive end-to-end consortium blockchain application built with **Hyperl
 - [Usage](#usage)
 - [API Documentation](#api-documentation)
 - [Troubleshooting](#troubleshooting)
+- [Documentation](#documentation)
 
 ## 🎯 Overview
 
 This project implements a consortium blockchain network for managing the complete coffee export lifecycle, from initial export request to final shipment confirmation. The system ensures transparency, traceability, and trust among all participating organizations.
+
+## 🚀 Quick Start
+
+**Get started in 5 minutes:**
+
+```bash
+# 1. Clone and navigate to project
+git clone <repository-url>
+cd cbc
+
+# 2. Start everything with one command
+./start-system.sh
+
+# 3. Access the application
+# Frontend: http://localhost:5173
+# APIs: http://localhost:3001-3004
+```
+
+**For detailed startup instructions, see:**
+- **[STARTUP_QUICK_REFERENCE.md](STARTUP_QUICK_REFERENCE.md)** - Quick reference card
+- **[STARTUP_ORDER.md](STARTUP_ORDER.md)** - Complete startup documentation
+- **[QUICK_START.md](QUICK_START.md)** - Step-by-step guide
+
+> ⚠️ **Important:** Components must be started in the correct order. The `start-system.sh` script handles this automatically.
 
 ## 🏗️ Architecture
 
@@ -439,13 +465,42 @@ docker logs -f peer0.exporterbank.coffee-export.com
 ./network.sh deployCC -ccn coffee-export -ccs 2 -ccv 1.1
 ```
 
+## 📚 Documentation
+
+### Getting Started
+- **[QUICK_START.md](QUICK_START.md)** - Quick start guide for new users
+- **[STARTUP_ORDER.md](STARTUP_ORDER.md)** - Detailed component startup order and dependencies
+- **[STARTUP_QUICK_REFERENCE.md](STARTUP_QUICK_REFERENCE.md)** - Quick reference card for startup
+
+### Architecture & Design
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System architecture and design decisions
+- **[SYSTEM_DIAGRAM.md](SYSTEM_DIAGRAM.md)** - Visual system diagrams
+
+### Development
+- **[DEVELOPER_NOTES.md](DEVELOPER_NOTES.md)** - Developer guidelines and notes
+- **[TESTING_GUIDE.md](TESTING_GUIDE.md)** - Testing procedures and guidelines
+- **[FRONTEND_GUIDE.md](FRONTEND_GUIDE.md)** - Frontend development guide
+
+### Deployment & Operations
+- **[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)** - Production deployment guide
+- **[PROJECT_STATUS.md](PROJECT_STATUS.md)** - Current project status
+- **[CHANGELOG.md](CHANGELOG.md)** - Version history and changes
+
+### Security
+- **[SECURITY.md](SECURITY.md)** - Security guidelines and best practices
+- **[INTER_SERVICE_COMMUNICATION.md](INTER_SERVICE_COMMUNICATION.md)** - Service communication security
+
+### Reference
+- **[DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md)** - Complete documentation index
+- **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** - Quick reference for common tasks
+
 ## 📝 License
 
 MIT License
 
 ## 👨‍💻 Contributors
 
-- Your Name
+- Coffee Blockchain Consortium Team
 
 ## 🤝 Contributing
 

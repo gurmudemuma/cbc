@@ -1,44 +1,61 @@
 /* Coffee Blockchain Consortium - Color Scheme: GOLDEN, PURPLE, BLACK */
 
 :root {
-  /* Primary Colors */
-  --color-golden: #FFD700;
-  --color-golden-light: #FFE55C;
-  --color-golden-dark: #DAA520;
+  /* Primary Colors - Balanced Purple Palette */
+  --color-purple-50: #F3E5F5;
+  --color-purple-100: #E1BEE7;
+  --color-purple-200: #CE93D8;
+  --color-purple-300: #BA68C8;
+  --color-purple-400: #AB47BC;
+  --color-purple-500: #9C27B0;
+  --color-purple-600: #8E24AA;
+  --color-purple-700: #7B1FA2;
+  --color-purple-800: #6A1B9A;
+  --color-purple-900: #4A148C;
   
-  --color-purple: #8B00FF;
-  --color-purple-light: #A64DFF;
-  --color-purple-dark: #6600CC;
+  /* Accent Colors */
+  --color-accent: #7C4DFF;
+  --color-accent-light: #B388FF;
+  --color-accent-dark: #651FFF;
   
-  --color-black: #000000;
-  --color-black-light: #1A1A1A;
-  --color-black-lighter: #2D2D2D;
+  /* Neutral Colors */
+  --color-white: #FFFFFF;
+  --color-gray-50: #FAFAFA;
+  --color-gray-100: #F5F5F5;
+  --color-gray-200: #EEEEEE;
+  --color-gray-300: #E0E0E0;
+  --color-gray-400: #BDBDBD;
+  --color-gray-500: #9E9E9E;
+  --color-gray-600: #757575;
+  --color-gray-700: #616161;
+  --color-gray-800: #424242;
+  --color-gray-900: #212121;
   
   /* Semantic Colors */
-  --color-background: var(--color-black);
-  --color-surface: var(--color-black-light);
-  --color-surface-elevated: var(--color-black-lighter);
+  --color-background: var(--color-purple-50);
+  --color-surface: var(--color-white);
+  --color-surface-elevated: var(--color-white);
   
-  --color-primary: var(--color-golden);
-  --color-primary-hover: var(--color-golden-light);
-  --color-primary-active: var(--color-golden-dark);
+  --color-primary: var(--color-purple-600);
+  --color-primary-hover: var(--color-purple-700);
+  --color-primary-active: var(--color-purple-800);
   
-  --color-secondary: var(--color-purple);
-  --color-secondary-hover: var(--color-purple-light);
-  --color-secondary-active: var(--color-purple-dark);
+  --color-secondary: var(--color-accent);
+  --color-secondary-hover: var(--color-accent-light);
+  --color-secondary-active: var(--color-accent-dark);
   
-  --color-text-primary: var(--color-golden);
-  --color-text-secondary: var(--color-purple-light);
-  --color-text-muted: #999999;
+  --color-text-primary: var(--color-gray-900);
+  --color-text-secondary: var(--color-gray-700);
+  --color-text-muted: var(--color-gray-600);
   
-  --color-border: var(--color-purple-dark);
-  --color-border-light: #444444;
+  --color-border: var(--color-purple-200);
+  --color-border-light: var(--color-gray-200);
   
-  /* Status Colors using theme palette */
-  --color-success: var(--color-golden);
-  --color-warning: var(--color-golden-dark);
-  --color-error: var(--color-purple);
-  --color-info: var(--color-purple-light);
+  /* Status Colors */
+  --color-success: #4CAF50;
+  --color-warning: #FF9800;
+  --color-error: #F44336;
+  --color-info: var(--color-accent);
   
   /* Spacing */
   --spacing-xs: 0.25rem;
@@ -97,7 +114,7 @@ body {
 
 /* Typography */
 h1, h2, h3, h4, h5, h6 {
-  color: var(--color-golden);
+  color: #000000;
   font-weight: 700;
   line-height: 1.2;
   margin-bottom: var(--spacing-md);
@@ -105,10 +122,7 @@ h1, h2, h3, h4, h5, h6 {
 
 h1 {
   font-size: 2.5rem;
-  background: linear-gradient(135deg, var(--color-golden) 0%, var(--color-golden-light) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #000000;
 }
 
 h2 {
@@ -125,17 +139,17 @@ h4 {
 
 p {
   margin-bottom: var(--spacing-md);
-  color: var(--color-text-secondary);
+  color: #424242;
 }
 
 a {
-  color: var(--color-purple-light);
+  color: var(--color-purple);
   text-decoration: none;
   transition: color var(--transition-fast);
 }
 
 a:hover {
-  color: var(--color-golden);
+  color: var(--color-purple-dark);
 }
 
 /* Scrollbar Styling */
@@ -145,32 +159,32 @@ a:hover {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-black-light);
+  background: #E8EAF6;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-purple-dark);
+  background: var(--color-purple);
   border-radius: var(--radius-md);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-purple);
+  background: var(--color-purple-dark);
 }
 
 /* Selection */
 ::selection {
-  background-color: var(--color-purple);
-  color: var(--color-golden);
+  background-color: var(--color-purple-light);
+  color: #FFFFFF;
 }
 
 ::-moz-selection {
-  background-color: var(--color-purple);
-  color: var(--color-golden);
+  background-color: var(--color-purple-light);
+  color: #FFFFFF;
 }
 
 /* Focus Styles */
 :focus-visible {
-  outline: 2px solid var(--color-golden);
+  outline: 2px solid var(--color-purple);
   outline-offset: 2px;
 }
 
@@ -215,8 +229,8 @@ a:hover {
 }
 
 .spinner {
-  border: 3px solid var(--color-black-lighter);
-  border-top-color: var(--color-golden);
+  border: 3px solid #E8EAF6;
+  border-top-color: var(--color-purple);
   border-radius: 50%;
   width: 40px;
   height: 40px;

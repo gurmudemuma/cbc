@@ -15,9 +15,8 @@ export const validateExportRequest = [
     .notEmpty()
     .withMessage("Coffee type is required")
     .trim()
-    .escape()
-    .isIn(["Arabica", "Robusta", "Liberica", "Excelsa"])
-    .withMessage("Invalid coffee type"),
+    .isLength({ min: 3, max: 100 })
+    .withMessage("Coffee type must be between 3 and 100 characters"),
 
   body("quantity")
     .isFloat({ min: 0.1, max: 1000000 })

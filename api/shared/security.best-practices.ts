@@ -68,7 +68,7 @@ export const rateLimitConfigs = {
   // Moderate rate limit for API endpoints
   api: {
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // 100 requests per window
+    max: 500, // 500 requests per window (increased for development)
     message: {
       success: false,
       message: 'Too many requests. Please try again later.',

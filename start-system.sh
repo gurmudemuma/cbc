@@ -280,13 +280,11 @@ if [ "$SKIP_DEPS" = false ]; then
     
     # Install API dependencies
     echo -e "${YELLOW}Installing API dependencies...${NC}"
-    for api_dir in exporter-bank national-bank ncat shipping-line; do
-        if [ -d "$PROJECT_ROOT/api/$api_dir" ]; then
-            echo -e "${YELLOW}  - Installing $api_dir dependencies...${NC}"
-            cd "$PROJECT_ROOT/api/$api_dir"
-            npm install --silent 2>/dev/null || npm install
-        fi
-    done
+    if [ -d "$PROJECT_ROOT/api" ]; then
+        echo -e "${YELLOW}  - Installing shared API dependencies...${NC}"
+        cd "$PROJECT_ROOT/api"
+        npm install --silent 2>/dev/null || npm install
+    fi
     
     # Install frontend dependencies
     if [ -d "$PROJECT_ROOT/frontend" ]; then
@@ -380,8 +378,8 @@ echo ""
 
 # Step 9: Create Necessary Directories
 echo -e "${BLUE}[9/16] Creating Necessary Directories...${NC}"
-mkdir -p "$PROJECT_ROOT/network/organizations/peerOrganizations"
-mkdir -p "$PROJECT_ROOT/network/organizations/ordererOrganizations"
+# Note: Do NOT create peerOrganizations and ordererOrganizations directories
+# as network.sh checks for their existence to decide whether to generate crypto material
 mkdir -p "$PROJECT_ROOT/network/channel-artifacts"
 mkdir -p "$PROJECT_ROOT/network/system-genesis-block"
 mkdir -p "$PROJECT_ROOT/api/exporter-bank/wallet"
@@ -401,27 +399,25 @@ if check_network && [ "$CLEAN_START" = false ]; then
     if [ ! -f "$PROJECT_ROOT/network/organizations/peerOrganizations/exporterbank.coffee-export.com/connection-exporterbank.json" ]; then
         echo -e "${YELLOW}Connection profiles not found. Generating...${NC}"
         cd "$PROJECT_ROOT/network"
-        ./scripts/ccp-generate.sh
+        ./organizations/ccp-generate.sh
         echo -e "${GREEN}✅ Connection profiles generated${NC}"
     fi
 else
-    echo -e "${YELLOW}Generating crypto material (certificates)...${NC}"
+    echo -e "${YELLOW}Step 10.1: Generating crypto material (certificates)...${NC}"
     cd "$PROJECT_ROOT/network"
     
-    # Generate certificates first
-    if [ -f "./scripts/generate-certs.sh" ]; then
-        ./scripts/generate-certs.sh
-        echo -e "${GREEN}✅ Crypto material generated${NC}"
-    else
-        echo -e "${RED}❌ generate-certs.sh not found${NC}"
-        exit 1
+    # Use network.sh to generate crypto material (it calls createOrgs internally)
+    # This ensures proper order: crypto material -> connection profiles -> containers
+    if [ ! -d "organizations/peerOrganizations" ]; then
+        echo -e "${YELLOW}Creating organizations and crypto material...${NC}"
+        # The network.sh up command will call createOrgs if needed
     fi
     
-    echo -e "${YELLOW}Starting network containers...${NC}"
+    echo -e "${YELLOW}Step 10.2: Starting network containers...${NC}"
     ./network.sh up
     
     # Wait for network to be ready with polling
-    echo -e "${YELLOW}Waiting for network to be ready...${NC}"
+    echo -e "${YELLOW}Step 10.3: Waiting for network to be ready...${NC}"
     for i in {1..30}; do
         if check_network; then
             break
@@ -436,11 +432,15 @@ else
         exit 1
     fi
     
-    # Generate connection profiles
-    echo -e "${YELLOW}Generating connection profiles...${NC}"
+    # Generate connection profiles (done after crypto material exists)
+    echo -e "${YELLOW}Step 10.4: Generating connection profiles...${NC}"
     cd "$PROJECT_ROOT/network"
-    ./scripts/ccp-generate.sh
-    echo -e "${GREEN}✅ Connection profiles generated${NC}"
+    if [ -f "./organizations/ccp-generate.sh" ]; then
+        ./organizations/ccp-generate.sh
+        echo -e "${GREEN}✅ Connection profiles generated${NC}"
+    else
+        echo -e "${YELLOW}⚠️  ccp-generate.sh not found, connection profiles may already exist${NC}"
+    fi
 fi
 echo ""
 
@@ -465,8 +465,10 @@ echo -e "${BLUE}[12/16] Deploying Chaincodes...${NC}"
 echo -e "${YELLOW}This may take 2-5 minutes per chaincode...${NC}"
 
 CHAINCODE_TEMP=$(docker exec peer0.exporterbank.coffee-export.com ls /var/hyperledger/production/lifecycle/chaincodes 2>/dev/null || echo "")
-COFFEE_EXPORT_CHECK=$(echo "$CHAINCODE_TEMP" | grep -c "coffee-export" || echo "0")
-USER_MGMT_CHECK=$(echo "$CHAINCODE_TEMP" | grep -c "user-management" || echo "0")
+COFFEE_EXPORT_CHECK=$(echo "$CHAINCODE_TEMP" | grep -c "coffee-export" 2>/dev/null || echo "0")
+COFFEE_EXPORT_CHECK=$(echo "$COFFEE_EXPORT_CHECK" | tr -d '\n\r' | tr -d ' ')
+USER_MGMT_CHECK=$(echo "$CHAINCODE_TEMP" | grep -c "user-management" 2>/dev/null || echo "0")
+USER_MGMT_CHECK=$(echo "$USER_MGMT_CHECK" | tr -d '\n\r' | tr -d ' ')
 
 cd "$PROJECT_ROOT/network"
 
@@ -565,28 +567,28 @@ else
     # Create logs directory
     mkdir -p "$PROJECT_ROOT/logs"
     
-    # Start each API with better error handling
+    # Start each API from the root with workspaces
     echo -e "${YELLOW}  - Starting Exporter Bank API (port 3001)...${NC}"
-    cd "$PROJECT_ROOT/api/exporter-bank"
-    nohup npm run dev > "$PROJECT_ROOT/logs/exporter-bank.log" 2>&1 &
+    cd "$PROJECT_ROOT/api"
+    nohup npm run dev --workspace=exporter-bank-api > "$PROJECT_ROOT/logs/exporter-bank.log" 2>&1 &
     EXPORTER_PID=$!
     echo $EXPORTER_PID > "$PROJECT_ROOT/logs/exporter-bank.pid"
     
     echo -e "${YELLOW}  - Starting National Bank API (port 3002)...${NC}"
-    cd "$PROJECT_ROOT/api/national-bank"
-    nohup npm run dev > "$PROJECT_ROOT/logs/national-bank.log" 2>&1 &
+    cd "$PROJECT_ROOT/api"
+    nohup npm run dev --workspace=national-bank-api > "$PROJECT_ROOT/logs/national-bank.log" 2>&1 &
     NATIONAL_PID=$!
     echo $NATIONAL_PID > "$PROJECT_ROOT/logs/national-bank.pid"
     
     echo -e "${YELLOW}  - Starting NCAT API (port 3003)...${NC}"
-    cd "$PROJECT_ROOT/api/ncat"
-    nohup npm run dev > "$PROJECT_ROOT/logs/ncat.log" 2>&1 &
+    cd "$PROJECT_ROOT/api"
+    nohup npm run dev --workspace=ncat-api > "$PROJECT_ROOT/logs/ncat.log" 2>&1 &
     NCAT_PID=$!
     echo $NCAT_PID > "$PROJECT_ROOT/logs/ncat.pid"
     
     echo -e "${YELLOW}  - Starting Shipping Line API (port 3004)...${NC}"
-    cd "$PROJECT_ROOT/api/shipping-line"
-    nohup npm run dev > "$PROJECT_ROOT/logs/shipping-line.log" 2>&1 &
+    cd "$PROJECT_ROOT/api"
+    nohup npm run dev --workspace=shipping-line-api > "$PROJECT_ROOT/logs/shipping-line.log" 2>&1 &
     SHIPPING_PID=$!
     echo $SHIPPING_PID > "$PROJECT_ROOT/logs/shipping-line.pid"
     
@@ -649,46 +651,6 @@ else
 fi
 echo ""
 
-# Step 16: Start Frontend
-echo -e "${BLUE}[16/16] Starting Frontend...${NC}"
-
-# Detect frontend port (default 5173)
-FRONTEND_PORT=5173
-if [ -f "$PROJECT_ROOT/frontend/.env" ]; then
-    FRONTEND_PORT=$(grep '^VITE_PORT=' "$PROJECT_ROOT/frontend/.env" | cut -d '=' -f2 || echo "5173")
-fi
-
-if [ -d "$PROJECT_ROOT/frontend" ]; then
-    if command -v tmux &> /dev/null; then
-        echo -e "${YELLOW}Starting frontend in tmux session 'cbc-frontend'...${NC}"
-        
-        # Kill existing session if it exists
-        tmux kill-session -t cbc-frontend 2>/dev/null || true
-        
-        # Start new session
-        tmux new-session -d -s cbc-frontend "cd $PROJECT_ROOT/frontend && npm run dev"
-        echo -e "${GREEN}✅ Frontend started in tmux session${NC}"
-        echo -e "${CYAN}   View logs: tmux attach-session -t cbc-frontend${NC}"
-    else
-        echo -e "${YELLOW}tmux not found, starting frontend with nohup...${NC}"
-        cd "$PROJECT_ROOT/frontend"
-        nohup npm run dev > "$PROJECT_ROOT/logs/frontend.log" 2>&1 &
-        echo -e "${GREEN}✅ Frontend started in background${NC}"
-    fi
-    
-    # Wait for frontend to start with polling
-    echo -e "${YELLOW}Waiting for frontend to initialize...${NC}"
-    for i in {1..30}; do
-        if lsof -Pi :$FRONTEND_PORT -sTCP:LISTEN -t >/dev/null 2>&1; then
-            break
-        fi
-        sleep 1
-    done
-else
-    echo -e "${YELLOW}⚠️  Frontend directory not found, skipping${NC}"
-fi
-echo ""
-
 # Final Step: System Verification
 echo -e "${BLUE}Final: System Verification...${NC}"
 echo -e "${YELLOW}Performing final system health checks...${NC}"
@@ -723,15 +685,6 @@ else
     echo -e "${RED}  ❌ IPFS is not running${NC}"
 fi
 
-# Check frontend
-if [ -d "$PROJECT_ROOT/frontend/exporter-portal" ]; then
-    if lsof -Pi :$FRONTEND_PORT -sTCP:LISTEN -t >/dev/null 2>&1; then
-        echo -e "${GREEN}  ✅ Frontend is running on port $FRONTEND_PORT${NC}"
-    else
-        echo -e "${YELLOW}  ⚠️  Frontend may still be starting up${NC}"
-    fi
-fi
-
 echo ""
 if [ $SERVICES_OK -eq $TOTAL_SERVICES ]; then
     echo -e "${GREEN}✅ All critical services are running${NC}"
@@ -757,7 +710,6 @@ echo -e "  • National Bank API:   ${GREEN}http://localhost:3002${NC}"
 echo -e "  • NCAT API:            ${GREEN}http://localhost:3003${NC}"
 echo -e "  • Shipping Line API:   ${GREEN}http://localhost:3004${NC}"
 echo -e "  • IPFS API:            ${GREEN}http://localhost:5001${NC}"
-echo -e "  • Frontend:            ${GREEN}http://localhost:$FRONTEND_PORT${NC}"
 echo ""
 echo -e "${YELLOW}Next Steps:${NC}"
 echo ""
@@ -772,26 +724,17 @@ echo -e "       \"organizationId\": \"exporter\","
 echo -e "       \"role\": \"exporter\""
 echo -e "     }'"
 echo ""
-echo -e "${CYAN}2. Login to Frontend:${NC}"
-echo -e "   • Open: ${GREEN}http://localhost:$FRONTEND_PORT${NC}"
-echo -e "   • Organization: Exporter Bank"
-echo -e "   • Username: testuser"
-echo -e "   • Password: Test123!@#"
-echo ""
 echo -e "${YELLOW}View Logs:${NC}"
 if command -v tmux &> /dev/null; then
     echo -e "   APIs:      ${CYAN}tmux attach-session -t cbc-apis${NC}"
-    echo -e "   Frontend:  ${CYAN}tmux attach-session -t cbc-frontend${NC}"
 else
     echo -e "   APIs:      ${CYAN}tail -f $PROJECT_ROOT/logs/*.log${NC}"
-    echo -e "   Frontend:  ${CYAN}tail -f $PROJECT_ROOT/logs/frontend.log${NC}"
 fi
 echo -e "   IPFS:      ${CYAN}tail -f $PROJECT_ROOT/logs/ipfs.log${NC}"
 echo ""
 echo -e "${YELLOW}Stop the System:${NC}"
 if command -v tmux &> /dev/null; then
     echo -e "   ${CYAN}tmux kill-session -t cbc-apis${NC}"
-    echo -e "   ${CYAN}tmux kill-session -t cbc-frontend${NC}"
     echo -e "   ${CYAN}pkill -f 'ipfs daemon'${NC}"
 else
     echo -e "   ${CYAN}pkill -f 'npm run dev'${NC}"
@@ -813,11 +756,61 @@ sleep 15 # Wait for APIs to be fully up
 echo "✅ APIs are up."
 echo ""
 
-echo "👤 Registering test users..."
-if [ -f "$(dirname "$0")/scripts/register-test-users.sh" ]; then
-    bash "$(dirname "$0")/scripts/register-test-users.sh"
-else
-    echo "⚠️ Warning: register-test-users.sh script not found. Skipping user registration."
-fi
-echo "✅ User registration process complete."
+echo -e "${BLUE}[16/16] Registering Test Users...${NC}"
+echo -e "${YELLOW}Creating test users for each organization...${NC}"
+
+# Function to register a test user
+register_test_user() {
+    local port=$1
+    local org_name=$2
+    local username=$3
+    local password=$4
+    local email=$5
+    
+    echo -e "${YELLOW}  Registering $username in $org_name...${NC}"
+    
+    response=$(curl -s -X POST http://localhost:$port/api/auth/register \
+        -H "Content-Type: application/json" \
+        -d "{\"username\":\"$username\",\"password\":\"$password\",\"email\":\"$email\"}")
+    
+    if echo "$response" | grep -q '"success":true'; then
+        echo -e "${GREEN}  ✅ Successfully registered $username${NC}"
+        echo -e "${CYAN}     Username: $username${NC}"
+        echo -e "${CYAN}     Password: $password${NC}"
+    else
+        echo -e "${RED}  ❌ Failed to register $username${NC}"
+        echo -e "${YELLOW}     Response: $response${NC}"
+    fi
+    echo ""
+}
+
+# Register test users for each organization
+register_test_user 3001 "Exporter Bank" "exporter1" "Exporter123!@#" "exporter1@exporterbank.com"
+register_test_user 3002 "National Bank" "banker1" "Banker123!@#" "banker1@nationalbank.com"
+register_test_user 3003 "NCAT" "inspector1" "Inspector123!@#" "inspector1@ncat.gov"
+register_test_user 3004 "Shipping Line" "shipper1" "Shipper123!@#" "shipper1@shippingline.com"
+
+echo -e "${GREEN}✅ Test users registered successfully!${NC}"
+echo ""
+echo -e "${CYAN}╔════════════════════════════════��═══════════════════════════╗${NC}"
+echo -e "${CYAN}║                                                            ║${NC}"
+echo -e "${CYAN}║                  Test User Credentials                     ║${NC}"
+echo -e "${CYAN}║                                                            ║${NC}"
+echo -e "${CYAN}╚════════════════════════════════════════════════════════════╝${NC}"
+echo ""
+echo -e "${GREEN}Exporter Bank:${NC}"
+echo -e "  Username: ${CYAN}exporter1${NC}"
+echo -e "  Password: ${CYAN}Exporter123!@#${NC}"
+echo ""
+echo -e "${GREEN}National Bank:${NC}"
+echo -e "  Username: ${CYAN}banker1${NC}"
+echo -e "  Password: ${CYAN}Banker123!@#${NC}"
+echo ""
+echo -e "${GREEN}NCAT:${NC}"
+echo -e "  Username: ${CYAN}inspector1${NC}"
+echo -e "  Password: ${CYAN}Inspector123!@#${NC}"
+echo ""
+echo -e "${GREEN}Shipping Line:${NC}"
+echo -e "  Username: ${CYAN}shipper1${NC}"
+echo -e "  Password: ${CYAN}Shipper123!@#${NC}"
 echo ""

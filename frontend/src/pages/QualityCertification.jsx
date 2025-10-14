@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Award, CheckCircle, XCircle, Search, Filter } from 'lucide-react';
-import Card from '../components/Card';
-import Button from '../components/Button';
+import { Award, CheckCircle, XCircle, Search } from 'lucide-react';
 import apiClient, { setApiBaseUrl } from '../services/api';
 import { API_ENDPOINTS } from '../config/api.config';
-import './CommonPages.css';
+import {
+  Box, Button, Card, CardContent, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Grid, InputAdornment, MenuItem, Paper, Select, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography
+} from '@mui/material';
 
 const QualityCertification = ({ user }) => {
   const [exports, setExports] = useState([]);
@@ -21,7 +21,6 @@ const QualityCertification = ({ user }) => {
   const [statusFilter, setStatusFilter] = useState('all');
 
   useEffect(() => {
-    // Set API base URL for NCAT
     setApiBaseUrl(API_ENDPOINTS.ncat);
     fetchExports();
   }, []);
@@ -42,7 +41,6 @@ const QualityCertification = ({ user }) => {
   const filterExports = () => {
     let filtered = [...exports];
 
-    // Filter by status
     if (statusFilter === 'pending') {
       filtered = filtered.filter(exp => exp.status === 'FX_APPROVED');
     } else if (statusFilter === 'certified') {
@@ -51,7 +49,6 @@ const QualityCertification = ({ user }) => {
       filtered = filtered.filter(exp => exp.status === 'QUALITY_REJECTED');
     }
 
-    // Filter by search term
     if (searchTerm) {
       filtered = filtered.filter(exp => 
         exp.exportId.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -110,13 +107,13 @@ const QualityCertification = ({ user }) => {
     }
   };
 
-  const getStatusClass = (status) => {
+  const getStatusColor = (status) => {
     const statusMap = {
-      FX_APPROVED: 'status-pending',
-      QUALITY_CERTIFIED: 'status-certified',
-      QUALITY_REJECTED: 'status-rejected',
+      FX_APPROVED: 'warning',
+      QUALITY_CERTIFIED: 'success',
+      QUALITY_REJECTED: 'error',
     };
-    return statusMap[status] || 'status-pending';
+    return statusMap[status] || 'default';
   };
 
   const qualityGrades = [
@@ -129,236 +126,237 @@ const QualityCertification = ({ user }) => {
   ];
 
   return (
-    <div className="page-container">
-      <div className="page-header">
-        <div>
-          <h1>Quality Certification</h1>
-          <p>Review and certify coffee quality for exports</p>
-        </div>
-      </div>
+    <Box sx={{ p: 3 }}>
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={9}>
+          <Typography variant="h4">Quality Certification</Typography>
+          <Typography variant="subtitle1" sx={{ mb: 3 }}>Review and certify coffee quality for exports</Typography>
 
-      <Card className="filter-card">
-        <div className="filter-bar">
-          <div className="search-box">
-            <Search size={20} />
-            <input 
-              type="text" 
-              placeholder="Search exports..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <div className="filter-buttons">
-            <select 
-              value={statusFilter} 
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="filter-select"
-            >
-              <option value="all">All Status</option>
-              <option value="pending">Pending Review</option>
-              <option value="certified">Certified</option>
-              <option value="rejected">Rejected</option>
-            </select>
-          </div>
-        </div>
-      </Card>
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Grid container spacing={2} alignItems="center">
+                <Grid item xs={6}>
+                  <TextField
+                    fullWidth
+                    placeholder="Search exports..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Search size={20} />
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={6}>
+                  <Select
+                    fullWidth
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                  >
+                    <MenuItem value="all">All Status</MenuItem>
+                    <MenuItem value="pending">Pending Review</MenuItem>
+                    <MenuItem value="certified">Certified</MenuItem>
+                    <MenuItem value="rejected">Rejected</MenuItem>
+                  </Select>
+                </Grid>
+              </Grid>
+            </CardContent>
+          </Card>
 
-      <div className="stats-row">
-        <Card variant="elevated" className="stat-mini">
-          <div className="stat-mini-content">
-            <div className="stat-mini-value">
-              {exports.filter(e => e.status === 'FX_APPROVED').length}
-            </div>
-            <div className="stat-mini-label">Pending Review</div>
-          </div>
-        </Card>
-        <Card variant="elevated" className="stat-mini">
-          <div className="stat-mini-content">
-            <div className="stat-mini-value">
-              {exports.filter(e => e.status === 'QUALITY_CERTIFIED').length}
-            </div>
-            <div className="stat-mini-label">Certified</div>
-          </div>
-        </Card>
-        <Card variant="elevated" className="stat-mini">
-          <div className="stat-mini-content">
-            <div className="stat-mini-value">
-              {exports.filter(e => e.status === 'QUALITY_REJECTED').length}
-            </div>
-            <div className="stat-mini-label">Rejected</div>
-          </div>
-        </Card>
-      </div>
+          <Grid container spacing={2} sx={{ mb: 3 }}>
+            <Grid item xs={4}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6">{exports.filter(e => e.status === 'FX_APPROVED').length}</Typography>
+                  <Typography variant="body2">Pending Review</Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={4}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6">{exports.filter(e => e.status === 'QUALITY_CERTIFIED').length}</Typography>
+                  <Typography variant="body2">Certified</Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={4}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6">{exports.filter(e => e.status === 'QUALITY_REJECTED').length}</Typography>
+                  <Typography variant="body2">Rejected</Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
 
-      <div className="table-card">
-        <Card title="Export Records" icon={<Award size={20} />}>
-          <div className="table-container">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Export ID</th>
-                  <th>Exporter</th>
-                  <th>Coffee Type</th>
-                  <th>Quantity (kg)</th>
-                  <th>Status</th>
-                  <th>Date</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredExports.map(exp => (
-                  <tr key={exp.exportId}>
-                    <td className="font-mono">{exp.exportId}</td>
-                    <td>{exp.exporterName}</td>
-                    <td>{exp.coffeeType}</td>
-                    <td>{exp.quantity.toLocaleString()}</td>
-                    <td>
-                      <span className={`status-badge ${getStatusClass(exp.status)}`}>
-                        {exp.status.replace(/_/g, ' ')}
-                      </span>
-                    </td>
-                    <td>{new Date(exp.createdAt).toLocaleDateString()}</td>
-                    <td>
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        {exp.status === 'FX_APPROVED' && (
-                          <>
-                            <Button 
-                              variant="success" 
-                              size="small"
-                              icon={<CheckCircle size={16} />}
-                              onClick={() => handleCertify(exp)}
-                            >
-                              Certify
-                            </Button>
-                            <Button 
-                              variant="danger" 
-                              size="small"
-                              icon={<XCircle size={16} />}
-                              onClick={() => handleReject(exp)}
-                            >
-                              Reject
-                            </Button>
-                          </>
-                        )}
-                        {exp.status !== 'FX_APPROVED' && (
-                          <Button variant="ghost" size="small">View</Button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {filteredExports.length === 0 && (
-              <div className="empty-state">
-                <Award size={48} style={{ opacity: 0.3 }} />
-                <p>No exports found</p>
-              </div>
-            )}
-          </div>
-        </Card>
-      </div>
-
-      {isModalOpen && (
-        <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>
-                {modalType === 'certify' ? 'Issue Quality Certificate' : 'Reject Quality'}
-              </h2>
-              <button className="modal-close" onClick={() => setIsModalOpen(false)}>×</button>
-            </div>
-            
-            <div className="modal-body">
-              <div className="detail-item">
-                <span className="detail-label">Export ID</span>
-                <span className="detail-value font-mono">{selectedExport?.exportId}</span>
-              </div>
-              <div className="detail-item">
-                <span className="detail-label">Exporter</span>
-                <span className="detail-value">{selectedExport?.exporterName}</span>
-              </div>
-              <div className="detail-item">
-                <span className="detail-label">Coffee Type</span>
-                <span className="detail-value">{selectedExport?.coffeeType}</span>
-              </div>
-              <div className="detail-item">
-                <span className="detail-label">Quantity</span>
-                <span className="detail-value">{selectedExport?.quantity.toLocaleString()} kg</span>
-              </div>
-
-              <hr style={{ margin: '1.5rem 0', border: 'none', borderTop: '1px solid var(--color-border)' }} />
-
-              {modalType === 'certify' ? (
-                <>
-                  <div className="form-group">
-                    <label>Quality Grade *</label>
-                    <select
-                      value={formData.qualityGrade}
-                      onChange={(e) => setFormData({ ...formData, qualityGrade: e.target.value })}
-                      required
-                    >
-                      <option value="">Select Grade</option>
-                      {qualityGrades.map(grade => (
-                        <option key={grade} value={grade}>{grade}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>Certified By *</label>
-                    <input
-                      type="text"
-                      value={formData.certifiedBy}
-                      onChange={(e) => setFormData({ ...formData, certifiedBy: e.target.value })}
-                      required
-                    />
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="form-group">
-                    <label>Rejection Reason *</label>
-                    <textarea
-                      value={formData.rejectionReason}
-                      onChange={(e) => setFormData({ ...formData, rejectionReason: e.target.value })}
-                      rows="4"
-                      placeholder="Provide detailed reason for rejection..."
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Rejected By *</label>
-                    <input
-                      type="text"
-                      value={formData.certifiedBy}
-                      onChange={(e) => setFormData({ ...formData, certifiedBy: e.target.value })}
-                      required
-                    />
-                  </div>
-                </>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" sx={{ mb: 2 }}>Export Records</Typography>
+              <TableContainer component={Paper}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Export ID</TableCell>
+                      <TableCell>Exporter</TableCell>
+                      <TableCell>Coffee Type</TableCell>
+                      <TableCell>Quantity (kg)</TableCell>
+                      <TableCell>Status</TableCell>
+                      <TableCell>Date</TableCell>
+                      <TableCell>Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {filteredExports.map(exp => (
+                      <TableRow key={exp.exportId}>
+                        <TableCell>{exp.exportId}</TableCell>
+                        <TableCell>{exp.exporterName}</TableCell>
+                        <TableCell>{exp.coffeeType}</TableCell>
+                        <TableCell>{exp.quantity.toLocaleString()}</TableCell>
+                        <TableCell>
+                          <Chip 
+                            label={exp.status.replace(/_/g, ' ')} 
+                            color={getStatusColor(exp.status)}
+                          />
+                        </TableCell>
+                        <TableCell>{new Date(exp.createdAt).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          {exp.status === 'FX_APPROVED' ? (
+                            <Grid container spacing={1}>
+                              <Grid item>
+                                <Button variant="contained" color="success" size="small" startIcon={<CheckCircle />} onClick={() => handleCertify(exp)}>
+                                  Certify
+                                </Button>
+                              </Grid>
+                              <Grid item>
+                                <Button variant="contained" color="error" size="small" startIcon={<XCircle />} onClick={() => handleReject(exp)}>
+                                  Reject
+                                </Button>
+                              </Grid>
+                            </Grid>
+                          ) : (
+                            <Button variant="outlined" size="small">View</Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              {filteredExports.length === 0 && (
+                <Box sx={{ textAlign: 'center', p: 3 }}>
+                  <Award size={48} color="action.disabled" />
+                  <Typography>No exports found</Typography>
+                </Box>
               )}
-            </div>
+            </CardContent>
+          </Card>
+        </Grid>
 
-            <div className="modal-actions">
-              <Button variant="outline" onClick={() => setIsModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button 
-                variant={modalType === 'certify' ? 'success' : 'danger'}
-                onClick={handleSubmit}
-                disabled={
-                  modalType === 'certify' 
-                    ? !formData.qualityGrade || !formData.certifiedBy
-                    : !formData.rejectionReason || !formData.certifiedBy
-                }
-              >
-                {modalType === 'certify' ? 'Issue Certificate' : 'Reject Quality'}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+        <Grid item xs={12} md={3}>
+          <Card sx={{ height: '100%' }}>
+            <CardContent>
+              <Typography variant="h6" sx={{ mb: 2 }}>Actions</Typography>
+              <Stack spacing={2}>
+                <Button variant="contained">Issue Certificate</Button>
+                <Button variant="outlined">Generate Report</Button>
+                <Button variant="outlined">View Pending Reviews</Button>
+              </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      <Dialog open={isModalOpen} onClose={() => setIsModalOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>{modalType === 'certify' ? 'Issue Quality Certificate' : 'Reject Quality'}</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12}>
+              <Typography variant="body1"><strong>Export ID:</strong> {selectedExport?.exportId}</Typography>
+            </Grid>
+            <Grid item xs={12}>
+              <Typography variant="body1"><strong>Exporter:</strong> {selectedExport?.exporterName}</Typography>
+            </Grid>
+            <Grid item xs={12}>
+              <Typography variant="body1"><strong>Coffee Type:</strong> {selectedExport?.coffeeType}</Typography>
+            </Grid>
+            <Grid item xs={12}>
+              <Typography variant="body1"><strong>Quantity:</strong> {selectedExport?.quantity.toLocaleString()} kg</Typography>
+            </Grid>
+            <Grid item xs={12}><Divider sx={{ my: 2 }} /></Grid>
+            {modalType === 'certify' ? (
+              <>
+                <Grid item xs={12}>
+                  <Select
+                    fullWidth
+                    label="Quality Grade"
+                    value={formData.qualityGrade}
+                    onChange={(e) => setFormData({ ...formData, qualityGrade: e.target.value })}
+                    required
+                  >
+                    <MenuItem value="">Select Grade</MenuItem>
+                    {qualityGrades.map(grade => (
+                      <MenuItem key={grade} value={grade}>{grade}</MenuItem>
+                    ))}
+                  </Select>
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Certified By"
+                    value={formData.certifiedBy}
+                    onChange={(e) => setFormData({ ...formData, certifiedBy: e.target.value })}
+                    required
+                  />
+                </Grid>
+              </>
+            ) : (
+              <>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    multiline
+                    rows={4}
+                    label="Rejection Reason"
+                    value={formData.rejectionReason}
+                    onChange={(e) => setFormData({ ...formData, rejectionReason: e.target.value })}
+                    placeholder="Provide detailed reason for rejection..."
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Rejected By"
+                    value={formData.certifiedBy}
+                    onChange={(e) => setFormData({ ...formData, certifiedBy: e.target.value })}
+                    required
+                  />
+                </Grid>
+              </>
+            )}
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIsModalOpen(false)}>Cancel</Button>
+          <Button 
+            onClick={handleSubmit} 
+            variant="contained" 
+            color={modalType === 'certify' ? 'success' : 'error'}
+            disabled={
+              modalType === 'certify' 
+                ? !formData.qualityGrade || !formData.certifiedBy
+                : !formData.rejectionReason || !formData.certifiedBy
+            }
+          >
+            {modalType === 'certify' ? 'Issue Certificate' : 'Reject Quality'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
   );
 };
 

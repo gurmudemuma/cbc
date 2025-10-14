@@ -16,7 +16,7 @@ const Layout = ({ user, onLogout }) => {
   ]
 
   const filteredNavigation = navigation.filter(item => 
-    item.roles.includes('all') || item.roles.includes(user?.organization?.toLowerCase())
+    item.roles.includes('all') || item.roles.includes(user?.role?.toLowerCase())
   )
 
   const isActive = (path) => location.pathname === path
@@ -46,7 +46,7 @@ const Layout = ({ user, onLogout }) => {
               </div>
               <div className="user-details">
                 <div className="user-name">{user?.username}</div>
-                <div className="user-org">{user?.organization}</div>
+                <div className="user-org">{user?.organizationId || user?.role}</div>
               </div>
             </div>
             <button className="logout-btn" onClick={onLogout}>

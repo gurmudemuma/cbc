@@ -1,185 +1,580 @@
-# ⚡ Quick Start Guide
+# Quick Start Guide
 
-## Coffee Export Consortium Blockchain
-
-**Get the system running in 5 minutes!**
+Get the Coffee Blockchain Consortium up and running in minutes.
 
 ---
 
-## 🚀 One-Command Startup (Recommended)
+## Prerequisites
 
-### Prerequisites
-- Docker, Node.js 16+, Go 1.19+, Fabric binaries installed
+### Required Software
 
-### Start Everything
+- **Docker** 20.10+ and Docker Compose
+- **Node.js** 16+ and npm
+- **Go** 1.19+ (for chaincode)
+- **Git**
+- **curl** (for testing)
+
+### System Requirements
+
+- **OS:** Linux (Ubuntu 20.04+), macOS, or Windows with WSL2
+- **RAM:** 8GB minimum, 16GB recommended
+- **Disk:** 20GB free space
+- **CPU:** 4 cores recommended
+
+### Check Prerequisites
 
 ```bash
-# Terminal 1: Start Blockchain
-cd /home/gu-da/CBC/network
-./network.sh up && ./network.sh createChannel && ./network.sh deployCC
+# Check Docker
+docker --version
+docker-compose --version
 
-# Terminal 2: Start Exporter Bank API
-cd /home/gu-da/CBC/api/exporter-bank && npm install && npm run dev
+# Check Node.js
+node --version
+npm --version
 
-# Terminal 3: Start National Bank API
-cd /home/gu-da/CBC/api/national-bank && npm install && npm run dev
+# Check Go
+go version
 
-# Terminal 4: Start NCAT API
-cd /home/gu-da/CBC/api/ncat && npm install && npm run dev
-
-# Terminal 5: Start Shipping Line API
-cd /home/gu-da/CBC/api/shipping-line && npm install && npm run dev
-
-# Terminal 6: Start Frontend
-cd /home/gu-da/CBC/frontend && npm install && npm run dev
+# Check available ports
+./scripts/validate-config.sh
 ```
 
 ---
 
-## 🎯 Access the Application
+## Quick Start (5 Minutes)
 
-Open browser: **http://localhost:5173**
-
----
-
-## 👥 Test Users
-
-Create users with these commands:
+### 1. Clone and Setup
 
 ```bash
-# Exporter Bank User
-curl -X POST http://localhost:3001/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"username":"exporter1","password":"password123","email":"exporter1@bank.com"}'
+# Clone repository
+git clone <repository-url>
+cd cbc
 
-# National Bank User
-curl -X POST http://localhost:3002/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"username":"banker1","password":"password123","email":"banker1@nationalbank.com"}'
+# Install dependencies
+npm install
+cd api && npm install
+cd exporter-bank && npm install && cd ..
+cd national-bank && npm install && cd ..
+cd ncat && npm install && cd ..
+cd shipping-line && npm install && cd ..
+cd ../..
 
-# NCAT User
-curl -X POST http://localhost:3003/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"username":"inspector1","password":"password123","email":"inspector1@ncat.gov"}'
-
-# Shipping Line User
-curl -X POST http://localhost:3004/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"username":"shipper1","password":"password123","email":"shipper1@shipping.com"}'
+# Install frontend dependencies
+cd frontend && npm install && cd ..
 ```
 
----
-
-## 🧪 Test Workflow
-
-### 1. Create Export (Exporter Bank)
-- Login: Organization=**Exporter Bank**, User=`exporter1`, Pass=`password123`
-- Go to **Export Management** → **Create Export**
-- Fill form and submit
-
-### 2. Approve FX (National Bank)
-- Logout and login: Organization=**National Bank**, User=`banker1`
-- Go to **FX Approval** → Find export → **Approve**
-
-### 3. Certify Quality (NCAT)
-- Logout and login: Organization=**NCAT**, User=`inspector1`
-- Go to **Quality Certification** → Find export → **Certify**
-
-### 4. Schedule Shipment (Shipping Line)
-- Logout and login: Organization=**Shipping Line**, User=`shipper1`
-- Go to **Shipment Tracking** → Find export → **Schedule**
-
-### 5. Confirm Shipment (Shipping Line)
-- Find scheduled export → **Confirm**
-
-### 6. Complete Export (Exporter Bank)
-- Logout and login: Organization=**Exporter Bank**, User=`exporter1`
-- Go to **Export Management** → Click export → **Complete Export**
-
----
-
-## 🛑 Stop Everything
+### 2. Configure Environment
 
 ```bash
-# Stop Frontend & APIs: Press Ctrl+C in each terminal
+# Copy environment templates
+cp .env.example .env
+cp api/exporter-bank/.env.example api/exporter-bank/.env
+cp api/national-bank/.env.example api/national-bank/.env
+cp api/ncat/.env.example api/ncat/.env
+cp api/shipping-line/.env.example api/shipping-line/.env
+cp frontend/.env.example frontend/.env
 
-# Stop Blockchain
-cd /home/gu-da/CBC/network
-./network.sh down
+# Update JWT secrets (IMPORTANT!)
+# Edit each .env file and change JWT_SECRET to a unique random string
 ```
 
----
-
-## 🔍 Verify System
+### 3. Start the System
 
 ```bash
-# Check blockchain
-docker ps
+# Start everything with one command
+./start-system.sh
+```
 
-# Check APIs
+This script will:
+- ✅ Start the blockchain network
+- ✅ Create the channel
+- ✅ Deploy chaincode
+- ✅ Start all API services
+- ✅ Start the frontend
+- ✅ Register test users
+
+### 4. Verify Installation
+
+```bash
+# Check all services are healthy
+./scripts/check-health.sh
+
+# Expected output:
+# ✅ Exporter Bank API (port 3001) is healthy
+# ✅ National Bank API (port 3002) is healthy
+# ✅ NCAT API (port 3003) is healthy
+# ✅ Shipping Line API (port 3004) is healthy
+```
+
+### 5. Access the Application
+
+Open your browser:
+- **Frontend:** http://localhost:5173
+- **Exporter Bank API:** http://localhost:3001
+- **National Bank API:** http://localhost:3002
+- **NCAT API:** http://localhost:3003
+- **Shipping Line API:** http://localhost:3004
+
+**Test Credentials:**
+- Username: `exporter1` / Password: `SecurePass123!@#`
+- Username: `banker1` / Password: `SecurePass123!@#`
+- Username: `inspector1` / Password: `SecurePass123!@#`
+- Username: `shipper1` / Password: `SecurePass123!@#`
+
+---
+
+## Manual Step-by-Step Setup
+
+If the automated script doesn't work, follow these manual steps:
+
+### Step 1: Start Blockchain Network
+
+```bash
+cd network
+
+# Generate crypto material
+./network.sh up createChannel -c coffeechannel
+
+# This will:
+# - Generate certificates for all organizations
+# - Start Docker containers
+# - Create the channel
+# - Join all peers to the channel
+```
+
+**Verify:**
+```bash
+docker ps | grep hyperledger
+# Should show orderer and 4 peer containers running
+```
+
+### Step 2: Deploy Chaincode
+
+```bash
+# Deploy user management chaincode
+./network.sh deployCC -ccn user-management -ccp ../chaincode/user-management -ccl go
+
+# Deploy coffee export chaincode
+./network.sh deployCC -ccn coffee-export -ccp ../chaincode/coffee-export -ccl go
+```
+
+**Verify:**
+```bash
+docker exec peer0.exporterbank.coffee-export.com peer lifecycle chaincode queryinstalled
+# Should show both chaincodes installed
+```
+
+### Step 3: Start IPFS (Optional but Recommended)
+
+```bash
+# Install IPFS
+cd go-ipfs
+./install.sh
+
+# Start IPFS daemon
+ipfs daemon &
+
+# Verify
+curl http://localhost:5001/api/v0/version
+```
+
+### Step 4: Start API Services
+
+```bash
+cd api
+
+# Option A: Start all services with tmux (recommended for development)
+../scripts/dev-apis.sh
+
+# Option B: Start services individually
+cd exporter-bank && npm run dev &
+cd ../national-bank && npm run dev &
+cd ../ncat && npm run dev &
+cd ../shipping-line && npm run dev &
+```
+
+**Verify:**
+```bash
+# Check health endpoints
 curl http://localhost:3001/health
 curl http://localhost:3002/health
 curl http://localhost:3003/health
 curl http://localhost:3004/health
 ```
 
----
+### Step 5: Register Test Users
 
-## 📊 System Ports
-
-| Service | Port |
-|---------|------|
-| Frontend | 5173 |
-| Exporter Bank API | 3001 |
-| National Bank API | 3002 |
-| NCAT API | 3003 |
-| Shipping Line API | 3004 |
-
----
-
-## 🐛 Quick Troubleshooting
-
-**Port in use?**
 ```bash
-lsof -i :3001  # Find process
-kill -9 <PID>  # Kill it
+./scripts/register-test-users.sh
 ```
 
-**Network issues?**
+This creates test users for each organization.
+
+### Step 6: Start Frontend
+
 ```bash
-cd /home/gu-da/CBC/network
-./network.sh down
+cd frontend
+npm run dev
+```
+
+Access at: http://localhost:5173
+
+---
+
+## Platform-Specific Instructions
+
+### Linux (Ubuntu/Debian)
+
+```bash
+# Install Docker
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+sudo usermod -aG docker $USER
+newgrp docker
+
+# Install Node.js
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# Install Go
+wget https://go.dev/dl/go1.19.linux-amd64.tar.gz
+sudo tar -C /usr/local -xzf go1.19.linux-amd64.tar.gz
+echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.bashrc
+source ~/.bashrc
+```
+
+### macOS
+
+```bash
+# Install Homebrew (if not installed)
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# Install Docker Desktop
+brew install --cask docker
+
+# Install Node.js
+brew install node
+
+# Install Go
+brew install go
+```
+
+### Windows (with Git Bash)
+
+This guide is optimized for running the Coffee Blockchain Consortium on Windows with Git Bash.
+
+#### Prerequisites
+- ✅ Docker Desktop running
+- ✅ Node.js installed
+- ✅ Go installed
+- ✅ Fabric binaries installed (already done)
+
+#### Step-by-Step Startup
+
+##### Step 1: Start Blockchain Network
+```bash
+cd network
 ./network.sh up
 ```
 
-**Frontend not loading?**
+Wait for output showing all containers are created (~2-3 minutes).
+
+##### Step 2: Create Channel
+```bash
+./network.sh createChannel
+```
+
+##### Step 3: Deploy Chaincode
+```bash
+# Deploy coffee-export chaincode
+./network.sh deployCC -ccn coffee-export -ccp ../chaincode/coffee-export -ccl golang
+
+# Deploy user-management chaincode (optional)
+./network.sh deployCC -ccn user-management -ccp ../chaincode/user-management -ccl golang
+```
+
+This will take ~5-10 minutes for each chaincode.
+
+##### Step 4: Verify Network
+```bash
+docker ps
+```
+
+You should see 5+ containers running:
+- orderer.coffee-export.com
+- peer0.exporterbank.coffee-export.com
+- peer0.nationalbank.coffee-export.com
+- peer0.ncat.coffee-export.com
+- peer0.shippingline.coffee-export.com
+- cli
+
+##### Step 5: Start APIs (in separate terminals)
+
+**Terminal 2 - Exporter Bank API:**
+```bash
+cd api/exporter-bank
+npm install  # First time only
+npm run dev
+```
+
+**Terminal 3 - National Bank API:**
+```bash
+cd api/national-bank
+npm install  # First time only
+npm run dev
+```
+
+**Terminal 4 - NCAT API:**
+```bash
+cd api/ncat
+npm install  # First time only
+npm run dev
+```
+
+**Terminal 5 - Shipping Line API:**
+```bash
+cd api/shipping-line
+npm install  # First time only
+npm run dev
+```
+
+##### Step 6: Start Frontend
+
+**Terminal 6 - Frontend:**
+```bash
+cd frontend
+npm install  # First time only
+npm run dev
+```
+
+#### Access the System
+
+- Frontend: http://localhost:5173
+- Exporter Bank API: http://localhost:3001
+- National Bank API: http://localhost:3002
+- NCAT API: http://localhost:3003
+- Shipping Line API: http://localhost:3004
+
+#### Troubleshooting
+
+##### Port Already in Use
+```bash
+# Kill node processes
+taskkill /F /IM node.exe
+```
+
+##### Network Won't Start
+```bash
+cd network
+./network.sh down
+docker system prune -f
+./network.sh up
+```
+
+##### Check Docker Logs
+```bash
+docker logs orderer.coffee-export.com
+docker logs peer0.exporterbank.coffee-export.com
+```
+
+#### Stopping the System
+
+1. Press Ctrl+C in each terminal running APIs and frontend
+2. Stop blockchain:
+```bash
+cd network
+./network.sh down
+```
+
+#### Quick Restart (After First Setup)
+
+If everything is already installed and you just want to restart:
+
+```bash
+# Terminal 1
+cd network && ./network.sh up
+
+# Terminal 2-5: Start APIs (in separate terminals)
+cd api/exporter-bank && npm run dev
+cd api/national-bank && npm run dev
+cd api/ncat && npm run dev
+cd api/shipping-line && npm run dev
+
+# Terminal 6: Start frontend
+cd frontend && npm run dev
+```
+
+#### Notes
+
+- IPFS is optional and not required for basic functionality
+- The automated `start-system.sh` script is Linux-optimized and may not work properly on Windows
+- Use this manual process for more control and better Windows compatibility
+
+---
+
+## System Architecture
+
+```
+┌────────────────────────────────────────────────────────────┐
+│                     Frontend (Port 5173)                   │
+│                    React + Vite Application                │
+└────────────────────────┬───────────────────────────────────┘
+                         │
+         ┌───────���───────┴───────────────┐
+         │                               │
+┌────────▼────────┐              ┌──────▼──────────┐
+│  API Services   │              │  API Services   │
+├─────────────────┤              ├─────────────────┤
+│ Exporter Bank   │              │ National Bank   │
+│   (Port 3001)   │              │   (Port 3002)   │
+├─────────────────┤              ├─────────────────┤
+│      NCAT       │              │ Shipping Line   │
+│   (Port 3003)   │              │   (Port 3004)   │
+└────────┬────────┘              └────────┬────────┘
+         │                                │
+         └────────────┬───────────────────┘
+                      │
+         ┌────────────▼────────────┐
+         │  Hyperledger Fabric     │
+         │  Blockchain Network     │
+         ├────────────���────────────┤
+         │ • 1 Orderer Node        │
+         │ • 4 Peer Nodes          │
+         │ • 4 CouchDB Instances   │
+         │ • 2 Chaincodes          │
+         │   - coffee-export       │
+         │   - user-management     │
+         └─────────────────────────┘
+```
+
+---
+
+## Port Reference
+
+| Service | Port | URL |
+|---------|------|-----|
+| Frontend | 5173 | http://localhost:5173 |
+| Exporter Bank API | 3001 | http://localhost:3001 |
+| National Bank API | 3002 | http://localhost:3002 |
+| NCAT API | 3003 | http://localhost:3003 |
+| Shipping Line API | 3004 | http://localhost:3004 |
+| Orderer | 7050 | - |
+| Peer 0 (Exporter Bank) | 7051 | - |
+| Peer 0 (National Bank) | 8051 | - |
+| Peer 0 (NCAT) | 9051 | - |
+| Peer 0 (Shipping Line) | 10051 | - |
+
+---
+
+## Startup Checklist
+
+Use this checklist to ensure everything is running:
+
+- [ ] Docker daemon is running
+- [ ] Fabric network is up (5+ containers)
+- [ ] Coffee-export chaincode deployed
+- [ ] User-management chaincode deployed
+- [ ] Exporter Bank API running (port 3001)
+- [ ] National Bank API running (port 3002)
+- [ ] NCAT API running (port 3003)
+- [ ] Shipping Line API running (port 3004)
+- [ ] Frontend running (port 5173)
+- [ ] Can access frontend in browser
+- [ ] Can login with test credentials
+- [ ] Can create test export
+
+---
+
+## Common Issues & Solutions
+
+### Port Already in Use
+
+```bash
+# Check what's using the port
+lsof -i :3001
+
+# Kill the process
+kill $(lsof -t -i:3001)
+```
+
+### Docker Containers Not Starting
+
+```bash
+# Check Docker daemon
+sudo systemctl status docker
+
+# Restart Docker
+sudo systemctl restart docker
+
+# Check logs
+docker logs <container_name>
+```
+
+### Chaincode Deployment Failed
+
+```bash
+cd /home/gu-da/CBC/network
+./network.sh down
+./network.sh up createChannel -c mychannel -ca
+./network.sh deployCC -ccn coffee-export -ccp ../chaincode/coffee-export -ccl go
+```
+
+### API Cannot Connect to Fabric
+
+```bash
+# Check connection profile
+ls -la /home/gu-da/CBC/network/organizations/peerOrganizations/
+
+# Verify environment variables
+cd /home/gu-da/CBC/api/exporter-bank
+cat .env | grep FABRIC
+```
+
+### Frontend Build Errors
+
 ```bash
 cd /home/gu-da/CBC/frontend
-rm -rf node_modules
+rm -rf node_modules package-lock.json
 npm install
 npm run dev
 ```
 
 ---
 
-## 📚 Full Documentation
+## Stopping the System
 
-- **COMPLETE_SYSTEM_GUIDE.md** - Detailed startup guide
-- **FRONTEND_COMPLETE.md** - Frontend documentation
-- **ARCHITECTURE.md** - System architecture
-- **README.md** - Project overview
+### Stop All Services
+
+```bash
+# Stop API services
+./scripts/stop-apis.sh
+
+# Stop blockchain network
+cd network
+./network.sh down
+
+# Stop IPFS
+pkill ipfs
+
+# Stop frontend
+# Press Ctrl+C in the terminal running the frontend
+```
+
+### Clean Everything
+
+```bash
+# Remove all containers, volumes, and generated files
+./scripts/clean.sh
+
+# This will:
+# - Stop all Docker containers
+# - Remove volumes
+# - Clean up generated crypto material
+# - Remove wallet files
+# - Clear logs
+```
 
 ---
 
-## ✅ Success Checklist
+For detailed information, see README.md or other documentation files.
 
-- [ ] 5 Docker containers running
-- [ ] 4 API services responding
-- [ ] Frontend loads at localhost:5173
-- [ ] Can login with test users
-- [ ] Can create an export
-- [ ] Can complete full workflow
-
----
-
-**🎉 You're ready to go! Happy exporting! ☕️**
