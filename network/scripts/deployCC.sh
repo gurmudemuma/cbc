@@ -2,6 +2,31 @@
 
 source scripts/envVar.sh
 
+# Find peer command (Windows/Linux compatible)
+PEER_CMD=""
+if command -v peer.exe &> /dev/null; then
+  PEER_CMD="peer.exe"
+elif command -v peer &> /dev/null; then
+  PEER_CMD="peer"
+else
+  # Try direct path as fallback
+  if [ -x "${PWD}/../bin/peer.exe" ]; then
+    PEER_CMD="${PWD}/../bin/peer.exe"
+  elif [ -x "${PWD}/../bin/peer" ]; then
+    PEER_CMD="${PWD}/../bin/peer"
+  fi
+fi
+
+if [ -z "$PEER_CMD" ]; then
+  echo "ERROR: peer tool not found."
+  exit 1
+fi
+
+# Create peer function alias
+peer() {
+  $PEER_CMD "$@"
+}
+
 CHANNEL_NAME=${1:-"coffeechannel"}
 CC_NAME=${2:-"coffee-export"}
 CC_SRC_PATH=${3:-"../chaincode/coffee-export"}
@@ -122,25 +147,56 @@ checkCommitReadiness() {
 
 # commitChaincodeDefinition VERSION PEER ORG (PEER ORG)...
 commitChaincodeDefinition() {
-  parsePeerConnectionParameters $@
-  res=$?
-  verifyResult $res "Invoke transaction failed on channel '$CHANNEL_NAME' due to uneven number of peer and org parameters"
-
-  # while 'peer chaincode' command can get the orderer endpoint from the
-  # peer (if join was successful), let's supply it directly as we know
-  # it using the "-o" option
+  # Run commit from inside Docker CLI container where internal DNS works
+  # This avoids TLS hostname override issues with multiple peers
+  # Don't call parsePeerConnectionParameters - it pollutes environment with Windows paths
+  infoln "Committing chaincode definition from Docker CLI container..."
+  
   set -x
-
+  # Run the commit command inside the Docker CLI container
+  # Use setGlobalsCLI approach - run the script from inside Docker
   if [ "$CC_END_POLICY" = "NA" ]; then
-    peer lifecycle chaincode commit -o localhost:7050 --ordererTLSHostnameOverride orderer.coffee-export.com --tls --cafile "$ORDERER_CA" --channelID $CHANNEL_NAME --name ${CC_NAME} "${PEER_CONN_PARMS[@]}" --version ${CC_VERSION} --sequence ${CC_SEQUENCE} >&log.txt
+    MSYS_NO_PATHCONV=1 docker exec cli bash -c "
+      cd /opt/gopath/src/github.com/hyperledger/fabric/peer &&
+      . ./scripts/envVar.sh &&
+      setGlobalsCLI 1 &&
+      peer lifecycle chaincode commit \
+        -o orderer.coffee-export.com:7050 --ordererTLSHostnameOverride orderer.coffee-export.com \
+        --tls --cafile \$ORDERER_CA \
+        --channelID $CHANNEL_NAME --name ${CC_NAME} \
+        --peerAddresses peer0.exporterbank.coffee-export.com:7051 \
+        --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/exporterbank.coffee-export.com/peers/peer0.exporterbank.coffee-export.com/tls/ca.crt \
+        --peerAddresses peer0.nationalbank.coffee-export.com:8051 \
+        --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/nationalbank.coffee-export.com/peers/peer0.nationalbank.coffee-export.com/tls/ca.crt \
+        --peerAddresses peer0.ncat.coffee-export.com:9051 \
+        --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/ncat.coffee-export.com/peers/peer0.ncat.coffee-export.com/tls/ca.crt \
+        --peerAddresses peer0.shippingline.coffee-export.com:10051 \
+        --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/shippingline.coffee-export.com/peers/peer0.shippingline.coffee-export.com/tls/ca.crt \
+        --version ${CC_VERSION} --sequence ${CC_SEQUENCE}" >&log.txt
   else
-    peer lifecycle chaincode commit -o localhost:7050 --ordererTLSHostnameOverride orderer.coffee-export.com --tls --cafile "$ORDERER_CA" --channelID $CHANNEL_NAME --name ${CC_NAME} "${PEER_CONN_PARMS[@]}" --version ${CC_VERSION} --sequence ${CC_SEQUENCE} --signature-policy "$CC_END_POLICY" >&log.txt
+    MSYS_NO_PATHCONV=1 docker exec cli bash -c "
+      cd /opt/gopath/src/github.com/hyperledger/fabric/peer &&
+      . ./scripts/envVar.sh &&
+      setGlobalsCLI 1 &&
+      peer lifecycle chaincode commit \
+        -o orderer.coffee-export.com:7050 --ordererTLSHostnameOverride orderer.coffee-export.com \
+        --tls --cafile \$ORDERER_CA \
+        --channelID $CHANNEL_NAME --name ${CC_NAME} \
+        --peerAddresses peer0.exporterbank.coffee-export.com:7051 \
+        --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/exporterbank.coffee-export.com/peers/peer0.exporterbank.coffee-export.com/tls/ca.crt \
+        --peerAddresses peer0.nationalbank.coffee-export.com:8051 \
+        --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/nationalbank.coffee-export.com/peers/peer0.nationalbank.coffee-export.com/tls/ca.crt \
+        --peerAddresses peer0.ncat.coffee-export.com:9051 \
+        --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/ncat.coffee-export.com/peers/peer0.ncat.coffee-export.com/tls/ca.crt \
+        --peerAddresses peer0.shippingline.coffee-export.com:10051 \
+        --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/shippingline.coffee-export.com/peers/peer0.shippingline.coffee-export.com/tls/ca.crt \
+        --version ${CC_VERSION} --sequence ${CC_SEQUENCE} --signature-policy '$CC_END_POLICY'" >&log.txt
   fi
 
   res=$?
   { set +x; } 2>/dev/null
   cat log.txt
-  verifyResult $res "Chaincode definition commit failed on peer0.org${ORG} on channel '$CHANNEL_NAME' failed"
+  verifyResult $res "Chaincode definition commit failed on channel '$CHANNEL_NAME'"
   successln "Chaincode definition committed on channel '$CHANNEL_NAME'"
 }
 
@@ -175,22 +231,38 @@ queryCommitted() {
 }
 
 chaincodeInvokeInit() {
-  parsePeerConnectionParameters $@
-  res=$?
-  verifyResult $res "Invoke transaction failed on channel '$CHANNEL_NAME' due to uneven number of peer and org parameters"
-
-  # while 'peer chaincode' command can get the orderer endpoint from the
-  # peer (if join was successful), let's supply it directly as we know
-  # it using the "-o" option
+  # Run init from inside Docker CLI container where internal DNS works
+  # Don't call parsePeerConnectionParameters - it pollutes environment with Windows paths
+  infoln "Invoking chaincode init from Docker CLI container..."
+  
   set -x
   fcn_call='{"function":"'${CC_INIT_FCN}'","Args":[]}'
   infoln "invoke fcn call:${fcn_call}"
-  peer chaincode invoke -o localhost:7050 --ordererTLSHostnameOverride orderer.coffee-export.com --tls --cafile "$ORDERER_CA" -C $CHANNEL_NAME -n ${CC_NAME} "${PEER_CONN_PARMS[@]}" --isInit -c ${fcn_call} >&log.txt
+  
+  # Run the init invoke inside the Docker CLI container
+  MSYS_NO_PATHCONV=1 docker exec cli bash -c "
+    cd /opt/gopath/src/github.com/hyperledger/fabric/peer &&
+    . ./scripts/envVar.sh &&
+    setGlobalsCLI 1 &&
+    peer chaincode invoke \
+      -o orderer.coffee-export.com:7050 --ordererTLSHostnameOverride orderer.coffee-export.com \
+      --tls --cafile \$ORDERER_CA \
+      -C $CHANNEL_NAME -n ${CC_NAME} \
+      --peerAddresses peer0.exporterbank.coffee-export.com:7051 \
+      --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/exporterbank.coffee-export.com/peers/peer0.exporterbank.coffee-export.com/tls/ca.crt \
+      --peerAddresses peer0.nationalbank.coffee-export.com:8051 \
+      --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/nationalbank.coffee-export.com/peers/peer0.nationalbank.coffee-export.com/tls/ca.crt \
+      --peerAddresses peer0.ncat.coffee-export.com:9051 \
+      --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/ncat.coffee-export.com/peers/peer0.ncat.coffee-export.com/tls/ca.crt \
+      --peerAddresses peer0.shippingline.coffee-export.com:10051 \
+      --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/shippingline.coffee-export.com/peers/peer0.shippingline.coffee-export.com/tls/ca.crt \
+      --isInit -c '$fcn_call'" >&log.txt
+    
   res=$?
   { set +x; } 2>/dev/null
   cat log.txt
-  verifyResult $res "Invoke execution on $PEERS failed"
-  successln "Invoke transaction successful on $PEERS on channel '$CHANNEL_NAME'"
+  verifyResult $res "Invoke execution failed"
+  successln "Invoke transaction successful on channel '$CHANNEL_NAME'"
 }
 
 chaincodeQuery() {

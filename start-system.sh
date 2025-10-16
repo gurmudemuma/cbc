@@ -630,23 +630,43 @@ echo ""
 
 # Step 15: Start IPFS Daemon
 echo -e "${BLUE}[15/16] Starting IPFS Daemon...${NC}"
-if pgrep -f "ipfs daemon" > /dev/null; then
-    echo -e "${GREEN}✅ IPFS is already running${NC}"
+# Check if IPFS is available
+if ! command -v ipfs &> /dev/null; then
+    echo -e "${YELLOW}⚠️ IPFS not found - skipping IPFS daemon startup${NC}"
+    echo -e "${YELLOW}File storage features will be disabled${NC}"
 else
-    echo -e "${YELLOW}Starting IPFS daemon...${NC}"
-    nohup ipfs daemon > "$PROJECT_ROOT/logs/ipfs.log" 2>&1 &
-    # Wait with polling
-    for i in {1..30}; do
-        if lsof -Pi :5001 -sTCP:LISTEN -t >/dev/null 2>&1; then
-            break
-        fi
-        sleep 1
-    done
+    # Check if IPFS is already running by checking port 5001
     if lsof -Pi :5001 -sTCP:LISTEN -t >/dev/null 2>&1; then
-        echo -e "${GREEN}✅ IPFS daemon started${NC}"
+        echo -e "${GREEN}✅ IPFS is already running${NC}"
     else
-        echo -e "${RED}❌ Failed to start IPFS daemon${NC}"
-        echo -e "${YELLOW}Check $PROJECT_ROOT/logs/ipfs.log for errors${NC}"
+        echo -e "${YELLOW}Starting IPFS daemon...${NC}"
+        # Initialize IPFS if not already done
+        if [ ! -d ~/.ipfs ]; then
+            echo -e "${YELLOW}Initializing IPFS repository...${NC}"
+            ipfs init
+        fi
+        
+        # Create logs directory
+        mkdir -p "$PROJECT_ROOT/logs"
+        
+        # Start IPFS daemon
+        nohup ipfs daemon > "$PROJECT_ROOT/logs/ipfs.log" 2>&1 &
+        
+        # Wait with polling
+        echo -e "${YELLOW}Waiting for IPFS daemon to start...${NC}"
+        for i in {1..30}; do
+            if lsof -Pi :5001 -sTCP:LISTEN -t >/dev/null 2>&1; then
+                break
+            fi
+            sleep 1
+        done
+        
+        if lsof -Pi :5001 -sTCP:LISTEN -t >/dev/null 2>&1; then
+            echo -e "${GREEN}✅ IPFS daemon started${NC}"
+        else
+            echo -e "${RED}❌ Failed to start IPFS daemon${NC}"
+            echo -e "${YELLOW}Check $PROJECT_ROOT/logs/ipfs.log for errors${NC}"
+        fi
     fi
 fi
 echo ""

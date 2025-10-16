@@ -55,20 +55,58 @@ NONWORKING_VERSIONS="^1\.0\. ^1\.1\. ^1\.2\. ^1\.3\. ^1\.4\."
 # Do some basic sanity checking to make sure that the appropriate versions of fabric
 # binaries/images are available
 function checkPrereqs() {
-  ## Check if your have cloned the peer binaries and configuration files.
-  peer version > /dev/null 2>&1
+  ## Check if peer binary is accessible (from PATH or direct path)
+  PEER_WORKS=1
+  PEER_CMD=""
+  
+  # Try to find peer command
+  if command -v peer.exe &> /dev/null; then
+    PEER_CMD="peer.exe"
+    peer.exe version > /dev/null 2>&1
+    PEER_WORKS=$?
+  elif command -v peer &> /dev/null; then
+    PEER_CMD="peer"
+    peer version > /dev/null 2>&1
+    PEER_WORKS=$?
+  else
+    # Try direct paths as fallback
+    BIN_DIR="${PWD}/../bin"
+    if [ -x "$BIN_DIR/peer.exe" ]; then
+      PEER_CMD="$BIN_DIR/peer.exe"
+      "$PEER_CMD" version > /dev/null 2>&1
+      PEER_WORKS=$?
+    elif [ -x "$BIN_DIR/peer" ]; then
+      PEER_CMD="$BIN_DIR/peer"
+      "$PEER_CMD" version > /dev/null 2>&1
+      PEER_WORKS=$?
+    fi
+  fi
 
-  if [[ $? -ne 0 || ! -d "../config" ]]; then
+  if [[ $PEER_WORKS -ne 0 || ! -d "../config" ]]; then
     echo "ERROR! Peer binary and configuration files not found.."
     echo
     echo "Follow the instructions in the Fabric docs to install the Fabric Binaries:"
     echo "https://hyperledger-fabric.readthedocs.io/en/latest/install.html"
+    echo ""
+    echo "Debug info:"
+    echo "  PWD: ${PWD}"
+    echo "  PATH: $PATH"
+    echo "  peer.exe in PATH: $(command -v peer.exe || echo 'not found')"
+    echo "  peer in PATH: $(command -v peer || echo 'not found')"
+    echo "  config exists: $([ -d '../config' ] && echo 'yes' || echo 'no')"
+    if [ -d "${PWD}/../bin" ]; then
+      echo "  Binaries in ../bin:"
+      ls "${PWD}/../bin/" | grep -E "(peer|cryptogen|orderer)" | head -10
+    fi
     exit 1
   fi
+  
+  echo "Using peer command: $PEER_CMD"
+
   # use the fabric tools container to see if the samples and binaries match your
   # docker images
-  LOCAL_VERSION=$(peer version | sed -ne 's/ Version: //p')
-  DOCKER_IMAGE_VERSION=$(docker run --rm hyperledger/fabric-tools:latest peer version | sed -ne 's/ Version: //p' | head -1)
+  LOCAL_VERSION=$($PEER_CMD version 2>&1 | sed -ne 's/ Version: //p')
+  DOCKER_IMAGE_VERSION=$(docker run --rm hyperledger/fabric-tools:latest peer version 2>&1 | sed -ne 's/ Version: //p' | head -1)
 
   echo "LOCAL_VERSION=$LOCAL_VERSION"
   echo "DOCKER_IMAGE_VERSION=$DOCKER_IMAGE_VERSION"
@@ -105,30 +143,48 @@ function createOrgs() {
   fi
 
   # Create crypto material using cryptogen
-  which cryptogen
-  if [ "$?" -ne 0 ]; then
+  # Check for cryptogen binary (from PATH or direct path)
+  CRYPTOGEN_CMD=""
+  
+  if command -v cryptogen.exe &> /dev/null; then
+    CRYPTOGEN_CMD="cryptogen.exe"
+  elif command -v cryptogen &> /dev/null; then
+    CRYPTOGEN_CMD="cryptogen"
+  else
+    # Try direct paths as fallback
+    BIN_DIR="${PWD}/../bin"
+    if [ -x "$BIN_DIR/cryptogen.exe" ]; then
+      CRYPTOGEN_CMD="$BIN_DIR/cryptogen.exe"
+    elif [ -x "$BIN_DIR/cryptogen" ]; then
+      CRYPTOGEN_CMD="$BIN_DIR/cryptogen"
+    fi
+  fi
+  
+  if [ -z "$CRYPTOGEN_CMD" ]; then
     echo "cryptogen tool not found. exiting"
     exit 1
   fi
+  
+  echo "Using cryptogen command: $CRYPTOGEN_CMD"
   
   echo "##########################################################"
   echo "##### Generate certificates using cryptogen tool #########"
   echo "##########################################################"
 
   echo "Creating Exporter Bank Identities"
-  cryptogen generate --config=./organizations/cryptogen/crypto-config-exporterbank.yaml --output="organizations"
+  "$CRYPTOGEN_CMD" generate --config=./organizations/cryptogen/crypto-config-exporterbank.yaml --output="organizations"
 
   echo "Creating National Bank Identities"
-  cryptogen generate --config=./organizations/cryptogen/crypto-config-nationalbank.yaml --output="organizations"
+  "$CRYPTOGEN_CMD" generate --config=./organizations/cryptogen/crypto-config-nationalbank.yaml --output="organizations"
 
   echo "Creating NCAT Identities"
-  cryptogen generate --config=./organizations/cryptogen/crypto-config-ncat.yaml --output="organizations"
+  "$CRYPTOGEN_CMD" generate --config=./organizations/cryptogen/crypto-config-ncat.yaml --output="organizations"
 
   echo "Creating Shipping Line Identities"
-  cryptogen generate --config=./organizations/cryptogen/crypto-config-shippingline.yaml --output="organizations"
+  "$CRYPTOGEN_CMD" generate --config=./organizations/cryptogen/crypto-config-shippingline.yaml --output="organizations"
 
   echo "Creating Orderer Org Identities"
-  cryptogen generate --config=./organizations/cryptogen/crypto-config-orderer.yaml --output="organizations"
+  "$CRYPTOGEN_CMD" generate --config=./organizations/cryptogen/crypto-config-orderer.yaml --output="organizations"
 
   echo "Generating CCP files for organizations"
   ./organizations/ccp-generate.sh
