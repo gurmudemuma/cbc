@@ -2,10 +2,10 @@
   "name": "shipping-line-api",
   "version": "1.0.0",
   "description": "API server for Shipping Line organization",
-  "main": "dist/shipping-line/src/index.js",
+  "main": "dist/src/index.js",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/shipping-line/src/index.js",
+    "start": "node dist/src/index.js",
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "lint": "eslint . --ext .ts",
     "test": "jest"

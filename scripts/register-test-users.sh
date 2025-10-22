@@ -35,17 +35,23 @@ register_user() {
 }
 
 # Register users for each organization
-echo "1️⃣ Registering Exporter Bank User..."
+echo "1️⃣ Registering Exporter Portal User..."
+register_user 3001 "Exporter Portal" "portal1"
+
+echo "2️⃣ Registering Exporter Bank User..."
 register_user 3001 "Exporter Bank" "exporter1"
 
-echo "2️⃣ Registering National Bank User..."
+echo "3️⃣ Registering National Bank User..."
 register_user 3002 "National Bank" "banker1"
 
-echo "3️⃣ Registering NCAT User..."
+echo "4️⃣ Registering NCAT User..."
 register_user 3003 "NCAT" "inspector1"
 
-echo "4️⃣ Registering Shipping Line User..."
+echo "5️⃣ Registering Shipping Line User..."
 register_user 3004 "Shipping Line" "shipper1"
+
+echo "6️⃣ Registering Custom Authorities User..."
+register_user 3005 "Custom Authorities" "custom1"
 
 echo "=========================================="
 echo "✅ User Registration Complete!"
@@ -53,10 +59,12 @@ echo "=========================================="
 echo ""
 echo "📋 Login Credentials:"
 echo "--------------------"
+echo "Exporter Portal: username: portal1     password: [Generated - Check logs or env]"
 echo "Exporter Bank:   username: exporter1   password: [Generated - Check logs or env]"
 echo "National Bank:   username: banker1     password: [Generated - Check logs or env]"
 echo "NCAT:            username: inspector1  password: [Generated - Check logs or env]"
 echo "Shipping Line:   username: shipper1    password: [Generated - Check logs or env]"
+echo "Custom Authorities: username: custom1   password: [Generated - Check logs or env]"
 echo ""
 echo "🌐 Access the frontend at: http://localhost:5173"
 echo ""

@@ -26,7 +26,7 @@ This project implements a consortium blockchain network for managing the complet
 
 ## 🚀 Quick Start
 
-**Get started in 5 minutes:**
+### Option 1: Automated Startup (Recommended)
 
 ```bash
 # 1. Clone and navigate to project
@@ -39,14 +39,45 @@ cd cbc
 # 3. Access the application
 # Frontend: http://localhost:5173
 # APIs: http://localhost:3001-3004
+# IPFS: http://localhost:5001
 ```
 
-**For detailed startup instructions, see:**
+### Option 2: Docker Compose (Infrastructure Only)
+
+```bash
+# 1. Start blockchain network + IPFS in containers
+docker-compose up -d
+
+# 2. Start APIs on host (for development)
+cd api/exporter-bank && npm run dev  # Terminal 1
+cd api/national-bank && npm run dev   # Terminal 2
+cd api/ncat && npm run dev            # Terminal 3
+cd api/shipping-line && npm run dev   # Terminal 4
+
+# 3. Start frontend
+cd frontend && npm run dev
+```
+
+### Option 3: Full Containerization (Production)
+
+```bash
+# Build and start ALL services in containers (18 containers total)
+./start-docker-full.sh --build
+
+# Access services:
+# - Frontend: http://localhost
+# - APIs: http://localhost:3001-3005
+# - IPFS: http://localhost:5001
+```
+
+**For detailed instructions, see:**
+- **[FULL_CONTAINERIZATION_GUIDE.md](FULL_CONTAINERIZATION_GUIDE.md)** - Complete containerization (recommended for production)
+- **[DOCKER_COMPOSE_GUIDE.md](DOCKER_COMPOSE_GUIDE.md)** - Docker Compose deployment guide
 - **[STARTUP_QUICK_REFERENCE.md](STARTUP_QUICK_REFERENCE.md)** - Quick reference card
 - **[STARTUP_ORDER.md](STARTUP_ORDER.md)** - Complete startup documentation
 - **[QUICK_START.md](QUICK_START.md)** - Step-by-step guide
 
-> ⚠️ **Important:** Components must be started in the correct order. The `start-system.sh` script handles this automatically.
+> ⚠️ **Important:** This project uses **Docker Compose** for containerized deployment. Choose between hybrid (Option 2) or full containerization (Option 3).
 
 ## 🏗️ Architecture
 
@@ -98,6 +129,15 @@ Before you begin, ensure you have the following installed:
 - **Docker** (v20.10+) and **Docker Compose** (v2.0+)
 - **Node.js** (v16+) and **npm** (v8+)
 - **Go** (v1.19+)
+- **IPFS** (v0.18+) - Required for document storage
+  ```bash
+  # Install IPFS - see https://docs.ipfs.tech/install/
+  wget https://dist.ipfs.tech/kubo/v0.32.1/kubo_v0.32.1_linux-amd64.tar.gz
+  tar -xvzf kubo_v0.32.1_linux-amd64.tar.gz
+  cd kubo
+  sudo bash install.sh
+  ipfs init
+  ```
 - **Hyperledger Fabric binaries** (v2.5+)
   ```bash
   curl -sSL https://bit.ly/2ysbOFE | bash -s -- 2.5.0 1.5.5

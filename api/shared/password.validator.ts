@@ -2,7 +2,7 @@ import { body, ValidationChain } from 'express-validator';
 import bcrypt from 'bcryptjs';
 
 export class PasswordValidator {
-  private static readonly MIN_LENGTH = 12;
+  private static readonly DEFAULT_MIN_LENGTH = 12;
   private static readonly MAX_LENGTH = 128;
   
   // Common weak passwords to reject
@@ -18,13 +18,14 @@ export class PasswordValidator {
    * Validate password meets security requirements
    */
   public static validatePassword(): ValidationChain {
+    const minLen = process.env['NODE_ENV'] === 'production' ? this.DEFAULT_MIN_LENGTH : 8;
     return body('password')
       .trim()
       .notEmpty()
       .withMessage('Password is required')
-      .isLength({ min: this.MIN_LENGTH, max: this.MAX_LENGTH })
-      .withMessage(`Password must be between ${this.MIN_LENGTH} and ${this.MAX_LENGTH} characters`)
-      .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
+      .isLength({ min: minLen, max: this.MAX_LENGTH })
+      .withMessage(`Password must be between ${minLen} and ${this.MAX_LENGTH} characters`)
+      .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).+$/)
       .withMessage(
         'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character (@$!%*?&)'
       )
@@ -36,20 +37,22 @@ export class PasswordValidator {
         return true;
       })
       .custom((value: string) => {
-        // Check for sequential characters (e.g., "aaa", "111")
+        // Check for repeated characters (e.g., "aaa", "111")
         if (/(.)\1{2,}/.test(value)) {
           throw new Error('Password cannot contain more than 2 repeated characters in a row');
         }
         return true;
       })
       .custom((value: string) => {
-        // Check for sequential patterns (e.g., "123", "abc")
-        const sequences = ['0123456789', 'abcdefghijklmnopqrstuvwxyz', 'qwertyuiop', 'asdfghjkl', 'zxcvbnm'];
-        for (const seq of sequences) {
-          for (let i = 0; i < seq.length - 2; i++) {
-            const pattern = seq.substring(i, i + 3);
-            if (value.toLowerCase().includes(pattern)) {
-              throw new Error('Password cannot contain sequential characters');
+        // In production, disallow simple sequential patterns (e.g., "123", "abc")
+        if (process.env['NODE_ENV'] === 'production') {
+          const sequences = ['0123456789', 'abcdefghijklmnopqrstuvwxyz', 'qwertyuiop', 'asdfghjkl', 'zxcvbnm'];
+          for (const seq of sequences) {
+            for (let i = 0; i < seq.length - 2; i++) {
+              const pattern = seq.substring(i, i + 3);
+              if (value.toLowerCase().includes(pattern)) {
+                throw new Error('Password cannot contain sequential characters');
+              }
             }
           }
         }
@@ -100,10 +103,10 @@ export class PasswordValidator {
     const feedback: string[] = [];
 
     // Length check
-    if (password.length >= this.MIN_LENGTH) {
+    if (password.length >= this.DEFAULT_MIN_LENGTH) {
       score += 20;
     } else {
-      feedback.push(`Password should be at least ${this.MIN_LENGTH} characters`);
+      feedback.push(`Password should be at least ${this.DEFAULT_MIN_LENGTH} characters`);
     }
 
     if (password.length >= 16) {

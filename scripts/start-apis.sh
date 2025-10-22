@@ -63,6 +63,15 @@ if ! (cd "$PROJECT_ROOT/api/shipping-line" && npm run build); then
 fi
 echo "✅ Shipping Line API built successfully"
 
+# Custom Authorities API
+print_header "Building Custom Authorities API..."
+echo "Compiling TypeScript for Custom Authorities API..."
+if ! (cd "$PROJECT_ROOT/api/custom-authorities" && npm run build); then
+  echo "❌ Failed to build Custom Authorities API"
+  exit 1
+fi
+echo "✅ Custom Authorities API built successfully"
+
 print_header "Starting API Services in Development Mode"
 
 # Create logs directory if it doesn't exist
@@ -100,6 +109,14 @@ kill "$(cat $PID_FILE)" 2>/dev/null
 echo $! > "$PID_FILE"
 echo "🚀 Shipping Line API started in dev mode. Log: $LOG_FILE"
 
+# Custom Authorities API
+LOG_FILE="$PROJECT_ROOT/logs/custom-authorities.log"
+PID_FILE="$PROJECT_ROOT/logs/custom-authorities.pid"
+kill "$(cat $PID_FILE)" 2>/dev/null
+(cd "$PROJECT_ROOT/api/custom-authorities" && ts-node-dev --respawn --transpile-only src/index.ts &> "$LOG_FILE") &
+echo $! > "$PID_FILE"
+echo "🚀 Custom Authorities API started in dev mode. Log: $LOG_FILE"
+
 print_header "All APIs have been started!"
 
 echo ""
@@ -108,6 +125,7 @@ echo "  🏦 Exporter Bank API: http://localhost:3001"
 echo "  🏦 National Bank API: http://localhost:3002"
 echo "  🏛️  NCAT API: http://localhost:3003"
 echo "  🚢 Shipping Line API: http://localhost:3004"
+echo "  🛃 Custom Authorities API: http://localhost:3005"
 echo ""
 echo "Logs are available in: $PROJECT_ROOT/logs/"
 echo ""

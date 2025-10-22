@@ -1,6 +1,11 @@
 #!/bin/bash
 
-source scripts/envVar.sh
+# Resolve script directory and source env vars with absolute path
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+# Ensure Fabric binaries in PATH and configuration path set
+export PATH=${SCRIPT_DIR}/../../bin:$PATH
+export FABRIC_CFG_PATH=${SCRIPT_DIR}/../../config
+source ${SCRIPT_DIR}/envVar.sh
 
 CHANNEL_NAME=${1:-"coffeechannel"}
 DELAY=${2:-"3"}
@@ -56,7 +61,7 @@ createConfigUpdate() {
   configtxlator proto_encode --input "${MODIFIED}" --type common.Config --output modified_config.pb
   configtxlator compute_update --channel_id "${CHANNEL}" --original original_config.pb --updated modified_config.pb --output config_update.pb
   configtxlator proto_decode --input config_update.pb --type common.ConfigUpdate --output config_update.json
-  echo '{"payload":{"header":{"channel_header":{"channel_id":"'$CHANNEL'", "type":2}},"data":{"config_update":'$(cat config_update.json)'}}}}' | jq . >config_update_in_envelope.json
+  jq --arg channel "$CHANNEL" '{payload: {header: {channel_header: {channel_id: $channel, type: 2}}, data: {config_update: .}}}' config_update.json > config_update_in_envelope.json
   configtxlator proto_encode --input config_update_in_envelope.json --type common.Envelope --output "${OUTPUT}"
   { set +x; } 2>/dev/null
 }
@@ -87,34 +92,44 @@ updateAnchorPeer() {
     orgmsp="ShippingLineMSP"
     host="peer0.shippingline.coffee-export.com"
     port=10051
+  elif [ $ORG -eq 5 ]; then
+    orgmsp="CustomAuthoritiesMSP"
+    host="peer0.customauthorities.coffee-export.com"
+    port=11051
   else
     errorln "Unknown organization: $ORG"
     exit 1
   fi
 
   infoln "Fetching channel config for channel $CHANNEL"
-  fetchChannelConfig $ORG $CHANNEL ${CORE_PEER_LOCALMSPID}config.json
+  fetchChannelConfig $ORG $CHANNEL ${orgmsp}config.json
 
   infoln "Generating anchor peer update transaction for Org${ORG} on channel $CHANNEL"
 
   set -x
   # Modify the configuration to append the anchor peer
-  jq '.channel_group.groups.Application.groups.'${orgmsp}'.values += {"AnchorPeers":{"mod_policy": "Admins","value":{"anchor_peers": [{"host": "'$host'","port": '$port'}]},"version": "0"}}' ${CORE_PEER_LOCALMSPID}config.json > ${CORE_PEER_LOCALMSPID}modified_config.json
+  jq '.channel_group.groups.Application.groups.'${orgmsp}'.values += {"AnchorPeers":{"mod_policy": "Admins","value":{"anchor_peers": [{"host": "'$host'","port": '$port'}]},"version": "0"}}' ${orgmsp}config.json > ${orgmsp}modified_config.json
   { set +x; } 2>/dev/null
 
   # Compute a config update, based on the differences between
   # {orgmsp}config.json and {orgmsp}modified_config.json, write
   # it as a transaction to {orgmsp}anchors.tx
-  createConfigUpdate ${CHANNEL} ${CORE_PEER_LOCALMSPID}config.json ${CORE_PEER_LOCALMSPID}modified_config.json ${CORE_PEER_LOCALMSPID}anchors.tx
+  createConfigUpdate ${CHANNEL} ${orgmsp}config.json ${orgmsp}modified_config.json ${orgmsp}anchors.tx
 
+  # Sign the config update with the target org's Admin (mod_policy: Admins of the org)
+  setGlobals $ORG
+  peer channel signconfigtx -f ${orgmsp}anchors.tx
+
+  # Submit the update from the same org
+  setGlobals $ORG
   infoln "Updating anchor peer for org${ORG}..."
   set -x
-  peer channel update -o orderer.coffee-export.com:7050 --ordererTLSHostnameOverride orderer.coffee-export.com -c $CHANNEL -f ${CORE_PEER_LOCALMSPID}anchors.tx --tls --cafile "$ORDERER_CA" >&log.txt
+  peer channel update -o orderer.coffee-export.com:7050 --ordererTLSHostnameOverride orderer.coffee-export.com -c $CHANNEL -f ${orgmsp}anchors.tx --tls --cafile "$ORDERER_CA" >&log.txt
   res=$?
   { set +x; } 2>/dev/null
   cat log.txt
   verifyResult $res "Anchor peer update failed"
-  successln "Anchor peer set for org '$CORE_PEER_LOCALMSPID' on channel '$CHANNEL'"
+  successln "Anchor peer set for org '$orgmsp' on channel '$CHANNEL'"
 }
 
 ORG=$1

@@ -83,6 +83,12 @@ export class QualityController {
   ): Promise<void> => {
     try {
       const { exportId } = req.params;
+      if (!exportId) {
+        res
+          .status(400)
+          .json({ success: false, message: "Export ID is required" });
+        return;
+      }
       const contract = this.fabricGateway.getExportContract();
 
       const result = await contract.evaluateTransaction(
@@ -97,7 +103,8 @@ export class QualityController {
       });
     } catch (error: unknown) {
       console.error("Error getting export by ID:", error);
-      const message = error instanceof Error ? error.message : "Export not found";
+      const message =
+        error instanceof Error ? error.message : "Export not found";
       res.status(404).json({
         success: false,
         message: "Export not found",

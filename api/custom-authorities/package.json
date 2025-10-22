@@ -1,0 +1,22 @@
+{
+  "name": "custom-authorities-api",
+  "version": "1.0.0",
+  "description": "API server for Custom Authorities",
+  "main": "dist/src/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/src/index.js",
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "lint": "eslint . --ext .ts",
+    "test": "jest"
+  },
+  "keywords": [
+    "hyperledger",
+    "fabric",
+    "blockchain",
+    "coffee",
+    "export"
+  ],
+  "author": "",
+  "license": "MIT"
+}

@@ -32,7 +32,7 @@ export const authMiddleware = (
     }
 
     const token = authHeader.substring(7);
-    
+
     // Use centralized security config - no hardcoded fallback
     const JWT_SECRET = SecurityConfig.getJWTSecret();
 

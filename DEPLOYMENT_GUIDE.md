@@ -2,20 +2,67 @@
 
 Complete guide for deploying the Coffee Export Consortium Blockchain to development, staging, and production environments.
 
+> **Version 2.0** - Updated with new workflow: National Bank creates exports, Banking approval stage added, Dashboard visualization with actor tracking
+
 ---
 
 ## Table of Contents
 
-1. [Prerequisites](#prerequisites)
-2. [Local Development](#local-development)
-3. [Docker Build](#docker-build)
-4. [Kubernetes Deployment](#kubernetes-deployment)
-5. [Production Deployment](#production-deployment)
-6. [Security Configuration](#security-configuration)
-7. [Monitoring & Logging](#monitoring--logging)
-8. [Backup & Recovery](#backup--recovery)
-9. [CI/CD Pipeline](#cicd-pipeline)
-10. [Troubleshooting](#troubleshooting)
+1. [Quick Start](#quick-start)
+2. [What's New in v2.0](#whats-new-in-v20)
+3. [Prerequisites](#prerequisites)
+4. [Local Development](#local-development)
+5. [Docker Build](#docker-build)
+6. [Kubernetes Deployment](#kubernetes-deployment)
+7. [Production Deployment](#production-deployment)
+8. [Security Configuration](#security-configuration)
+9. [Monitoring & Logging](#monitoring--logging)
+10. [Backup & Recovery](#backup--recovery)
+11. [CI/CD Pipeline](#cicd-pipeline)
+12. [Troubleshooting](#troubleshooting)
+
+---
+
+## Quick Start
+
+For rapid deployment with all v2.0 updates:
+
+```bash
+cd /home/gu-da/cbc
+./start-system.sh --clean
+```
+
+This handles:
+- Chaincode v2.0 deployment (National Bank workflow)
+- Frontend dependencies (recharts for dashboard)
+- All services startup
+- Test user creation
+
+**See detailed steps below for manual deployment or production.**
+
+---
+
+## What's New in v2.0
+
+### Chaincode Changes
+- **National Bank creates export requests** (not Exporter Bank)
+- **New Banking Approval stage** for Exporter Bank financial validation
+- **Updated status constants**:
+  - `BANKING_PENDING`
+  - `BANKING_APPROVED`
+  - `BANKING_REJECTED`
+- **Sequential workflow**: Portal → National Bank → FX → Banking → Quality → Customs → Shipping
+
+### Frontend Updates
+- **Dashboard workflow chart** - visualize export requests through all blockchain stages
+- **Actor tracking** - hover chart to see who approved each stage
+- **Updated navigation** - all sidebar items independently clickable
+- **New dependency**: recharts for data visualization
+
+### Deployment Changes
+- Chaincode version updated to v2.0 (sequence 2)
+- Frontend npm install required for recharts
+- Updated test user credentials
 
 ---
 
@@ -78,7 +125,9 @@ cp frontend/.env.example frontend/.env
 ```bash
 cd network
 ./network.sh up createChannel -c coffeechannel
-./network.sh deployCC -ccn coffee-export -ccp ../chaincode/coffee-export/ -ccl golang
+
+# Deploy v2.0 chaincode with new workflow
+./network.sh deployCC -ccn coffee-export -ccp ../chaincode/coffee-export/ -ccl golang -ccv 2.0 -ccs 2
 ./network.sh deployCC -ccn user-management -ccp ../chaincode/user-management/ -ccl golang
 ```
 
@@ -103,6 +152,25 @@ npm run dev
 ```
 
 Access at: http://localhost:5173
+
+### 6. Verify v2.0 Features
+
+```bash
+# Check chaincode version
+docker exec peer0.exporterbank.coffee-export.com \
+  peer lifecycle chaincode querycommitted -C coffeechannel
+
+# Should show coffee-export version 2.0, sequence 2
+```
+
+**Test workflow:**
+1. Login as National Bank user
+2. Create export request (blockchain record created)
+3. Approve FX
+4. Login as Exporter Bank user
+5. Approve banking/financial validation
+6. Continue through quality → customs → shipping
+7. Check Dashboard to see workflow chart with actor info
 
 ---
 
@@ -1087,9 +1155,12 @@ echo "All smoke tests passed ✅"
 
 **For more information:**
 - [QUICK_START.md](./QUICK_START.md) - Local development setup
+- [CORRECTED_WORKFLOW.md](./CORRECTED_WORKFLOW.md) - v2.0 workflow details
+- [DASHBOARD_WORKFLOW_CHART.md](./DASHBOARD_WORKFLOW_CHART.md) - Dashboard features
 - [SECURITY.md](./SECURITY.md) - Security best practices
 - [INTER_SERVICE_COMMUNICATION.md](./INTER_SERVICE_COMMUNICATION.md) - Service integration
 - [PROJECT_STATUS.md](./PROJECT_STATUS.md) - Current system status
 
-**Last Updated:** Consolidation Phase  
-**Status:** ✅ Ready for Production
+**Version:** 2.0  
+**Last Updated:** 2025-01-21  
+**Status:** ✅ Ready for Deployment

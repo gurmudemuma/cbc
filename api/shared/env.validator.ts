@@ -7,8 +7,8 @@ export interface EnvConfig {
   PORT: number;
   NODE_ENV: 'development' | 'production' | 'test';
   JWT_SECRET: string;
-  JWT_EXPIRY: string;
-  REFRESH_TOKEN_EXPIRY: string;
+  JWT_EXPIRES_IN: string;
+  JWT_REFRESH_EXPIRES_IN: string;
   ORGANIZATION_ID: string;
   ORGANIZATION_NAME: string;
   PEER_ENDPOINT: string;
@@ -67,6 +67,8 @@ class EnvValidator {
       'CHAINCODE_NAME_USER',
       'CONNECTION_PROFILE_PATH',
       'WALLET_PATH',
+      'IPFS_HOST',
+      'IPFS_PROTOCOL',
     ];
 
     for (const key of requiredStrings) {
@@ -97,14 +99,18 @@ class EnvValidator {
       }
     }
 
-    // Validate IPFS settings
-    const ipfsPort = parseInt(process.env['IPFS_PORT'] || '5001', 10);
-    if (isNaN(ipfsPort) || ipfsPort < 1 || ipfsPort > 65535) {
-      errors.push(`Invalid IPFS_PORT: ${process.env['IPFS_PORT']}`);
+    // Validate IPFS settings (required)
+    const ipfsPort = parseInt(process.env['IPFS_PORT'] || '', 10);
+    if (!process.env['IPFS_PORT']) {
+      errors.push('Missing required environment variable: IPFS_PORT');
+    } else if (isNaN(ipfsPort) || ipfsPort < 1 || ipfsPort > 65535) {
+      errors.push(`Invalid IPFS_PORT: ${process.env['IPFS_PORT']}. Must be between 1 and 65535`);
     }
 
-    const ipfsProtocol = process.env['IPFS_PROTOCOL'] || 'http';
-    if (!['http', 'https'].includes(ipfsProtocol)) {
+    const ipfsProtocol = process.env['IPFS_PROTOCOL'] || '';
+    if (!ipfsProtocol) {
+      errors.push('Missing required environment variable: IPFS_PROTOCOL');
+    } else if (!['http', 'https'].includes(ipfsProtocol)) {
       errors.push(`Invalid IPFS_PROTOCOL: ${ipfsProtocol}. Must be 'http' or 'https'`);
     }
 
@@ -145,8 +151,8 @@ class EnvValidator {
       PORT: port,
       NODE_ENV: nodeEnv as 'development' | 'production' | 'test',
       JWT_SECRET: process.env['JWT_SECRET']!,
-      JWT_EXPIRY: process.env['JWT_EXPIRY'] || '24h',
-      REFRESH_TOKEN_EXPIRY: process.env['REFRESH_TOKEN_EXPIRY'] || '7d',
+      JWT_EXPIRES_IN: process.env['JWT_EXPIRES_IN'] || '24h',
+      JWT_REFRESH_EXPIRES_IN: process.env['JWT_REFRESH_EXPIRES_IN'] || '7d',
       ORGANIZATION_ID: process.env['ORGANIZATION_ID']!,
       ORGANIZATION_NAME: process.env['ORGANIZATION_NAME']!,
       PEER_ENDPOINT: process.env['PEER_ENDPOINT']!,
@@ -158,9 +164,9 @@ class EnvValidator {
       WALLET_PATH: process.env['WALLET_PATH']!,
       ADMIN_CERT_PATH: process.env['ADMIN_CERT_PATH'] || '',
       ADMIN_KEY_PATH: process.env['ADMIN_KEY_PATH'] || '',
-      IPFS_HOST: process.env['IPFS_HOST'] || 'localhost',
+      IPFS_HOST: process.env['IPFS_HOST']!,
       IPFS_PORT: ipfsPort,
-      IPFS_PROTOCOL: ipfsProtocol,
+      IPFS_PROTOCOL: ipfsProtocol as 'http' | 'https',
       ENCRYPTION_KEY: process.env['ENCRYPTION_KEY'],
       LOG_LEVEL: logLevel as 'error' | 'warn' | 'info' | 'debug',
       RATE_LIMIT_WINDOW_MS: rateLimitWindow,

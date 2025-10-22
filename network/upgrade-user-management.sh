@@ -28,9 +28,13 @@ echo "Approving for ShippingLine..."
 setGlobals 4
 peer lifecycle chaincode approveformyorg -o localhost:7050 --ordererTLSHostnameOverride orderer.coffee-export.com --tls --cafile "$ORDERER_CA" --channelID $CHANNEL_NAME --name ${CC_NAME} --version ${CC_VERSION} --package-id ${PACKAGE_ID} --sequence ${CC_SEQUENCE}
 
+echo "Approving for CustomAuthorities..."
+setGlobals 5
+peer lifecycle chaincode approveformyorg -o localhost:7050 --ordererTLSHostnameOverride orderer.coffee-export.com --tls --cafile "$ORDERER_CA" --channelID $CHANNEL_NAME --name ${CC_NAME} --version ${CC_VERSION} --package-id ${PACKAGE_ID} --sequence ${CC_SEQUENCE}
+
 # Commit the chaincode
 echo "Committing chaincode definition..."
-parsePeerConnectionParameters 1 2 3 4
+parsePeerConnectionParameters 1 2 3 4 5
 setGlobals 1
 peer lifecycle chaincode commit -o localhost:7050 --ordererTLSHostnameOverride orderer.coffee-export.com --tls --cafile "$ORDERER_CA" --channelID $CHANNEL_NAME --name ${CC_NAME} "${PEER_CONN_PARMS[@]}" --version ${CC_VERSION} --sequence ${CC_SEQUENCE}
 

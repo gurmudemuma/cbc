@@ -1,3 +1,1 @@
-+ peer.exe lifecycle chaincode querycommitted --channelID coffeechannel --name user-management
-Committed chaincode definition for chaincode 'user-management' on channel 'coffeechannel':
-Version: 1.0, Sequence: 1, Endorsement Plugin: escc, Validation Plugin: vscc, Approvals: [ExporterBankMSP: true, NCATMSP: true, NationalBankMSP: true, ShippingLineMSP: true]
+Error: chaincode install failed with status: 500 - failed to invoke backing implementation of 'InstallChaincode': chaincode already successfully installed (package ID 'user-management_1.2:713069c737d7a5121cb2159a4a4e63e5d193dd10d0ca99046f6a2c7389a621d0')

@@ -46,15 +46,17 @@ done
 echo -e "${YELLOW}APIs running: $API_RUNNING/4${NC}"
 echo ""
 
-echo -e "${BLUE}4. Checking IPFS...${NC}"
+echo -e "${BLUE}4. Checking IPFS (Required)...${NC}"
 if command -v ipfs &> /dev/null; then
     if lsof -Pi :5001 -sTCP:LISTEN -t >/dev/null 2>&1; then
         echo -e "${GREEN}✅ IPFS daemon is running on port 5001${NC}"
     else
-        echo -e "${YELLOW}⚠️ IPFS is installed but daemon is not running${NC}"
+        echo -e "${RED}❌ IPFS is installed but daemon is not running${NC}"
+        echo -e "${YELLOW}   Start IPFS with: ipfs daemon${NC}"
     fi
 else
-    echo -e "${YELLOW}⚠️ IPFS is not installed${NC}"
+    echo -e "${RED}❌ IPFS is not installed (Required)${NC}"
+    echo -e "${YELLOW}   Install IPFS from: https://docs.ipfs.tech/install/${NC}"
 fi
 echo ""
 
@@ -116,12 +118,12 @@ else
 fi
 ((TOTAL_SERVICES++))
 
-# IPFS (optional)
+# IPFS (required)
 if lsof -Pi :5001 -sTCP:LISTEN -t >/dev/null 2>&1; then
-    echo -e "  IPFS Daemon: ${GREEN}✅ Running${NC}"
+    echo -e "  IPFS Daemon: ${GREEN}✅ Running (Required)${NC}"
     ((RUNNING_SERVICES++))
 else
-    echo -e "  IPFS Daemon: ${YELLOW}⚠️ Not Running${NC}"
+    echo -e "  IPFS Daemon: ${RED}❌ Not Running (Required)${NC}"
 fi
 ((TOTAL_SERVICES++))
 

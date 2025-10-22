@@ -121,7 +121,7 @@ const FXRates = ({ user }) => {
   };
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box className={`organization-${user.organizationId || 'national-bank'}`} sx={{ p: 3 }}>
       <Grid container spacing={3}>
         <Grid item xs={12} md={9}>
           <Typography variant="h4">Foreign Exchange Approval</Typography>
@@ -208,9 +208,9 @@ const FXRates = ({ user }) => {
           <Card>
             <CardContent>
               <Typography variant="h6" sx={{ mb: 2 }}>FX Approval Requests</Typography>
-              <TableContainer component={Paper}>
-                <Table>
-                  <TableHead>
+              <TableContainer component={Paper} sx={{ maxHeight: 520, borderRadius: 2 }}>
+                <Table stickyHeader size="small">
+                  <TableHead sx={{ '& th': { fontWeight: 700 } }}>
                     <TableRow>
                       <TableCell>Export ID</TableCell>
                       <TableCell>Exporter</TableCell>
@@ -219,12 +219,12 @@ const FXRates = ({ user }) => {
                       <TableCell>KES Amount</TableCell>
                       <TableCell>Status</TableCell>
                       <TableCell>Date</TableCell>
-                      <TableCell>Actions</TableCell>
+                      <TableCell align="right">Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {filteredExports.map(exp => (
-                      <TableRow key={exp.exportId}>
+                      <TableRow key={exp.exportId} hover>
                         <TableCell>{exp.exportId}</TableCell>
                         <TableCell>{exp.exporterName}</TableCell>
                         <TableCell>{exp.destinationCountry}</TableCell>
@@ -234,12 +234,13 @@ const FXRates = ({ user }) => {
                           <Chip 
                             label={exp.status.replace(/_/g, ' ')} 
                             color={getStatusColor(exp.status)}
+                            size="small"
                           />
                         </TableCell>
                         <TableCell>{new Date(exp.createdAt).toLocaleDateString()}</TableCell>
-                        <TableCell>
+                        <TableCell align="right">
                           {exp.status === 'PENDING' ? (
-                            <Grid container spacing={1}>
+                            <Grid container spacing={1} justifyContent="flex-end">
                               <Grid item>
                                 <Button variant="contained" color="success" size="small" startIcon={<CheckCircle />} onClick={() => handleApprove(exp)}>
                                   Approve
@@ -262,8 +263,8 @@ const FXRates = ({ user }) => {
               </TableContainer>
               {filteredExports.length === 0 && (
                 <Box sx={{ textAlign: 'center', p: 3 }}>
-                  <DollarSign size={48} color="action.disabled" />
-                  <Typography>No exports found</Typography>
+                  <DollarSign size={48} color="#9E9E9E" />
+                  <Typography color="text.secondary">No exports found</Typography>
                 </Box>
               )}
             </CardContent>

@@ -205,9 +205,9 @@ if ! command -v docker-compose &> /dev/null; then
     MISSING_TOOLS+=("docker-compose")
 fi
 
-# IPFS is optional - only needed for file storage features
+# IPFS is required for document storage
 if ! command -v ipfs &> /dev/null; then
-    echo -e "${YELLOW}⚠️ IPFS not found - file storage features will be disabled${NC}"
+    MISSING_TOOLS+=("IPFS")
 fi
 
 # lsof is not available on Windows/MINGW - skip this check
@@ -273,10 +273,12 @@ if [ "$SKIP_DEPS" = false ]; then
     cd "$PROJECT_ROOT/chaincode/coffee-export"
     go mod download 2>/dev/null || true
     go mod tidy 2>/dev/null || true
+    go mod vendor 2>/dev/null || go mod vendor
     
     cd "$PROJECT_ROOT/chaincode/user-management"
     go mod download 2>/dev/null || true
     go mod tidy 2>/dev/null || true
+    go mod vendor 2>/dev/null || go mod vendor
     
     # Install API dependencies
     echo -e "${YELLOW}Installing API dependencies...${NC}"
@@ -332,6 +334,7 @@ create_env_file "api/exporter-bank"
 create_env_file "api/national-bank"
 create_env_file "api/ncat"
 create_env_file "api/shipping-line"
+create_env_file "api/custom-authorities"
 create_env_file "frontend"
 
 echo -e "${GREEN}✅ Environment files ready${NC}"
@@ -460,6 +463,13 @@ else
 fi
 echo ""
 
+# Step 11.5: Add Custom Authorities Organization
+echo -e "${BLUE}[11.5/16] Adding Custom Authorities Organization...${NC}"
+cd "$PROJECT_ROOT/network/scripts"
+./add-custom-authorities-org.sh
+echo -e "${GREEN}✅ Custom Authorities added${NC}"
+echo ""
+
 # Step 12: Deploy Chaincodes
 echo -e "${BLUE}[12/16] Deploying Chaincodes...${NC}"
 echo -e "${YELLOW}This may take 2-5 minutes per chaincode...${NC}"
@@ -473,16 +483,18 @@ USER_MGMT_CHECK=$(echo "$USER_MGMT_CHECK" | tr -d '\n\r' | tr -d ' ')
 cd "$PROJECT_ROOT/network"
 
 if [ "$COFFEE_EXPORT_CHECK" -eq 0 ] || [ "$CLEAN_START" = true ]; then
-    echo -e "${YELLOW}Deploying coffee-export chaincode...${NC}"
-    ./network.sh deployCC -ccn coffee-export -ccp ../chaincode/coffee-export -ccl go
-    echo -e "${GREEN}✅ coffee-export chaincode deployed${NC}"
+    echo -e "${YELLOW}Deploying coffee-export chaincode v2.0 (with new workflow)...${NC}"
+    # First deployment on a channel must use sequence 1
+    ./network.sh deployCC -ccn coffee-export -ccp ../chaincode/coffee-export -ccl golang -ccv 2.0 -ccs 1
+    echo -e "${GREEN}✅ coffee-export chaincode v2.0 deployed${NC}"
 else
     echo -e "${GREEN}✅ coffee-export chaincode already deployed${NC}"
+    echo -e "${YELLOW}Note: To update to a new definition later, increment -ccs (e.g., -ccs 2).${NC}"
 fi
 
 if [ "$USER_MGMT_CHECK" -eq 0 ] || [ "$CLEAN_START" = true ]; then
     echo -e "${YELLOW}Deploying user-management chaincode...${NC}"
-    ./network.sh deployCC -ccn user-management -ccp ../chaincode/user-management -ccl go
+    ./network.sh deployCC -ccn user-management -ccp ../chaincode/user-management -ccl golang
     echo -e "${GREEN}✅ user-management chaincode deployed${NC}"
 else
     echo -e "${GREEN}✅ user-management chaincode already deployed${NC}"
@@ -510,7 +522,7 @@ cd "$PROJECT_ROOT"
 # Check if ports are available
 echo -e "${YELLOW}Checking API ports availability...${NC}"
 PORTS_IN_USE=()
-for port in 3001 3002 3003 3004; do
+for port in 3001 3002 3003 3004 3005; do
     if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1; then
         PORTS_IN_USE+=($port)
     fi
@@ -558,6 +570,8 @@ if command -v tmux &> /dev/null; then
         tmux select-pane -t cbc-apis.0
         tmux split-window -t cbc-apis -v
         tmux send-keys -t cbc-apis "cd $PROJECT_ROOT/api/shipping-line && echo 'Starting Shipping Line API...' && npm run dev" C-m
+        tmux split-window -t cbc-apis -v
+        tmux send-keys -t cbc-apis "cd $PROJECT_ROOT/api/custom-authorities && echo 'Starting Custom Authorities API...' && npm run dev" C-m
     fi
     echo -e "${GREEN}✅ API services started${NC}"
     echo -e "${CYAN}   View logs: tmux attach-session -t cbc-apis${NC}"
@@ -592,6 +606,12 @@ else
     SHIPPING_PID=$!
     echo $SHIPPING_PID > "$PROJECT_ROOT/logs/shipping-line.pid"
     
+    echo -e "${YELLOW}  - Starting Custom Authorities API (port 3005)...${NC}"
+    cd "$PROJECT_ROOT/api"
+    nohup npm run dev --workspace=custom-authorities-api > "$PROJECT_ROOT/logs/custom-authorities.log" 2>&1 &
+    CUSTOM_PID=$!
+    echo $CUSTOM_PID > "$PROJECT_ROOT/logs/custom-authorities.pid"
+    
     echo -e "${GREEN}✅ API services started in background${NC}"
     echo -e "${CYAN}   View logs in: $PROJECT_ROOT/logs/${NC}"
     echo -e "${CYAN}   PIDs saved in: $PROJECT_ROOT/logs/*.pid${NC}"
@@ -599,7 +619,7 @@ fi
 
 # Wait for APIs to start with polling
 echo -e "${YELLOW}Waiting for APIs to initialize...${NC}"
-for port in 3001 3002 3003 3004; do
+for port in 3001 3002 3003 3004 3005; do
     for i in {1..30}; do
         if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1; then
             break
@@ -628,45 +648,48 @@ else
 fi
 echo ""
 
-# Step 15: Start IPFS Daemon
+# Step 15: Start IPFS Daemon (Required)
 echo -e "${BLUE}[15/16] Starting IPFS Daemon...${NC}"
-# Check if IPFS is available
-if ! command -v ipfs &> /dev/null; then
-    echo -e "${YELLOW}⚠️ IPFS not found - skipping IPFS daemon startup${NC}"
-    echo -e "${YELLOW}File storage features will be disabled${NC}"
+# Check if IPFS is already running by checking port 5001
+if lsof -Pi :5001 -sTCP:LISTEN -t >/dev/null 2>&1; then
+    echo -e "${GREEN}✅ IPFS is already running${NC}"
 else
-    # Check if IPFS is already running by checking port 5001
-    if lsof -Pi :5001 -sTCP:LISTEN -t >/dev/null 2>&1; then
-        echo -e "${GREEN}✅ IPFS is already running${NC}"
-    else
-        echo -e "${YELLOW}Starting IPFS daemon...${NC}"
-        # Initialize IPFS if not already done
-        if [ ! -d ~/.ipfs ]; then
-            echo -e "${YELLOW}Initializing IPFS repository...${NC}"
-            ipfs init
+    echo -e "${YELLOW}Starting IPFS daemon...${NC}"
+    # Initialize IPFS if not already done
+    if [ ! -d ~/.ipfs ]; then
+        echo -e "${YELLOW}Initializing IPFS repository...${NC}"
+        ipfs init
+        if [ $? -ne 0 ]; then
+            echo -e "${RED}❌ Failed to initialize IPFS${NC}"
+            echo -e "${RED}IPFS is required for document storage${NC}"
+            exit 1
         fi
-        
-        # Create logs directory
-        mkdir -p "$PROJECT_ROOT/logs"
-        
-        # Start IPFS daemon
-        nohup ipfs daemon > "$PROJECT_ROOT/logs/ipfs.log" 2>&1 &
-        
-        # Wait with polling
-        echo -e "${YELLOW}Waiting for IPFS daemon to start...${NC}"
-        for i in {1..30}; do
-            if lsof -Pi :5001 -sTCP:LISTEN -t >/dev/null 2>&1; then
-                break
-            fi
-            sleep 1
-        done
-        
+    fi
+    
+    # Create logs directory
+    mkdir -p "$PROJECT_ROOT/logs"
+    
+    # Start IPFS daemon
+    nohup ipfs daemon > "$PROJECT_ROOT/logs/ipfs.log" 2>&1 &
+    
+    # Wait with polling
+    echo -e "${YELLOW}Waiting for IPFS daemon to start...${NC}"
+    IPFS_STARTED=false
+    for i in {1..30}; do
         if lsof -Pi :5001 -sTCP:LISTEN -t >/dev/null 2>&1; then
-            echo -e "${GREEN}✅ IPFS daemon started${NC}"
-        else
-            echo -e "${RED}❌ Failed to start IPFS daemon${NC}"
-            echo -e "${YELLOW}Check $PROJECT_ROOT/logs/ipfs.log for errors${NC}"
+            IPFS_STARTED=true
+            break
         fi
+        sleep 1
+    done
+    
+    if [ "$IPFS_STARTED" = true ]; then
+        echo -e "${GREEN}✅ IPFS daemon started successfully${NC}"
+    else
+        echo -e "${RED}❌ Failed to start IPFS daemon${NC}"
+        echo -e "${RED}IPFS is required for document storage${NC}"
+        echo -e "${YELLOW}Check $PROJECT_ROOT/logs/ipfs.log for errors${NC}"
+        exit 1
     fi
 fi
 echo ""
@@ -677,7 +700,7 @@ echo -e "${YELLOW}Performing final system health checks...${NC}"
 
 # Check if all services are responding
 SERVICES_OK=0
-TOTAL_SERVICES=6
+TOTAL_SERVICES=7
 
 # Check blockchain network
 if docker ps | grep -q "peer0.exporterbank"; then
@@ -688,7 +711,7 @@ else
 fi
 
 # Check API services (basic port check)
-for port in 3001 3002 3003 3004; do
+for port in 3001 3002 3003 3004 3005; do
     if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1; then
         echo -e "${GREEN}  ✅ API service on port $port is running${NC}"
         ((SERVICES_OK++))
@@ -697,12 +720,12 @@ for port in 3001 3002 3003 3004; do
     fi
 done
 
-# Check IPFS
+# Check IPFS (required)
 if lsof -Pi :5001 -sTCP:LISTEN -t >/dev/null 2>&1; then
-    echo -e "${GREEN}  ✅ IPFS is running on port 5001${NC}"
+    echo -e "${GREEN}  ✅ IPFS is running on port 5001 (Required)${NC}"
     ((SERVICES_OK++))
 else
-    echo -e "${RED}  ❌ IPFS is not running${NC}"
+    echo -e "${RED}  ❌ IPFS is not running (Required)${NC}"
 fi
 
 echo ""
@@ -809,6 +832,7 @@ register_test_user 3001 "Exporter Bank" "exporter1" "Exporter123!@#" "exporter1@
 register_test_user 3002 "National Bank" "banker1" "Banker123!@#" "banker1@nationalbank.com"
 register_test_user 3003 "NCAT" "inspector1" "Inspector123!@#" "inspector1@ncat.gov"
 register_test_user 3004 "Shipping Line" "shipper1" "Shipper123!@#" "shipper1@shippingline.com"
+register_test_user 3005 "Custom Authorities" "custom1" "Custom123!@#" "custom1@customauthorities.gov"
 
 echo -e "${GREEN}✅ Test users registered successfully!${NC}"
 echo ""
@@ -833,4 +857,8 @@ echo ""
 echo -e "${GREEN}Shipping Line:${NC}"
 echo -e "  Username: ${CYAN}shipper1${NC}"
 echo -e "  Password: ${CYAN}Shipper123!@#${NC}"
+echo ""
+echo -e "${GREEN}Custom Authorities:${NC}"
+echo -e "  Username: ${CYAN}custom1${NC}"
+echo -e "  Password: ${CYAN}Custom123!@#${NC}"
 echo ""

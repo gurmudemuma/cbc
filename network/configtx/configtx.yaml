@@ -88,6 +88,23 @@ Organizations:
         Endorsement:
           Type: Signature
           Rule: "OR('ShippingLineMSP.peer')"
+  - &CustomAuthorities
+      Name: CustomAuthoritiesMSP
+      ID: CustomAuthoritiesMSP
+      MSPDir: ../organizations/peerOrganizations/customauthorities.coffee-export.com/msp
+      Policies:
+        Readers:
+          Type: Signature
+          Rule: "OR('CustomAuthoritiesMSP.admin', 'CustomAuthoritiesMSP.peer', 'CustomAuthoritiesMSP.client')"
+        Writers:
+          Type: Signature
+          Rule: "OR('CustomAuthoritiesMSP.admin', 'CustomAuthoritiesMSP.client')"
+        Admins:
+          Type: Signature
+          Rule: "OR('CustomAuthoritiesMSP.admin')"
+        Endorsement:
+          Type: Signature
+          Rule: "OR('CustomAuthoritiesMSP.peer')"
 
 Capabilities:
   Channel: &ChannelCapabilities
@@ -177,4 +194,5 @@ Profiles:
         - *NationalBank
         - *NCAT
         - *ShippingLine
+        - *CustomAuthorities
       Capabilities: *ApplicationCapabilities

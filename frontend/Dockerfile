@@ -1,5 +1,13 @@
 # Multi-stage build for production
-FROM node:16-alpine AS builder
+FROM node:20-alpine AS builder
+
+# Configure npm for better network resilience and use multiple registries
+RUN npm config set fetch-retry-mintimeout 60000 && \
+    npm config set fetch-retry-maxtimeout 300000 && \
+    npm config set fetch-retries 10 && \
+    npm config set fetch-timeout 600000 && \
+    npm config set maxsockets 1 && \
+    npm config set registry https://registry.npmjs.org/
 
 # Set working directory
 WORKDIR /app
@@ -7,8 +15,10 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci
+# Install dependencies with network-friendly options
+# Use ci for faster, more reliable installs and break into chunks if needed
+RUN npm install --legacy-peer-deps --prefer-offline --no-audit --maxsockets=1 && \
+    npm cache clean --force
 
 # Copy source code
 COPY . .

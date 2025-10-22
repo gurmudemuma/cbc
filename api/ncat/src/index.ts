@@ -12,10 +12,10 @@ import { errorHandler } from "./middleware/error.middleware";
 import { FabricGateway } from "./fabric/gateway";
 import { initializeWebSocket } from "../../shared/websocket.service";
 import { envValidator } from "../../shared/env.validator";
-import { 
-  applySecurityMiddleware, 
-  createRateLimiters, 
-  getCorsConfig 
+import {
+  applySecurityMiddleware,
+  createRateLimiters,
+  getCorsConfig,
 } from "../../shared/security.best-practices";
 
 // Validate environment variables before starting
@@ -23,7 +23,7 @@ try {
   envValidator.validate();
   envValidator.printSummary();
 } catch (error) {
-  console.error('❌ Environment validation failed:', error);
+  console.error("❌ Environment validation failed:", error);
   process.exit(1);
 }
 
@@ -36,17 +36,17 @@ applySecurityMiddleware(app, {
   corsOrigins: config.CORS_ORIGIN,
   enableHelmet: true,
   enableRateLimiting: true,
-  isProduction: config.NODE_ENV === 'production',
+  isProduction: config.NODE_ENV === "production",
 });
 
 // CORS configuration
 app.use(cors(getCorsConfig(config.CORS_ORIGIN)));
 
 // Request logging
-if (config.NODE_ENV === 'development') {
-  app.use(morgan('dev'));
+if (config.NODE_ENV === "development") {
+  app.use(morgan("dev"));
 } else {
-  app.use(morgan('combined'));
+  app.use(morgan("combined"));
 }
 
 // Body parsing with size limits
@@ -68,8 +68,10 @@ app.use("/api/quality", apiLimiter, qualityRoutes);
 
 // Health check with detailed status
 app.get("/health", async (_req: Request, res: Response) => {
-  const fabricStatus = fabricGateway.isConnected() ? 'connected' : 'disconnected';
-  
+  const fabricStatus = fabricGateway.isConnected()
+    ? "connected"
+    : "disconnected";
+
   res.json({
     status: "ok",
     service: "NCAT API",
@@ -81,25 +83,25 @@ app.get("/health", async (_req: Request, res: Response) => {
     memory: {
       used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
       total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
-      unit: 'MB'
-    }
+      unit: "MB",
+    },
   });
 });
 
 // Ready check (for Kubernetes)
 app.get("/ready", async (_req: Request, res: Response) => {
   const isReady = fabricGateway.isConnected();
-  
+
   if (isReady) {
-    res.status(200).json({ status: 'ready' });
+    res.status(200).json({ status: "ready" });
   } else {
-    res.status(503).json({ status: 'not ready' });
+    res.status(503).json({ status: "not ready" });
   }
 });
 
 // Liveness check (for Kubernetes)
 app.get("/live", (_req: Request, res: Response) => {
-  res.status(200).json({ status: 'alive' });
+  res.status(200).json({ status: "alive" });
 });
 
 // Error handling
@@ -111,28 +113,30 @@ const websocketService = initializeWebSocket(httpServer);
 
 // Start server
 httpServer.listen(PORT, async () => {
-  console.log(`\n${'='.repeat(60)}`);
+  console.log(`\n${"=".repeat(60)}`);
   console.log(`  NCAT API server running`);
-  console.log(`${'='.repeat(60)}`);
+  console.log(`${"=".repeat(60)}`);
   console.log(`   Port: ${PORT}`);
   console.log(`   Environment: ${config.NODE_ENV}`);
   console.log(`   Organization: ${config.ORGANIZATION_NAME}`);
-  console.log(`   WebSocket: ${config.WEBSOCKET_ENABLED ? 'Enabled' : 'Disabled'}`);
-  console.log(`${'='.repeat(60)}\n`);
+  console.log(
+    `   WebSocket: ${config.WEBSOCKET_ENABLED ? "Enabled" : "Disabled"}`,
+  );
+  console.log(`${"=".repeat(60)}\n`);
 
   try {
-    console.log('  Connecting to Hyperledger Fabric network...');
+    console.log("  Connecting to Hyperledger Fabric network...");
     await fabricGateway.connect();
-    console.log('  Connected to Hyperledger Fabric network');
+    console.log("  Connected to Hyperledger Fabric network");
     console.log(`   Channel: ${config.CHANNEL_NAME}`);
     console.log(`   Chaincode: ${config.CHAINCODE_NAME_EXPORT}`);
   } catch (error) {
-    console.error('  Failed to connect to Fabric network:', error);
-    console.error('   Please ensure the Fabric network is running');
+    console.error("  Failed to connect to Fabric network:", error);
+    console.error("   Please ensure the Fabric network is running");
     process.exit(1);
   }
 
-  console.log('\n  Server is ready to accept requests\n');
+  console.log("\n  Server is ready to accept requests\n");
 });
 
 // Graceful shutdown handler

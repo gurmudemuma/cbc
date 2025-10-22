@@ -84,7 +84,9 @@ export class FXController {
     try {
       const { exportId } = req.params;
       if (!exportId) {
-        res.status(400).json({ success: false, message: "Export ID is required" });
+        res
+          .status(400)
+          .json({ success: false, message: "Export ID is required" });
         return;
       }
       const contract = this.fabricGateway.getExportContract();
@@ -119,7 +121,9 @@ export class FXController {
     try {
       const { exportId } = req.body;
       if (!exportId) {
-        res.status(400).json({ success: false, message: "Export ID is required" });
+        res
+          .status(400)
+          .json({ success: false, message: "Export ID is required" });
         return;
       }
       const fxApprovalId = `FX-${uuidv4()}`;
@@ -163,11 +167,15 @@ export class FXController {
     try {
       const { exportId, rejectionReason } = req.body;
       if (!exportId) {
-        res.status(400).json({ success: false, message: "Export ID is required" });
+        res
+          .status(400)
+          .json({ success: false, message: "Export ID is required" });
         return;
       }
       if (!rejectionReason) {
-        res.status(400).json({ success: false, message: "Rejection reason is required" });
+        res
+          .status(400)
+          .json({ success: false, message: "Rejection reason is required" });
         return;
       }
       const rejectedBy = req.user?.username || "National Bank Officer";

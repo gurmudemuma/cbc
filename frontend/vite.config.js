@@ -37,6 +37,16 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/shipping/, '/api')
       },
+      '/api/customauthorities': {
+        target: 'http://localhost:3005',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/customauthorities/, '/api')
+      },
+      '/api/exporter-portal': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/exporter-portal/, '')
+      },
       // Default /api routes to exporter backend (port 3001)
       '/api': {
         target: 'http://localhost:3001',

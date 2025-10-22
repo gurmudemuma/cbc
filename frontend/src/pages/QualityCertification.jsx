@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Award, CheckCircle, XCircle, Search } from 'lucide-react';
 import apiClient, { setApiBaseUrl } from '../services/api';
-import { API_ENDPOINTS } from '../config/api.config';
-import {
-  Box, Button, Card, CardContent, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Grid, InputAdornment, MenuItem, Paper, Select, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography
+import { 
+  Box, Button, Card, CardContent, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Grid, InputAdornment, MenuItem, Paper, Select, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography, Divider
 } from '@mui/material';
+import { API_ENDPOINTS } from '../config/api.config.js';
 
 const QualityCertification = ({ user }) => {
   const [exports, setExports] = useState([]);
@@ -126,7 +126,7 @@ const QualityCertification = ({ user }) => {
   ];
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box className={`organization-${user.organizationId || 'ncat'}`} sx={{ p: 3 }}>
       <Grid container spacing={3}>
         <Grid item xs={12} md={9}>
           <Typography variant="h4">Quality Certification</Typography>
@@ -196,9 +196,9 @@ const QualityCertification = ({ user }) => {
           <Card>
             <CardContent>
               <Typography variant="h6" sx={{ mb: 2 }}>Export Records</Typography>
-              <TableContainer component={Paper}>
-                <Table>
-                  <TableHead>
+              <TableContainer component={Paper} sx={{ maxHeight: 520, borderRadius: 2 }}>
+                <Table stickyHeader size="small">
+                  <TableHead sx={{ '& th': { fontWeight: 700 } }}>
                     <TableRow>
                       <TableCell>Export ID</TableCell>
                       <TableCell>Exporter</TableCell>
@@ -206,12 +206,12 @@ const QualityCertification = ({ user }) => {
                       <TableCell>Quantity (kg)</TableCell>
                       <TableCell>Status</TableCell>
                       <TableCell>Date</TableCell>
-                      <TableCell>Actions</TableCell>
+                      <TableCell align="right">Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {filteredExports.map(exp => (
-                      <TableRow key={exp.exportId}>
+                      <TableRow key={exp.exportId} hover>
                         <TableCell>{exp.exportId}</TableCell>
                         <TableCell>{exp.exporterName}</TableCell>
                         <TableCell>{exp.coffeeType}</TableCell>
@@ -220,12 +220,13 @@ const QualityCertification = ({ user }) => {
                           <Chip 
                             label={exp.status.replace(/_/g, ' ')} 
                             color={getStatusColor(exp.status)}
+                            size="small"
                           />
                         </TableCell>
                         <TableCell>{new Date(exp.createdAt).toLocaleDateString()}</TableCell>
-                        <TableCell>
+                        <TableCell align="right">
                           {exp.status === 'FX_APPROVED' ? (
-                            <Grid container spacing={1}>
+                            <Grid container spacing={1} justifyContent="flex-end">
                               <Grid item>
                                 <Button variant="contained" color="success" size="small" startIcon={<CheckCircle />} onClick={() => handleCertify(exp)}>
                                   Certify
@@ -248,8 +249,8 @@ const QualityCertification = ({ user }) => {
               </TableContainer>
               {filteredExports.length === 0 && (
                 <Box sx={{ textAlign: 'center', p: 3 }}>
-                  <Award size={48} color="action.disabled" />
-                  <Typography>No exports found</Typography>
+                  <Award size={48} color="#9E9E9E" />
+                  <Typography color="text.secondary">No exports found</Typography>
                 </Box>
               )}
             </CardContent>

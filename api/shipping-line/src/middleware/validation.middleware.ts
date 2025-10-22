@@ -3,7 +3,12 @@ import { body, validationResult } from "express-validator";
 
 export const validateScheduleShipment = [
   body("exportId").notEmpty().withMessage("Export ID is required"),
-  body("vesselName").notEmpty().withMessage("Vessel name is required"),
+  body("transportIdentifier")
+    .notEmpty()
+    .withMessage("Transport identifier is required"),
+  body("transportMode")
+    .isIn(["SEA", "AIR", "RAIL"])
+    .withMessage("Invalid transport mode"),
   body("departureDate").notEmpty().withMessage("Departure date is required"),
   body("arrivalDate").notEmpty().withMessage("Arrival date is required"),
   (req: Request, res: Response, next: NextFunction) => {

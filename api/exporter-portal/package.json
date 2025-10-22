@@ -1,0 +1,27 @@
+{
+  "name": "exporter-portal-api",
+  "version": "1.0.0",
+  "description": "API server for Exporter Portal - External exporter interface for creating export requests",
+  "main": "dist/src/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/src/index.js",
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "lint": "eslint . --ext .ts",
+    "test": "jest"
+  },
+  "keywords": [
+    "exporter",
+    "portal",
+    "coffee",
+    "export",
+    "trade",
+    "documents"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "joi": "^17.9.2",
+    "winston": "^3.10.0"
+  }
+}

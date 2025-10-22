@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Button } from '@mui/material';
 
 const ContinueModal = ({ onContinue, onStop }) => {
   return (
@@ -7,8 +7,8 @@ const ContinueModal = ({ onContinue, onStop }) => {
         <h2>Continue with other pages?</h2>
         <p>Do you want to continue with the implementation of the other pages?</p>
         <div className="modal-actions">
-          <Button variant="outline" onClick={onStop}>Stop</Button>
-          <Button variant="primary" onClick={onContinue}>Continue</Button>
+          <Button variant="outlined" onClick={onStop}>Stop</Button>
+          <Button variant="contained" onClick={onContinue}>Continue</Button>
         </div>
       </div>
     </div>

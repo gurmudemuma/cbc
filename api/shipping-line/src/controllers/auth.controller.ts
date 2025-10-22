@@ -33,8 +33,8 @@ export class AuthController {
     if (!match) {
       throw new Error("Invalid expiresIn format");
     }
-    const value = parseInt(match[1], 10);
-    const unit = match[2];
+    const value = parseInt(match[1]!, 10);
+    const unit = match[2] as "s" | "m" | "h" | "d";
     switch (unit) {
       case "s":
         return value;

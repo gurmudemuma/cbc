@@ -87,7 +87,8 @@ export class ExportController {
         console.error("Fabric gateway is not connected");
         res.status(503).json({
           success: false,
-          message: "Blockchain network is not available. Please try again later.",
+          message:
+            "Blockchain network is not available. Please try again later.",
           error: "Fabric gateway not connected",
         });
         return;
@@ -95,10 +96,11 @@ export class ExportController {
 
       const contract = this.fabricGateway.getExportContract();
       const result = await contract.evaluateTransaction("GetAllExports");
-      
+
       // Handle empty or null responses
       const resultString = result.toString().trim();
-      const exports = resultString && resultString !== '' ? JSON.parse(resultString) : [];
+      const exports =
+        resultString && resultString !== "" ? JSON.parse(resultString) : [];
 
       res.status(200).json({
         success: true,
@@ -108,19 +110,26 @@ export class ExportController {
     } catch (error: unknown) {
       console.error("Error getting all exports:", error);
       const message = error instanceof Error ? error.message : "Unknown error";
-      
+
       // Provide more specific error messages
       let statusCode = 500;
       let userMessage = "Failed to retrieve exports";
-      
-      if (message.includes("not initialized") || message.includes("not connected")) {
+
+      if (
+        message.includes("not initialized") ||
+        message.includes("not connected")
+      ) {
         statusCode = 503;
-        userMessage = "Blockchain network is not available. Please try again later.";
-      } else if (message.includes("ECONNREFUSED") || message.includes("UNAVAILABLE")) {
+        userMessage =
+          "Blockchain network is not available. Please try again later.";
+      } else if (
+        message.includes("ECONNREFUSED") ||
+        message.includes("UNAVAILABLE")
+      ) {
         statusCode = 503;
         userMessage = "Unable to connect to blockchain network";
       }
-      
+
       res.status(statusCode).json({
         success: false,
         message: userMessage,
@@ -137,18 +146,20 @@ export class ExportController {
     try {
       const { exportId } = req.params;
       if (!exportId) {
-        res.status(400).json({ success: false, message: "Export ID is required" });
+        res
+          .status(400)
+          .json({ success: false, message: "Export ID is required" });
         return;
       }
-      
+
       // Sanitize export ID
       const sanitizedExportId = InputSanitizer.sanitizeId(exportId);
-      
+
       const contract = this.fabricGateway.getExportContract();
 
       const result = await contract.evaluateTransaction(
         "GetExportRequest",
-        sanitizedExportId
+        sanitizedExportId,
       );
       const exportData = JSON.parse(result.toString());
 
@@ -179,28 +190,30 @@ export class ExportController {
         res.status(400).json({ success: false, message: "Status is required" });
         return;
       }
-      
+
       // Check if Fabric gateway is connected
       if (!this.fabricGateway.isConnected()) {
         console.error("Fabric gateway is not connected");
         res.status(503).json({
           success: false,
-          message: "Blockchain network is not available. Please try again later.",
+          message:
+            "Blockchain network is not available. Please try again later.",
           error: "Fabric gateway not connected",
         });
         return;
       }
-      
+
       const contract = this.fabricGateway.getExportContract();
 
       const result = await contract.evaluateTransaction(
         "GetExportsByStatus",
-        status
+        status,
       );
-      
+
       // Handle empty or null responses
       const resultString = result.toString().trim();
-      const exports = resultString && resultString !== '' ? JSON.parse(resultString) : [];
+      const exports =
+        resultString && resultString !== "" ? JSON.parse(resultString) : [];
 
       res.status(200).json({
         success: true,
@@ -211,19 +224,26 @@ export class ExportController {
       console.error("Error getting exports by status:", error);
       const message =
         error instanceof Error ? error.message : "Failed to retrieve exports";
-      
+
       // Provide more specific error messages
       let statusCode = 500;
       let userMessage = "Failed to retrieve exports by status";
-      
-      if (message.includes("not initialized") || message.includes("not connected")) {
+
+      if (
+        message.includes("not initialized") ||
+        message.includes("not connected")
+      ) {
         statusCode = 503;
-        userMessage = "Blockchain network is not available. Please try again later.";
-      } else if (message.includes("ECONNREFUSED") || message.includes("UNAVAILABLE")) {
+        userMessage =
+          "Blockchain network is not available. Please try again later.";
+      } else if (
+        message.includes("ECONNREFUSED") ||
+        message.includes("UNAVAILABLE")
+      ) {
         statusCode = 503;
         userMessage = "Unable to connect to blockchain network";
       }
-      
+
       res.status(statusCode).json({
         success: false,
         message: userMessage,
@@ -240,14 +260,16 @@ export class ExportController {
     try {
       const { exportId } = req.params;
       if (!exportId) {
-        res.status(400).json({ success: false, message: "Export ID is required" });
+        res
+          .status(400)
+          .json({ success: false, message: "Export ID is required" });
         return;
       }
       const contract = this.fabricGateway.getExportContract();
 
       const result = await contract.evaluateTransaction(
         "GetExportHistory",
-        exportId
+        exportId,
       );
       const history = JSON.parse(result.toString());
 
@@ -275,7 +297,9 @@ export class ExportController {
     try {
       const { exportId } = req.params;
       if (!exportId) {
-        res.status(400).json({ success: false, message: "Export ID is required" });
+        res
+          .status(400)
+          .json({ success: false, message: "Export ID is required" });
         return;
       }
       const contract = this.fabricGateway.getExportContract();
@@ -298,6 +322,82 @@ export class ExportController {
     }
   };
 
+  public updateRejectedExport = async (
+    req: RequestWithUser,
+    res: Response,
+    _next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const { exportId } = req.params;
+      if (!exportId) {
+        res
+          .status(400)
+          .json({ success: false, message: "Export ID is required" });
+        return;
+      }
+
+      const sanitizedData = InputSanitizer.sanitizeExportRequest(req.body);
+      const contract = this.fabricGateway.getExportContract();
+
+      await contract.submitTransaction(
+        "UpdateRejectedExport",
+        exportId,
+        sanitizedData.coffeeType || "",
+        sanitizedData.quantity?.toString() || "0",
+        sanitizedData.destinationCountry || "",
+        sanitizedData.estimatedValue?.toString() || "0",
+      );
+
+      res.status(200).json({
+        success: true,
+        message:
+          "Rejected export updated successfully. Status reset to DRAFT. You can now resubmit.",
+        data: { exportId, status: "DRAFT", ...sanitizedData },
+      });
+    } catch (error: unknown) {
+      console.error("Error updating rejected export:", error);
+      const message = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({
+        success: false,
+        message: "Failed to update rejected export",
+        error: message,
+      });
+    }
+  };
+
+  public resubmitRejectedExport = async (
+    req: Request,
+    res: Response,
+    _next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const { exportId } = req.params;
+      if (!exportId) {
+        res
+          .status(400)
+          .json({ success: false, message: "Export ID is required" });
+        return;
+      }
+      const contract = this.fabricGateway.getExportContract();
+
+      await contract.submitTransaction("ResubmitRejectedExport", exportId);
+
+      res.status(200).json({
+        success: true,
+        message: "Export resubmitted successfully. Status reset to DRAFT.",
+        data: { exportId, status: "DRAFT" },
+      });
+    } catch (error: unknown) {
+      console.error("Error resubmitting rejected export:", error);
+      const message = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({
+        success: false,
+        message: "Failed to resubmit rejected export",
+        error: message,
+      });
+    }
+  };
+
   public cancelExport = async (
     req: Request,
     res: Response,
@@ -306,7 +406,9 @@ export class ExportController {
     try {
       const { exportId } = req.params;
       if (!exportId) {
-        res.status(400).json({ success: false, message: "Export ID is required" });
+        res
+          .status(400)
+          .json({ success: false, message: "Export ID is required" });
         return;
       }
       const contract = this.fabricGateway.getExportContract();
@@ -337,7 +439,9 @@ export class ExportController {
     try {
       const { exportId } = req.params;
       if (!exportId) {
-        res.status(400).json({ success: false, message: "Export ID is required" });
+        res
+          .status(400)
+          .json({ success: false, message: "Export ID is required" });
         return;
       }
       const { docType } = req.body;
@@ -366,17 +470,17 @@ export class ExportController {
 
       // Map frontend document types to chaincode document categories
       const docTypeMapping: { [key: string]: string } = {
-        'COMMERCIAL_INVOICE': 'fx',
-        'PACKING_LIST': 'shipment',
-        'CERTIFICATE_OF_ORIGIN': 'quality',
-        'BILL_OF_LADING': 'shipment',
-        'PHYTOSANITARY_CERTIFICATE': 'quality',
-        'QUALITY_REPORT': 'quality',
-        'EXPORT_LICENSE': 'fx',
+        COMMERCIAL_INVOICE: "fx",
+        PACKING_LIST: "shipment",
+        CERTIFICATE_OF_ORIGIN: "quality",
+        BILL_OF_LADING: "shipment",
+        PHYTOSANITARY_CERTIFICATE: "quality",
+        QUALITY_REPORT: "quality",
+        EXPORT_LICENSE: "fx",
         // Legacy support
-        'fx': 'fx',
-        'quality': 'quality',
-        'shipment': 'shipment'
+        fx: "fx",
+        quality: "quality",
+        shipment: "shipment",
       };
 
       if (!docType) {
@@ -391,7 +495,7 @@ export class ExportController {
       if (!mappedDocType) {
         res.status(400).json({
           success: false,
-          message: `Invalid document type: ${docType}. Supported types: ${Object.keys(docTypeMapping).join(', ')}`,
+          message: `Invalid document type: ${docType}. Supported types: ${Object.keys(docTypeMapping).join(", ")}`,
         });
         return;
       }
@@ -415,7 +519,12 @@ export class ExportController {
       const cid = result.hash;
 
       const contract = this.fabricGateway.getExportContract();
-      await contract.submitTransaction("AddDocument", exportId, mappedDocType, cid);
+      await contract.submitTransaction(
+        "AddDocument",
+        exportId,
+        mappedDocType,
+        cid,
+      );
 
       // Query to get the actual version
       const queryResult = await contract.evaluateTransaction(
@@ -445,7 +554,12 @@ export class ExportController {
       res.status(200).json({
         success: true,
         message: "Document added successfully",
-        data: { exportId, docType: mappedDocType, originalDocType: docType, cid },
+        data: {
+          exportId,
+          docType: mappedDocType,
+          originalDocType: docType,
+          cid,
+        },
       });
     } catch (error: unknown) {
       console.error("Error adding document:", error);
@@ -466,15 +580,21 @@ export class ExportController {
     try {
       const { exportId, docType, version: versionStr } = req.params;
       if (!exportId) {
-        res.status(400).json({ success: false, message: "Export ID is required" });
+        res
+          .status(400)
+          .json({ success: false, message: "Export ID is required" });
         return;
       }
       if (!docType) {
-        res.status(400).json({ success: false, message: "Document type is required" });
+        res
+          .status(400)
+          .json({ success: false, message: "Document type is required" });
         return;
       }
       if (!versionStr) {
-        res.status(400).json({ success: false, message: "Version is required" });
+        res
+          .status(400)
+          .json({ success: false, message: "Version is required" });
         return;
       }
 

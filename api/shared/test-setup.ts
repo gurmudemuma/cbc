@@ -3,7 +3,7 @@
  * Common test configuration and helper functions
  */
 
-import { Request, Response, NextFunction } from 'express';
+import type { NextFunction } from 'express';
 
 // Mock Request builder
 export class MockRequest {
@@ -15,12 +15,12 @@ export class MockRequest {
   public file?: any;
   public files?: any;
 
-  constructor(data: Partial<Request> = {}) {
+  constructor(data: any = {}) {
     Object.assign(this, data);
   }
 
-  static create(data: Partial<Request> = {}): Request {
-    return new MockRequest(data) as unknown as Request;
+  static create(data: any = {}) {
+    return new MockRequest(data) as unknown as any;
   }
 }
 
@@ -50,8 +50,8 @@ export class MockResponse {
     return this;
   }
 
-  static create(): Response {
-    return new MockResponse() as unknown as Response;
+  static create() {
+    return new MockResponse() as unknown as any;
   }
 }
 

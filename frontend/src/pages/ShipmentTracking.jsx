@@ -5,6 +5,7 @@ import { API_ENDPOINTS } from '../config/api.config';
 import {
   Box, Button, Card, CardContent, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Grid, InputAdornment, MenuItem, Paper, Select, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography
 } from '@mui/material';
+import Divider from '@mui/material/Divider';
 
 const ShipmentTracking = ({ user }) => {
   const [exports, setExports] = useState([]);
@@ -14,10 +15,10 @@ const ShipmentTracking = ({ user }) => {
   const [modalType, setModalType] = useState('schedule'); // 'schedule' or 'confirm'
   const [formData, setFormData] = useState({
     shipmentId: '',
-    vesselName: '',
+    transportIdentifier: '',
+    transportMode: 'SEA',
     departureDate: '',
     arrivalDate: '',
-    shippingLineId: 'SHIP-001'
   });
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -63,18 +64,18 @@ const ShipmentTracking = ({ user }) => {
     setFilteredExports(filtered);
   };
 
-  const handleSchedule = (exportData) => {
-    setSelectedExport(exportData);
-    setModalType('schedule');
-    setFormData({
-      shipmentId: `SHIP-${Date.now()}`,
-      vesselName: '',
-      departureDate: '',
-      arrivalDate: '',
-      shippingLineId: 'SHIP-001'
-    });
-    setIsModalOpen(true);
-  };
+const handleSchedule = (exportData) => {
+  setSelectedExport(exportData);
+  setModalType('schedule');
+  setFormData({
+    shipmentId: `SHIP-${Date.now()}`,
+    transportIdentifier: '',
+    transportMode: 'SEA',
+    departureDate: '',
+    arrivalDate: '',
+  });
+  setIsModalOpen(true);
+};
 
   const handleConfirm = (exportData) => {
     setSelectedExport(exportData);
@@ -84,14 +85,13 @@ const ShipmentTracking = ({ user }) => {
 
   const handleSubmit = async () => {
     try {
-      if (modalType === 'schedule') {
+if (modalType === 'schedule') {
         await apiClient.post('/shipments/schedule', {
           exportId: selectedExport.exportId,
-          shipmentId: formData.shipmentId,
-          vesselName: formData.vesselName,
+          transportIdentifier: formData.transportIdentifier,
           departureDate: formData.departureDate,
           arrivalDate: formData.arrivalDate,
-          shippingLineId: formData.shippingLineId
+          transportMode: formData.transportMode,
         });
       } else {
         await apiClient.post('/shipments/confirm', {
@@ -124,7 +124,7 @@ const ShipmentTracking = ({ user }) => {
   };
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box className={`organization-${user.organizationId || 'shipping-line'}`} sx={{ p: 3 }}>
       <Grid container spacing={3}>
         <Grid item xs={12} md={9}>
           <Typography variant="h4">Shipment Tracking</Typography>
@@ -202,23 +202,23 @@ const ShipmentTracking = ({ user }) => {
           <Card>
             <CardContent>
               <Typography variant="h6" sx={{ mb: 2 }}>Shipment Records</Typography>
-              <TableContainer component={Paper}>
-                <Table>
-                  <TableHead>
+              <TableContainer component={Paper} sx={{ maxHeight: 520, borderRadius: 2 }}>
+                <Table stickyHeader size="small">
+                  <TableHead sx={{ '& th': { fontWeight: 700 } }}>
                     <TableRow>
                       <TableCell>Export ID</TableCell>
                       <TableCell>Exporter</TableCell>
                       <TableCell>Destination</TableCell>
-                      <TableCell>Vessel</TableCell>
+<TableCell>Transport ID</TableCell>
                       <TableCell>Departure</TableCell>
                       <TableCell>Arrival</TableCell>
                       <TableCell>Status</TableCell>
-                      <TableCell>Actions</TableCell>
+                      <TableCell align="right">Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {filteredExports.map(exp => (
-                      <TableRow key={exp.exportId}>
+                      <TableRow key={exp.exportId} hover>
                         <TableCell>{exp.exportId}</TableCell>
                         <TableCell>{exp.exporterName}</TableCell>
                         <TableCell>
@@ -227,7 +227,7 @@ const ShipmentTracking = ({ user }) => {
                             {exp.destinationCountry}
                           </Stack>
                         </TableCell>
-                        <TableCell>{exp.vesselName || '-'}</TableCell>
+<TableCell>{exp.transportIdentifier || '-'}</TableCell>
                         <TableCell>
                           {exp.departureDate ? (
                             <Stack direction="row" alignItems="center" spacing={0.5}>
@@ -248,9 +248,10 @@ const ShipmentTracking = ({ user }) => {
                           <Chip 
                             label={exp.status.replace(/_/g, ' ')} 
                             color={getStatusColor(exp.status)}
+                            size="small"
                           />
                         </TableCell>
-                        <TableCell>
+                        <TableCell align="right">
                           {exp.status === 'QUALITY_CERTIFIED' && (
                             <Button variant="contained" size="small" startIcon={<Ship size={16} />} onClick={() => handleSchedule(exp)}>
                               Schedule
@@ -272,8 +273,8 @@ const ShipmentTracking = ({ user }) => {
               </TableContainer>
               {filteredExports.length === 0 && (
                 <Box sx={{ textAlign: 'center', p: 3 }}>
-                  <Ship size={48} color="action.disabled" />
-                  <Typography>No shipments found</Typography>
+                  <Ship size={48} color="#9E9E9E" />
+                  <Typography color="text.secondary">No shipments found</Typography>
                 </Box>
               )}
             </CardContent>
@@ -297,6 +298,51 @@ const ShipmentTracking = ({ user }) => {
       <Dialog open={isModalOpen} onClose={() => setIsModalOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>{modalType === 'schedule' ? 'Schedule Shipment' : 'Confirm Shipment'}</DialogTitle>
         <DialogContent>
+          {modalType === 'schedule' ? (
+            <Grid container spacing={2} sx={{ mt: 1 }}>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Transport Identifier"
+                  value={formData.transportIdentifier}
+                  onChange={(e) => setFormData({ ...formData, transportIdentifier: e.target.value })}
+                  placeholder="e.g., CONTAINER-ABC123 or AIRWAYBILL-XYZ"
+                  required
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Select fullWidth value={formData.transportMode} onChange={(e) => setFormData({ ...formData, transportMode: e.target.value })}>
+                  <MenuItem value="SEA">SEA</MenuItem>
+                  <MenuItem value="AIR">AIR</MenuItem>
+                  <MenuItem value="RAIL">RAIL</MenuItem>
+                </Select>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  type="date"
+                  label="Departure Date"
+                  InputLabelProps={{ shrink: true }}
+                  value={formData.departureDate}
+                  onChange={(e) => setFormData({ ...formData, departureDate: e.target.value })}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  type="date"
+                  label="Arrival Date"
+                  InputLabelProps={{ shrink: true }}
+                  value={formData.arrivalDate}
+                  onChange={(e) => setFormData({ ...formData, arrivalDate: e.target.value })}
+                  required
+                />
+              </Grid>
+            </Grid>
+          ) : (
+            <Typography>Confirm shipment for export {selectedExport?.exportId}?</Typography>
+          )}
           <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid item xs={12}>
               <Typography variant="body1"><strong>Export ID:</strong> {selectedExport?.exportId}</Typography>

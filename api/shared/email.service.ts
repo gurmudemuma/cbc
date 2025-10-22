@@ -1,5 +1,4 @@
 import nodemailer, { Transporter } from 'nodemailer';
-import { ExportRequest } from './types';
 
 interface EmailConfig {
   host: string;
@@ -36,7 +35,7 @@ export class EmailService {
     this.from = process.env.SMTP_FROM || 'noreply@coffeeexport.com';
 
     // Create transporter
-    this.transporter = nodemailer.createTransporter(config);
+    this.transporter = nodemailer.createTransport(config);
 
     // Verify connection
     this.verifyConnection();

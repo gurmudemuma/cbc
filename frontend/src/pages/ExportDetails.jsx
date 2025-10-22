@@ -64,10 +64,17 @@ const ExportDetails = ({ user }) => {
   const getStatusColor = (status) => {
     const colors = {
       PENDING: 'warning',
+      FX_PENDING: 'warning',
       FX_APPROVED: 'info',
       FX_REJECTED: 'error',
+      BANKING_PENDING: 'warning',
+      BANKING_APPROVED: 'info',
+      BANKING_REJECTED: 'error',
+      QUALITY_PENDING: 'warning',
       QUALITY_CERTIFIED: 'success',
       QUALITY_REJECTED: 'error',
+      EXPORT_CUSTOMS_PENDING: 'warning',
+      EXPORT_CUSTOMS_CLEARED: 'info',
       SHIPMENT_SCHEDULED: 'primary',
       SHIPPED: 'info',
       COMPLETED: 'success',
@@ -193,6 +200,40 @@ const ExportDetails = ({ user }) => {
                 </Grid>
               )}
 
+              {exportData.bankingApprovedBy && (
+                <Grid item xs={12} md={6}>
+                  <Card>
+                    <CardContent>
+                      <Typography variant="h6" sx={{ mb: 2 }}>Banking Approval</Typography>
+                      <List>
+                        <ListItem>
+                          <ListItemText primary="Approved By" secondary={exportData.bankingApprovedBy} />
+                        </ListItem>
+                        <Divider />
+                        <ListItem>
+                          <ListItemText primary="Approved At" secondary={exportData.bankingApprovedAt ? new Date(exportData.bankingApprovedAt).toLocaleString() : '-'} />
+                        </ListItem>
+                      </List>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              )}
+
+              {exportData.bankingRejectionReason && (
+                <Grid item xs={12} md={6}>
+                  <Card>
+                    <CardContent>
+                      <Typography variant="h6" sx={{ mb: 2 }}>Banking Rejection</Typography>
+                      <List>
+                        <ListItem>
+                          <ListItemText primary="Rejection Reason" secondary={exportData.bankingRejectionReason} />
+                        </ListItem>
+                      </List>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              )}
+
               {exportData.fxRejectionReason && (
                 <Grid item xs={12} md={6}>
                   <Card>
@@ -250,7 +291,7 @@ const ExportDetails = ({ user }) => {
                 </Grid>
               )}
 
-              {exportData.shipmentId && (
+{(exportData.transportIdentifier || exportData.departureDate || exportData.arrivalDate) && (
                 <Grid item xs={12} md={6}>
                   <Card>
                     <CardContent>
@@ -261,7 +302,11 @@ const ExportDetails = ({ user }) => {
                         </ListItem>
                         <Divider />
                         <ListItem>
-                          <ListItemText primary="Vessel Name" secondary={exportData.vesselName} />
+                          <ListItemText primary="Transport Identifier" secondary={exportData.transportIdentifier || '-'} />
+                        </ListItem>
+                        <Divider />
+                        <ListItem>
+                          <ListItemText primary="Transport Mode" secondary={exportData.transportMode || '-'} />
                         </ListItem>
                         <Divider />
                         <ListItem>

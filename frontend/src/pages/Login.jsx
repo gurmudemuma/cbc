@@ -9,29 +9,38 @@ const Login = ({ onLogin }) => {
   const [formData, setFormData] = useState({
     username: '',
     password: '',
-    organization: 'exporter'
+    organization: 'exporter-portal'
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSubmit = async (e) => {
+const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
     try {
-      // Use organization-specific proxy path
-      const apiUrl = getApiUrl(formData.organization);
+      // Authentication flow:
+      // - Exporter Portal users authenticate via National Bank (who manages export licenses)
+      // - All other organizations authenticate via their own APIs
+      const apiUrl = formData.organization === 'exporter-portal' 
+        ? getApiUrl('nationalbank') 
+        : getApiUrl(formData.organization);
       setApiBaseUrl(apiUrl);
 
-      const response = await apiClient.post('/auth/login', {
+      // Use portal auth endpoint for exporter portal users
+      const authEndpoint = formData.organization === 'exporter-portal' 
+        ? '/portal/auth/login' 
+        : '/auth/login';
+
+      const response = await apiClient.post(authEndpoint, {
         username: formData.username,
         password: formData.password,
       });
 
       const { user, token } = response.data.data;
       localStorage.setItem('token', token);
-      onLogin(user, token);
+      onLogin(user, token, formData.organization);
     } catch (err) {
       setError('Invalid credentials. Please try again.');
     } finally {

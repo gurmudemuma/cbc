@@ -1,11 +1,11 @@
 {
   "name": "exporter-bank-api",
   "version": "1.0.0",
-  "description": "API server for Exporter Bank organization",
-  "main": "dist/exporter-bank/src/index.js",
+  "description": "Consortium blockchain node API for Exporter Bank - validates documents, contracts, invoices, and bank-specific workflows",
+  "main": "dist/src/index.js",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/exporter-bank/src/index.js",
+    "start": "node dist/src/index.js",
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "lint": "eslint . --ext .ts",
     "test": "jest"

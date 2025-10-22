@@ -182,6 +182,8 @@ function createOrgs() {
 
   echo "Creating Shipping Line Identities"
   "$CRYPTOGEN_CMD" generate --config=./organizations/cryptogen/crypto-config-shippingline.yaml --output="organizations"
+  echo "Creating Custom Authorities Identities"
+  "$CRYPTOGEN_CMD" generate --config=./organizations/cryptogen/crypto-config-customauthorities.yaml --output="organizations"
 
   echo "Creating Orderer Org Identities"
   "$CRYPTOGEN_CMD" generate --config=./organizations/cryptogen/crypto-config-orderer.yaml --output="organizations"
@@ -242,7 +244,7 @@ CHANNEL_NAME="coffeechannel"
 # chaincode name defaults to "coffee-export"
 CC_NAME="coffee-export"
 # chaincode path
-CC_SRC_PATH="../chaincode/coffee-export/"
+CC_SRC_PATH="chaincode/coffee-export/"
 # chaincode language
 CC_RUNTIME_LANGUAGE="golang"
 # Chaincode version

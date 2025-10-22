@@ -2,10 +2,13 @@
 
 # Environment variables for peer commands
 
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+NETWORK_DIR=$(dirname $SCRIPT_DIR)
+
 export CORE_PEER_TLS_ENABLED=true
-export ORDERER_CA=${PWD}/organizations/ordererOrganizations/coffee-export.com/orderers/orderer.coffee-export.com/msp/tlscacerts/tlsca.coffee-export.com-cert.pem
-export ORDERER_ADMIN_TLS_SIGN_CERT=${PWD}/organizations/ordererOrganizations/coffee-export.com/orderers/orderer.coffee-export.com/tls/server.crt
-export ORDERER_ADMIN_TLS_PRIVATE_KEY=${PWD}/organizations/ordererOrganizations/coffee-export.com/orderers/orderer.coffee-export.com/tls/server.key
+export ORDERER_CA=${NETWORK_DIR}/organizations/ordererOrganizations/coffee-export.com/orderers/orderer.coffee-export.com/msp/tlscacerts/tlsca.coffee-export.com-cert.pem
+export ORDERER_ADMIN_TLS_SIGN_CERT=${NETWORK_DIR}/organizations/ordererOrganizations/coffee-export.com/orderers/orderer.coffee-export.com/tls/server.crt
+export ORDERER_ADMIN_TLS_PRIVATE_KEY=${NETWORK_DIR}/organizations/ordererOrganizations/coffee-export.com/orderers/orderer.coffee-export.com/tls/server.key
 
 # setGlobals <ORG>
 setGlobals() {
@@ -18,28 +21,34 @@ setGlobals() {
   
   if [ $USING_ORG -eq 1 ]; then
     export CORE_PEER_LOCALMSPID="ExporterBankMSP"
-    export CORE_PEER_TLS_ROOTCERT_FILE=$PWD/organizations/peerOrganizations/exporterbank.coffee-export.com/peers/peer0.exporterbank.coffee-export.com/tls/ca.crt
-    export CORE_PEER_MSPCONFIGPATH=$PWD/organizations/peerOrganizations/exporterbank.coffee-export.com/users/Admin@exporterbank.coffee-export.com/msp
+    export CORE_PEER_TLS_ROOTCERT_FILE=${NETWORK_DIR}/organizations/peerOrganizations/exporterbank.coffee-export.com/peers/peer0.exporterbank.coffee-export.com/tls/ca.crt
+    export CORE_PEER_MSPCONFIGPATH=${NETWORK_DIR}/organizations/peerOrganizations/exporterbank.coffee-export.com/users/Admin@exporterbank.coffee-export.com/msp
     export CORE_PEER_ADDRESS=localhost:7051
     export CORE_PEER_TLS_SERVERHOSTOVERRIDE=peer0.exporterbank.coffee-export.com
   elif [ $USING_ORG -eq 2 ]; then
     export CORE_PEER_LOCALMSPID="NationalBankMSP"
-    export CORE_PEER_TLS_ROOTCERT_FILE=$PWD/organizations/peerOrganizations/nationalbank.coffee-export.com/peers/peer0.nationalbank.coffee-export.com/tls/ca.crt
-    export CORE_PEER_MSPCONFIGPATH=$PWD/organizations/peerOrganizations/nationalbank.coffee-export.com/users/Admin@nationalbank.coffee-export.com/msp
+    export CORE_PEER_TLS_ROOTCERT_FILE=${NETWORK_DIR}/organizations/peerOrganizations/nationalbank.coffee-export.com/peers/peer0.nationalbank.coffee-export.com/tls/ca.crt
+    export CORE_PEER_MSPCONFIGPATH=${NETWORK_DIR}/organizations/peerOrganizations/nationalbank.coffee-export.com/users/Admin@nationalbank.coffee-export.com/msp
     export CORE_PEER_ADDRESS=localhost:8051
     export CORE_PEER_TLS_SERVERHOSTOVERRIDE=peer0.nationalbank.coffee-export.com
   elif [ $USING_ORG -eq 3 ]; then
     export CORE_PEER_LOCALMSPID="NCATMSP"
-    export CORE_PEER_TLS_ROOTCERT_FILE=$PWD/organizations/peerOrganizations/ncat.coffee-export.com/peers/peer0.ncat.coffee-export.com/tls/ca.crt
-    export CORE_PEER_MSPCONFIGPATH=$PWD/organizations/peerOrganizations/ncat.coffee-export.com/users/Admin@ncat.coffee-export.com/msp
+    export CORE_PEER_TLS_ROOTCERT_FILE=${NETWORK_DIR}/organizations/peerOrganizations/ncat.coffee-export.com/peers/peer0.ncat.coffee-export.com/tls/ca.crt
+    export CORE_PEER_MSPCONFIGPATH=${NETWORK_DIR}/organizations/peerOrganizations/ncat.coffee-export.com/users/Admin@ncat.coffee-export.com/msp
     export CORE_PEER_ADDRESS=localhost:9051
     export CORE_PEER_TLS_SERVERHOSTOVERRIDE=peer0.ncat.coffee-export.com
   elif [ $USING_ORG -eq 4 ]; then
     export CORE_PEER_LOCALMSPID="ShippingLineMSP"
-    export CORE_PEER_TLS_ROOTCERT_FILE=$PWD/organizations/peerOrganizations/shippingline.coffee-export.com/peers/peer0.shippingline.coffee-export.com/tls/ca.crt
-    export CORE_PEER_MSPCONFIGPATH=$PWD/organizations/peerOrganizations/shippingline.coffee-export.com/users/Admin@shippingline.coffee-export.com/msp
+    export CORE_PEER_TLS_ROOTCERT_FILE=${NETWORK_DIR}/organizations/peerOrganizations/shippingline.coffee-export.com/peers/peer0.shippingline.coffee-export.com/tls/ca.crt
+    export CORE_PEER_MSPCONFIGPATH=${NETWORK_DIR}/organizations/peerOrganizations/shippingline.coffee-export.com/users/Admin@shippingline.coffee-export.com/msp
     export CORE_PEER_ADDRESS=localhost:10051
     export CORE_PEER_TLS_SERVERHOSTOVERRIDE=peer0.shippingline.coffee-export.com
+  elif [ $USING_ORG -eq 5 ]; then
+    export CORE_PEER_LOCALMSPID="CustomAuthoritiesMSP"
+    export CORE_PEER_TLS_ROOTCERT_FILE=${NETWORK_DIR}/organizations/peerOrganizations/customauthorities.coffee-export.com/peers/peer0.customauthorities.coffee-export.com/tls/ca.crt
+    export CORE_PEER_MSPCONFIGPATH=${NETWORK_DIR}/organizations/peerOrganizations/customauthorities.coffee-export.com/users/Admin@customauthorities.coffee-export.com/msp
+    export CORE_PEER_ADDRESS=localhost:11051
+    export CORE_PEER_TLS_SERVERHOSTOVERRIDE=peer0.customauthorities.coffee-export.com
   else
     echo "================== ERROR !!! ORG Unknown =================="
   fi
@@ -69,6 +78,8 @@ setGlobalsCLI() {
     export CORE_PEER_ADDRESS=peer0.ncat.coffee-export.com:9051
   elif [ $USING_ORG -eq 4 ]; then
     export CORE_PEER_ADDRESS=peer0.shippingline.coffee-export.com:10051
+  elif [ $USING_ORG -eq 5 ]; then
+    export CORE_PEER_ADDRESS=peer0.customauthorities.coffee-export.com:11051
   else
     echo "================== ERROR !!! ORG Unknown =================="
   fi
@@ -103,6 +114,9 @@ parsePeerConnectionParameters() {
     elif [ $ORG -eq 4 ]; then
       PEER_HOST="peer0.shippingline.coffee-export.com"
       PEER_PORT="10051"
+    elif [ $ORG -eq 5 ]; then
+      PEER_HOST="peer0.customauthorities.coffee-export.com"
+      PEER_PORT="11051"
     fi
     
     ## Set peer addresses

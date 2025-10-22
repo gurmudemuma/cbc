@@ -2,7 +2,7 @@ import jwt from "jsonwebtoken";
 
 // Mock JWT secret for tests
 process.env.JWT_SECRET = "test-secret-key-for-testing-purposes-only";
-process.env['NODE_ENV'] = "test";
+process.env["NODE_ENV"] = "test";
 
 // Helper function to generate test tokens
 export const generateTestToken = (
@@ -28,6 +28,7 @@ jest.mock("../fabric/gateway", () => {
       getInstance: jest.fn().mockReturnValue({
         connect: jest.fn().mockResolvedValue(undefined),
         disconnect: jest.fn().mockResolvedValue(undefined),
+        isConnected: jest.fn().mockReturnValue(true),
         getExportContract: jest.fn().mockReturnValue({
           submitTransaction: jest
             .fn()
@@ -75,9 +76,17 @@ jest.mock("../fabric/gateway", () => {
   };
 });
 
+// Ensure user mocks are initialized cleanly before suite
+beforeAll(() => {
+  (global as any).__mockUsers?.clear?.();
+});
+
 // Mock the userService
 jest.mock("../../../shared/userService", () => {
   const mockUsers = new Map();
+
+  // expose for cleanup between tests
+  (global as any).__mockUsers = mockUsers;
 
   return {
     createUserService: jest.fn().mockReturnValue({

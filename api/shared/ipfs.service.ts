@@ -28,12 +28,16 @@ export class IPFSService {
   }
 
   private async initialize(): Promise<void> {
-    try {
-      // Connect to IPFS node (local or remote)
-      const ipfsHost = process.env.IPFS_HOST || 'localhost';
-      const ipfsPort = process.env.IPFS_PORT || '5001';
-      const ipfsProtocol = process.env.IPFS_PROTOCOL || 'http';
+    // Connect to IPFS node (required)
+    const ipfsHost = process.env.IPFS_HOST;
+    const ipfsPort = process.env.IPFS_PORT;
+    const ipfsProtocol = process.env.IPFS_PROTOCOL;
 
+    if (!ipfsHost || !ipfsPort || !ipfsProtocol) {
+      throw new Error('IPFS configuration is required: IPFS_HOST, IPFS_PORT, and IPFS_PROTOCOL must be set');
+    }
+
+    try {
       const ipfs = await import('ipfs-http-client');
       this.client = ipfs.create({
         host: ipfsHost,
@@ -43,19 +47,18 @@ export class IPFSService {
 
       // Test connection
       const version = await this.client.version();
-      console.log(`Connected to IPFS node version: ${version.version}`);
+      console.log(`✅ Connected to IPFS node version: ${version.version}`);
       this.isConnected = true;
     } catch (error: any) {
-      console.error('Failed to connect to IPFS:', error);
-      console.log('IPFS service will operate in fallback mode (local storage)');
-      this.isConnected = false;
+      console.error('❌ Failed to connect to IPFS:', error);
+      throw new Error(`IPFS connection is required but failed: ${error.message}`);
     }
   }
 
   // Upload file to IPFS
   public async uploadFile(filePath: string, _metadata?: any): Promise<UploadResult> {
     if (!this.isConnected || !this.client) {
-      return this.fallbackUpload(filePath, _metadata);
+      throw new Error('IPFS is not connected. Cannot upload file.');
     }
 
     try {
@@ -80,14 +83,14 @@ export class IPFSService {
       };
     } catch (error) {
       console.error('Error uploading to IPFS:', error);
-      return this.fallbackUpload(filePath, _metadata);
+      throw new Error(`Failed to upload file to IPFS: ${error}`);
     }
   }
 
   // Upload buffer to IPFS
   public async uploadBuffer(buffer: Buffer, fileName: string): Promise<UploadResult> {
     if (!this.isConnected || !this.client) {
-      return this.fallbackUploadBuffer(buffer, fileName);
+      throw new Error('IPFS is not connected. Cannot upload buffer.');
     }
 
     try {
@@ -108,7 +111,7 @@ export class IPFSService {
       };
     } catch (error) {
       console.error('Error uploading buffer to IPFS:', error);
-      return this.fallbackUploadBuffer(buffer, fileName);
+      throw new Error(`Failed to upload buffer to IPFS: ${error}`);
     }
   }
 
@@ -122,7 +125,7 @@ export class IPFSService {
   // Retrieve file from IPFS
   public async getFile(hash: string): Promise<Buffer> {
     if (!this.isConnected || !this.client) {
-      return this.fallbackGetFile(hash);
+      throw new Error('IPFS is not connected. Cannot retrieve file.');
     }
 
     try {
@@ -135,7 +138,7 @@ export class IPFSService {
       return Buffer.concat(chunks);
     } catch (error) {
       console.error('Error retrieving from IPFS:', error);
-      return this.fallbackGetFile(hash);
+      throw new Error(`Failed to retrieve file from IPFS: ${error}`);
     }
   }
 
@@ -148,8 +151,7 @@ export class IPFSService {
   // Pin file to ensure it stays on IPFS
   public async pinFile(hash: string): Promise<boolean> {
     if (!this.isConnected || !this.client) {
-      console.log('IPFS not connected, skipping pin');
-      return false;
+      throw new Error('IPFS is not connected. Cannot pin file.');
     }
 
     try {
@@ -165,7 +167,7 @@ export class IPFSService {
   // Unpin file
   public async unpinFile(hash: string): Promise<boolean> {
     if (!this.isConnected || !this.client) {
-      return false;
+      throw new Error('IPFS is not connected. Cannot unpin file.');
     }
 
     try {
@@ -233,74 +235,6 @@ export class IPFSService {
     return mimeTypes[ext] || 'application/octet-stream';
   }
 
-  // Fallback: Store locally if IPFS is not available
-  private fallbackUpload(filePath: string, _metadata?: any): UploadResult {
-    const uploadDir = path.join(process.cwd(), 'uploads');
-    
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-
-    const fileName = path.basename(filePath);
-    const hash = this.generateHash(filePath);
-    const destPath = path.join(uploadDir, hash);
-
-    fs.copyFileSync(filePath, destPath);
-    const stats = fs.statSync(destPath);
-
-    console.log(`File stored locally (fallback): ${hash}`);
-
-    return {
-      hash,
-      path: fileName,
-      size: stats.size,
-      url: `/uploads/${hash}`
-    };
-  }
-
-  private fallbackUploadBuffer(buffer: Buffer, fileName: string): UploadResult {
-    const uploadDir = path.join(process.cwd(), 'uploads');
-    
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-
-    const hash = this.generateHashFromBuffer(buffer);
-    const destPath = path.join(uploadDir, hash);
-
-    fs.writeFileSync(destPath, buffer);
-
-    console.log(`Buffer stored locally (fallback): ${hash}`);
-
-    return {
-      hash,
-      path: fileName,
-      size: buffer.length,
-      url: `/uploads/${hash}`
-    };
-  }
-
-  private fallbackGetFile(hash: string): Buffer {
-    const uploadDir = path.join(process.cwd(), 'uploads');
-    const filePath = path.join(uploadDir, hash);
-
-    if (fs.existsSync(filePath)) {
-      return fs.readFileSync(filePath);
-    }
-
-    throw new Error(`File not found: ${hash}`);
-  }
-
-  private generateHash(filePath: string): string {
-    const crypto = require('crypto');
-    const fileBuffer = fs.readFileSync(filePath);
-    return crypto.createHash('sha256').update(fileBuffer).digest('hex');
-  }
-
-  private generateHashFromBuffer(buffer: Buffer): string {
-    const crypto = require('crypto');
-    return crypto.createHash('sha256').update(buffer).digest('hex');
-  }
 
   // Check if IPFS is connected
   public isIPFSConnected(): boolean {

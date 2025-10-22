@@ -2,34 +2,13 @@
 
 source scripts/envVar.sh
 
-# Find peer command (Windows/Linux compatible)
-PEER_CMD=""
-if command -v peer.exe &> /dev/null; then
-  PEER_CMD="peer.exe"
-elif command -v peer &> /dev/null; then
-  PEER_CMD="peer"
-else
-  # Try direct path as fallback
-  if [ -x "${PWD}/../bin/peer.exe" ]; then
-    PEER_CMD="${PWD}/../bin/peer.exe"
-  elif [ -x "${PWD}/../bin/peer" ]; then
-    PEER_CMD="${PWD}/../bin/peer"
-  fi
-fi
-
-if [ -z "$PEER_CMD" ]; then
-  echo "ERROR: peer tool not found."
-  exit 1
-fi
-
-# Create peer function alias
-peer() {
-  $PEER_CMD "$@"
-}
+# All lifecycle commands will run inside the Docker CLI container to avoid host binary issues
 
 CHANNEL_NAME=${1:-"coffeechannel"}
 CC_NAME=${2:-"coffee-export"}
-CC_SRC_PATH=${3:-"../chaincode/coffee-export"}
+# Note: inside the CLI container, the repo is mounted at /opt/gopath/src/github.com/hyperledger/fabric/peer
+# and the chaincode lives under the 'chaincode/' subdirectory there. Avoid '../' prefixes.
+CC_SRC_PATH=${3:-"chaincode/coffee-export"}
 CC_SRC_LANGUAGE=${4:-"go"}
 CC_VERSION=${5:-"1.0"}
 CC_SEQUENCE=${6:-"1"}
@@ -56,10 +35,33 @@ infoln() {
   echo "INFO: $1"
 }
 
+# Normalize chaincode source path for inside the CLI container
+# Map '../chaincode/foo' or './chaincode/foo' to 'chaincode/foo'
+normalize_cc_path() {
+  local in="$1"
+  if [[ "$in" == ../chaincode/* ]]; then
+    echo "chaincode/${in#../chaincode/}"
+  elif [[ "$in" == ./chaincode/* ]]; then
+    echo "${in#./}"
+  elif [[ "$in" == chaincode/* ]]; then
+    echo "$in"
+  else
+    # Fallback: strip leading ../ or ./ if present
+    local tmp="${in#../}"
+    tmp="${tmp#./}"
+    echo "$tmp"
+  fi
+}
+
 # packageChaincode VERSION PEER ORG
 packageChaincode() {
+  local CC_SRC_PATH_DOCKER
+  CC_SRC_PATH_DOCKER=$(normalize_cc_path "$CC_SRC_PATH")
   set -x
-  peer lifecycle chaincode package ${CC_NAME}.tar.gz --path ${CC_SRC_PATH} --lang ${CC_SRC_LANGUAGE} --label ${CC_NAME}_${CC_VERSION} >&log.txt
+  MSYS_NO_PATHCONV=1 docker exec -e GOFLAGS=-mod=vendor -e GOPROXY=direct -e GOSUMDB=off cli bash -c "\
+    cd /opt/gopath/src/github.com/hyperledger/fabric/peer && \
+    peer lifecycle chaincode package ${CC_NAME}.tar.gz \
+      --path ${CC_SRC_PATH_DOCKER} --lang ${CC_SRC_LANGUAGE} --label ${CC_NAME}_${CC_VERSION}" >&log.txt
   res=$?
   { set +x; } 2>/dev/null
   cat log.txt
@@ -70,9 +72,12 @@ packageChaincode() {
 # installChaincode PEER ORG
 installChaincode() {
   ORG=$1
-  setGlobals $ORG
   set -x
-  peer lifecycle chaincode install ${CC_NAME}.tar.gz >&log.txt
+  MSYS_NO_PATHCONV=1 docker exec cli bash -c "\
+    cd /opt/gopath/src/github.com/hyperledger/fabric/peer && \
+    . ./scripts/envVar.sh && \
+    setGlobalsCLI ${ORG} && \
+    peer lifecycle chaincode install ${CC_NAME}.tar.gz" >&log.txt
   res=$?
   { set +x; } 2>/dev/null
   cat log.txt
@@ -83,9 +88,12 @@ installChaincode() {
 # queryInstalled PEER ORG
 queryInstalled() {
   ORG=$1
-  setGlobals $ORG
   set -x
-  peer lifecycle chaincode queryinstalled >&log.txt
+  MSYS_NO_PATHCONV=1 docker exec cli bash -c "\
+    cd /opt/gopath/src/github.com/hyperledger/fabric/peer && \
+    . ./scripts/envVar.sh && \
+    setGlobalsCLI ${ORG} && \
+    peer lifecycle chaincode queryinstalled" >&log.txt
   res=$?
   { set +x; } 2>/dev/null
   cat log.txt
@@ -97,15 +105,28 @@ queryInstalled() {
 # approveForMyOrg VERSION PEER ORG
 approveForMyOrg() {
   ORG=$1
-  setGlobals $ORG
   set -x
-
   if [ "$CC_END_POLICY" = "NA" ]; then
-    peer lifecycle chaincode approveformyorg -o localhost:7050 --ordererTLSHostnameOverride orderer.coffee-export.com --tls --cafile "$ORDERER_CA" --channelID $CHANNEL_NAME --name ${CC_NAME} --version ${CC_VERSION} --package-id ${PACKAGE_ID} --sequence ${CC_SEQUENCE} >&log.txt
+    MSYS_NO_PATHCONV=1 docker exec cli bash -c "\
+      cd /opt/gopath/src/github.com/hyperledger/fabric/peer && \
+      . ./scripts/envVar.sh && \
+      setGlobalsCLI ${ORG} && \
+      peer lifecycle chaincode approveformyorg \
+        -o orderer.coffee-export.com:7050 --ordererTLSHostnameOverride orderer.coffee-export.com \
+        --tls --cafile \$ORDERER_CA \
+        --channelID $CHANNEL_NAME --name ${CC_NAME} --version ${CC_VERSION} \
+        --package-id ${PACKAGE_ID} --sequence ${CC_SEQUENCE}" >&log.txt
   else
-    peer lifecycle chaincode approveformyorg -o localhost:7050 --ordererTLSHostnameOverride orderer.coffee-export.com --tls --cafile "$ORDERER_CA" --channelID $CHANNEL_NAME --name ${CC_NAME} --version ${CC_VERSION} --package-id ${PACKAGE_ID} --sequence ${CC_SEQUENCE} --signature-policy "$CC_END_POLICY" >&log.txt
+    MSYS_NO_PATHCONV=1 docker exec cli bash -c "\
+      cd /opt/gopath/src/github.com/hyperledger/fabric/peer && \
+      . ./scripts/envVar.sh && \
+      setGlobalsCLI ${ORG} && \
+      peer lifecycle chaincode approveformyorg \
+        -o orderer.coffee-export.com:7050 --ordererTLSHostnameOverride orderer.coffee-export.com \
+        --tls --cafile \$ORDERER_CA \
+        --channelID $CHANNEL_NAME --name ${CC_NAME} --version ${CC_VERSION} \
+        --package-id ${PACKAGE_ID} --sequence ${CC_SEQUENCE} --signature-policy '$CC_END_POLICY'" >&log.txt
   fi
-
   res=$?
   { set +x; } 2>/dev/null
   cat log.txt
@@ -117,17 +138,20 @@ approveForMyOrg() {
 checkCommitReadiness() {
   ORG=$1
   shift 1
-  setGlobals $ORG
   infoln "Checking the commit readiness of the chaincode definition on peer0.org${ORG} on channel '$CHANNEL_NAME'..."
   local rc=1
   local COUNTER=1
-  # continue to poll
-  # we either get a successful response, or reach MAX RETRY
   while [ $rc -ne 0 -a $COUNTER -lt $MAX_RETRY ]; do
     sleep $DELAY
     infoln "Attempting to check the commit readiness of the chaincode definition on peer0.org${ORG}, Retry after $DELAY seconds."
     set -x
-    peer lifecycle chaincode checkcommitreadiness --channelID $CHANNEL_NAME --name ${CC_NAME} --version ${CC_VERSION} --sequence ${CC_SEQUENCE} --output json >&log.txt
+    MSYS_NO_PATHCONV=1 docker exec cli bash -c "\
+      cd /opt/gopath/src/github.com/hyperledger/fabric/peer && \
+      . ./scripts/envVar.sh && \
+      setGlobalsCLI ${ORG} && \
+      peer lifecycle chaincode checkcommitreadiness \
+        --channelID $CHANNEL_NAME --name ${CC_NAME} \
+        --version ${CC_VERSION} --sequence ${CC_SEQUENCE} --output json" >&log.txt
     res=$?
     { set +x; } 2>/dev/null
     let rc=0
@@ -203,18 +227,19 @@ commitChaincodeDefinition() {
 # queryCommitted ORG
 queryCommitted() {
   ORG=$1
-  setGlobals $ORG
   EXPECTED_RESULT="Version: ${CC_VERSION}, Sequence: ${CC_SEQUENCE}, Endorsement Plugin: escc, Validation Plugin: vscc"
   infoln "Querying chaincode definition on peer0.org${ORG} on channel '$CHANNEL_NAME'..."
   local rc=1
   local COUNTER=1
-  # continue to poll
-  # we either get a successful response, or reach MAX RETRY
   while [ $rc -ne 0 -a $COUNTER -lt $MAX_RETRY ]; do
     sleep $DELAY
     infoln "Attempting to Query committed status on peer0.org${ORG}, Retry after $DELAY seconds."
     set -x
-    peer lifecycle chaincode querycommitted --channelID $CHANNEL_NAME --name ${CC_NAME} >&log.txt
+    MSYS_NO_PATHCONV=1 docker exec cli bash -c "\
+      cd /opt/gopath/src/github.com/hyperledger/fabric/peer && \
+      . ./scripts/envVar.sh && \
+      setGlobalsCLI ${ORG} && \
+      peer lifecycle chaincode querycommitted --channelID $CHANNEL_NAME --name ${CC_NAME}" >&log.txt
     res=$?
     { set +x; } 2>/dev/null
     test $res -eq 0 && VALUE=$(cat log.txt | grep -o '^Version: '$CC_VERSION', Sequence: [0-9]*, Endorsement Plugin: escc, Validation Plugin: vscc')
@@ -292,7 +317,7 @@ chaincodeQuery() {
   fi
 }
 
-## package the chaincode
+## Package the chaincode (run inside CLI container)
 packageChaincode
 
 ## Install chaincode on peer0.org1 and peer0.org2

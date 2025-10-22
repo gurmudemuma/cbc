@@ -83,6 +83,12 @@ export class ShipmentController {
   ): Promise<void> => {
     try {
       const { exportId } = req.params;
+      if (!exportId) {
+        res
+          .status(400)
+          .json({ success: false, message: "Export ID is required" });
+        return;
+      }
       const contract = this.fabricGateway.getExportContract();
 
       const result = await contract.evaluateTransaction(
@@ -113,7 +119,14 @@ export class ShipmentController {
     _next: NextFunction,
   ): Promise<void> => {
     try {
-      const { exportId, vesselName, departureDate, arrivalDate } = req.body;
+      const {
+        exportId,
+        transportIdentifier,
+        departureDate,
+        arrivalDate,
+        transportMode,
+      } = req.body;
+
       const shipmentId = `SHIP-${uuidv4()}`;
       const shippingLineId = req.user?.organizationId || "SHIPPING-LINE-001";
 
@@ -123,10 +136,11 @@ export class ShipmentController {
         "ScheduleShipment",
         exportId,
         shipmentId,
-        vesselName,
+        transportIdentifier,
         departureDate,
         arrivalDate,
         shippingLineId,
+        transportMode,
       );
 
       res.status(200).json({
@@ -135,10 +149,11 @@ export class ShipmentController {
         data: {
           exportId,
           shipmentId,
-          vesselName,
+          transportIdentifier,
           departureDate,
           arrivalDate,
           shippingLineId,
+          transportMode,
           status: "SHIPMENT_SCHEDULED",
         },
       });

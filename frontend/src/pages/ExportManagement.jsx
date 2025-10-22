@@ -262,13 +262,20 @@ const ExportManagement = ({ user }) => {
   const getStatusColor = (status) => {
     const statusMap = {
       PENDING: 'warning',
+      FX_PENDING: 'warning',
       FX_APPROVED: 'info',
+      BANKING_PENDING: 'warning',
+      BANKING_APPROVED: 'info',
+      QUALITY_PENDING: 'warning',
       QUALITY_CERTIFIED: 'info',
+      EXPORT_CUSTOMS_PENDING: 'warning',
+      EXPORT_CUSTOMS_CLEARED: 'info',
       SHIPMENT_SCHEDULED: 'primary',
       SHIPPED: 'primary',
       COMPLETED: 'success',
       CANCELLED: 'error',
       FX_REJECTED: 'error',
+      BANKING_REJECTED: 'error',
       QUALITY_REJECTED: 'error',
     };
     return statusMap[status] || 'default';
@@ -335,6 +342,8 @@ const ExportManagement = ({ user }) => {
                     <MenuItem value="all">All Status</MenuItem>
                     <MenuItem value="PENDING">Pending</MenuItem>
                     <MenuItem value="FX_APPROVED">FX Approved</MenuItem>
+                    <MenuItem value="BANKING_PENDING">Banking Pending</MenuItem>
+                    <MenuItem value="BANKING_APPROVED">Banking Approved</MenuItem>
                     <MenuItem value="QUALITY_CERTIFIED">Quality Certified</MenuItem>
                     <MenuItem value="SHIPMENT_SCHEDULED">Shipment Scheduled</MenuItem>
                     <MenuItem value="SHIPPED">Shipped</MenuItem>
@@ -370,21 +379,21 @@ const ExportManagement = ({ user }) => {
                   )}
                 </Box>
               ) : (
-                <TableContainer component={Paper}>
-                  <Table>
-                    <TableHead>
+                <TableContainer component={Paper} sx={{ maxHeight: 520, borderRadius: 2 }}>
+                  <Table stickyHeader size="small">
+                    <TableHead sx={{ '& th': { fontWeight: 700 } }}>
                       <TableRow>
                         <TableCell>Export ID</TableCell>
                         <TableCell>Quantity (kg)</TableCell>
                         <TableCell>Destination</TableCell>
                         <TableCell>Status</TableCell>
                         <TableCell>Date</TableCell>
-                        <TableCell>Actions</TableCell>
+                        <TableCell align="right">Actions</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {filteredExports.map(exp => (
-                        <TableRow key={exp.exportId}>
+                        <TableRow key={exp.exportId} hover>
                           <TableCell>{exp.exportId}</TableCell>
                           <TableCell>{exp.quantity.toLocaleString()}</TableCell>
                           <TableCell>{exp.destinationCountry}</TableCell>
@@ -392,11 +401,12 @@ const ExportManagement = ({ user }) => {
                             <Chip 
                               label={exp.status.replace(/_/g, ' ')} 
                               color={getStatusColor(exp.status)}
+                              size="small"
                             />
                           </TableCell>
                           <TableCell>{new Date(exp.createdAt).toLocaleDateString()}</TableCell>
-                          <TableCell>
-                            <IconButton onClick={() => navigate(`/exports/${exp.exportId}`)}>
+                          <TableCell align="right">
+                            <IconButton onClick={() => navigate(`/exports/${exp.exportId}`)} size="small">
                               <Eye size={16} />
                             </IconButton>
                           </TableCell>

@@ -3,8 +3,8 @@
  * Centralized security settings and utilities
  */
 
-import helmet from 'helmet';
-import { Express } from 'express';
+import helmet, { type HelmetOptions } from 'helmet';
+import type { Application } from 'express';
 import rateLimit from 'express-rate-limit';
 
 /**
@@ -27,11 +27,11 @@ export const cspConfig = {
 /**
  * Helmet security headers configuration
  */
-export const helmetConfig = {
-  contentSecurityPolicy: cspConfig,
+export const helmetConfig: HelmetOptions = {
+  contentSecurityPolicy: cspConfig as any,
   crossOriginEmbedderPolicy: true,
   crossOriginOpenerPolicy: true,
-  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  crossOriginResourcePolicy: { policy: 'cross-origin' as const },
   dnsPrefetchControl: true,
   frameguard: { action: 'deny' },
   hidePoweredBy: true,
@@ -44,8 +44,7 @@ export const helmetConfig = {
   noSniff: true,
   originAgentCluster: true,
   permittedCrossDomainPolicies: { permittedPolicies: 'none' },
-  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
-  xssFilter: true,
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' as any },
 };
 
 /**
@@ -140,7 +139,7 @@ export const getCorsConfig = (allowedOrigins: string | string[]) => {
 /**
  * Security headers middleware
  */
-export const securityHeadersMiddleware = (req: any, res: any, next: any) => {
+export const securityHeadersMiddleware = (_req: any, res: any, next: any) => {
   // Prevent clickjacking
   res.setHeader('X-Frame-Options', 'DENY');
 
@@ -166,7 +165,7 @@ export const securityHeadersMiddleware = (req: any, res: any, next: any) => {
  * Apply all security middleware to Express app
  */
 export const applySecurityMiddleware = (
-  app: Express,
+  app: Application,
   config: {
     corsOrigins: string;
     enableHelmet?: boolean;

@@ -30,6 +30,15 @@ router.get("/:exportId/history", exportController.getExportHistory);
 // Complete export
 router.put("/:exportId/complete", exportController.completeExport);
 
+// Update rejected export (edit and reset to DRAFT)
+router.put("/:exportId/update-rejected", exportController.updateRejectedExport);
+
+// Resubmit rejected export without changes (reset to DRAFT)
+router.put(
+  "/:exportId/resubmit-rejected",
+  exportController.resubmitRejectedExport,
+);
+
 // Cancel export
 router.put("/:exportId/cancel", exportController.cancelExport);
 
