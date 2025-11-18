@@ -24,17 +24,34 @@ if ! docker ps | grep -q "hyperledger"; then
 fi
 echo "✅ Blockchain network is running"
 
+# Check and start Redis
+print_header "Checking Redis Server..."
+if ! pgrep -x "redis-server" > /dev/null; then
+  echo "🔄 Starting Redis server..."
+  redis-server --daemonize yes
+  sleep 2
+  if pgrep -x "redis-server" > /dev/null; then
+    echo "✅ Redis server started successfully"
+  else
+    echo "❌ Failed to start Redis server"
+    echo "Please install Redis or start it manually: redis-server"
+    exit 1
+  fi
+else
+  echo "✅ Redis server is already running"
+fi
+
 # Build and start services
 print_header "Building API Services"
 
-# Exporter Bank API
-print_header "Building Exporter Bank API..."
-echo "Compiling TypeScript for Exporter Bank API..."
-if ! (cd "$PROJECT_ROOT/api/exporter-bank" && npm run build); then
-  echo "❌ Failed to build Exporter Bank API"
+# Commercial Bank API
+print_header "Building Commercial Bank API..."
+echo "Compiling TypeScript for Commercial Bank API..."
+if ! (cd "$PROJECT_ROOT/api/commercial-bank" && npm run build); then
+  echo "❌ Failed to build Commercial Bank API"
   exit 1
 fi
-echo "✅ Exporter Bank API built successfully"
+echo "✅ commercialbank API built successfully"
 
 # National Bank API
 print_header "Building National Bank API..."
@@ -45,14 +62,32 @@ if ! (cd "$PROJECT_ROOT/api/national-bank" && npm run build); then
 fi
 echo "✅ National Bank API built successfully"
 
-# NCAT API
-print_header "Building NCAT API..."
-echo "Compiling TypeScript for NCAT API..."
-if ! (cd "$PROJECT_ROOT/api/ncat" && npm run build); then
-  echo "❌ Failed to build NCAT API"
+# ECTA API (Ethiopian Coffee & Tea Authority)
+print_header "Building ECTA API..."
+echo "Compiling TypeScript for ECTA API..."
+if ! (cd "$PROJECT_ROOT/api/ecta" && npm run build); then
+  echo "❌ Failed to build ECTA API"
   exit 1
 fi
-echo "✅ NCAT API built successfully"
+echo "✅ ECTA API built successfully"
+
+# ECX API (Ethiopian Commodity Exchange)
+print_header "Building ECX API..."
+echo "Compiling TypeScript for ECX API..."
+if ! (cd "$PROJECT_ROOT/api/ecx" && npm run build); then
+  echo "❌ Failed to build ECX API"
+  exit 1
+fi
+echo "✅ ECX API built successfully"
+
+# Exporter Portal API
+print_header "Building Exporter Portal API..."
+echo "Compiling TypeScript for Exporter Portal API..."
+if ! (cd "$PROJECT_ROOT/api/exporter-portal" && npm run build); then
+  echo "❌ Failed to build Exporter Portal API"
+  exit 1
+fi
+echo "✅ Exporter Portal API built successfully"
 
 # Shipping Line API
 print_header "Building Shipping Line API..."
@@ -77,13 +112,13 @@ print_header "Starting API Services in Development Mode"
 # Create logs directory if it doesn't exist
 mkdir -p "$PROJECT_ROOT/logs"
 
-# Exporter Bank API
-LOG_FILE="$PROJECT_ROOT/logs/exporter-bank.log"
-PID_FILE="$PROJECT_ROOT/logs/exporter-bank.pid"
+# Commercial Bank API
+LOG_FILE="$PROJECT_ROOT/logs/commercial-bank.log"
+PID_FILE="$PROJECT_ROOT/logs/commercial-bank.pid"
 kill "$(cat $PID_FILE)" 2>/dev/null
-(cd "$PROJECT_ROOT/api/exporter-bank" && ts-node-dev --respawn --transpile-only src/index.ts &> "$LOG_FILE") &
+(cd "$PROJECT_ROOT/api/commercial-bank" && ts-node-dev --respawn --transpile-only src/index.ts &> "$LOG_FILE") &
 echo $! > "$PID_FILE"
-echo "🚀 Exporter Bank API started in dev mode. Log: $LOG_FILE"
+echo "🚀 Commercial Bank API started in dev mode. Log: $LOG_FILE"
 
 # National Bank API
 LOG_FILE="$PROJECT_ROOT/logs/national-bank.log"
@@ -93,13 +128,29 @@ kill "$(cat $PID_FILE)" 2>/dev/null
 echo $! > "$PID_FILE"
 echo "🚀 National Bank API started in dev mode. Log: $LOG_FILE"
 
-# NCAT API
-LOG_FILE="$PROJECT_ROOT/logs/ncat.log"
-PID_FILE="$PROJECT_ROOT/logs/ncat.pid"
+# ECTA API (Ethiopian Coffee & Tea Authority)
+LOG_FILE="$PROJECT_ROOT/logs/ecta.log"
+PID_FILE="$PROJECT_ROOT/logs/ecta.pid"
 kill "$(cat $PID_FILE)" 2>/dev/null
-(cd "$PROJECT_ROOT/api/ncat" && ts-node-dev --respawn --transpile-only src/index.ts &> "$LOG_FILE") &
+(cd "$PROJECT_ROOT/api/ecta" && ts-node-dev --respawn --transpile-only src/index.ts &> "$LOG_FILE") &
 echo $! > "$PID_FILE"
-echo "🚀 NCAT API started in dev mode. Log: $LOG_FILE"
+echo "🚀 ECTA API started in dev mode. Log: $LOG_FILE"
+
+# ECX API (Ethiopian Commodity Exchange)
+LOG_FILE="$PROJECT_ROOT/logs/ecx.log"
+PID_FILE="$PROJECT_ROOT/logs/ecx.pid"
+kill "$(cat $PID_FILE)" 2>/dev/null
+(cd "$PROJECT_ROOT/api/ecx" && ts-node-dev --respawn --transpile-only src/index.ts &> "$LOG_FILE") &
+echo $! > "$PID_FILE"
+echo "🚀 ECX API started in dev mode. Log: $LOG_FILE"
+
+# Exporter Portal API
+LOG_FILE="$PROJECT_ROOT/logs/exporter-portal.log"
+PID_FILE="$PROJECT_ROOT/logs/exporter-portal.pid"
+kill "$(cat $PID_FILE)" 2>/dev/null
+(cd "$PROJECT_ROOT/api/exporter-portal" && ts-node-dev --respawn --transpile-only src/index.ts &> "$LOG_FILE") &
+echo $! > "$PID_FILE"
+echo "🚀 Exporter Portal API started in dev mode. Log: $LOG_FILE"
 
 # Shipping Line API
 LOG_FILE="$PROJECT_ROOT/logs/shipping-line.log"
@@ -120,12 +171,17 @@ echo "🚀 Custom Authorities API started in dev mode. Log: $LOG_FILE"
 print_header "All APIs have been started!"
 
 echo ""
-echo "API Services Status:"
-echo "  🏦 Exporter Bank API: http://localhost:3001"
-echo "  🏦 National Bank API: http://localhost:3002"
-echo "  🏛️  NCAT API: http://localhost:3003"
+echo "Services Status:"
+echo "  📦 Redis Server: localhost:6379 (caching)"
+echo "  🏦 Commercial Bank API: http://localhost:3001"
+echo "  🏦 National Bank (NBE) API: http://localhost:3002"
+echo "  🏛️  ECTA API: http://localhost:3003 (License, Quality, Contract)"
 echo "  🚢 Shipping Line API: http://localhost:3004"
-echo "  🛃 Custom Authorities API: http://localhost:3005"
+echo "  🛃 Customs API: http://localhost:3005"
+echo "  📊 ECX API: http://localhost:3006 (Lot Verification)"
+echo "  👤 Exporter Portal API: http://localhost:3007"
 echo ""
 echo "Logs are available in: $PROJECT_ROOT/logs/"
+echo ""
+echo "To stop Redis: redis-cli shutdown"
 echo ""

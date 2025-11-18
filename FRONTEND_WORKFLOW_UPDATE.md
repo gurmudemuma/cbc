@@ -27,9 +27,9 @@ Exporter Portal (Off-chain PostgreSQL)
   ↓ Submits via HTTP to National Bank API
 STEP 1: National Bank creates blockchain record & approves FX
   ↓
-STEP 2: Exporter Bank validates financial documents (Banking Approval)
+STEP 2: commercialbank validates financial documents (Banking Approval)
   ↓
-STEP 3: NCAT Quality Certification
+STEP 3: ECTA Quality Certification
   ↓
 STEP 4: Export Customs Clearance (Ethiopian Customs)
   ↓
@@ -92,7 +92,7 @@ STEP 8: Completion
 
 ---
 
-### 3. Exporter Bank Portal (Financial Validation)
+### 3. commercialbank Portal (Financial Validation)
 
 #### **Sidebar Navigation**
 - 📊 Dashboard
@@ -108,11 +108,11 @@ STEP 8: Completion
 3. **View Pending Reviews** (Secondary)
    - List exports awaiting banking approval (BANKING_PENDING)
 
-**Note**: Exporter Bank validates financial documents AFTER National Bank approves FX.
+**Note**: commercialbank validates financial documents AFTER National Bank approves FX.
 
 ---
 
-### 4. NCAT Portal (Quality Certification)
+### 4. ECTA Portal (Quality Certification)
 
 #### **Sidebar Navigation** 
 - 📊 Dashboard
@@ -190,7 +190,7 @@ STEP 8: Completion
 [Exporter Portal]
   1. Create Export
        ↓
-  2. Submit for Quality ──→ [NCAT] Certifies ──→ QUALITY_CERTIFIED
+  2. Submit for Quality ──→ [ECTA] Certifies ──→ QUALITY_CERTIFIED
        ↓
   3. Submit for FX ──→ [Bank] Approves ──→ FX_APPROVED
        ↓
@@ -216,18 +216,18 @@ STEP 8: Completion
 - No payment/repatriation tracking
 
 ### ✅ **ADDED** (New/Correct):
-1. **Origin Certificates** menu for NCAT
+1. **Origin Certificates** menu for ECTA
 2. **Payment & Repatriation** menu for National Bank
 3. **Arrival Notifications** menu for Shipping
 4. **Split Customs** menus: Export Customs + Import Customs
 5. **Exporter workflow buttons**: Submit Quality → Submit FX → Submit Customs
-6. **NCAT**: Issue Origin Certificate button
+6. **ECTA**: Issue Origin Certificate button
 7. **Bank**: Confirm Payment + Confirm Repatriation buttons
 8. **Shipping**: Notify Arrival button
 9. **Customs**: Separate Export and Import sections with distinct actions
 
 ### 🔄 **REORDERED** (Sequence Fixed):
-- NCAT now clearly shown as FIRST STEP
+- ECTA now clearly shown as FIRST STEP
 - FX approval now clearly SECOND STEP (after quality)
 - Export customs now THIRD STEP (before shipment)
 - Import customs now SIXTH STEP (after arrival)
@@ -240,7 +240,7 @@ Each section now has comments indicating workflow position:
 
 ```javascript
 // Exporter Portal - Workflow: Quality → FX → Export Customs
-// NCAT - Quality Certification (FIRST STEP)
+// ECTA - Quality Certification (FIRST STEP)
 // National Bank - FX Approval (SECOND STEP, after quality)
 // Export Customs Authority - Export clearance (THIRD STEP, before shipment)
 // Shipping Line - Shipment & Arrival (FOURTH & FIFTH STEPS)
@@ -275,7 +275,7 @@ Each section now has comments indicating workflow position:
 ### Current Routes:
 - `/dashboard` - All users
 - `/exports` - Exporter + National Bank
-- `/quality` - NCAT
+- `/quality` - ECTA
 - `/fx-rates` - National Bank
 - `/users` - National Bank
 - `/shipments` - Shipping Line
@@ -296,7 +296,7 @@ Or use a single route with tabs:
 When the backend is deployed, verify:
 
 - [ ] Exporter sees 5 quick actions in correct order
-- [ ] NCAT sees "Issue Origin Certificate" button
+- [ ] ECTA sees "Issue Origin Certificate" button
 - [ ] National Bank sees "Confirm Payment" and "Confirm Repatriation" buttons
 - [ ] Shipping sees "Notify Arrival" button
 - [ ] Customs sees TWO sections: Export Customs and Import Customs
@@ -326,7 +326,7 @@ When the backend is deployed, verify:
 ✅ **Frontend navigation is now 100% aligned with the corrected workflow**
 
 The sidebars and quick actions now correctly show:
-- NCAT quality certification as FIRST STEP
+- ECTA quality certification as FIRST STEP
 - FX approval as SECOND STEP (after quality)
 - Split customs (export before shipment, import after arrival)
 - Complete workflow steps including arrival, payment, repatriation

@@ -71,7 +71,7 @@ COPY --from=builder --chown=nodejs:nodejs /app/custom-authorities/dist ./custom-
 COPY --from=builder --chown=nodejs:nodejs /app/shared ./shared
 
 # Copy wallet directory structure (will be populated at runtime)
-RUN mkdir -p wallet && chown -R nodejs:nodejs wallet
+RUN mkdir -p wallet logs && chown -R nodejs:nodejs wallet logs
 
 # Switch to non-root user
 USER nodejs
@@ -87,4 +87,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
 ENTRYPOINT ["dumb-init", "--"]
 
 # Start application
-CMD ["node", "custom-authorities/dist/src/index.js"]
+CMD ["node", "custom-authorities/dist/custom-authorities/src/index.js"]

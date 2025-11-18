@@ -32,9 +32,24 @@ fi
 # Remove generated crypto material
 echo ""
 echo "🧹 Removing generated crypto material..."
-rm -rf network/organizations/peerOrganizations
-rm -rf network/organizations/ordererOrganizations
-rm -rf network/organizations/fabric-ca
+# Use sudo if needed for permission issues
+if [ -d "network/organizations/peerOrganizations" ] && [ ! -w "network/organizations/peerOrganizations" ]; then
+    sudo rm -rf network/organizations/peerOrganizations 2>/dev/null || rm -rf network/organizations/peerOrganizations
+else
+    rm -rf network/organizations/peerOrganizations 2>/dev/null || true
+fi
+
+if [ -d "network/organizations/ordererOrganizations" ] && [ ! -w "network/organizations/ordererOrganizations" ]; then
+    sudo rm -rf network/organizations/ordererOrganizations 2>/dev/null || rm -rf network/organizations/ordererOrganizations
+else
+    rm -rf network/organizations/ordererOrganizations 2>/dev/null || true
+fi
+
+if [ -d "network/organizations/fabric-ca" ] && [ ! -w "network/organizations/fabric-ca" ]; then
+    sudo rm -rf network/organizations/fabric-ca 2>/dev/null || rm -rf network/organizations/fabric-ca
+else
+    rm -rf network/organizations/fabric-ca 2>/dev/null || true
+fi
 
 # Remove channel artifacts
 echo ""
@@ -51,18 +66,22 @@ rm -f network/log.txt
 # Remove API build artifacts
 echo ""
 echo "🧹 Removing API build artifacts..."
-rm -rf api/exporter-bank/dist
+rm -rf api/commercial-bank/dist
 rm -rf api/national-bank/dist
+rm -rf api/exporter/dist
 rm -rf api/ncat/dist
 rm -rf api/shipping-line/dist
+rm -rf api/custom-authorities/dist
 
 # Remove node_modules (optional - uncomment if needed)
 # echo ""
 # echo "🧹 Removing node_modules..."
-# rm -rf api/exporter-bank/node_modules
+# rm -rf api/commercial-bank/node_modules
 # rm -rf api/national-bank/node_modules
+# rm -rf api/exporter/node_modules
 # rm -rf api/ncat/node_modules
 # rm -rf api/shipping-line/node_modules
+# rm -rf api/custom-authorities/node_modules
 
 # Remove Docker volumes
 echo ""

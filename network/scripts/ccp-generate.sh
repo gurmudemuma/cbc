@@ -26,15 +26,15 @@ function yaml_ccp {
         organizations/ccp-template.yaml | sed -e $'s/\\\\n/\\\n          /g'
 }
 
-# ExporterBank
-ORG=exporterbank
-ORGMSP=ExporterBank
+# commercialbank
+ORG=commercialbank
+ORGMSP=commercialbank
 P0PORT=7051
-PEERPEM=organizations/peerOrganizations/exporterbank.coffee-export.com/tlsca/tlsca.exporterbank.coffee-export.com-cert.pem
-CAPEM=organizations/peerOrganizations/exporterbank.coffee-export.com/ca/ca.exporterbank.coffee-export.com-cert.pem
+PEERPEM=organizations/peerOrganizations/commercialbank.coffee-export.com/tlsca/tlsca.commercialbank.coffee-export.com-cert.pem
+CAPEM=organizations/peerOrganizations/commercialbank.coffee-export.com/ca/ca.commercialbank.coffee-export.com-cert.pem
 
-echo "$(json_ccp $ORG $ORGMSP $P0PORT $PEERPEM $CAPEM)" > organizations/peerOrganizations/exporterbank.coffee-export.com/connection-exporterbank.json
-echo "$(yaml_ccp $ORG $ORGMSP $P0PORT $PEERPEM $CAPEM)" > organizations/peerOrganizations/exporterbank.coffee-export.com/connection-exporterbank.yaml
+echo "$(json_ccp $ORG $ORGMSP $P0PORT $PEERPEM $CAPEM)" > organizations/peerOrganizations/commercialbank.coffee-export.com/connection-commercialbank.json
+echo "$(yaml_ccp $ORG $ORGMSP $P0PORT $PEERPEM $CAPEM)" > organizations/peerOrganizations/commercialbank.coffee-export.com/connection-commercialbank.yaml
 
 # NationalBank
 ORG=nationalbank
@@ -46,15 +46,15 @@ CAPEM=organizations/peerOrganizations/nationalbank.coffee-export.com/ca/ca.natio
 echo "$(json_ccp $ORG $ORGMSP $P0PORT $PEERPEM $CAPEM)" > organizations/peerOrganizations/nationalbank.coffee-export.com/connection-nationalbank.json
 echo "$(yaml_ccp $ORG $ORGMSP $P0PORT $PEERPEM $CAPEM)" > organizations/peerOrganizations/nationalbank.coffee-export.com/connection-nationalbank.yaml
 
-# NCAT
-ORG=ncat
-ORGMSP=NCAT
+# ECTA
+ORG=ecta
+ORGMSP=ECTA
 P0PORT=9051
-PEERPEM=organizations/peerOrganizations/ncat.coffee-export.com/tlsca/tlsca.ncat.coffee-export.com-cert.pem
-CAPEM=organizations/peerOrganizations/ncat.coffee-export.com/ca/ca.ncat.coffee-export.com-cert.pem
+PEERPEM=organizations/peerOrganizations/ecta.coffee-export.com/tlsca/tlsca.ecta.coffee-export.com-cert.pem
+CAPEM=organizations/peerOrganizations/ecta.coffee-export.com/ca/ca.ecta.coffee-export.com-cert.pem
 
-echo "$(json_ccp $ORG $ORGMSP $P0PORT $PEERPEM $CAPEM)" > organizations/peerOrganizations/ncat.coffee-export.com/connection-ncat.json
-echo "$(yaml_ccp $ORG $ORGMSP $P0PORT $PEERPEM $CAPEM)" > organizations/peerOrganizations/ncat.coffee-export.com/connection-ncat.yaml
+echo "$(json_ccp $ORG $ORGMSP $P0PORT $PEERPEM $CAPEM)" > organizations/peerOrganizations/ecta.coffee-export.com/connection-ecta.json
+echo "$(yaml_ccp $ORG $ORGMSP $P0PORT $PEERPEM $CAPEM)" > organizations/peerOrganizations/ecta.coffee-export.com/connection-ecta.yaml
 
 # ShippingLine
 ORG=shippingline

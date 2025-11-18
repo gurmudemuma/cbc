@@ -18,12 +18,12 @@ echo -e "${BOLD}${BLUE}========================================${NC}\n"
 # Check if services are running
 echo -e "${YELLOW}Checking if services are running...${NC}"
 if ! curl -s http://localhost:3001/health > /dev/null 2>&1; then
-    echo -e "${RED}✗ Exporter Bank API is not running on port 3001${NC}"
+    echo -e "${RED}✗ commercialbank API is not running on port 3001${NC}"
     echo -e "${YELLOW}Please start the service with:${NC}"
-    echo -e "  cd api/exporter-bank && npm run dev"
+    echo -e "  cd api/commercial-bank && npm run dev"
     exit 1
 fi
-echo -e "${GREEN}✓ Exporter Bank API is running${NC}\n"
+echo -e "${GREEN}✓ commercialbank API is running${NC}\n"
 
 # Create test results directory
 RESULTS_DIR="test-results"

@@ -81,12 +81,12 @@ data:
           action: replace
           target_label: kubernetes_pod_name
 
-      # Exporter Bank API
-      - job_name: 'exporter-bank-api'
+      # commercialbank API
+      - job_name: 'commercialbank-api'
         static_configs:
-        - targets: ['exporter-bank-api:3001']
+        - targets: ['commercialbank-api:3001']
           labels:
-            service: 'exporter-bank-api'
+            service: 'commercialbank-api'
             tier: 'backend'
 
       # National Bank API
@@ -97,7 +97,7 @@ data:
             service: 'national-bank-api'
             tier: 'backend'
 
-      # NCAT API
+      # ECTA API
       - job_name: 'ncat-api'
         static_configs:
         - targets: ['ncat-api:3003']

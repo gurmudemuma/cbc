@@ -13,50 +13,65 @@ type CoffeeExportContractV2 struct {
 	contractapi.Contract
 }
 
-// ExportStatus represents the current status of an export - CORRECTED WORKFLOW
+// ExportStatus represents the current status of an export - CORRECTED ETHIOPIAN WORKFLOW
+// Workflow: Portal → ECX → ECTA → Commercial Bank → NBE → Customs → Shipping → Payment
 type ExportStatus string
 
 const (
 	// Initial State (Portal submits)
 	StatusDraft ExportStatus = "DRAFT"
 
-	// FX Phase (FIRST - National Bank validates license & FX)
-	StatusFXPending  ExportStatus = "FX_PENDING"
-	StatusFXApproved ExportStatus = "FX_APPROVED"
-	StatusFXRejected ExportStatus = "FX_REJECTED"
+	// ECX Phase (FIRST - Ethiopian Commodity Exchange verifies source)
+	StatusECXPending  ExportStatus = "ECX_PENDING"
+	StatusECXVerified ExportStatus = "ECX_VERIFIED"
+	StatusECXRejected ExportStatus = "ECX_REJECTED"
 
-	// Banking Phase (SECOND - Exporter Bank validates financial docs)
-	StatusBankingPending  ExportStatus = "BANKING_PENDING"
-	StatusBankingApproved ExportStatus = "BANKING_APPROVED"
-	StatusBankingRejected ExportStatus = "BANKING_REJECTED"
+	// ECTA Phase (SECOND - Ethiopian Coffee & Tea Authority - PRIMARY REGULATOR)
+	// License Validation
+	StatusECTALicensePending  ExportStatus = "ECTA_LICENSE_PENDING"
+	StatusECTALicenseApproved ExportStatus = "ECTA_LICENSE_APPROVED"
+	StatusECTALicenseRejected ExportStatus = "ECTA_LICENSE_REJECTED"
+	// Quality Certification
+	StatusECTAQualityPending  ExportStatus = "ECTA_QUALITY_PENDING"
+	StatusECTAQualityApproved ExportStatus = "ECTA_QUALITY_APPROVED"
+	StatusECTAQualityRejected ExportStatus = "ECTA_QUALITY_REJECTED"
+	// Contract Approval
+	StatusECTAContractPending  ExportStatus = "ECTA_CONTRACT_PENDING"
+	StatusECTAContractApproved ExportStatus = "ECTA_CONTRACT_APPROVED"
+	StatusECTAContractRejected ExportStatus = "ECTA_CONTRACT_REJECTED"
 
-	// Quality Phase (THIRD - NCAT certifies quality)
-	StatusQualityPending   ExportStatus = "QUALITY_PENDING"
-	StatusQualityCertified ExportStatus = "QUALITY_CERTIFIED"
-	StatusQualityRejected  ExportStatus = "QUALITY_REJECTED"
+	// Commercial Bank Phase (THIRD - Document verification & FX intermediary)
+	StatusBankDocumentPending  ExportStatus = "BANK_DOCUMENT_PENDING"
+	StatusBankDocumentVerified ExportStatus = "BANK_DOCUMENT_VERIFIED"
+	StatusBankDocumentRejected ExportStatus = "BANK_DOCUMENT_REJECTED"
 
-	// Origin Customs Phase (THIRD - export clearance)
-	StatusExportCustomsPending  ExportStatus = "EXPORT_CUSTOMS_PENDING"
-	StatusExportCustomsCleared  ExportStatus = "EXPORT_CUSTOMS_CLEARED"
-	StatusExportCustomsRejected ExportStatus = "EXPORT_CUSTOMS_REJECTED"
+	// NBE Phase (FOURTH - National Bank of Ethiopia FX approval ONLY)
+	StatusFXApplicationPending ExportStatus = "FX_APPLICATION_PENDING"
+	StatusFXApproved           ExportStatus = "FX_APPROVED"
+	StatusFXRejected           ExportStatus = "FX_REJECTED"
 
-	// Shipment Phase (FOURTH)
+	// Customs Phase (FIFTH - Export clearance)
+	StatusCustomsPending  ExportStatus = "CUSTOMS_PENDING"
+	StatusCustomsCleared  ExportStatus = "CUSTOMS_CLEARED"
+	StatusCustomsRejected ExportStatus = "CUSTOMS_REJECTED"
+
+	// Shipment Phase (SIXTH)
+	StatusReadyForShipment  ExportStatus = "READY_FOR_SHIPMENT"
 	StatusShipmentScheduled ExportStatus = "SHIPMENT_SCHEDULED"
 	StatusShipped           ExportStatus = "SHIPPED"
 
-	// Destination Customs Phase (FIFTH - import clearance)
+	// Destination Phase (SEVENTH - import clearance)
 	StatusArrived                ExportStatus = "ARRIVED"
 	StatusImportCustomsPending   ExportStatus = "IMPORT_CUSTOMS_PENDING"
 	StatusImportCustomsCleared   ExportStatus = "IMPORT_CUSTOMS_CLEARED"
 	StatusImportCustomsRejected  ExportStatus = "IMPORT_CUSTOMS_REJECTED"
+	StatusDelivered              ExportStatus = "DELIVERED"
 
-	// Delivery Phase (SIXTH)
-	StatusDelivered ExportStatus = "DELIVERED"
-
-	// Financial Phase (SEVENTH)
-	StatusPaymentPending  ExportStatus = "PAYMENT_PENDING"
-	StatusPaymentReceived ExportStatus = "PAYMENT_RECEIVED"
-	StatusFXRepatriated   ExportStatus = "FX_REPATRIATED"
+	// Payment Phase (EIGHTH)
+	StatusPaymentPending         ExportStatus = "PAYMENT_PENDING"
+	StatusPaymentReceived        ExportStatus = "PAYMENT_RECEIVED"
+	StatusFXRepatriationPending  ExportStatus = "FX_REPATRIATION_PENDING"
+	StatusFXRepatriated          ExportStatus = "FX_REPATRIATED"
 
 	// Terminal States
 	StatusCompleted ExportStatus = "COMPLETED"
@@ -81,7 +96,7 @@ type Document struct {
 // ExportRequest represents a coffee export request with complete workflow fields
 type ExportRequest struct {
 	ExportID           string       `json:"exportId"`
-	ExporterBankID     string       `json:"exporterBankId"`
+	CommercialBankID   string       `json:"commercialBankId"`
 	ExporterName       string       `json:"exporterName"`
 	CoffeeType         string       `json:"coffeeType"`
 	Quantity           float64      `json:"quantity"` // in kg
@@ -91,17 +106,30 @@ type ExportRequest struct {
 	CreatedAt          string       `json:"createdAt"`
 	UpdatedAt          string       `json:"updatedAt"`
 
-	// NEW: Pre-export fields
-	ExportLicenseNumber string `json:"exportLicenseNumber"`
-	ECXLotNumber        string `json:"ecxLotNumber,omitempty"`
-	WarehouseLocation   string `json:"warehouseLocation,omitempty"`
+	// ECX fields (Ethiopian Commodity Exchange - FIRST STEP)
+	ECXLotNumber           string     `json:"ecxLotNumber"`
+	WarehouseReceiptNumber string     `json:"warehouseReceiptNumber,omitempty"`
+	WarehouseLocation      string     `json:"warehouseLocation,omitempty"`
+	ECXVerifiedBy          string     `json:"ecxVerifiedBy,omitempty"`
+	ECXVerifiedAt          string     `json:"ecxVerifiedAt,omitempty"`
+	ECXRejectionReason     string     `json:"ecxRejectionReason,omitempty"`
 
-	// NCAT fields (Quality Certification)
+	// ECTA fields (Ethiopian Coffee & Tea Authority - PRIMARY REGULATOR)
+	// Export License
+	ExportLicenseNumber      string `json:"exportLicenseNumber"`
+	ExportLicenseValidatedBy string `json:"exportLicenseValidatedBy,omitempty"`
+	ExportLicenseValidatedAt string `json:"exportLicenseValidatedAt,omitempty"`
+	// Quality Certification
 	QualityDocuments       []Document `json:"qualityDocuments,omitempty"`
+	QualityCertID          string     `json:"qualityCertId,omitempty"`
 	QualityGrade           string     `json:"qualityGrade,omitempty"`
 	QualityCertifiedBy     string     `json:"qualityCertifiedBy,omitempty"`
 	QualityCertifiedAt     string     `json:"qualityCertifiedAt,omitempty"`
 	QualityRejectionReason string     `json:"qualityRejectionReason,omitempty"`
+	// Contract Approval
+	ContractApprovedBy     string `json:"contractApprovedBy,omitempty"`
+	ContractApprovedAt     string `json:"contractApprovedAt,omitempty"`
+	ContractRejectionReason string `json:"contractRejectionReason,omitempty"`
 
 	// NEW: Certificate of Origin
 	OriginCertificateNumber    string     `json:"originCertificateNumber,omitempty"`
@@ -165,11 +193,12 @@ func (c *CoffeeExportContractV2) InitLedger(ctx contractapi.TransactionContextIn
 	return nil
 }
 
-// CreateExportRequest creates a new export request (called by National Bank when portal submits)
+// CreateExportRequest creates a new export request (called by ECX after lot verification)
+// CORRECTED: ECX creates the initial blockchain record, not NBE
 func (c *CoffeeExportContractV2) CreateExportRequest(
 	ctx contractapi.TransactionContextInterface,
 	exportID string,
-	exporterBankID string,
+	commercialBankID string,
 	exporterName string,
 	exportLicenseNumber string,
 	coffeeType string,
@@ -179,30 +208,30 @@ func (c *CoffeeExportContractV2) CreateExportRequest(
 	ecxLotNumber string,
 	warehouseLocation string,
 ) error {
-	// Input validation
-	if exportID == "" {
-		return fmt.Errorf("export ID cannot be empty")
+	// Enhanced input validation
+	if err := ValidateExportID(exportID); err != nil {
+		return fmt.Errorf("invalid export ID: %v", err)
 	}
-	if exporterBankID == "" {
-		return fmt.Errorf("exporter bank ID cannot be empty")
+	if err := ValidateExportID(commercialBankID); err != nil {
+		return fmt.Errorf("invalid commercial bank ID: %v", err)
 	}
-	if exporterName == "" {
-		return fmt.Errorf("exporter name cannot be empty")
+	if err := ValidateExporterName(exporterName); err != nil {
+		return fmt.Errorf("invalid exporter name: %v", err)
 	}
-	if exportLicenseNumber == "" {
-		return fmt.Errorf("export license number cannot be empty")
+	if err := ValidateLicenseNumber(exportLicenseNumber); err != nil {
+		return fmt.Errorf("invalid license number: %v", err)
 	}
-	if coffeeType == "" {
-		return fmt.Errorf("coffee type cannot be empty")
+	if err := ValidateCoffeeType(coffeeType); err != nil {
+		return fmt.Errorf("invalid coffee type: %v", err)
 	}
-	if quantity <= 0 {
-		return fmt.Errorf("quantity must be greater than 0")
+	if err := ValidateQuantity(quantity); err != nil {
+		return fmt.Errorf("invalid quantity: %v", err)
 	}
-	if destinationCountry == "" {
-		return fmt.Errorf("destination country cannot be empty")
+	if err := ValidateDestinationCountry(destinationCountry); err != nil {
+		return fmt.Errorf("invalid destination country: %v", err)
 	}
-	if estimatedValue <= 0 {
-		return fmt.Errorf("estimated value must be greater than 0")
+	if err := ValidateEstimatedValue(estimatedValue); err != nil {
+		return fmt.Errorf("invalid estimated value: %v", err)
 	}
 
 	// Check if export already exists
@@ -214,20 +243,27 @@ func (c *CoffeeExportContractV2) CreateExportRequest(
 		return fmt.Errorf("export request %s already exists", exportID)
 	}
 
-	// Validate caller is National Bank (portal submits through National Bank)
+	// Validate caller is Commercial Bank or ECX
+	// Commercial Bank creates initial export request, ECX verifies lot
 	clientMSPID, err := ctx.GetClientIdentity().GetMSPID()
 	if err != nil {
 		return fmt.Errorf("failed to get client MSP ID: %v", err)
 	}
-	if clientMSPID != "NationalBankMSP" {
-		return fmt.Errorf("only National Bank can create export requests (from portal), got MSP ID: %s", clientMSPID)
+	if clientMSPID != "ECXMSP" && clientMSPID != "CommercialBankMSP" {
+		return fmt.Errorf("only Commercial Bank or ECX can create export requests, got MSP ID: %s", clientMSPID)
 	}
 
 	now := time.Now().UTC().Format(time.RFC3339)
 
+	// Get caller identity for ECX verification tracking
+	callerID, err := ctx.GetClientIdentity().GetID()
+	if err != nil {
+		return fmt.Errorf("failed to get caller ID: %v", err)
+	}
+
 	exportRequest := ExportRequest{
 		ExportID:            exportID,
-		ExporterBankID:      exporterBankID,
+		CommercialBankID:    commercialBankID,
 		ExporterName:        exporterName,
 		ExportLicenseNumber: exportLicenseNumber,
 		CoffeeType:          coffeeType,
@@ -236,7 +272,9 @@ func (c *CoffeeExportContractV2) CreateExportRequest(
 		EstimatedValue:      estimatedValue,
 		ECXLotNumber:        ecxLotNumber,
 		WarehouseLocation:   warehouseLocation,
-		Status:              StatusFXPending,
+		ECXVerifiedBy:       callerID,
+		ECXVerifiedAt:       now,
+		Status:              StatusECXVerified, // Start with ECX_VERIFIED
 		CreatedAt:           now,
 		UpdatedAt:           now,
 	}
@@ -254,9 +292,253 @@ func (c *CoffeeExportContractV2) CreateExportRequest(
 	return nil
 }
 
+// SubmitToECX - Exporter submits draft export to ECX for verification
+// Status: DRAFT → ECX_PENDING
+func (c *CoffeeExportContractV2) SubmitToECX(
+	ctx contractapi.TransactionContextInterface,
+	exportID string,
+) error {
+	// Get export
+	exportRequest, err := c.GetExportRequest(ctx, exportID)
+	if err != nil {
+		return err
+	}
 
+	// Validate current status
+	if exportRequest.Status != StatusDraft {
+		return fmt.Errorf("export must be in DRAFT status to submit to ECX, current status: %s", exportRequest.Status)
+	}
 
-// SubmitForBankingReview submits for banking/financial validation (after FX approval)
+	// Update status
+	exportRequest.Status = StatusECXPending
+	exportRequest.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
+
+	// Save updated export
+	exportJSON, err := json.Marshal(exportRequest)
+	if err != nil {
+		return fmt.Errorf("failed to marshal updated export: %v", err)
+	}
+
+	return ctx.GetStub().PutState(exportID, exportJSON)
+}
+
+// SubmitToECTA - Exporter submits ECX-verified export to ECTA for license approval
+// Status: ECX_VERIFIED → ECTA_LICENSE_PENDING
+func (c *CoffeeExportContractV2) SubmitToECTA(
+	ctx contractapi.TransactionContextInterface,
+	exportID string,
+) error {
+	// Get export
+	exportRequest, err := c.GetExportRequest(ctx, exportID)
+	if err != nil {
+		return err
+	}
+
+	// Validate current status
+	if exportRequest.Status != StatusECXVerified {
+		return fmt.Errorf("export must be ECX_VERIFIED to submit to ECTA, current status: %s", exportRequest.Status)
+	}
+
+	// Update status
+	exportRequest.Status = StatusECTALicensePending
+	exportRequest.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
+
+	// Save updated export
+	exportJSON, err := json.Marshal(exportRequest)
+	if err != nil {
+		return fmt.Errorf("failed to marshal updated export: %v", err)
+	}
+
+	return ctx.GetStub().PutState(exportID, exportJSON)
+}
+
+// SubmitToBank - Exporter submits ECTA-approved export to Commercial Bank for document verification
+// Status: ECTA_CONTRACT_APPROVED → BANK_DOCUMENT_PENDING
+func (c *CoffeeExportContractV2) SubmitToBank(
+	ctx contractapi.TransactionContextInterface,
+	exportID string,
+) error {
+	// Get export
+	exportRequest, err := c.GetExportRequest(ctx, exportID)
+	if err != nil {
+		return err
+	}
+
+	// Validate current status
+	if exportRequest.Status != StatusECTAContractApproved {
+		return fmt.Errorf("export must be ECTA_CONTRACT_APPROVED to submit to Bank, current status: %s", exportRequest.Status)
+	}
+
+	// Update status
+	exportRequest.Status = StatusBankDocumentPending
+	exportRequest.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
+
+	// Save updated export
+	exportJSON, err := json.Marshal(exportRequest)
+	if err != nil {
+		return fmt.Errorf("failed to marshal updated export: %v", err)
+	}
+
+	return ctx.GetStub().PutState(exportID, exportJSON)
+}
+
+// VerifyECXLot verifies ECX lot number (called by ECX)
+func (c *CoffeeExportContractV2) VerifyECXLot(
+	ctx contractapi.TransactionContextInterface,
+	exportID string,
+	lotNumber string,
+	warehouseReceiptNumber string,
+) error {
+	// Validate caller is ECX
+	clientMSPID, err := ctx.GetClientIdentity().GetMSPID()
+	if err != nil {
+		return fmt.Errorf("failed to get client MSP ID: %v", err)
+	}
+	if clientMSPID != "ECXMSP" {
+		return fmt.Errorf("only ECX can verify lots, got MSP ID: %s", clientMSPID)
+	}
+
+	exportRequest, err := c.GetExportRequest(ctx, exportID)
+	if err != nil {
+		return err
+	}
+
+	if exportRequest.Status != StatusECXPending {
+		return fmt.Errorf("export is not in ECX_PENDING status, current status: %s", exportRequest.Status)
+	}
+
+	now := time.Now().UTC().Format(time.RFC3339)
+	callerID, _ := ctx.GetClientIdentity().GetID()
+
+	exportRequest.ECXLotNumber = lotNumber
+	exportRequest.WarehouseReceiptNumber = warehouseReceiptNumber
+	exportRequest.ECXVerifiedBy = callerID
+	exportRequest.ECXVerifiedAt = now
+	exportRequest.Status = StatusECXVerified
+	exportRequest.UpdatedAt = now
+
+	exportJSON, err := json.Marshal(exportRequest)
+	if err != nil {
+		return fmt.Errorf("failed to marshal export request: %v", err)
+	}
+
+	return ctx.GetStub().PutState(exportID, exportJSON)
+}
+
+// RejectECXVerification rejects ECX verification (called by ECX)
+func (c *CoffeeExportContractV2) RejectECXVerification(
+	ctx contractapi.TransactionContextInterface,
+	exportID string,
+	reason string,
+) error {
+	// Validate caller is ECX
+	clientMSPID, err := ctx.GetClientIdentity().GetMSPID()
+	if err != nil {
+		return fmt.Errorf("failed to get client MSP ID: %v", err)
+	}
+	if clientMSPID != "ECXMSP" {
+		return fmt.Errorf("only ECX can reject verification, got MSP ID: %s", clientMSPID)
+	}
+
+	exportRequest, err := c.GetExportRequest(ctx, exportID)
+	if err != nil {
+		return err
+	}
+
+	now := time.Now().UTC().Format(time.RFC3339)
+
+	exportRequest.ECXRejectionReason = reason
+	exportRequest.Status = StatusECXRejected
+	exportRequest.UpdatedAt = now
+
+	exportJSON, err := json.Marshal(exportRequest)
+	if err != nil {
+		return fmt.Errorf("failed to marshal export request: %v", err)
+	}
+
+	return ctx.GetStub().PutState(exportID, exportJSON)
+}
+
+// ValidateExportLicense validates export license (called by ECTA)
+// ECTA is the PRIMARY REGULATOR and FIRST regulatory step
+func (c *CoffeeExportContractV2) ValidateExportLicense(
+	ctx contractapi.TransactionContextInterface,
+	exportID string,
+) error {
+	// Validate caller is ECTA (formerly NCAT)
+	clientMSPID, err := ctx.GetClientIdentity().GetMSPID()
+	if err != nil {
+		return fmt.Errorf("failed to get client MSP ID: %v", err)
+	}
+	if clientMSPID != "ECTAMSP" {
+		return fmt.Errorf("only ECTA can validate export license, got MSP ID: %s", clientMSPID)
+	}
+
+	exportRequest, err := c.GetExportRequest(ctx, exportID)
+	if err != nil {
+		return err
+	}
+
+	if exportRequest.Status != StatusECXVerified {
+		return fmt.Errorf("export must be ECX verified first, current status: %s", exportRequest.Status)
+	}
+
+	now := time.Now().UTC().Format(time.RFC3339)
+	callerID, _ := ctx.GetClientIdentity().GetID()
+
+	exportRequest.ExportLicenseValidatedBy = callerID
+	exportRequest.ExportLicenseValidatedAt = now
+	exportRequest.Status = StatusECTALicenseApproved
+	exportRequest.UpdatedAt = now
+
+	exportJSON, err := json.Marshal(exportRequest)
+	if err != nil {
+		return fmt.Errorf("failed to marshal export request: %v", err)
+	}
+
+	return ctx.GetStub().PutState(exportID, exportJSON)
+}
+
+// ApproveExportContract approves export contract (called by ECTA)
+func (c *CoffeeExportContractV2) ApproveExportContract(
+	ctx contractapi.TransactionContextInterface,
+	exportID string,
+) error {
+	// Validate caller is ECTA
+	clientMSPID, err := ctx.GetClientIdentity().GetMSPID()
+	if err != nil {
+		return fmt.Errorf("failed to get client MSP ID: %v", err)
+	}
+	if clientMSPID != "ECTAMSP" {
+		return fmt.Errorf("only ECTA can approve contracts, got MSP ID: %s", clientMSPID)
+	}
+
+	exportRequest, err := c.GetExportRequest(ctx, exportID)
+	if err != nil {
+		return err
+	}
+
+	if exportRequest.Status != StatusECTAQualityApproved {
+		return fmt.Errorf("quality must be certified first, current status: %s", exportRequest.Status)
+	}
+
+	now := time.Now().UTC().Format(time.RFC3339)
+	callerID, _ := ctx.GetClientIdentity().GetID()
+
+	exportRequest.ContractApprovedBy = callerID
+	exportRequest.ContractApprovedAt = now
+	exportRequest.Status = StatusECTAContractApproved
+	exportRequest.UpdatedAt = now
+
+	exportJSON, err := json.Marshal(exportRequest)
+	if err != nil {
+		return fmt.Errorf("failed to marshal export request: %v", err)
+	}
+
+	return ctx.GetStub().PutState(exportID, exportJSON)
+}
+
+// SubmitForBankingReview submits for banking/financial validation (after ECTA approval)
 func (c *CoffeeExportContractV2) SubmitForBankingReview(
 	ctx contractapi.TransactionContextInterface,
 	exportID string,
@@ -279,7 +561,7 @@ func (c *CoffeeExportContractV2) SubmitForBankingReview(
 	}
 
 	now := time.Now().UTC().Format(time.RFC3339)
-	exportRequest.Status = StatusBankingPending
+	exportRequest.Status = StatusBankDocumentPending
 	exportRequest.UpdatedAt = now
 
 	exportJSON, err := json.Marshal(exportRequest)
@@ -290,80 +572,98 @@ func (c *CoffeeExportContractV2) SubmitForBankingReview(
 	return ctx.GetStub().PutState(exportID, exportJSON)
 }
 
-// ApproveBanking approves financial documents (Exporter Bank) - SECOND STAGE
+// ApproveBanking approves financial documents (Commercial Bank) - SECOND STAGE
 func (c *CoffeeExportContractV2) ApproveBanking(
 	ctx contractapi.TransactionContextInterface,
 	exportID string,
-	bankingApprovalID string,
 	approvedBy string,
+	notes string,
+	documentCIDs string,
 ) error {
+	// Validate caller is Commercial Bank
 	clientMSPID, err := ctx.GetClientIdentity().GetMSPID()
 	if err != nil {
 		return fmt.Errorf("failed to get client MSP ID: %v", err)
 	}
-	if clientMSPID != "ExporterBankMSP" {
-		return fmt.Errorf("only Exporter Bank can approve banking/financial documents")
+	if clientMSPID != "CommercialBankMSP" {
+		return fmt.Errorf("only Commercial Bank can approve banking, got MSP ID: %s", clientMSPID)
 	}
 
+	// Get export
 	exportRequest, err := c.GetExportRequest(ctx, exportID)
 	if err != nil {
 		return err
 	}
 
-	if exportRequest.Status != StatusBankingPending {
-		return fmt.Errorf("export must be BANKING_PENDING to approve, current status: %s", exportRequest.Status)
+	// Validate current status
+	if exportRequest.Status != StatusBankDocumentPending {
+		return fmt.Errorf("export must be in BANK_DOCUMENT_PENDING status to approve banking, current status: %s", exportRequest.Status)
+	}
+
+	// Parse document CIDs
+	var docs []Document
+	if documentCIDs != "" && documentCIDs != "[]" {
+		if err := json.Unmarshal([]byte(documentCIDs), &docs); err != nil {
+			return fmt.Errorf("failed to parse document CIDs: %v", err)
+		}
 	}
 
 	now := time.Now().UTC().Format(time.RFC3339)
-	exportRequest.Status = StatusBankingApproved
-	exportRequest.FXDocuments = append(exportRequest.FXDocuments, Document{
-		CID:       bankingApprovalID,
-		Version:   len(exportRequest.FXDocuments) + 1,
-		Timestamp: now,
-		IsActive:  true,
-	})
+
+	// Update export
+	exportRequest.Status = StatusBankDocumentVerified
+	exportRequest.FXDocuments = docs
+	exportRequest.FXApprovedBy = approvedBy
+	exportRequest.FXApprovedAt = now
 	exportRequest.UpdatedAt = now
 
+	// Save updated export
 	exportJSON, err := json.Marshal(exportRequest)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal updated export: %v", err)
 	}
 
 	return ctx.GetStub().PutState(exportID, exportJSON)
 }
 
-// RejectBanking rejects financial documents (Exporter Bank)
+// RejectBanking rejects financial documents (Commercial Bank)
 func (c *CoffeeExportContractV2) RejectBanking(
 	ctx contractapi.TransactionContextInterface,
 	exportID string,
-	rejectionReason string,
 	rejectedBy string,
+	reason string,
 ) error {
+	// Validate caller is Commercial Bank
 	clientMSPID, err := ctx.GetClientIdentity().GetMSPID()
 	if err != nil {
 		return fmt.Errorf("failed to get client MSP ID: %v", err)
 	}
-	if clientMSPID != "ExporterBankMSP" {
-		return fmt.Errorf("only Exporter Bank can reject banking review")
+	if clientMSPID != "CommercialBankMSP" {
+		return fmt.Errorf("only Commercial Bank can reject banking, got MSP ID: %s", clientMSPID)
 	}
 
+	// Get export
 	exportRequest, err := c.GetExportRequest(ctx, exportID)
 	if err != nil {
 		return err
 	}
 
-	if exportRequest.Status != StatusBankingPending {
-		return fmt.Errorf("export must be BANKING_PENDING to reject")
+	// Validate current status
+	if exportRequest.Status != StatusBankDocumentPending {
+		return fmt.Errorf("export must be in BANK_DOCUMENT_PENDING status to reject banking, current status: %s", exportRequest.Status)
 	}
 
 	now := time.Now().UTC().Format(time.RFC3339)
-	exportRequest.Status = StatusBankingRejected
-	exportRequest.FXRejectionReason = rejectionReason
+
+	// Update export
+	exportRequest.Status = StatusBankDocumentRejected
+	exportRequest.FXRejectionReason = reason
 	exportRequest.UpdatedAt = now
 
+	// Save updated export
 	exportJSON, err := json.Marshal(exportRequest)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal updated export: %v", err)
 	}
 
 	return ctx.GetStub().PutState(exportID, exportJSON)
@@ -378,8 +678,8 @@ func (c *CoffeeExportContractV2) SubmitForQuality(
 	if err != nil {
 		return fmt.Errorf("failed to get client MSP ID: %v", err)
 	}
-	if clientMSPID != "ExporterBankMSP" {
-		return fmt.Errorf("only Exporter Bank can submit for quality")
+	if clientMSPID != "CommercialBankMSP" {
+		return fmt.Errorf("only Commercial Bank can submit for quality")
 	}
 
 	exportRequest, err := c.GetExportRequest(ctx, exportID)
@@ -387,12 +687,12 @@ func (c *CoffeeExportContractV2) SubmitForQuality(
 		return err
 	}
 
-	if exportRequest.Status != StatusBankingApproved {
-		return fmt.Errorf("export must be BANKING_APPROVED to submit for quality, current status: %s", exportRequest.Status)
+	if exportRequest.Status != StatusBankDocumentVerified {
+		return fmt.Errorf("export must be BANK_DOCUMENT_VERIFIED to submit for quality, current status: %s", exportRequest.Status)
 	}
 
 	now := time.Now().UTC().Format(time.RFC3339)
-	exportRequest.Status = StatusQualityPending
+	exportRequest.Status = StatusECTAQualityPending
 	exportRequest.UpdatedAt = now
 
 	exportJSON, err := json.Marshal(exportRequest)
@@ -415,8 +715,8 @@ func (c *CoffeeExportContractV2) IssueQualityCertificate(
 	if err != nil {
 		return fmt.Errorf("failed to get client MSP ID: %v", err)
 	}
-	if clientMSPID != "NCATMSP" {
-		return fmt.Errorf("only NCAT can issue quality certificates")
+	if clientMSPID != "ECTAMSP" {
+		return fmt.Errorf("only ECTA can issue quality certificates")
 	}
 
 	exportRequest, err := c.GetExportRequest(ctx, exportID)
@@ -424,12 +724,12 @@ func (c *CoffeeExportContractV2) IssueQualityCertificate(
 		return err
 	}
 
-	if exportRequest.Status != StatusQualityPending {
-		return fmt.Errorf("export must be QUALITY_PENDING to certify, current status: %s", exportRequest.Status)
+	if exportRequest.Status != StatusECTAQualityPending {
+		return fmt.Errorf("export must be ECTA_QUALITY_PENDING to certify, current status: %s", exportRequest.Status)
 	}
 
 	now := time.Now().UTC().Format(time.RFC3339)
-	exportRequest.Status = StatusQualityCertified
+	exportRequest.Status = StatusECTAQualityApproved
 	exportRequest.QualityDocuments = append(exportRequest.QualityDocuments, Document{
 		CID:       qualityCertID,
 		Version:   len(exportRequest.QualityDocuments) + 1,
@@ -460,8 +760,8 @@ func (c *CoffeeExportContractV2) RejectQuality(
 	if err != nil {
 		return fmt.Errorf("failed to get client MSP ID: %v", err)
 	}
-	if clientMSPID != "NCATMSP" {
-		return fmt.Errorf("only NCAT can reject quality")
+	if clientMSPID != "ECTAMSP" {
+		return fmt.Errorf("only ECTA can reject quality")
 	}
 
 	exportRequest, err := c.GetExportRequest(ctx, exportID)
@@ -469,12 +769,12 @@ func (c *CoffeeExportContractV2) RejectQuality(
 		return err
 	}
 
-	if exportRequest.Status != StatusQualityPending {
-		return fmt.Errorf("export must be QUALITY_PENDING to reject")
+	if exportRequest.Status != StatusECTAQualityPending {
+		return fmt.Errorf("export must be ECTA_QUALITY_PENDING to reject")
 	}
 
 	now := time.Now().UTC().Format(time.RFC3339)
-	exportRequest.Status = StatusQualityRejected
+	exportRequest.Status = StatusECTAQualityRejected
 	exportRequest.QualityRejectionReason = rejectionReason
 	exportRequest.QualityCertifiedBy = rejectedBy
 	exportRequest.UpdatedAt = now
@@ -500,8 +800,8 @@ func (c *CoffeeExportContractV2) IssueOriginCertificate(
 		return fmt.Errorf("failed to get client MSP ID: %v", err)
 	}
 	// Allow NCAT or a dedicated Chamber of Commerce MSP
-	if clientMSPID != "NCATMSP" && clientMSPID != "ChamberOfCommerceMSP" {
-		return fmt.Errorf("only NCAT or Chamber of Commerce can issue origin certificates")
+	if clientMSPID != "ECTAMSP" && clientMSPID != "ChamberOfCommerceMSP" {
+		return fmt.Errorf("only ECTA or Chamber of Commerce can issue origin certificates")
 	}
 
 	exportRequest, err := c.GetExportRequest(ctx, exportID)
@@ -509,8 +809,8 @@ func (c *CoffeeExportContractV2) IssueOriginCertificate(
 		return err
 	}
 
-	if exportRequest.Status != StatusQualityCertified {
-		return fmt.Errorf("export must be QUALITY_CERTIFIED to issue origin certificate")
+	if exportRequest.Status != StatusECTAQualityApproved {
+		return fmt.Errorf("export must be ECTA_QUALITY_APPROVED to issue origin certificate")
 	}
 
 	now := time.Now().UTC().Format(time.RFC3339)
@@ -542,8 +842,8 @@ func (c *CoffeeExportContractV2) SubmitForFX(
 	if err != nil {
 		return fmt.Errorf("failed to get client MSP ID: %v", err)
 	}
-	if clientMSPID != "ExporterBankMSP" {
-		return fmt.Errorf("only Exporter Bank can submit for FX")
+	if clientMSPID != "CommercialBankMSP" {
+		return fmt.Errorf("only Commercial Bank can submit for FX")
 	}
 
 	exportRequest, err := c.GetExportRequest(ctx, exportID)
@@ -551,12 +851,12 @@ func (c *CoffeeExportContractV2) SubmitForFX(
 		return err
 	}
 
-	if exportRequest.Status != StatusQualityCertified {
-		return fmt.Errorf("export must be QUALITY_CERTIFIED to submit for FX, current status: %s", exportRequest.Status)
+	if exportRequest.Status != StatusECTAContractApproved {
+		return fmt.Errorf("export must be ECTA_CONTRACT_APPROVED to submit for FX, current status: %s", exportRequest.Status)
 	}
 
 	now := time.Now().UTC().Format(time.RFC3339)
-	exportRequest.Status = StatusFXPending
+	exportRequest.Status = StatusFXApplicationPending
 	exportRequest.UpdatedAt = now
 
 	exportJSON, err := json.Marshal(exportRequest)
@@ -587,8 +887,8 @@ func (c *CoffeeExportContractV2) ApproveFX(
 		return err
 	}
 
-	if exportRequest.Status != StatusFXPending {
-		return fmt.Errorf("export must be FX_PENDING to approve FX, current status: %s", exportRequest.Status)
+	if exportRequest.Status != StatusFXApplicationPending {
+		return fmt.Errorf("export must be FX_APPLICATION_PENDING to approve FX, current status: %s", exportRequest.Status)
 	}
 
 	now := time.Now().UTC().Format(time.RFC3339)
@@ -631,8 +931,8 @@ func (c *CoffeeExportContractV2) RejectFX(
 		return err
 	}
 
-	if exportRequest.Status != StatusFXPending {
-		return fmt.Errorf("export must be FX_PENDING to reject FX")
+	if exportRequest.Status != StatusFXApplicationPending {
+		return fmt.Errorf("export must be FX_APPLICATION_PENDING to reject FX")
 	}
 
 	now := time.Now().UTC().Format(time.RFC3339)
@@ -659,8 +959,8 @@ func (c *CoffeeExportContractV2) SubmitToExportCustoms(
 	if err != nil {
 		return fmt.Errorf("failed to get client MSP ID: %v", err)
 	}
-	if clientMSPID != "ExporterBankMSP" {
-		return fmt.Errorf("only Exporter Bank can submit to export customs")
+	if clientMSPID != "CommercialBankMSP" {
+		return fmt.Errorf("only Commercial Bank can submit to export customs")
 	}
 
 	exportRequest, err := c.GetExportRequest(ctx, exportID)
@@ -673,7 +973,7 @@ func (c *CoffeeExportContractV2) SubmitToExportCustoms(
 	}
 
 	now := time.Now().UTC().Format(time.RFC3339)
-	exportRequest.Status = StatusExportCustomsPending
+	exportRequest.Status = StatusCustomsPending
 	exportRequest.ExportCustomsDeclarationNumber = declarationNumber
 	exportRequest.UpdatedAt = now
 
@@ -705,12 +1005,12 @@ func (c *CoffeeExportContractV2) ClearExportCustoms(
 		return err
 	}
 
-	if exportRequest.Status != StatusExportCustomsPending {
-		return fmt.Errorf("export must be EXPORT_CUSTOMS_PENDING to clear")
+	if exportRequest.Status != StatusCustomsPending {
+		return fmt.Errorf("export must be CUSTOMS_PENDING to clear")
 	}
 
 	now := time.Now().UTC().Format(time.RFC3339)
-	exportRequest.Status = StatusExportCustomsCleared
+	exportRequest.Status = StatusCustomsCleared
 	exportRequest.ExportCustomsDocuments = append(exportRequest.ExportCustomsDocuments, Document{
 		CID:       clearanceCID,
 		Version:   len(exportRequest.ExportCustomsDocuments) + 1,
@@ -749,12 +1049,12 @@ func (c *CoffeeExportContractV2) RejectExportCustoms(
 		return err
 	}
 
-	if exportRequest.Status != StatusExportCustomsPending {
-		return fmt.Errorf("export must be EXPORT_CUSTOMS_PENDING to reject")
+	if exportRequest.Status != StatusCustomsPending {
+		return fmt.Errorf("export must be CUSTOMS_PENDING to reject")
 	}
 
 	now := time.Now().UTC().Format(time.RFC3339)
-	exportRequest.Status = StatusExportCustomsRejected
+	exportRequest.Status = StatusCustomsRejected
 	exportRequest.ExportCustomsRejectionReason = rejectionReason
 	exportRequest.ExportCustomsClearedBy = rejectedBy
 	exportRequest.UpdatedAt = now
@@ -791,8 +1091,8 @@ func (c *CoffeeExportContractV2) ScheduleShipment(
 		return err
 	}
 
-	if exportRequest.Status != StatusExportCustomsCleared {
-		return fmt.Errorf("export must be EXPORT_CUSTOMS_CLEARED to schedule shipment, current status: %s", exportRequest.Status)
+	if exportRequest.Status != StatusCustomsCleared {
+		return fmt.Errorf("export must be CUSTOMS_CLEARED to schedule shipment, current status: %s", exportRequest.Status)
 	}
 
 	now := time.Now().UTC().Format(time.RFC3339)
@@ -1045,40 +1345,47 @@ func (c *CoffeeExportContractV2) ConfirmDelivery(
 	return ctx.GetStub().PutState(exportID, exportJSON)
 }
 
-// ConfirmPayment confirms payment receipt (Exporter Bank or National Bank)
+// ConfirmPayment confirms payment receipt (Commercial Bank or National Bank)
 func (c *CoffeeExportContractV2) ConfirmPayment(
 	ctx contractapi.TransactionContextInterface,
 	exportID string,
-	paymentMethod string,
+	confirmedBy string,
 	paymentAmount float64,
+	paymentDate string,
 ) error {
+	// Validate caller is Commercial Bank or National Bank
 	clientMSPID, err := ctx.GetClientIdentity().GetMSPID()
 	if err != nil {
 		return fmt.Errorf("failed to get client MSP ID: %v", err)
 	}
-	if clientMSPID != "ExporterBankMSP" && clientMSPID != "NationalBankMSP" {
-		return fmt.Errorf("only Exporter Bank or National Bank can confirm payment")
+	if clientMSPID != "CommercialBankMSP" && clientMSPID != "NBEMSP" {
+		return fmt.Errorf("only Commercial Bank or National Bank can confirm payment, got MSP ID: %s", clientMSPID)
 	}
 
+	// Get export
 	exportRequest, err := c.GetExportRequest(ctx, exportID)
 	if err != nil {
 		return err
 	}
 
+	// Validate current status
 	if exportRequest.Status != StatusDelivered {
-		return fmt.Errorf("export must be DELIVERED to confirm payment")
+		return fmt.Errorf("export must be in DELIVERED status to confirm payment, current status: %s", exportRequest.Status)
 	}
 
 	now := time.Now().UTC().Format(time.RFC3339)
+
+	// Update export
 	exportRequest.Status = StatusPaymentReceived
-	exportRequest.PaymentMethod = paymentMethod
 	exportRequest.PaymentAmount = paymentAmount
-	exportRequest.PaymentReceivedDate = now
+	exportRequest.PaymentReceivedDate = paymentDate
+	exportRequest.DeliveryConfirmedBy = confirmedBy
 	exportRequest.UpdatedAt = now
 
+	// Save updated export
 	exportJSON, err := json.Marshal(exportRequest)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal updated export: %v", err)
 	}
 
 	return ctx.GetStub().PutState(exportID, exportJSON)
@@ -1123,35 +1430,92 @@ func (c *CoffeeExportContractV2) ConfirmRepatriation(
 	return ctx.GetStub().PutState(exportID, exportJSON)
 }
 
-// CompleteExport marks export as completed (Exporter Bank or National Bank)
+// CompleteExport marks export as completed (Commercial Bank or National Bank)
 func (c *CoffeeExportContractV2) CompleteExport(
 	ctx contractapi.TransactionContextInterface,
 	exportID string,
+	completedBy string,
 ) error {
+	// Validate caller is Commercial Bank or National Bank
 	clientMSPID, err := ctx.GetClientIdentity().GetMSPID()
 	if err != nil {
 		return fmt.Errorf("failed to get client MSP ID: %v", err)
 	}
-	if clientMSPID != "ExporterBankMSP" && clientMSPID != "NationalBankMSP" {
-		return fmt.Errorf("only Exporter Bank or National Bank can complete exports")
+	if clientMSPID != "CommercialBankMSP" && clientMSPID != "NBEMSP" {
+		return fmt.Errorf("only Commercial Bank or National Bank can complete export, got MSP ID: %s", clientMSPID)
 	}
 
+	// Get export
 	exportRequest, err := c.GetExportRequest(ctx, exportID)
 	if err != nil {
 		return err
 	}
 
-	if exportRequest.Status != StatusFXRepatriated {
-		return fmt.Errorf("export must be FX_REPATRIATED to complete, current status: %s", exportRequest.Status)
+	// Validate current status
+	allowedStatuses := []ExportStatus{StatusPaymentReceived, StatusFXRepatriated}
+	validStatus := false
+	for _, status := range allowedStatuses {
+		if exportRequest.Status == status {
+			validStatus = true
+			break
+		}
+	}
+	if !validStatus {
+		return fmt.Errorf("export must be in PAYMENT_RECEIVED or FX_REPATRIATED status to complete, current status: %s", exportRequest.Status)
 	}
 
 	now := time.Now().UTC().Format(time.RFC3339)
+
+	// Update export
 	exportRequest.Status = StatusCompleted
 	exportRequest.UpdatedAt = now
 
+	// Save updated export
 	exportJSON, err := json.Marshal(exportRequest)
 	if err != nil {
+		return fmt.Errorf("failed to marshal updated export: %v", err)
+	}
+
+	return ctx.GetStub().PutState(exportID, exportJSON)
+}
+
+// CancelExport cancels an export (Commercial Bank or National Bank)
+func (c *CoffeeExportContractV2) CancelExport(
+	ctx contractapi.TransactionContextInterface,
+	exportID string,
+	cancelledBy string,
+	reason string,
+) error {
+	// Validate caller is Commercial Bank or National Bank
+	clientMSPID, err := ctx.GetClientIdentity().GetMSPID()
+	if err != nil {
+		return fmt.Errorf("failed to get client MSP ID: %v", err)
+	}
+	if clientMSPID != "CommercialBankMSP" && clientMSPID != "NBEMSP" {
+		return fmt.Errorf("only Commercial Bank or National Bank can cancel export, got MSP ID: %s", clientMSPID)
+	}
+
+	// Get export
+	exportRequest, err := c.GetExportRequest(ctx, exportID)
+	if err != nil {
 		return err
+	}
+
+	// Validate current status (can cancel from most statuses except COMPLETED)
+	if exportRequest.Status == StatusCompleted {
+		return fmt.Errorf("cannot cancel completed export")
+	}
+
+	now := time.Now().UTC().Format(time.RFC3339)
+
+	// Update export
+	exportRequest.Status = StatusCancelled
+	exportRequest.UpdatedAt = now
+
+	// Save updated export
+	exportJSON, err := json.Marshal(exportRequest)
+	if err != nil {
+		return fmt.Errorf("failed to marshal updated export: %v", err)
 	}
 
 	return ctx.GetStub().PutState(exportID, exportJSON)
@@ -1170,8 +1534,8 @@ func (c *CoffeeExportContractV2) UpdateRejectedExport(
 	if err != nil {
 		return fmt.Errorf("failed to get client MSP ID: %v", err)
 	}
-	if clientMSPID != "ExporterBankMSP" {
-		return fmt.Errorf("only Exporter Bank can update exports")
+	if clientMSPID != "CommercialBankMSP" {
+		return fmt.Errorf("only Commercial Bank can update exports")
 	}
 
 	exportRequest, err := c.GetExportRequest(ctx, exportID)
@@ -1180,9 +1544,9 @@ func (c *CoffeeExportContractV2) UpdateRejectedExport(
 	}
 
 	// Can only update rejected exports
-	if exportRequest.Status != StatusQualityRejected &&
+	if exportRequest.Status != StatusECTAQualityRejected &&
 		exportRequest.Status != StatusFXRejected &&
-		exportRequest.Status != StatusExportCustomsRejected {
+		exportRequest.Status != StatusCustomsRejected {
 		return fmt.Errorf("can only update rejected exports, current status: %s", exportRequest.Status)
 	}
 
@@ -1218,6 +1582,8 @@ func (c *CoffeeExportContractV2) UpdateRejectedExport(
 	return ctx.GetStub().PutState(exportID, exportJSON)
 }
 
+}
+
 // ResubmitRejectedExport allows exporter to resubmit a rejected export without changes
 func (c *CoffeeExportContractV2) ResubmitRejectedExport(
 	ctx contractapi.TransactionContextInterface,
@@ -1227,8 +1593,8 @@ func (c *CoffeeExportContractV2) ResubmitRejectedExport(
 	if err != nil {
 		return fmt.Errorf("failed to get client MSP ID: %v", err)
 	}
-	if clientMSPID != "ExporterBankMSP" {
-		return fmt.Errorf("only Exporter Bank can resubmit exports")
+	if clientMSPID != "CommercialBankMSP" {
+		return fmt.Errorf("only Commercial Bank can resubmit exports")
 	}
 
 	exportRequest, err := c.GetExportRequest(ctx, exportID)
@@ -1237,9 +1603,9 @@ func (c *CoffeeExportContractV2) ResubmitRejectedExport(
 	}
 
 	// Can only resubmit rejected exports
-	if exportRequest.Status != StatusQualityRejected &&
+	if exportRequest.Status != StatusECTAQualityRejected &&
 		exportRequest.Status != StatusFXRejected &&
-		exportRequest.Status != StatusExportCustomsRejected {
+		exportRequest.Status != StatusCustomsRejected {
 		return fmt.Errorf("can only resubmit rejected exports, current status: %s", exportRequest.Status)
 	}
 
@@ -1258,7 +1624,313 @@ func (c *CoffeeExportContractV2) ResubmitRejectedExport(
 	return ctx.GetStub().PutState(exportID, exportJSON)
 }
 
-// CancelExport cancels an export (Exporter Bank)
+// ============================================================================
+// NEW FUNCTIONS FOR REORGANIZED WORKFLOW
+// ============================================================================
+
+// ApproveLotVerification approves ECX lot verification (called by ECX)
+// Status: PENDING → ECX_VERIFIED
+func (c *CoffeeExportContractV2) ApproveLotVerification(
+	ctx contractapi.TransactionContextInterface,
+	exportID string,
+	approvedBy string,
+	notes string,
+) error {
+	exportRequest, err := c.GetExportRequest(ctx, exportID)
+	if err != nil {
+		return err
+	}
+
+	if exportRequest.Status != "PENDING" {
+		return fmt.Errorf("export must be in PENDING status, current status: %s", exportRequest.Status)
+	}
+
+	now := time.Now().UTC().Format(time.RFC3339)
+	exportRequest.Status = StatusECXVerified
+	exportRequest.UpdatedAt = now
+
+	exportJSON, err := json.Marshal(exportRequest)
+	if err != nil {
+		return err
+	}
+
+	return ctx.GetStub().PutState(exportID, exportJSON)
+}
+
+// RejectLotVerification rejects ECX lot verification (called by ECX)
+// Status: PENDING → ECX_REJECTED
+func (c *CoffeeExportContractV2) RejectLotVerification(
+	ctx contractapi.TransactionContextInterface,
+	exportID string,
+	reason string,
+	rejectedBy string,
+) error {
+	exportRequest, err := c.GetExportRequest(ctx, exportID)
+	if err != nil {
+		return err
+	}
+
+	if exportRequest.Status != "PENDING" {
+		return fmt.Errorf("export must be in PENDING status, current status: %s", exportRequest.Status)
+	}
+
+	now := time.Now().UTC().Format(time.RFC3339)
+	exportRequest.Status = StatusECXRejected
+	exportRequest.UpdatedAt = now
+
+	exportJSON, err := json.Marshal(exportRequest)
+	if err != nil {
+		return err
+	}
+
+	return ctx.GetStub().PutState(exportID, exportJSON)
+}
+
+// ApproveLicense approves ECTA license (called by ECTA)
+// Status: ECX_VERIFIED → ECTA_LICENSE_APPROVED
+func (c *CoffeeExportContractV2) ApproveLicense(
+	ctx contractapi.TransactionContextInterface,
+	exportID string,
+	licenseNumber string,
+	approvedBy string,
+	notes string,
+) error {
+	exportRequest, err := c.GetExportRequest(ctx, exportID)
+	if err != nil {
+		return err
+	}
+
+	if exportRequest.Status != StatusECXVerified {
+		return fmt.Errorf("export must be ECX_VERIFIED, current status: %s", exportRequest.Status)
+	}
+
+	now := time.Now().UTC().Format(time.RFC3339)
+	exportRequest.Status = StatusECTALicenseApproved
+	exportRequest.UpdatedAt = now
+
+	exportJSON, err := json.Marshal(exportRequest)
+	if err != nil {
+		return err
+	}
+
+	return ctx.GetStub().PutState(exportID, exportJSON)
+}
+
+// RejectLicense rejects ECTA license (called by ECTA)
+// Status: ECX_VERIFIED → ECTA_LICENSE_REJECTED
+func (c *CoffeeExportContractV2) RejectLicense(
+	ctx contractapi.TransactionContextInterface,
+	exportID string,
+	reason string,
+	rejectedBy string,
+) error {
+	exportRequest, err := c.GetExportRequest(ctx, exportID)
+	if err != nil {
+		return err
+	}
+
+	if exportRequest.Status != StatusECXVerified {
+		return fmt.Errorf("export must be ECX_VERIFIED, current status: %s", exportRequest.Status)
+	}
+
+	now := time.Now().UTC().Format(time.RFC3339)
+	exportRequest.Status = StatusECTALicenseRejected
+	exportRequest.UpdatedAt = now
+
+	exportJSON, err := json.Marshal(exportRequest)
+	if err != nil {
+		return err
+	}
+
+	return ctx.GetStub().PutState(exportID, exportJSON)
+}
+
+// ApproveQualityCertification approves ECTA quality (called by ECTA)
+// Status: ECTA_LICENSE_APPROVED → ECTA_QUALITY_APPROVED
+func (c *CoffeeExportContractV2) ApproveQualityCertification(
+	ctx contractapi.TransactionContextInterface,
+	exportID string,
+	qualityCertID string,
+	qualityGrade string,
+	approvedBy string,
+) error {
+	exportRequest, err := c.GetExportRequest(ctx, exportID)
+	if err != nil {
+		return err
+	}
+
+	if exportRequest.Status != StatusECTALicenseApproved {
+		return fmt.Errorf("export must be ECTA_LICENSE_APPROVED, current status: %s", exportRequest.Status)
+	}
+
+	now := time.Now().UTC().Format(time.RFC3339)
+	exportRequest.Status = StatusECTAQualityApproved
+	exportRequest.QualityCertID = qualityCertID
+	exportRequest.QualityGrade = qualityGrade
+	exportRequest.QualityCertifiedBy = approvedBy
+	exportRequest.QualityCertifiedAt = now
+	exportRequest.UpdatedAt = now
+
+	exportJSON, err := json.Marshal(exportRequest)
+	if err != nil {
+		return err
+	}
+
+	return ctx.GetStub().PutState(exportID, exportJSON)
+}
+
+// RejectQualityCertification rejects ECTA quality (called by ECTA)
+// Status: ECTA_LICENSE_APPROVED → ECTA_QUALITY_REJECTED
+func (c *CoffeeExportContractV2) RejectQualityCertification(
+	ctx contractapi.TransactionContextInterface,
+	exportID string,
+	reason string,
+	rejectedBy string,
+) error {
+	exportRequest, err := c.GetExportRequest(ctx, exportID)
+	if err != nil {
+		return err
+	}
+
+	if exportRequest.Status != StatusECTALicenseApproved {
+		return fmt.Errorf("export must be ECTA_LICENSE_APPROVED, current status: %s", exportRequest.Status)
+	}
+
+	now := time.Now().UTC().Format(time.RFC3339)
+	exportRequest.Status = StatusECTAQualityRejected
+	exportRequest.QualityRejectionReason = reason
+	exportRequest.UpdatedAt = now
+
+	exportJSON, err := json.Marshal(exportRequest)
+	if err != nil {
+		return err
+	}
+
+	return ctx.GetStub().PutState(exportID, exportJSON)
+}
+
+// ApproveContract approves ECTA contract (called by ECTA)
+// Status: ECTA_QUALITY_APPROVED → ECTA_CONTRACT_APPROVED
+func (c *CoffeeExportContractV2) ApproveContract(
+	ctx contractapi.TransactionContextInterface,
+	exportID string,
+	contractNumber string,
+	originCertificateNumber string,
+	approvedBy string,
+	notes string,
+) error {
+	exportRequest, err := c.GetExportRequest(ctx, exportID)
+	if err != nil {
+		return err
+	}
+
+	if exportRequest.Status != StatusECTAQualityApproved {
+		return fmt.Errorf("export must be ECTA_QUALITY_APPROVED, current status: %s", exportRequest.Status)
+	}
+
+	now := time.Now().UTC().Format(time.RFC3339)
+	exportRequest.Status = StatusECTAContractApproved
+	exportRequest.UpdatedAt = now
+
+	exportJSON, err := json.Marshal(exportRequest)
+	if err != nil {
+		return err
+	}
+
+	return ctx.GetStub().PutState(exportID, exportJSON)
+}
+
+// RejectContract rejects ECTA contract (called by ECTA)
+// Status: ECTA_QUALITY_APPROVED → ECTA_CONTRACT_REJECTED
+func (c *CoffeeExportContractV2) RejectContract(
+	ctx contractapi.TransactionContextInterface,
+	exportID string,
+	reason string,
+	rejectedBy string,
+) error {
+	exportRequest, err := c.GetExportRequest(ctx, exportID)
+	if err != nil {
+		return err
+	}
+
+	if exportRequest.Status != StatusECTAQualityApproved {
+		return fmt.Errorf("export must be ECTA_QUALITY_APPROVED, current status: %s", exportRequest.Status)
+	}
+
+	now := time.Now().UTC().Format(time.RFC3339)
+	exportRequest.Status = StatusECTAContractRejected
+	exportRequest.UpdatedAt = now
+
+	exportJSON, err := json.Marshal(exportRequest)
+	if err != nil {
+		return err
+	}
+
+	return ctx.GetStub().PutState(exportID, exportJSON)
+}
+
+// VerifyDocuments verifies documents (called by Commercial Bank)
+// Status: ECTA_CONTRACT_APPROVED → BANK_DOCUMENT_VERIFIED
+func (c *CoffeeExportContractV2) VerifyDocuments(
+	ctx contractapi.TransactionContextInterface,
+	exportID string,
+	verifiedBy string,
+	notes string,
+) error {
+	exportRequest, err := c.GetExportRequest(ctx, exportID)
+	if err != nil {
+		return err
+	}
+
+	if exportRequest.Status != StatusECTAContractApproved {
+		return fmt.Errorf("export must be ECTA_CONTRACT_APPROVED, current status: %s", exportRequest.Status)
+	}
+
+	now := time.Now().UTC().Format(time.RFC3339)
+	exportRequest.Status = StatusBankDocumentVerified
+	exportRequest.UpdatedAt = now
+
+	exportJSON, err := json.Marshal(exportRequest)
+	if err != nil {
+		return err
+	}
+
+	return ctx.GetStub().PutState(exportID, exportJSON)
+}
+
+// SubmitFXApplication submits FX application (called by Commercial Bank)
+// Status: BANK_DOCUMENT_VERIFIED → FX_APPLICATION_PENDING
+func (c *CoffeeExportContractV2) SubmitFXApplication(
+	ctx contractapi.TransactionContextInterface,
+	exportID string,
+	submittedBy string,
+) error {
+	exportRequest, err := c.GetExportRequest(ctx, exportID)
+	if err != nil {
+		return err
+	}
+
+	if exportRequest.Status != StatusBankDocumentVerified {
+		return fmt.Errorf("export must be BANK_DOCUMENT_VERIFIED, current status: %s", exportRequest.Status)
+	}
+
+	now := time.Now().UTC().Format(time.RFC3339)
+	exportRequest.Status = StatusFXApplicationPending
+	exportRequest.UpdatedAt = now
+
+	exportJSON, err := json.Marshal(exportRequest)
+	if err != nil {
+		return err
+	}
+
+	return ctx.GetStub().PutState(exportID, exportJSON)
+}
+
+// ============================================================================
+// END NEW FUNCTIONS
+// ============================================================================
+
+// CancelExport cancels an export (commercialbank)
 func (c *CoffeeExportContractV2) CancelExport(
 	ctx contractapi.TransactionContextInterface,
 	exportID string,
@@ -1267,8 +1939,8 @@ func (c *CoffeeExportContractV2) CancelExport(
 	if err != nil {
 		return fmt.Errorf("failed to get client MSP ID: %v", err)
 	}
-	if clientMSPID != "ExporterBankMSP" {
-		return fmt.Errorf("only Exporter Bank can cancel exports")
+	if clientMSPID != "CommercialBankMSP" {
+		return fmt.Errorf("only Commercial Bank can cancel exports")
 	}
 
 	exportRequest, err := c.GetExportRequest(ctx, exportID)

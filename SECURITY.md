@@ -78,7 +78,7 @@ All API endpoints (except public ones) require JWT authentication:
   "userId": "user123",
   "username": "exporter1",
   "role": "exporter",
-  "organization": "ExporterBank",
+  "organization": "commercialbank",
   "iat": 1234567890,
   "exp": 1234654290
 }
@@ -438,10 +438,10 @@ Each organization has its own MSP (Membership Service Provider):
 
 ```yaml
 Organizations:
-  - &ExporterBank
+  - &commercialbank
     Name: ExporterBankMSP
     ID: ExporterBankMSP
-    MSPDir: organizations/peerOrganizations/exporterbank/msp
+    MSPDir: organizations/peerOrganizations/commercialbank/msp
     
   - &NationalBank
     Name: NationalBankMSP
@@ -459,7 +459,7 @@ const policy = {
   identities: [
     { role: { name: "member", mspId: "ExporterBankMSP" }},
     { role: { name: "member", mspId: "NationalBankMSP" }},
-    { role: { name: "member", mspId: "NCATMSP" }}
+    { role: { name: "member", mspId: "ECTAMSP" }}
   ],
   policy: {
     "2-of": [
@@ -498,9 +498,9 @@ func (s *SmartContract) CreateExport(ctx contractapi.TransactionContextInterface
         return fmt.Errorf("failed to get MSP ID: %v", err)
     }
     
-    // Only ExporterBank can create exports
+    // Only commercialbank can create exports
     if mspID != "ExporterBankMSP" {
-        return fmt.Errorf("only ExporterBank can create exports")
+        return fmt.Errorf("only commercialbank can create exports")
     }
     
     // ... rest of the logic

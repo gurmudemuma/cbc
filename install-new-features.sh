@@ -51,7 +51,7 @@ print_info "Installing dependencies for API services..."
 echo ""
 
 # Array of API services
-services=("exporter-bank" "national-bank" "ncat" "shipping-line")
+services=("commercial-bank" "national-bank" "ncat" "shipping-line")
 
 # Install dependencies for each service
 for service in "${services[@]}"; do
@@ -89,7 +89,7 @@ print_info "Next steps:"
 echo "1. Configure environment variables in .env files"
 echo "2. Set up SMTP credentials for email service"
 echo "3. (Optional) Install and start IPFS node"
-echo "4. Run tests: cd api/exporter-bank && npm test"
+echo "4. Run tests: cd api/commercial-bank && npm test"
 echo "5. Start services: npm run dev"
 echo ""
 

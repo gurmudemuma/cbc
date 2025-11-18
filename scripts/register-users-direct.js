@@ -12,9 +12,9 @@ const users = [
         username: 'exporter1',
         password: 'Password123',
         email: 'exporter1@bank.com',
-        organizationId: 'EXPORTER-BANK-001',
+        organizationId: 'commercialbank-001',
         role: 'exporter',
-        org: 'exporterbank',
+        org: 'commercialbank',
         mspId: 'ExporterBankMSP'
     },
     {

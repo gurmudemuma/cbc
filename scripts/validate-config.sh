@@ -28,13 +28,13 @@ check_port() {
 # Check all ports
 echo "Checking port availability..."
 check_port 7050 "Orderer"
-check_port 7051 "Peer0 ExporterBank"
+check_port 7051 "Peer0 CommercialBank"
 check_port 8051 "Peer0 NationalBank"
-check_port 9051 "Peer0 NCAT"
+check_port 9051 "Peer0 ECTA"
 check_port 10051 "Peer0 ShippingLine"
-check_port 3001 "Exporter Bank API"
+check_port 3001 "Commercial Bank API"
 check_port 3002 "National Bank API"
-check_port 3003 "NCAT API"
+check_port 3003 "ECTA API"
 check_port 3004 "Shipping Line API"
 check_port 5173 "Frontend"
 echo ""
@@ -71,7 +71,7 @@ echo ""
 
 # Check API .env files
 echo "Checking API environment files..."
-for api in exporter-bank national-bank ncat shipping-line; do
+for api in commercial-bank national-bank ncat shipping-line; do
     if [ -f "api/$api/.env" ]; then
         echo "✅ api/$api/.env exists"
     else

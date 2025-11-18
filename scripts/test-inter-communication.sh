@@ -58,7 +58,7 @@ echo "Checking if services are accessible..."
 echo ""
 
 services_running=true
-for port in 3001 3002 3003 3004; do
+for port in 3001 3002 3003 3004 3005 3006 3007; do
     if curl -s --connect-timeout 2 "http://localhost:${port}/health" > /dev/null 2>&1; then
         echo -e "  Port ${port}: ${GREEN}✓ Accessible${NC}"
     else
@@ -73,10 +73,17 @@ if [ "$services_running" = false ]; then
     echo -e "${YELLOW}⚠ Warning: Some services are not running${NC}"
     echo "Please start all services before running tests:"
     echo ""
-    echo "  Terminal 1: cd api/exporter-bank && npm run dev"
+    echo "  Option 1: ./scripts/start-apis.sh"
+    echo "  Option 2: ./scripts/dev-apis.sh (tmux)"
+    echo ""
+    echo "Or manually:"
+    echo "  Terminal 1: cd api/commercial-bank && npm run dev"
     echo "  Terminal 2: cd api/national-bank && npm run dev"
-    echo "  Terminal 3: cd api/ncat && npm run dev"
+    echo "  Terminal 3: cd api/ecta && npm run dev"
     echo "  Terminal 4: cd api/shipping-line && npm run dev"
+    echo "  Terminal 5: cd api/custom-authorities && npm run dev"
+    echo "  Terminal 6: cd api/ecx && npm run dev"
+    echo "  Terminal 7: cd api/exporter-portal && npm run dev"
     echo ""
     read -p "Continue anyway? (y/N) " -n 1 -r
     echo ""

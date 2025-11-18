@@ -104,7 +104,12 @@ func (c *UserManagementContract) RegisterUser(
 		return fmt.Errorf("email %s is already registered", email)
 	}
 
-	now := time.Now().UTC().Format(time.RFC3339)
+	// Use transaction timestamp for deterministic behavior across peers
+	txTimestamp, err := ctx.GetStub().GetTxTimestamp()
+	if err != nil {
+		return fmt.Errorf("failed to get transaction timestamp: %v", err)
+	}
+	now := time.Unix(txTimestamp.Seconds, int64(txTimestamp.Nanos)).UTC().Format(time.RFC3339)
 
 	user := User{
 		ID:             userID,
@@ -219,7 +224,12 @@ func (c *UserManagementContract) UpdateLastLogin(ctx contractapi.TransactionCont
 		return err
 	}
 
-	now := time.Now().UTC().Format(time.RFC3339)
+	// Use transaction timestamp for deterministic behavior across peers
+	txTimestamp, err := ctx.GetStub().GetTxTimestamp()
+	if err != nil {
+		return fmt.Errorf("failed to get transaction timestamp: %v", err)
+	}
+	now := time.Unix(txTimestamp.Seconds, int64(txTimestamp.Nanos)).UTC().Format(time.RFC3339)
 	user.LastLogin = now
 	user.UpdatedAt = now
 
@@ -239,7 +249,12 @@ func (c *UserManagementContract) UpdatePassword(ctx contractapi.TransactionConte
 	}
 
 	user.PasswordHash = newPasswordHash
-	user.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
+	// Use transaction timestamp for deterministic behavior across peers
+	txTimestamp, err := ctx.GetStub().GetTxTimestamp()
+	if err != nil {
+		return fmt.Errorf("failed to get transaction timestamp: %v", err)
+	}
+	user.UpdatedAt = time.Unix(txTimestamp.Seconds, int64(txTimestamp.Nanos)).UTC().Format(time.RFC3339)
 
 	userJSON, err := json.Marshal(user)
 	if err != nil {
@@ -257,7 +272,12 @@ func (c *UserManagementContract) DeactivateUser(ctx contractapi.TransactionConte
 	}
 
 	user.IsActive = false
-	user.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
+	// Use transaction timestamp for deterministic behavior across peers
+	txTimestamp, err := ctx.GetStub().GetTxTimestamp()
+	if err != nil {
+		return fmt.Errorf("failed to get transaction timestamp: %v", err)
+	}
+	user.UpdatedAt = time.Unix(txTimestamp.Seconds, int64(txTimestamp.Nanos)).UTC().Format(time.RFC3339)
 
 	userJSON, err := json.Marshal(user)
 	if err != nil {
@@ -275,7 +295,12 @@ func (c *UserManagementContract) ActivateUser(ctx contractapi.TransactionContext
 	}
 
 	user.IsActive = true
-	user.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
+	// Use transaction timestamp for deterministic behavior across peers
+	txTimestamp, err := ctx.GetStub().GetTxTimestamp()
+	if err != nil {
+		return fmt.Errorf("failed to get transaction timestamp: %v", err)
+	}
+	user.UpdatedAt = time.Unix(txTimestamp.Seconds, int64(txTimestamp.Nanos)).UTC().Format(time.RFC3339)
 
 	userJSON, err := json.Marshal(user)
 	if err != nil {

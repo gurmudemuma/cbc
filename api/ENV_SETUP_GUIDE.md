@@ -7,8 +7,8 @@ Each API service needs a `.env` file. You can copy the `.env.example` files as a
 ```bash
 # From /c/cbc/api directory
 
-# Exporter Bank
-cd exporter-bank
+# commercialbank
+cd commercialbank
 cp .env.example .env
 cd ..
 
@@ -17,7 +17,7 @@ cd national-bank
 cp .env.example .env
 cd ..
 
-# NCAT
+# ECTA
 cd ncat
 cp .env.example .env
 cd ..
@@ -37,10 +37,10 @@ All services require these variables as validated by `env.validator.ts`:
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `JWT_SECRET` | Secret key for JWT tokens (min 32 chars in production) | `your-super-secret-jwt-key-at-least-32-characters-long` |
-| `ORGANIZATION_ID` | Unique organization identifier | `exporterbank`, `nationalbank`, `ncat`, `shippingline` |
-| `ORGANIZATION_NAME` | Human-readable organization name | `ExporterBank`, `National Bank`, `NCAT`, `Shipping Line` |
-| `PEER_ENDPOINT` | Hyperledger Fabric peer endpoint | `peer0.exporterbank.coffee-export.com:7051` |
-| `MSP_ID` | Membership Service Provider ID | `ExporterBankMSP`, `NationalBankMSP`, `NCATMSP`, `ShippingLineMSP` |
+| `ORGANIZATION_ID` | Unique organization identifier | `commercialbank`, `nationalbank`, `ncat`, `shippingline` |
+| `ORGANIZATION_NAME` | Human-readable organization name | `commercialbank`, `National Bank`, `ECTA`, `Shipping Line` |
+| `PEER_ENDPOINT` | Hyperledger Fabric peer endpoint | `peer0.commercialbank.coffee-export.com:7051` |
+| `MSP_ID` | Membership Service Provider ID | `ExporterBankMSP`, `NationalBankMSP`, `ECTAMSP`, `ShippingLineMSP` |
 | `CHANNEL_NAME` | Fabric channel name | `coffeechannel` |
 | `CHAINCODE_NAME_EXPORT` | Export chaincode name | `coffee-export` |
 | `CHAINCODE_NAME_USER` | User management chaincode name | `user-management` |
@@ -72,7 +72,7 @@ All services require these variables as validated by `env.validator.ts`:
 
 ## Service-Specific Configuration
 
-### 🏦 Exporter Bank (Port 3001)
+### 🏦 commercialbank (Port 3001)
 
 ```env
 # Server
@@ -80,21 +80,21 @@ PORT=3001
 NODE_ENV=development
 
 # JWT
-JWT_SECRET=exporter-bank-secret-key-change-in-production-min-32-characters
+JWT_SECRET=commercialbank-secret-key-change-in-production-min-32-characters
 JWT_EXPIRY=24h
 REFRESH_TOKEN_EXPIRY=7d
 
 # Organization
-ORGANIZATION_ID=exporterbank
-ORGANIZATION_NAME=ExporterBank
+ORGANIZATION_ID=commercialbank
+ORGANIZATION_NAME=commercialbank
 MSP_ID=ExporterBankMSP
-PEER_ENDPOINT=peer0.exporterbank.coffee-export.com:7051
+PEER_ENDPOINT=peer0.commercialbank.coffee-export.com:7051
 
 # Fabric Network
 CHANNEL_NAME=coffeechannel
 CHAINCODE_NAME_EXPORT=coffee-export
 CHAINCODE_NAME_USER=user-management
-CONNECTION_PROFILE_PATH=../../network/organizations/peerOrganizations/exporterbank.coffee-export.com/connection-exporterbank.json
+CONNECTION_PROFILE_PATH=../../network/organizations/peerOrganizations/commercialbank.coffee-export.com/connection-commercialbank.json
 WALLET_PATH=./wallet
 
 # IPFS
@@ -158,7 +158,7 @@ LOG_LEVEL=info
 
 ---
 
-### ☕ NCAT (Port 3003)
+### ☕ ECTA (Port 3003)
 
 ```env
 # Server
@@ -172,8 +172,8 @@ REFRESH_TOKEN_EXPIRY=7d
 
 # Organization
 ORGANIZATION_ID=ncat
-ORGANIZATION_NAME=NCAT
-MSP_ID=NCATMSP
+ORGANIZATION_NAME=ECTA
+MSP_ID=ECTAMSP
 PEER_ENDPOINT=peer0.ncat.coffee-export.com:7051
 
 # Fabric Network
@@ -249,7 +249,7 @@ LOG_LEVEL=info
 ### ✅ Existing `.env.example` Files Found
 
 All services already have `.env.example` files:
-- ✅ `/api/exporter-bank/.env.example` (comprehensive)
+- ✅ `/api/commercialbank/.env.example` (comprehensive)
 - ✅ `/api/national-bank/.env.example` (needs updates for validator)
 - ✅ `/api/ncat/.env.example` (needs updates for validator)
 - ✅ `/api/shipping-line/.env.example` (needs updates for validator)
@@ -284,7 +284,7 @@ The national-bank, ncat, and shipping-line `.env.example` files are missing some
 cd /c/cbc/api
 
 # Create .env files from examples
-cp exporter-bank/.env.example exporter-bank/.env
+cp commercialbank/.env.example commercialbank/.env
 cp national-bank/.env.example national-bank/.env
 cp ncat/.env.example ncat/.env
 cp shipping-line/.env.example shipping-line/.env
@@ -333,7 +333,7 @@ Environment Configuration Summary
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   Environment: development
   Port: 3001
-  Organization: ExporterBank (exporterbank)
+  Organization: commercialbank (commercialbank)
   MSP ID: ExporterBankMSP
   Channel: coffeechannel
   Chaincode Export: coffee-export
@@ -377,16 +377,16 @@ LOG_LEVEL=warn
 JWT_SECRET=<use-aws-secrets-manager-or-vault>
 ENCRYPTION_KEY=<use-kms-or-vault>
 
-ORGANIZATION_ID=exporterbank
-ORGANIZATION_NAME=ExporterBank
+ORGANIZATION_ID=commercialbank
+ORGANIZATION_NAME=commercialbank
 MSP_ID=ExporterBankMSP
-PEER_ENDPOINT=peer0.exporterbank.coffee-export.com:7051
+PEER_ENDPOINT=peer0.commercialbank.coffee-export.com:7051
 
 CHANNEL_NAME=coffeechannel
 CHAINCODE_NAME_EXPORT=coffee-export
 CHAINCODE_NAME_USER=user-management
-CONNECTION_PROFILE_PATH=/etc/fabric/connection-exporterbank.json
-WALLET_PATH=/var/fabric/wallets/exporterbank
+CONNECTION_PROFILE_PATH=/etc/fabric/connection-commercialbank.json
+WALLET_PATH=/var/fabric/wallets/commercialbank
 
 IPFS_HOST=ipfs.yourcompany.com
 IPFS_PORT=5001

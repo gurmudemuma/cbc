@@ -25,7 +25,7 @@ else
 fi
 
 echo "Testing peer connectivity..."
-PEERS=("peer0.exporterbank.coffee-export.com:7051" "peer0.nationalbank.coffee-export.com:8051" "peer0.ncat.coffee-export.com:9051" "peer0.shippingline.coffee-export.com:10051")
+PEERS=("peer0.commercialbank.coffee-export.com:7051" "peer0.nationalbank.coffee-export.com:8051" "peer0.ecta.coffee-export.com:9051" "peer0.shippingline.coffee-export.com:10051")
 
 for peer_info in "${PEERS[@]}"; do
     IFS=':' read -r peer_name peer_port <<< "$peer_info"

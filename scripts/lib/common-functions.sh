@@ -176,7 +176,7 @@ check_docker() {
 
 # Check if blockchain network is running
 check_blockchain_network() {
-    if ! docker ps | grep -q "peer0.exporterbank"; then
+    if ! docker ps | grep -q "peer0.commercialbank"; then
         print_error "Blockchain network is not running"
         print_info "Start the network with: cd network && ./network.sh up"
         return 1

@@ -53,7 +53,7 @@
   ],
   "item": [
     {
-      "name": "Exporter Bank",
+      "name": "commercialbank",
       "item": [
         {
           "name": "Register",
@@ -340,7 +340,7 @@
       ]
     },
     {
-      "name": "NCAT",
+      "name": "ECTA",
       "item": [
         {
           "name": "Register",

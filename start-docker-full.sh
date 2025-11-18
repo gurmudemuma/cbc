@@ -105,7 +105,7 @@ if [ "$BUILD_IMAGES" = true ]; then
     echo -e "${YELLOW}This may take 10-15 minutes...${NC}"
     
     echo -e "${CYAN}Building API images...${NC}"
-    docker-compose -f docker-compose-full.yml build exporter-bank-api
+    docker-compose -f docker-compose-full.yml build commercialbank-api
     docker-compose -f docker-compose-full.yml build national-bank-api
     docker-compose -f docker-compose-full.yml build ncat-api
     docker-compose -f docker-compose-full.yml build shipping-line-api
@@ -200,9 +200,9 @@ echo ""
 
 echo -e "${GREEN}Services Running:${NC}"
 echo -e "  • IPFS:                ${GREEN}http://localhost:5001${NC} (API), ${GREEN}http://localhost:8080${NC} (Gateway)"
-echo -e "  • Exporter Bank API:   ${GREEN}http://localhost:3001${NC}"
+echo -e "  • commercialbank API:   ${GREEN}http://localhost:3001${NC}"
 echo -e "  • National Bank API:   ${GREEN}http://localhost:3002${NC}"
-echo -e "  • NCAT API:            ${GREEN}http://localhost:3003${NC}"
+echo -e "  • ECTA API:            ${GREEN}http://localhost:3003${NC}"
 echo -e "  • Shipping Line API:   ${GREEN}http://localhost:3004${NC}"
 echo -e "  • Custom Auth. API:    ${GREEN}http://localhost:3005${NC}"
 echo -e "  • Frontend:            ${GREEN}http://localhost${NC}"

@@ -25,7 +25,7 @@ Visual representations of the system architecture and workflows.
 │                        API SERVICE LAYER                             │
 │                                                                       │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐              │
-│  │ Exporter API │  │National Bank │  │   NCAT API   │              │
+│  │ Exporter API │  │National Bank │  │   ECTA API   │              │
 │  │   :3001      │  │     API      │  │    :3003     │              │
 │  │              │  │    :3002     │  │              │              │
 │  │ - Create     │  │ - Approve FX │  │ - Certify    │              │
@@ -58,7 +58,7 @@ Visual representations of the system architecture and workflows.
 │  │                                                               │   │
 │  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐   │   │
 │  │  │  Peer0   │  │  Peer0   │  │  Peer0   │  │  Peer0   │   │   │
-│  │  │ Exporter │  │ National │  │   NCAT   │  │ Shipping │   │   │
+│  │  │ Exporter │  │ National │  │   ECTA   │  │ Shipping │   │   │
 │  │  │  :7051   │  │  :8051   │  │  :9051   │  │  :10051  │   │   │
 │  │  └──────────┘  └──────────┘  └──────────┘  └──────────┘   │   │
 │  │                                                               │   │
@@ -92,7 +92,7 @@ Visual representations of the system architecture and workflows.
 └─────────────────────────────────────────────────────────────────────┘
 
     ┌──────────────┐
-    │   PENDING    │ ◄─── Exporter Bank creates export
+    │   PENDING    │ ◄─── commercialbank creates export
     └──────┬───────┘
            │
            ├─────────────────┐
@@ -106,7 +106,7 @@ Visual representations of the system architecture and workflows.
            │                 │
            ▼                 ▼
     ┌──────────────┐  ┌──────────────┐
-    │   QUALITY_   │  │   QUALITY_   │ ◄─── NCAT decision
+    │   QUALITY_   │  │   QUALITY_   │ ◄─── ECTA decision
     │  CERTIFIED   │  │  REJECTED    │
     └──────┬───────┘  └──────────────┘
            │
@@ -123,10 +123,10 @@ Visual representations of the system architecture and workflows.
            │
            ▼
     ┌───────────���──┐
-    │  COMPLETED   │ ◄─── Exporter Bank completes
+    │  COMPLETED   │ ◄─── commercialbank completes
     └──────────────┘
 
-    Note: Export can be CANCELLED by Exporter Bank at any stage
+    Note: Export can be CANCELLED by commercialbank at any stage
           before SHIPPED status
 ```
 
@@ -140,7 +140,7 @@ Visual representations of the system architecture and workflows.
 └─────────────────────────────────────────────────────────────────────┘
 
 ┌──────────────────┐
-│  Exporter Bank   │
+│  commercialbank   │
 ├──────────────────┤
 │ ✅ Create Export  │
 │ ✅ View Exports   │
@@ -164,7 +164,7 @@ Visual representations of the system architecture and workflows.
 └──────────────────┘
 
 ┌──────────────────┐
-│      NCAT        │
+│      ECTA        │
 ├──────────────────┤
 │ ❌ Create Export  │
 │ ✅ View Exports   │
@@ -317,7 +317,7 @@ Visual representations of the system architecture and workflows.
             │                │                │
     ┌───────▼──────┐  ┌─────▼──────┐  ┌─────▼──────┐
     │    Peer0     │  │   Peer0    │  │   Peer0    │
-    │ ExporterBank │  │NationalBank│  │    NCAT    │
+    │ commercialbank │  │NationalBank│  │    ECTA    │
     │   :7051      │  │   :8051    │  │   :9051    │
     └────────────��─┘  └────────────┘  └────────────┘
                              │
@@ -330,9 +330,9 @@ Visual representations of the system architecture and workflows.
     Host Machine:
     ┌─────────────────────────────────────────┐
     │  APIs (localhost)                       │
-    │  - Exporter Bank API    :3001           │
+    │  - commercialbank API    :3001           │
     │  - National Bank API    :3002           │
-    │  - NCAT API             :3003           │
+    │  - ECTA API             :3003           │
     │  - Shipping Line API    :3004           │
     │                                         │
     │  Frontend (localhost)   :5173           │

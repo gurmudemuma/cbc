@@ -3,9 +3,9 @@ version: '3.7'
 volumes:
   # Fabric network volumes
   orderer.coffee-export.com:
-  peer0.exporterbank.coffee-export.com:
+  peer0.commercialbank.coffee-export.com:
   peer0.nationalbank.coffee-export.com:
-  peer0.ncat.coffee-export.com:
+  peer0.ecta.coffee-export.com:
   peer0.shippingline.coffee-export.com:
   peer0.customauthorities.coffee-export.com:
   couchdb0:
@@ -17,7 +17,7 @@ volumes:
   ipfs-data:
   ipfs-staging:
   # API wallet volumes
-  exporter-bank-wallet:
+  commercialbank-wallet:
   national-bank-wallet:
   ncat-wallet:
   shipping-line-wallet:
@@ -61,7 +61,7 @@ services:
 
   orderer.coffee-export.com:
     container_name: orderer.coffee-export.com
-    image: hyperledger/fabric-orderer:2.5
+    image: hyperledger/fabric-orderer:2.5.14
     labels:
       service: hyperledger-fabric
     environment:
@@ -173,9 +173,9 @@ services:
     restart: unless-stopped
 
   # Peer nodes (all 5 organizations)
-  peer0.exporterbank.coffee-export.com:
-    container_name: peer0.exporterbank.coffee-export.com
-    image: hyperledger/fabric-peer:2.5
+  peer0.commercialbank.coffee-export.com:
+    container_name: peer0.commercialbank.coffee-export.com
+    image: hyperledger/fabric-peer:2.5.14
     environment:
       - FABRIC_LOGGING_SPEC=INFO
       - CORE_PEER_TLS_ENABLED=true
@@ -183,16 +183,16 @@ services:
       - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
       - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
       - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
-      - CORE_PEER_ID=peer0.exporterbank.coffee-export.com
-      - CORE_PEER_ADDRESS=peer0.exporterbank.coffee-export.com:7051
+      - CORE_PEER_ID=peer0.commercialbank.coffee-export.com
+      - CORE_PEER_ADDRESS=peer0.commercialbank.coffee-export.com:7051
       - CORE_PEER_LISTENADDRESS=0.0.0.0:7051
-      - CORE_PEER_CHAINCODEADDRESS=peer0.exporterbank.coffee-export.com:7052
+      - CORE_PEER_CHAINCODEADDRESS=peer0.commercialbank.coffee-export.com:7052
       - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
-      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.exporterbank.coffee-export.com:7051
-      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.exporterbank.coffee-export.com:7051
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.commercialbank.coffee-export.com:7051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.commercialbank.coffee-export.com:7051
       - CORE_PEER_LOCALMSPID=ExporterBankMSP
       - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/fabric/msp
-      - CORE_OPERATIONS_LISTENADDRESS=peer0.exporterbank.coffee-export.com:9444
+      - CORE_OPERATIONS_LISTENADDRESS=peer0.commercialbank.coffee-export.com:9444
       - CORE_METRICS_PROVIDER=prometheus
       - CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG={"peername":"peer0exporterbank"}
       - CORE_CHAINCODE_EXECUTETIMEOUT=600s
@@ -204,8 +204,8 @@ services:
       - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./network/organizations/peerOrganizations/exporterbank.coffee-export.com/peers/peer0.exporterbank.coffee-export.com:/etc/hyperledger/fabric
-      - peer0.exporterbank.coffee-export.com:/var/hyperledger/production
+      - ./network/organizations/peerOrganizations/commercialbank.coffee-export.com/peers/peer0.commercialbank.coffee-export.com:/etc/hyperledger/fabric
+      - peer0.commercialbank.coffee-export.com:/var/hyperledger/production
       - ./config/core.yaml:/etc/hyperledger/fabric/core.yaml
     working_dir: /root
     command: peer node start
@@ -221,7 +221,7 @@ services:
 
   peer0.nationalbank.coffee-export.com:
     container_name: peer0.nationalbank.coffee-export.com
-    image: hyperledger/fabric-peer:2.5
+    image: hyperledger/fabric-peer:2.5.14
     environment:
       - FABRIC_LOGGING_SPEC=INFO
       - CORE_PEER_TLS_ENABLED=true
@@ -265,9 +265,9 @@ services:
       - orderer.coffee-export.com
     restart: unless-stopped
 
-  peer0.ncat.coffee-export.com:
-    container_name: peer0.ncat.coffee-export.com
-    image: hyperledger/fabric-peer:2.5
+  peer0.ecta.coffee-export.com:
+    container_name: peer0.ecta.coffee-export.com
+    image: hyperledger/fabric-peer:2.5.14
     environment:
       - FABRIC_LOGGING_SPEC=INFO
       - CORE_PEER_TLS_ENABLED=true
@@ -275,16 +275,16 @@ services:
       - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
       - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
       - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
-      - CORE_PEER_ID=peer0.ncat.coffee-export.com
-      - CORE_PEER_ADDRESS=peer0.ncat.coffee-export.com:9051
+      - CORE_PEER_ID=peer0.ecta.coffee-export.com
+      - CORE_PEER_ADDRESS=peer0.ecta.coffee-export.com:9051
       - CORE_PEER_LISTENADDRESS=0.0.0.0:9051
-      - CORE_PEER_CHAINCODEADDRESS=peer0.ncat.coffee-export.com:9052
+      - CORE_PEER_CHAINCODEADDRESS=peer0.ecta.coffee-export.com:9052
       - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:9052
-      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.ncat.coffee-export.com:9051
-      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.ncat.coffee-export.com:9051
-      - CORE_PEER_LOCALMSPID=NCATMSP
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.ecta.coffee-export.com:9051
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.ecta.coffee-export.com:9051
+      - CORE_PEER_LOCALMSPID=ECTAMSP
       - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/fabric/msp
-      - CORE_OPERATIONS_LISTENADDRESS=peer0.ncat.coffee-export.com:9446
+      - CORE_OPERATIONS_LISTENADDRESS=peer0.ecta.coffee-export.com:9446
       - CORE_METRICS_PROVIDER=prometheus
       - CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG={"peername":"peer0ncat"}
       - CORE_CHAINCODE_EXECUTETIMEOUT=600s
@@ -296,8 +296,8 @@ services:
       - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./network/organizations/peerOrganizations/ncat.coffee-export.com/peers/peer0.ncat.coffee-export.com:/etc/hyperledger/fabric
-      - peer0.ncat.coffee-export.com:/var/hyperledger/production
+      - ./network/organizations/peerOrganizations/ecta.coffee-export.com/peers/peer0.ecta.coffee-export.com:/etc/hyperledger/fabric
+      - peer0.ecta.coffee-export.com:/var/hyperledger/production
       - ./config/core.yaml:/etc/hyperledger/fabric/core.yaml
     working_dir: /root
     command: peer node start
@@ -313,7 +313,7 @@ services:
 
   peer0.shippingline.coffee-export.com:
     container_name: peer0.shippingline.coffee-export.com
-    image: hyperledger/fabric-peer:2.5
+    image: hyperledger/fabric-peer:2.5.14
     environment:
       - FABRIC_LOGGING_SPEC=INFO
       - CORE_PEER_TLS_ENABLED=true
@@ -359,7 +359,7 @@ services:
 
   peer0.customauthorities.coffee-export.com:
     container_name: peer0.customauthorities.coffee-export.com
-    image: hyperledger/fabric-peer:2.5
+    image: hyperledger/fabric-peer:2.5.14
     environment:
       - FABRIC_LOGGING_SPEC=INFO
       - CORE_PEER_TLS_ENABLED=true
@@ -408,7 +408,7 @@ services:
   # ===========================
   cli:
     container_name: cli
-    image: hyperledger/fabric-tools:2.5
+    image: hyperledger/fabric-tools:2.5.14
     tty: true
     stdin_open: true
     environment:
@@ -424,9 +424,9 @@ services:
       - ./bin:/opt/gopath/src/github.com/hyperledger/fabric/bin
       - ./config:/opt/gopath/src/github.com/hyperledger/fabric/config
     depends_on:
-      - peer0.exporterbank.coffee-export.com
+      - peer0.commercialbank.coffee-export.com
       - peer0.nationalbank.coffee-export.com
-      - peer0.ncat.coffee-export.com
+      - peer0.ecta.coffee-export.com
       - peer0.shippingline.coffee-export.com
       - peer0.customauthorities.coffee-export.com
       - orderer.coffee-export.com
@@ -438,27 +438,27 @@ services:
   # API Services (All Containerized)
   # ===========================
 
-  exporter-bank-api:
+  commercialbank-api:
     build:
       context: ./api
-      dockerfile: exporter-bank/Dockerfile
-    container_name: exporter-bank-api
+      dockerfile: commercialbank/Dockerfile
+    container_name: commercialbank-api
     environment:
       - PORT=3001
       - NODE_ENV=production
       - IPFS_HOST=ipfs
       - IPFS_PORT=5001
       - IPFS_PROTOCOL=http
-      - ORGANIZATION_ID=exporterbank
-      - ORGANIZATION_NAME=ExporterBank
+      - ORGANIZATION_ID=commercialbank
+      - ORGANIZATION_NAME=commercialbank
       - MSP_ID=ExporterBankMSP
-      - PEER_ENDPOINT=peer0.exporterbank.coffee-export.com:7051
+      - PEER_ENDPOINT=peer0.commercialbank.coffee-export.com:7051
       - CHANNEL_NAME=coffeechannel
       - CHAINCODE_NAME_EXPORT=coffee-export
       - CHAINCODE_NAME_USER=user-management
-      - CONNECTION_PROFILE_PATH=/crypto/connection-exporterbank.json
+      - CONNECTION_PROFILE_PATH=/crypto/connection-commercialbank.json
       - WALLET_PATH=/app/wallet
-      - JWT_SECRET=exporter-bank-secret-production-key-change-this
+      - JWT_SECRET=commercialbank-secret-production-key-change-this
       - JWT_EXPIRES_IN=24h
       - JWT_REFRESH_EXPIRES_IN=7d
       - CORS_ORIGIN=*
@@ -473,10 +473,10 @@ services:
       - coffee-export
     depends_on:
       - ipfs
-      - peer0.exporterbank.coffee-export.com
+      - peer0.commercialbank.coffee-export.com
     volumes:
-      - exporter-bank-wallet:/app/wallet
-      - ./network/organizations/peerOrganizations/exporterbank.coffee-export.com:/crypto:ro
+      - commercialbank-wallet:/app/wallet
+      - ./network/organizations/peerOrganizations/commercialbank.coffee-export.com:/crypto:ro
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001/health"]
@@ -544,9 +544,9 @@ services:
       - IPFS_PORT=5001
       - IPFS_PROTOCOL=http
       - ORGANIZATION_ID=ncat
-      - ORGANIZATION_NAME=NCAT
-      - MSP_ID=NCATMSP
-      - PEER_ENDPOINT=peer0.ncat.coffee-export.com:9051
+      - ORGANIZATION_NAME=ECTA
+      - MSP_ID=ECTAMSP
+      - PEER_ENDPOINT=peer0.ecta.coffee-export.com:9051
       - CHANNEL_NAME=coffeechannel
       - CHAINCODE_NAME_EXPORT=coffee-export
       - CHAINCODE_NAME_USER=user-management
@@ -567,10 +567,10 @@ services:
       - coffee-export
     depends_on:
       - ipfs
-      - peer0.ncat.coffee-export.com
+      - peer0.ecta.coffee-export.com
     volumes:
       - ncat-wallet:/app/wallet
-      - ./network/organizations/peerOrganizations/ncat.coffee-export.com:/crypto:ro
+      - ./network/organizations/peerOrganizations/ecta.coffee-export.com:/crypto:ro
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3003/health"]
@@ -684,7 +684,7 @@ services:
     environment:
       - VITE_EXPORTER_BANK_API_URL=http://localhost:3001
       - VITE_NATIONAL_BANK_API_URL=http://localhost:3002
-      - VITE_NCAT_API_URL=http://localhost:3003
+      - VITE_ECTA_API_URL=http://localhost:3003
       - VITE_SHIPPING_LINE_API_URL=http://localhost:3004
       - VITE_CUSTOM_AUTHORITIES_API_URL=http://localhost:3005
     ports:
@@ -692,7 +692,7 @@ services:
     networks:
       - coffee-export
     depends_on:
-      - exporter-bank-api
+      - commercialbank-api
       - national-bank-api
       - ncat-api
       - shipping-line-api

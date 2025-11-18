@@ -23,7 +23,7 @@ fi
 
 echo ""
 echo "3. Checking individual API dependencies..."
-for api_dir in "exporter-bank" "national-bank" "ncat" "shipping-line"; do
+for api_dir in "commercial-bank" "national-bank" "ncat" "shipping-line"; do
     echo "Checking $api_dir..."
     cd "$PROJECT_ROOT/api/$api_dir"
     
@@ -56,7 +56,7 @@ done
 
 echo ""
 echo "4. Testing a simple API startup (5 second test)..."
-cd "$PROJECT_ROOT/api/exporter-bank"
+cd "$PROJECT_ROOT/api/commercial-bank"
 
 echo "Starting API for 5 seconds to see startup messages..."
 timeout 5s npm run dev &
@@ -85,7 +85,7 @@ done
 
 echo ""
 echo "6. Blockchain connectivity test..."
-if docker ps | grep -q "peer0.exporterbank"; then
+if docker ps | grep -q "peer0.commercialbank"; then
     echo "✅ Blockchain network is running"
 else
     echo "❌ Blockchain network is not running"

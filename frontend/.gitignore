@@ -31,3 +31,16 @@ dist-ssr
 
 # Build output
 build
+
+# Testing
+coverage
+*.lcov
+.nyc_output
+
+# TypeScript
+*.tsbuildinfo
+
+# Misc
+.cache
+.temp
+.tmp

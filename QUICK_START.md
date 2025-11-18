@@ -53,7 +53,7 @@ cd cbc
 # Install dependencies
 npm install
 cd api && npm install
-cd exporter-bank && npm install && cd ..
+cd commercialbank && npm install && cd ..
 cd national-bank && npm install && cd ..
 cd ncat && npm install && cd ..
 cd shipping-line && npm install && cd ..
@@ -68,7 +68,7 @@ cd frontend && npm install && cd ..
 ```bash
 # Copy environment templates
 cp .env.example .env
-cp api/exporter-bank/.env.example api/exporter-bank/.env
+cp api/commercialbank/.env.example api/commercialbank/.env
 cp api/national-bank/.env.example api/national-bank/.env
 cp api/ncat/.env.example api/ncat/.env
 cp api/shipping-line/.env.example api/shipping-line/.env
@@ -100,9 +100,9 @@ This script will:
 ./scripts/check-health.sh
 
 # Expected output:
-# ✅ Exporter Bank API (port 3001) is healthy
+# ✅ commercialbank API (port 3001) is healthy
 # ✅ National Bank API (port 3002) is healthy
-# ✅ NCAT API (port 3003) is healthy
+# ✅ ECTA API (port 3003) is healthy
 # ✅ Shipping Line API (port 3004) is healthy
 ```
 
@@ -110,9 +110,9 @@ This script will:
 
 Open your browser:
 - **Frontend:** http://localhost:5173
-- **Exporter Bank API:** http://localhost:3001
+- **commercialbank API:** http://localhost:3001
 - **National Bank API:** http://localhost:3002
-- **NCAT API:** http://localhost:3003
+- **ECTA API:** http://localhost:3003
 - **Shipping Line API:** http://localhost:3004
 
 **Test Credentials:**
@@ -160,7 +160,7 @@ docker ps | grep hyperledger
 
 **Verify:**
 ```bash
-docker exec peer0.exporterbank.coffee-export.com peer lifecycle chaincode queryinstalled
+docker exec peer0.commercialbank.coffee-export.com peer lifecycle chaincode queryinstalled
 # Should show both chaincodes installed
 ```
 
@@ -187,7 +187,7 @@ cd api
 ../scripts/dev-apis.sh
 
 # Option B: Start services individually
-cd exporter-bank && npm run dev &
+cd commercialbank && npm run dev &
 cd ../national-bank && npm run dev &
 cd ../ncat && npm run dev &
 cd ../shipping-line && npm run dev &
@@ -302,7 +302,7 @@ docker ps
 
 You should see 5+ containers running:
 - orderer.coffee-export.com
-- peer0.exporterbank.coffee-export.com
+- peer0.commercialbank.coffee-export.com
 - peer0.nationalbank.coffee-export.com
 - peer0.ncat.coffee-export.com
 - peer0.shippingline.coffee-export.com
@@ -310,9 +310,9 @@ You should see 5+ containers running:
 
 ##### Step 5: Start APIs (in separate terminals)
 
-**Terminal 2 - Exporter Bank API:**
+**Terminal 2 - commercialbank API:**
 ```bash
-cd api/exporter-bank
+cd api/commercialbank
 npm install  # First time only
 npm run dev
 ```
@@ -324,7 +324,7 @@ npm install  # First time only
 npm run dev
 ```
 
-**Terminal 4 - NCAT API:**
+**Terminal 4 - ECTA API:**
 ```bash
 cd api/ncat
 npm install  # First time only
@@ -350,9 +350,9 @@ npm run dev
 #### Access the System
 
 - Frontend: http://localhost:5173
-- Exporter Bank API: http://localhost:3001
+- commercialbank API: http://localhost:3001
 - National Bank API: http://localhost:3002
-- NCAT API: http://localhost:3003
+- ECTA API: http://localhost:3003
 - Shipping Line API: http://localhost:3004
 
 #### Troubleshooting
@@ -374,7 +374,7 @@ docker system prune -f
 ##### Check Docker Logs
 ```bash
 docker logs orderer.coffee-export.com
-docker logs peer0.exporterbank.coffee-export.com
+docker logs peer0.commercialbank.coffee-export.com
 ```
 
 #### Stopping the System
@@ -395,7 +395,7 @@ If everything is already installed and you just want to restart:
 cd network && ./network.sh up
 
 # Terminal 2-5: Start APIs (in separate terminals)
-cd api/exporter-bank && npm run dev
+cd api/commercialbank && npm run dev
 cd api/national-bank && npm run dev
 cd api/ncat && npm run dev
 cd api/shipping-line && npm run dev
@@ -425,10 +425,10 @@ cd frontend && npm run dev
 ┌────────▼────────┐              ┌──────▼──────────┐
 │  API Services   │              │  API Services   │
 ├─────────────────┤              ├─────────────────┤
-│ Exporter Bank   │              │ National Bank   │
+│ commercialbank   │              │ National Bank   │
 │   (Port 3001)   │              │   (Port 3002)   │
 ├─────────────────┤              ├─────────────────┤
-│      NCAT       │              │ Shipping Line   │
+│      ECTA       │              │ Shipping Line   │
 │   (Port 3003)   │              │   (Port 3004)   │
 └────────┬────────┘              └────────┬────────┘
          │                                │
@@ -454,14 +454,14 @@ cd frontend && npm run dev
 | Service | Port | URL |
 |---------|------|-----|
 | Frontend | 5173 | http://localhost:5173 |
-| Exporter Bank API | 3001 | http://localhost:3001 |
+| commercialbank API | 3001 | http://localhost:3001 |
 | National Bank API | 3002 | http://localhost:3002 |
-| NCAT API | 3003 | http://localhost:3003 |
+| ECTA API | 3003 | http://localhost:3003 |
 | Shipping Line API | 3004 | http://localhost:3004 |
 | Orderer | 7050 | - |
-| Peer 0 (Exporter Bank) | 7051 | - |
+| Peer 0 (commercialbank) | 7051 | - |
 | Peer 0 (National Bank) | 8051 | - |
-| Peer 0 (NCAT) | 9051 | - |
+| Peer 0 (ECTA) | 9051 | - |
 | Peer 0 (Shipping Line) | 10051 | - |
 
 ---
@@ -474,9 +474,9 @@ Use this checklist to ensure everything is running:
 - [ ] Fabric network is up (5+ containers)
 - [ ] Coffee-export chaincode deployed
 - [ ] User-management chaincode deployed
-- [ ] Exporter Bank API running (port 3001)
+- [ ] commercialbank API running (port 3001)
 - [ ] National Bank API running (port 3002)
-- [ ] NCAT API running (port 3003)
+- [ ] ECTA API running (port 3003)
 - [ ] Shipping Line API running (port 3004)
 - [ ] Frontend running (port 5173)
 - [ ] Can access frontend in browser
@@ -526,7 +526,7 @@ cd /home/gu-da/CBC/network
 ls -la /home/gu-da/CBC/network/organizations/peerOrganizations/
 
 # Verify environment variables
-cd /home/gu-da/CBC/api/exporter-bank
+cd /home/gu-da/CBC/api/commercialbank
 cat .env | grep FABRIC
 ```
 

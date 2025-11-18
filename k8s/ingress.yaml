@@ -44,12 +44,12 @@ spec:
   - host: api.coffeeexport.com
     http:
       paths:
-      # Exporter Bank API
-      - path: /exporter-bank
+      # commercialbank API
+      - path: /commercialbank
         pathType: Prefix
         backend:
           service:
-            name: exporter-bank-api
+            name: commercialbank-api
             port:
               number: 3001
       # National Bank API
@@ -60,7 +60,7 @@ spec:
             name: national-bank-api
             port:
               number: 3002
-      # NCAT API
+      # ECTA API
       - path: /ncat
         pathType: Prefix
         backend:

@@ -3,9 +3,10 @@
  * Centralized security settings and utilities
  */
 
-import helmet, { type HelmetOptions } from 'helmet';
+import helmet from 'helmet';
 import type { Application } from 'express';
 import rateLimit from 'express-rate-limit';
+import crypto from 'crypto';
 
 /**
  * Content Security Policy configuration
@@ -27,8 +28,8 @@ export const cspConfig = {
 /**
  * Helmet security headers configuration
  */
-export const helmetConfig: HelmetOptions = {
-  contentSecurityPolicy: cspConfig as any,
+export const helmetConfig = {
+  contentSecurityPolicy: cspConfig,
   crossOriginEmbedderPolicy: true,
   crossOriginOpenerPolicy: true,
   crossOriginResourcePolicy: { policy: 'cross-origin' as const },
@@ -44,7 +45,7 @@ export const helmetConfig: HelmetOptions = {
   noSniff: true,
   originAgentCluster: true,
   permittedCrossDomainPolicies: { permittedPolicies: 'none' },
-  referrerPolicy: { policy: 'strict-origin-when-cross-origin' as any },
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' as const },
 };
 
 /**
@@ -111,18 +112,23 @@ export const getCorsConfig = (allowedOrigins: string | string[]) => {
 
   return {
     origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-      // Allow requests with no origin (mobile apps, curl, etc.)
+      // Allow requests with no origin (like mobile apps or curl requests)
       if (!origin) {
         return callback(null, true);
       }
 
-      // Allow all origins in development with wildcard
+      // Allow all origins in development
       if (origins.includes('*')) {
         return callback(null, true);
       }
 
       // Check if origin is in allowed list
       if (origins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      // In development, allow localhost on any port
+      if (process.env.NODE_ENV === 'development' && origin.includes('localhost')) {
         return callback(null, true);
       }
 
@@ -175,7 +181,7 @@ export const applySecurityMiddleware = (
 ) => {
   // Apply Helmet security headers
   if (config.enableHelmet !== false) {
-    app.use(helmet(helmetConfig));
+    app.use(helmet(helmetConfig as any));
   }
 
   // Apply custom security headers
@@ -274,7 +280,6 @@ export const validatePassword = (password: string): { valid: boolean; errors: st
  * Generate secure random token
  */
 export const generateSecureToken = (length: number = 32): string => {
-  const crypto = require('crypto');
   return crypto.randomBytes(length).toString('hex');
 };
 
@@ -282,7 +287,6 @@ export const generateSecureToken = (length: number = 32): string => {
  * Hash sensitive data (for logging, etc.)
  */
 export const hashForLogging = (data: string): string => {
-  const crypto = require('crypto');
   return crypto.createHash('sha256').update(data).digest('hex').substring(0, 8);
 };
 

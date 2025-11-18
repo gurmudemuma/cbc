@@ -77,7 +77,7 @@ installChaincode() {
     cd /opt/gopath/src/github.com/hyperledger/fabric/peer && \
     . ./scripts/envVar.sh && \
     setGlobalsCLI ${ORG} && \
-    peer lifecycle chaincode install ${CC_NAME}.tar.gz" >&log.txt
+    (peer lifecycle chaincode queryinstalled | grep -q '${CC_NAME}_${CC_VERSION}' && echo 'Chaincode already installed') || peer lifecycle chaincode install ${CC_NAME}.tar.gz" >&log.txt
   res=$?
   { set +x; } 2>/dev/null
   cat log.txt
@@ -177,6 +177,9 @@ commitChaincodeDefinition() {
   infoln "Committing chaincode definition from Docker CLI container..."
   
   set -x
+  fcn_call='{"function":"'${CC_INIT_FCN}'","Args":[]}'
+  infoln "invoke fcn call:${fcn_call}"
+  
   # Run the commit command inside the Docker CLI container
   # Use setGlobalsCLI approach - run the script from inside Docker
   if [ "$CC_END_POLICY" = "NA" ]; then
@@ -188,14 +191,16 @@ commitChaincodeDefinition() {
         -o orderer.coffee-export.com:7050 --ordererTLSHostnameOverride orderer.coffee-export.com \
         --tls --cafile \$ORDERER_CA \
         --channelID $CHANNEL_NAME --name ${CC_NAME} \
-        --peerAddresses peer0.exporterbank.coffee-export.com:7051 \
-        --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/exporterbank.coffee-export.com/peers/peer0.exporterbank.coffee-export.com/tls/ca.crt \
+        --peerAddresses peer0.commercialbank.coffee-export.com:7051 \
+        --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/commercialbank.coffee-export.com/peers/peer0.commercialbank.coffee-export.com/tls/ca.crt \
         --peerAddresses peer0.nationalbank.coffee-export.com:8051 \
         --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/nationalbank.coffee-export.com/peers/peer0.nationalbank.coffee-export.com/tls/ca.crt \
-        --peerAddresses peer0.ncat.coffee-export.com:9051 \
-        --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/ncat.coffee-export.com/peers/peer0.ncat.coffee-export.com/tls/ca.crt \
+        --peerAddresses peer0.ecta.coffee-export.com:9051 \
+        --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/ecta.coffee-export.com/peers/peer0.ecta.coffee-export.com/tls/ca.crt \
         --peerAddresses peer0.shippingline.coffee-export.com:10051 \
         --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/shippingline.coffee-export.com/peers/peer0.shippingline.coffee-export.com/tls/ca.crt \
+        --peerAddresses peer0.custom-authorities.coffee-export.com:11051 \
+        --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/custom-authorities.coffee-export.com/peers/peer0.custom-authorities.coffee-export.com/tls/ca.crt \
         --version ${CC_VERSION} --sequence ${CC_SEQUENCE}" >&log.txt
   else
     MSYS_NO_PATHCONV=1 docker exec cli bash -c "
@@ -206,14 +211,16 @@ commitChaincodeDefinition() {
         -o orderer.coffee-export.com:7050 --ordererTLSHostnameOverride orderer.coffee-export.com \
         --tls --cafile \$ORDERER_CA \
         --channelID $CHANNEL_NAME --name ${CC_NAME} \
-        --peerAddresses peer0.exporterbank.coffee-export.com:7051 \
-        --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/exporterbank.coffee-export.com/peers/peer0.exporterbank.coffee-export.com/tls/ca.crt \
+        --peerAddresses peer0.commercialbank.coffee-export.com:7051 \
+        --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/commercialbank.coffee-export.com/peers/peer0.commercialbank.coffee-export.com/tls/ca.crt \
         --peerAddresses peer0.nationalbank.coffee-export.com:8051 \
         --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/nationalbank.coffee-export.com/peers/peer0.nationalbank.coffee-export.com/tls/ca.crt \
-        --peerAddresses peer0.ncat.coffee-export.com:9051 \
-        --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/ncat.coffee-export.com/peers/peer0.ncat.coffee-export.com/tls/ca.crt \
+        --peerAddresses peer0.ecta.coffee-export.com:9051 \
+        --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/ecta.coffee-export.com/peers/peer0.ecta.coffee-export.com/tls/ca.crt \
         --peerAddresses peer0.shippingline.coffee-export.com:10051 \
         --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/shippingline.coffee-export.com/peers/peer0.shippingline.coffee-export.com/tls/ca.crt \
+        --peerAddresses peer0.custom-authorities.coffee-export.com:11051 \
+        --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/custom-authorities.coffee-export.com/peers/peer0.custom-authorities.coffee-export.com/tls/ca.crt \
         --version ${CC_VERSION} --sequence ${CC_SEQUENCE} --signature-policy '$CC_END_POLICY'" >&log.txt
   fi
 
@@ -231,6 +238,8 @@ queryCommitted() {
   infoln "Querying chaincode definition on peer0.org${ORG} on channel '$CHANNEL_NAME'..."
   local rc=1
   local COUNTER=1
+  # continue to poll
+  # we either get a successful response, or reach MAX RETRY
   while [ $rc -ne 0 -a $COUNTER -lt $MAX_RETRY ]; do
     sleep $DELAY
     infoln "Attempting to Query committed status on peer0.org${ORG}, Retry after $DELAY seconds."
@@ -273,14 +282,16 @@ chaincodeInvokeInit() {
       -o orderer.coffee-export.com:7050 --ordererTLSHostnameOverride orderer.coffee-export.com \
       --tls --cafile \$ORDERER_CA \
       -C $CHANNEL_NAME -n ${CC_NAME} \
-      --peerAddresses peer0.exporterbank.coffee-export.com:7051 \
-      --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/exporterbank.coffee-export.com/peers/peer0.exporterbank.coffee-export.com/tls/ca.crt \
+      --peerAddresses peer0.commercialbank.coffee-export.com:7051 \
+      --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/commercialbank.coffee-export.com/peers/peer0.commercialbank.coffee-export.com/tls/ca.crt \
       --peerAddresses peer0.nationalbank.coffee-export.com:8051 \
       --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/nationalbank.coffee-export.com/peers/peer0.nationalbank.coffee-export.com/tls/ca.crt \
-      --peerAddresses peer0.ncat.coffee-export.com:9051 \
-      --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/ncat.coffee-export.com/peers/peer0.ncat.coffee-export.com/tls/ca.crt \
+      --peerAddresses peer0.ecta.coffee-export.com:9051 \
+      --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/ecta.coffee-export.com/peers/peer0.ecta.coffee-export.com/tls/ca.crt \
       --peerAddresses peer0.shippingline.coffee-export.com:10051 \
       --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/shippingline.coffee-export.com/peers/peer0.shippingline.coffee-export.com/tls/ca.crt \
+      --peerAddresses peer0.custom-authorities.coffee-export.com:11051 \
+      --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/custom-authorities.coffee-export.com/peers/peer0.custom-authorities.coffee-export.com/tls/ca.crt \
       --isInit -c '$fcn_call'" >&log.txt
     
   res=$?
@@ -320,78 +331,95 @@ chaincodeQuery() {
 ## Package the chaincode (run inside CLI container)
 packageChaincode
 
-## Install chaincode on peer0.org1 and peer0.org2
-infoln "Installing chaincode on peer0.exporterbank..."
+## Install chaincode on all organizations
+infoln "Installing chaincode on peer0.commercialbank..."
 installChaincode 1
 infoln "Install chaincode on peer0.nationalbank..."
 installChaincode 2
-infoln "Install chaincode on peer0.ncat..."
+infoln "Install chaincode on peer0.ecta..."
 installChaincode 3
 infoln "Install chaincode on peer0.shippingline..."
 installChaincode 4
+infoln "Install chaincode on peer0.customauthorities..."
+installChaincode 5
 
 ## query whether the chaincode is installed
 queryInstalled 1
 
 ## approve the definition for org1
-infoln "Approving chaincode definition for ExporterBank..."
+infoln "Approving chaincode definition for commercialbank..."
 approveForMyOrg 1
 
 ## check whether the chaincode definition is ready to be committed
-## expect org1 to have approved and org2 not to
-checkCommitReadiness 1 "\"ExporterBankMSP\": true" "\"NationalBankMSP\": false" "\"NCATMSP\": false" "\"ShippingLineMSP\": false"
-checkCommitReadiness 2 "\"ExporterBankMSP\": true" "\"NationalBankMSP\": false" "\"NCATMSP\": false" "\"ShippingLineMSP\": false"
-checkCommitReadiness 3 "\"ExporterBankMSP\": true" "\"NationalBankMSP\": false" "\"NCATMSP\": false" "\"ShippingLineMSP\": false"
-checkCommitReadiness 4 "\"ExporterBankMSP\": true" "\"NationalBankMSP\": false" "\"NCATMSP\": false" "\"ShippingLineMSP\": false"
+## expect org1 to have approved and others not to
+checkCommitReadiness 1 "\"CommercialBankMSP\": true" "\"NationalBankMSP\": false" "\"ECTAMSP\": false" "\"ShippingLineMSP\": false" "\"CustomAuthoritiesMSP\": false"
+checkCommitReadiness 2 "\"CommercialBankMSP\": true" "\"NationalBankMSP\": false" "\"ECTAMSP\": false" "\"ShippingLineMSP\": false" "\"CustomAuthoritiesMSP\": false"
+checkCommitReadiness 3 "\"CommercialBankMSP\": true" "\"NationalBankMSP\": false" "\"ECTAMSP\": false" "\"ShippingLineMSP\": false" "\"CustomAuthoritiesMSP\": false"
+checkCommitReadiness 4 "\"CommercialBankMSP\": true" "\"NationalBankMSP\": false" "\"ECTAMSP\": false" "\"ShippingLineMSP\": false" "\"CustomAuthoritiesMSP\": false"
+checkCommitReadiness 5 "\"CommercialBankMSP\": true" "\"NationalBankMSP\": false" "\"ECTAMSP\": false" "\"ShippingLineMSP\": false" "\"CustomAuthoritiesMSP\": false"
 
 ## now approve also for org2
 infoln "Approving chaincode definition for NationalBank..."
 approveForMyOrg 2
 
 ## check whether the chaincode definition is ready to be committed
-## expect them both to have approved
-checkCommitReadiness 1 "\"ExporterBankMSP\": true" "\"NationalBankMSP\": true" "\"NCATMSP\": false" "\"ShippingLineMSP\": false"
-checkCommitReadiness 2 "\"ExporterBankMSP\": true" "\"NationalBankMSP\": true" "\"NCATMSP\": false" "\"ShippingLineMSP\": false"
-checkCommitReadiness 3 "\"ExporterBankMSP\": true" "\"NationalBankMSP\": true" "\"NCATMSP\": false" "\"ShippingLineMSP\": false"
-checkCommitReadiness 4 "\"ExporterBankMSP\": true" "\"NationalBankMSP\": true" "\"NCATMSP\": false" "\"ShippingLineMSP\": false"
+checkCommitReadiness 1 "\"CommercialBankMSP\": true" "\"NationalBankMSP\": true" "\"ECTAMSP\": false" "\"ShippingLineMSP\": false" "\"CustomAuthoritiesMSP\": false"
+checkCommitReadiness 2 "\"CommercialBankMSP\": true" "\"NationalBankMSP\": true" "\"ECTAMSP\": false" "\"ShippingLineMSP\": false" "\"CustomAuthoritiesMSP\": false"
+checkCommitReadiness 3 "\"CommercialBankMSP\": true" "\"NationalBankMSP\": true" "\"ECTAMSP\": false" "\"ShippingLineMSP\": false" "\"CustomAuthoritiesMSP\": false"
+checkCommitReadiness 4 "\"CommercialBankMSP\": true" "\"NationalBankMSP\": true" "\"ECTAMSP\": false" "\"ShippingLineMSP\": false" "\"CustomAuthoritiesMSP\": false"
+checkCommitReadiness 5 "\"CommercialBankMSP\": true" "\"NationalBankMSP\": true" "\"ECTAMSP\": false" "\"ShippingLineMSP\": false" "\"CustomAuthoritiesMSP\": false"
 
 ## now approve for org3
-infoln "Approving chaincode definition for NCAT..."
+infoln "Approving chaincode definition for ECTA..."
 approveForMyOrg 3
 
 ## check whether the chaincode definition is ready to be committed
-checkCommitReadiness 1 "\"ExporterBankMSP\": true" "\"NationalBankMSP\": true" "\"NCATMSP\": true" "\"ShippingLineMSP\": false"
-checkCommitReadiness 2 "\"ExporterBankMSP\": true" "\"NationalBankMSP\": true" "\"NCATMSP\": true" "\"ShippingLineMSP\": false"
-checkCommitReadiness 3 "\"ExporterBankMSP\": true" "\"NationalBankMSP\": true" "\"NCATMSP\": true" "\"ShippingLineMSP\": false"
-checkCommitReadiness 4 "\"ExporterBankMSP\": true" "\"NationalBankMSP\": true" "\"NCATMSP\": true" "\"ShippingLineMSP\": false"
+checkCommitReadiness 1 "\"CommercialBankMSP\": true" "\"NationalBankMSP\": true" "\"ECTAMSP\": true" "\"ShippingLineMSP\": false" "\"CustomAuthoritiesMSP\": false"
+checkCommitReadiness 2 "\"CommercialBankMSP\": true" "\"NationalBankMSP\": true" "\"ECTAMSP\": true" "\"ShippingLineMSP\": false" "\"CustomAuthoritiesMSP\": false"
+checkCommitReadiness 3 "\"CommercialBankMSP\": true" "\"NationalBankMSP\": true" "\"ECTAMSP\": true" "\"ShippingLineMSP\": false" "\"CustomAuthoritiesMSP\": false"
+checkCommitReadiness 4 "\"CommercialBankMSP\": true" "\"NationalBankMSP\": true" "\"ECTAMSP\": true" "\"ShippingLineMSP\": false" "\"CustomAuthoritiesMSP\": false"
+checkCommitReadiness 5 "\"CommercialBankMSP\": true" "\"NationalBankMSP\": true" "\"ECTAMSP\": true" "\"ShippingLineMSP\": false" "\"CustomAuthoritiesMSP\": false"
 
 ## now approve for org4
 infoln "Approving chaincode definition for ShippingLine..."
 approveForMyOrg 4
 
 ## check whether the chaincode definition is ready to be committed
+checkCommitReadiness 1 "\"CommercialBankMSP\": true" "\"NationalBankMSP\": true" "\"ECTAMSP\": true" "\"ShippingLineMSP\": true" "\"CustomAuthoritiesMSP\": false"
+checkCommitReadiness 2 "\"CommercialBankMSP\": true" "\"NationalBankMSP\": true" "\"ECTAMSP\": true" "\"ShippingLineMSP\": true" "\"CustomAuthoritiesMSP\": false"
+checkCommitReadiness 3 "\"CommercialBankMSP\": true" "\"NationalBankMSP\": true" "\"ECTAMSP\": true" "\"ShippingLineMSP\": true" "\"CustomAuthoritiesMSP\": false"
+checkCommitReadiness 4 "\"CommercialBankMSP\": true" "\"NationalBankMSP\": true" "\"ECTAMSP\": true" "\"ShippingLineMSP\": true" "\"CustomAuthoritiesMSP\": false"
+checkCommitReadiness 5 "\"CommercialBankMSP\": true" "\"NationalBankMSP\": true" "\"ECTAMSP\": true" "\"ShippingLineMSP\": true" "\"CustomAuthoritiesMSP\": false"
+
+## now approve for org5
+infoln "Approving chaincode definition for CustomAuthorities..."
+approveForMyOrg 5
+
+## check whether the chaincode definition is ready to be committed
 ## expect all orgs to have approved
-checkCommitReadiness 1 "\"ExporterBankMSP\": true" "\"NationalBankMSP\": true" "\"NCATMSP\": true" "\"ShippingLineMSP\": true"
-checkCommitReadiness 2 "\"ExporterBankMSP\": true" "\"NationalBankMSP\": true" "\"NCATMSP\": true" "\"ShippingLineMSP\": true"
-checkCommitReadiness 3 "\"ExporterBankMSP\": true" "\"NationalBankMSP\": true" "\"NCATMSP\": true" "\"ShippingLineMSP\": true"
-checkCommitReadiness 4 "\"ExporterBankMSP\": true" "\"NationalBankMSP\": true" "\"NCATMSP\": true" "\"ShippingLineMSP\": true"
+checkCommitReadiness 1 "\"CommercialBankMSP\": true" "\"NationalBankMSP\": true" "\"ECTAMSP\": true" "\"ShippingLineMSP\": true" "\"CustomAuthoritiesMSP\": true"
+checkCommitReadiness 2 "\"CommercialBankMSP\": true" "\"NationalBankMSP\": true" "\"ECTAMSP\": true" "\"ShippingLineMSP\": true" "\"CustomAuthoritiesMSP\": true"
+checkCommitReadiness 3 "\"CommercialBankMSP\": true" "\"NationalBankMSP\": true" "\"ECTAMSP\": true" "\"ShippingLineMSP\": true" "\"CustomAuthoritiesMSP\": true"
+checkCommitReadiness 4 "\"CommercialBankMSP\": true" "\"NationalBankMSP\": true" "\"ECTAMSP\": true" "\"ShippingLineMSP\": true" "\"CustomAuthoritiesMSP\": true"
+checkCommitReadiness 5 "\"CommercialBankMSP\": true" "\"NationalBankMSP\": true" "\"ECTAMSP\": true" "\"ShippingLineMSP\": true" "\"CustomAuthoritiesMSP\": true"
 
 ## now that we know for sure all orgs have approved, commit the definition
 infoln "Committing chaincode definition to channel '$CHANNEL_NAME'..."
-commitChaincodeDefinition 1 2 3 4
+commitChaincodeDefinition 1 2 3 4 5
 
 ## query on all orgs to see that the definition committed successfully
 queryCommitted 1
 queryCommitted 2
 queryCommitted 3
 queryCommitted 4
+queryCommitted 5
 
 ## Invoke the chaincode - this does require that the chaincode have the 'initLedger'
 ## method defined
 if [ "$CC_INIT_FCN" = "NA" ]; then
   infoln "Chaincode initialization is not required"
 else
-  chaincodeInvokeInit 1 2 3 4
+  chaincodeInvokeInit 1 2 3 4 5
 fi
 
 exit 0

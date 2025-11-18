@@ -15,7 +15,7 @@ This guide explains how to test all the security improvements that have been imp
 
 Check that all services have their .env files:
 ```bash
-ls -la api/exporter-bank/.env
+ls -la api/commercialbank/.env
 ls -la api/national-bank/.env
 ls -la api/ncat/.env
 ls -la api/shipping-line/.env
@@ -30,8 +30,8 @@ Each should contain a unique JWT_SECRET.
 ### Option 1: Run All Tests (Recommended)
 
 ```bash
-# Start the exporter-bank service first
-cd api/exporter-bank
+# Start the commercialbank service first
+cd api/commercialbank
 npm run dev &
 
 # Wait a few seconds for service to start
@@ -124,7 +124,7 @@ Failed: 1
 **Test that service fails without JWT_SECRET:**
 ```bash
 # Temporarily remove JWT_SECRET
-cd api/exporter-bank
+cd api/commercialbank
 mv .env .env.backup
 npm run dev
 # Expected: Error about missing JWT_SECRET
@@ -275,10 +275,10 @@ curl -X POST http://localhost:3001/api/exports \
 **Error: "JWT_SECRET environment variable is required"**
 ```bash
 # Solution: Check .env file exists and has JWT_SECRET
-cat api/exporter-bank/.env | grep JWT_SECRET
+cat api/commercialbank/.env | grep JWT_SECRET
 
 # If missing, add it:
-echo "JWT_SECRET=$(openssl rand -base64 64)" >> api/exporter-bank/.env
+echo "JWT_SECRET=$(openssl rand -base64 64)" >> api/commercialbank/.env
 ```
 
 **Error: "JWT_SECRET must be at least 64 characters in production"**
@@ -295,7 +295,7 @@ openssl rand -base64 64
 **"Connection refused" errors**
 ```bash
 # Solution: Make sure service is running
-cd api/exporter-bank
+cd api/commercialbank
 npm run dev
 
 # Check if running
@@ -317,7 +317,7 @@ curl -X POST http://localhost:3001/api/auth/register \
 **"Module not found: isomorphic-dompurify"**
 ```bash
 # Solution: Install the dependency
-cd api/exporter-bank
+cd api/commercialbank
 npm install isomorphic-dompurify
 
 # Repeat for other services

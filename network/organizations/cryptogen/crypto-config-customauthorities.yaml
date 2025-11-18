@@ -1,6 +1,6 @@
 PeerOrgs:
   - Name: CustomAuthorities
-    Domain: customauthorities.coffee-export.com
+    Domain: custom-authorities.coffee-export.com
     EnableNodeOUs: true
     Template:
       Count: 1

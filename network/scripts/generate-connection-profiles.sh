@@ -12,6 +12,9 @@ generate_profile() {
     local ORG_LOWER=$2
     local PORT=$3
     
+    # Read and format the TLS CA certificate
+    local PEER_PEM=$(cat ../organizations/peerOrganizations/${ORG_LOWER}.coffee-export.com/peers/peer0.${ORG_LOWER}.coffee-export.com/tls/ca.crt | sed 's/$/\\n/' | tr -d '\n')
+    
     cat > "../organizations/peerOrganizations/${ORG_LOWER}.coffee-export.com/connection-${ORG_LOWER}.json" << PROFILE
 {
   "name": "${ORG}-network",
@@ -41,7 +44,7 @@ generate_profile() {
     "peer0.${ORG_LOWER}.coffee-export.com": {
       "url": "grpcs://localhost:${PORT}",
       "tlsCACerts": {
-        "pem": "$(cat ../organizations/peerOrganizations/${ORG_LOWER}.coffee-export.com/peers/peer0.${ORG_LOWER}.coffee-export.com/tls/ca.crt | sed 's/$/\\n/' | tr -d '\n')"
+        "pem": "${PEER_PEM}"
       },
       "grpcOptions": {
         "ssl-target-name-override": "peer0.${ORG_LOWER}.coffee-export.com",
@@ -56,9 +59,10 @@ PROFILE
 }
 
 # Generate profiles for all organizations
-generate_profile "ExporterBank" "exporterbank" "7051"
+generate_profile "CommercialBank" "commercialbank" "7051"
 generate_profile "NationalBank" "nationalbank" "8051"
-generate_profile "NCAT" "ncat" "9051"
+generate_profile "ECTA" "ecta" "9051"
 generate_profile "ShippingLine" "shippingline" "10051"
+generate_profile "CustomAuthorities" "custom-authorities" "11051"
 
 echo "Connection profiles generated successfully!"

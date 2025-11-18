@@ -49,16 +49,19 @@ stop_service() {
 }
 
 # Stop all services
-stop_service "exporter-bank"
+stop_service "commercial-bank"
 stop_service "national-bank"
-stop_service "ncat"
+stop_service "ecta"
 stop_service "shipping-line"
+stop_service "custom-authorities"
+stop_service "ecx"
+stop_service "exporter-portal"
 
 # Also kill any node processes on the API ports
 echo ""
 echo -e "${YELLOW}Checking for any remaining processes on API ports...${NC}"
 
-for port in 3001 3002 3003 3004; do
+for port in 3001 3002 3003 3004 3005 3006 3007; do
     pid=$(lsof -ti:$port 2>/dev/null || true)
     if [ ! -z "$pid" ]; then
         echo -e "${YELLOW}Killing process on port $port (PID: $pid)...${NC}"

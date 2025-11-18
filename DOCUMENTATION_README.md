@@ -89,12 +89,12 @@ Technical reference documentation:
 │          • Approves FX & license                        │
 │          Status: FX_PENDING → FX_APPROVED               │
 ├─────────────────────────────────────────────────────────┤
-│  STEP 2: Exporter Bank                                  │
+│  STEP 2: commercialbank                                  │
 │          • Validates financial documents                │
 │          • Commercial invoice, sales contract           │
 │          Status: BANKING_PENDING → BANKING_APPROVED     │
 ├─────────────────────────────────────────────────────────┤
-│  STEP 3: NCAT                                           │
+│  STEP 3: ECTA                                           │
 │          • Quality certification                        │
 │          • Origin certificate                           │
 │          Status: QUALITY_PENDING → QUALITY_CERTIFIED    │
@@ -123,15 +123,15 @@ Technical reference documentation:
 ## 🎯 Key Changes in v2.0
 
 ### ✅ What's New:
-- **National Bank creates blockchain records** (not Exporter Bank)
-- **Banking approval stage** added (Exporter Bank validates financial docs)
+- **National Bank creates blockchain records** (not commercialbank)
+- **Banking approval stage** added (commercialbank validates financial docs)
 - **Exporter Portal is off-chain** (PostgreSQL, not on blockchain)
 - **Dashboard workflow visualization** with actor tracking
 - **Sequential validation enforced** by chaincode
 
 ### ❌ What Changed:
 - ~~Quality certification first~~ → FX approval first
-- ~~Exporter Bank creates records~~ → National Bank creates records
+- ~~commercialbank creates records~~ → National Bank creates records
 - ~~No banking validation~~ → Banking approval required
 
 ---

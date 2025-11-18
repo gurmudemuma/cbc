@@ -12,9 +12,9 @@ All services have `.env.example` files, but they need updating:
 
 | Service | File | Status |
 |---------|------|--------|
-| Exporter Bank | `/api/exporter-bank/.env.example` | ✅ Complete and up-to-date |
+| commercialbank | `/api/commercialbank/.env.example` | ✅ Complete and up-to-date |
 | National Bank | `/api/national-bank/.env.example` | ⚠️ Missing 13 required variables |
-| NCAT | `/api/ncat/.env.example` | ⚠️ Missing 13 required variables |
+| ECTA | `/api/ncat/.env.example` | ⚠️ Missing 13 required variables |
 | Shipping Line | `/api/shipping-line/.env.example` | ⚠️ Missing 13 required variables |
 
 ### 2. Missing Variables in Older Services
@@ -55,7 +55,7 @@ cd /c/cbc/api/national-bank
 cp .env.updated .env
 # Edit .env and customize if needed
 
-# NCAT
+# ECTA
 cd /c/cbc/api/ncat
 cp .env.updated .env
 # Edit .env and customize if needed
@@ -65,8 +65,8 @@ cd /c/cbc/api/shipping-line
 cp .env.updated .env
 # Edit .env and customize if needed
 
-# Exporter Bank
-cd /c/cbc/api/exporter-bank
+# commercialbank
+cd /c/cbc/api/commercialbank
 cp .env.example .env
 # Edit .env and customize if needed
 ```
@@ -83,9 +83,9 @@ If you already have `.env` files, add the missing variables. See `/api/ENV_SETUP
 
 | Service | npm install | Status |
 |---------|-------------|--------|
-| Exporter Bank | ✅ Success | 884 packages installed |
+| commercialbank | ✅ Success | 884 packages installed |
 | National Bank | ✅ Success | 822 packages installed |
-| NCAT | ✅ Success | 822 packages installed |
+| ECTA | ✅ Success | 822 packages installed |
 | Shipping Line | ⏳ Pending | Run: `cd shipping-line && npm install` |
 
 ### Network Structure Found
@@ -95,9 +95,9 @@ The codebase expects this Fabric network structure:
 /c/cbc/network/
 ├── organizations/
 │   └── peerOrganizations/
-│       ├── exporterbank.coffee-export.com/
-│       │   ├── connection-exporterbank.json
-│       │   └── users/Admin@exporterbank.coffee-export.com/msp/
+│       ├── commercialbank.coffee-export.com/
+│       │   ├── connection-commercialbank.json
+│       │   └── users/Admin@commercialbank.coffee-export.com/msp/
 │       ├── nationalbank.coffee-export.com/
 │       │   ├── connection-nationalbank.json
 │       │   └── users/Admin@nationalbank.coffee-export.com/msp/
@@ -127,13 +127,13 @@ cd shipping-line && npm install && cd ..
 cp national-bank/.env.updated national-bank/.env
 cp ncat/.env.updated ncat/.env
 cp shipping-line/.env.updated shipping-line/.env
-cp exporter-bank/.env.example exporter-bank/.env
+cp commercialbank/.env.example commercialbank/.env
 
 # 3. Verify environment files exist
 ls -la */\.env
 
 # 4. Start services (in separate terminals)
-cd exporter-bank && npm run dev &
+cd commercialbank && npm run dev &
 cd national-bank && npm run dev &
 cd ncat && npm run dev &
 cd shipping-line && npm run dev &
@@ -230,7 +230,7 @@ For your reference, I've created:
 2. Verify connection profile path in `.env`
 3. Check peer endpoint is reachable
 
-### Issue: npm install fails with jsdom error (exporter-bank)
+### Issue: npm install fails with jsdom error (commercialbank)
 **Solution:** Already fixed! Run: `npm cache clean --force && npm install`
 
 ---

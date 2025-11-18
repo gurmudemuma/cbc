@@ -55,10 +55,11 @@ check_executable "network/scripts/generate-certs.sh" "Generate certificates scri
 echo ""
 echo "Checking Cryptogen Configurations..."
 echo "-------------------------------------"
-check_file "network/organizations/cryptogen/crypto-config-exporterbank.yaml" "ExporterBank crypto config"
+check_file "network/organizations/cryptogen/crypto-config-commercialbank.yaml" "CommercialBank crypto config"
 check_file "network/organizations/cryptogen/crypto-config-nationalbank.yaml" "NationalBank crypto config"
-check_file "network/organizations/cryptogen/crypto-config-ncat.yaml" "NCAT crypto config"
+check_file "network/organizations/cryptogen/crypto-config-ecta.yaml" "ECTA crypto config"
 check_file "network/organizations/cryptogen/crypto-config-shippingline.yaml" "ShippingLine crypto config"
+check_file "network/organizations/cryptogen/crypto-config-customauthorities.yaml" "CustomAuthorities crypto config"
 check_file "network/organizations/cryptogen/crypto-config-orderer.yaml" "Orderer crypto config"
 
 echo ""

@@ -5,9 +5,9 @@ A comprehensive React-based frontend application for the Coffee Export Consortiu
 ## 🎯 Overview
 
 The frontend provides role-based interfaces for:
-- **Exporter Bank** - Create and manage export requests
+- **commercialbank** - Create and manage export requests
 - **National Bank** - Approve/reject foreign exchange (FX) requests
-- **NCAT** - Issue quality certifications
+- **ECTA** - Issue quality certifications
 - **Shipping Line** - Schedule and confirm shipments
 
 ## 🏗️ Architecture
@@ -33,7 +33,7 @@ frontend/
 │   │   ├── Dashboard.jsx    # Overview dashboard
 │   │   ├── ExportManagement.jsx    # Export CRUD operations
 │   │   ├── ExportDetails.jsx       # Detailed export view
-│   │   ├── QualityCertification.jsx # NCAT quality management
+│   │   ├── QualityCertification.jsx # ECTA quality management
 │   │   ├── FXRates.jsx             # National Bank FX approval
 │   │   └── ShipmentTracking.jsx    # Shipping Line operations
 │   ├── services/            # API integration
@@ -96,7 +96,7 @@ npm run preview  # Preview production build
 - **Quick actions** - Role-based action buttons
 - **Organization indicator** - Current user's organization display
 
-### 3. Export Management (Exporter Bank)
+### 3. Export Management (commercialbank)
 - **Create exports** - Form-based export request creation
 - **List view** - Searchable and filterable export table
 - **Status tracking** - Visual status badges
@@ -110,7 +110,7 @@ npm run preview  # Preview production build
 - **Conversion calculator** - Automatic USD to KES conversion
 - **Approval tracking** - View approved and rejected requests
 
-### 5. Quality Certification (NCAT)
+### 5. Quality Certification (ECTA)
 - **Quality review** - Exports awaiting certification
 - **Grade assignment** - Predefined quality grades
 - **Certificate issuance** - Generate quality certificates
@@ -182,9 +182,9 @@ The application uses a dark theme with purple and golden accents:
 
 ### Base URLs
 The application dynamically switches API base URLs based on the selected organization:
-- Exporter Bank: `http://localhost:3001/api`
+- commercialbank: `http://localhost:3001/api`
 - National Bank: `http://localhost:3002/api`
-- NCAT: `http://localhost:3003/api`
+- ECTA: `http://localhost:3003/api`
 - Shipping Line: `http://localhost:3004/api`
 
 ### Authentication Flow
@@ -200,7 +200,7 @@ The application dynamically switches API base URLs based on the selected organiz
 - `POST /api/auth/login` - User login
 - `POST /api/auth/register` - User registration
 
-#### Exports (Exporter Bank)
+#### Exports (commercialbank)
 - `GET /api/exports` - List all exports
 - `POST /api/exports` - Create new export
 - `GET /api/exports/:id` - Get export details
@@ -213,7 +213,7 @@ The application dynamically switches API base URLs based on the selected organiz
 - `POST /api/fx/approve` - Approve FX
 - `POST /api/fx/reject` - Reject FX
 
-#### Quality (NCAT)
+#### Quality (ECTA)
 - `GET /api/quality/exports` - List all exports
 - `POST /api/quality/certify` - Issue certificate
 - `POST /api/quality/reject` - Reject quality
@@ -241,8 +241,8 @@ The application is fully responsive with breakpoints:
 
 ## 🎯 User Workflows
 
-### Creating an Export (Exporter Bank)
-1. Login as Exporter Bank user
+### Creating an Export (commercialbank)
+1. Login as commercialbank user
 2. Navigate to "Export Management"
 3. Click "Create Export" button
 4. Fill in export details (exporter, coffee type, quantity, destination, value)
@@ -258,8 +258,8 @@ The application is fully responsive with breakpoints:
 6. Submit approval
 7. Export status changes to FX_APPROVED
 
-### Certifying Quality (NCAT)
-1. Login as NCAT user
+### Certifying Quality (ECTA)
+1. Login as ECTA user
 2. Navigate to "Quality Certification"
 3. View exports with FX approval
 4. Click "Certify" on an export
@@ -282,7 +282,7 @@ The application is fully responsive with breakpoints:
 3. Confirm departure
 4. Export status changes to SHIPPED
 
-### Completing Export (Exporter Bank)
+### Completing Export (commercialbank)
 1. View shipped exports
 2. Click "Complete Export"
 3. Confirm completion

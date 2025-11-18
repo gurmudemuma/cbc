@@ -44,7 +44,7 @@ REG_RESPONSE=$(curl -s -X POST http://localhost:3001/api/auth/register \
         "username": "verifyuser",
         "password": "V3r1fyUs3r!@#$",
         "email": "verify@test.com",
-        "organizationId": "EXPORTER-BANK-001",
+        "organizationId": "commercialbank-001",
         "role": "exporter"
     }')
 

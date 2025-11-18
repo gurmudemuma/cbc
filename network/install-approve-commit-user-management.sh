@@ -12,7 +12,7 @@ CC_SEQUENCE="1"
 # Install on all peers
 echo "Installing chaincode on all peers..."
 
-echo "Installing on peer0.exporterbank..."
+echo "Installing on peer0.commercialbank..."
 setGlobals 1
 peer lifecycle chaincode install ${CC_NAME}.tar.gz 2>&1 | grep -v "already successfully installed" || echo "Already installed or installed successfully"
 
@@ -43,7 +43,7 @@ echo "Found Package ID: $PACKAGE_ID"
 
 # Approve for all organizations
 echo ""
-echo "Approving for ExporterBank..."
+echo "Approving for commercialbank..."
 setGlobals 1
 peer lifecycle chaincode approveformyorg -o localhost:7050 --ordererTLSHostnameOverride orderer.coffee-export.com --tls --cafile "$ORDERER_CA" --channelID $CHANNEL_NAME --name ${CC_NAME} --version ${CC_VERSION} --package-id ${PACKAGE_ID} --sequence ${CC_SEQUENCE}
 
@@ -53,7 +53,7 @@ setGlobals 2
 peer lifecycle chaincode approveformyorg -o localhost:7050 --ordererTLSHostnameOverride orderer.coffee-export.com --tls --cafile "$ORDERER_CA" --channelID $CHANNEL_NAME --name ${CC_NAME} --version ${CC_VERSION} --package-id ${PACKAGE_ID} --sequence ${CC_SEQUENCE}
 
 echo ""
-echo "Approving for NCAT..."
+echo "Approving for ECTA..."
 setGlobals 3
 peer lifecycle chaincode approveformyorg -o localhost:7050 --ordererTLSHostnameOverride orderer.coffee-export.com --tls --cafile "$ORDERER_CA" --channelID $CHANNEL_NAME --name ${CC_NAME} --version ${CC_VERSION} --package-id ${PACKAGE_ID} --sequence ${CC_SEQUENCE}
 

@@ -1,515 +1,294 @@
-import { Response, NextFunction } from "express";
-import { AuthenticatedRequest } from "../middleware/auth.middleware";
-import { ExportRequestService } from "../services/export-request.service";
-import { DocumentService } from "../services/document.service";
-import {
-  CreateExportRequestDTO,
-  UpdateExportRequestDTO,
-  ExportRequestStatus,
-  DEFAULT_DOCUMENT_REQUIREMENTS,
-} from "../models/export-request.model";
-import { v4 as uuidv4 } from "uuid";
+import { Request, Response, NextFunction } from "express";
+import { FabricSDKGateway } from "../fabric/sdk-gateway";
+import { logger } from "../config/logger";
+import { ectaPreRegistrationService } from "../../../shared/services/ecta-preregistration.service";
+import { EctaPreRegistrationRepository } from "../../../shared/database/repositories/ecta-preregistration.repository";
+import pool from "../../../shared/database/db.config";
 
+/**
+ * Export Controller for Exporter Portal
+ *
+ * Exporters can:
+ * - Create export requests (submit to blockchain via SDK)
+ * - View their own exports
+ * - Track export status
+ * - Upload documents
+ *
+ * They CANNOT:
+ * - Approve exports
+ * - Modify other exporters' exports
+ * - Access banking operations
+ */
 export class ExportController {
-  private exportRequestService: ExportRequestService;
-  private documentService: DocumentService;
+  private fabricGateway: FabricSDKGateway;
 
   constructor() {
-    this.exportRequestService = new ExportRequestService();
-    this.documentService = new DocumentService();
+    this.fabricGateway = FabricSDKGateway.getInstance();
   }
 
   /**
-   * Get all export requests for authenticated user
+   * Create new export request
+   * Submits transaction to blockchain via SDK
    */
-  public getExportRequests = async (
-    req: AuthenticatedRequest,
+  public createExport = async (
+    req: Request,
     res: Response,
-    next: NextFunction,
+    _next: NextFunction,
   ): Promise<void> => {
     try {
-      const { page = 1, limit = 10, status, search } = req.query;
-      const userId = req.user!.id;
+      const exportData = req.body;
+      const userId = (req as any).user?.id;
 
-      const result = await this.exportRequestService.getExportRequestsByUser(
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          message: "User not authenticated",
+        });
+        return;
+      }
+
+      // CRITICAL: Validate exporter qualification BEFORE allowing export creation
+      // Based on real-world ECTA requirements and Directive 1106/2025
+
+      // Map userId -> exporterId using the preregistration repository
+      const repository = new EctaPreRegistrationRepository(pool);
+      const profile = await repository.getExporterProfileByUserId(userId);
+      if (!profile) {
+        logger.warn(`Exporter profile not found for user ${userId}`);
+        res.status(403).json({
+          success: false,
+          message: "Exporter profile not found. Please register first.",
+        });
+        return;
+      }
+      const exporterId = profile.exporterId;
+
+      const qualificationCheck =
+        await ectaPreRegistrationService.canCreateExportRequest(exporterId);
+
+      if (!qualificationCheck.allowed) {
+        logger.warn(
+          `❌ Export creation blocked for ${exporterId}: ${qualificationCheck.reason}`,
+        );
+
+        res.status(403).json({
+          success: false,
+          message:
+            "Cannot create export request. Pre-qualification requirements not met.",
+          reason: qualificationCheck.reason,
+          requiredActions: qualificationCheck.requiredActions,
+          helpUrl: "/api/exporter/qualification-status",
+        });
+        return;
+      }
+
+      // Validate required pre-existing documents
+      const requiredDocs = [
+        "exportLicenseNumber",
+        "competenceCertificateNumber",
+        "ecxLotNumber",
+        "warehouseReceiptNumber",
+        "qualityCertificateNumber",
+        "salesContractNumber",
+        "exportPermitNumber",
+        "originCertificateNumber",
+      ];
+
+      const missingDocs = requiredDocs.filter((doc) => !exportData[doc]);
+
+      if (missingDocs.length > 0) {
+        res.status(400).json({
+          success: false,
+          message: "Missing required pre-existing documents",
+          missingDocuments: missingDocs,
+          requiredActions: [
+            "Obtain export license from ECTA",
+            "Get competence certificate from ECTA",
+            "Purchase coffee lot from ECX",
+            "Complete quality inspection with ECTA",
+            "Register sales contract with ECTA",
+            "Obtain export permit from ECTA",
+            "Get certificate of origin from ECTA",
+          ],
+        });
+        return;
+      }
+
+      // Validate basic required fields
+      if (
+        !exportData.exportId ||
+        !exportData.coffeeType ||
+        !exportData.quantity
+      ) {
+        res.status(400).json({
+          success: false,
+          message: "Missing required fields: exportId, coffeeType, quantity",
+        });
+        return;
+      }
+
+      const contract = this.fabricGateway.getExportContract();
+
+      // Submit transaction to blockchain with all pre-existing documents
+      const result = await contract.submitTransaction(
+        "CreateExportRequest",
+        exportData.exportId,
+        exportData.exporterName || "",
+        exportData.exporterTIN || "",
+        exportData.exportLicenseNumber,
+        exportData.coffeeType,
+        exportData.quantity.toString(),
+        exportData.destinationCountry || "",
+        exportData.estimatedValue?.toString() || "0",
         userId,
-        {
-          page: parseInt(page as string),
-          limit: parseInt(limit as string),
-          status: status as ExportRequestStatus,
-          search: search as string,
-        },
+        JSON.stringify({
+          ...exportData.metadata,
+          // Pre-existing regulatory documents
+          competenceCertificateNumber: exportData.competenceCertificateNumber,
+          ecxLotNumber: exportData.ecxLotNumber,
+          warehouseReceiptNumber: exportData.warehouseReceiptNumber,
+          qualityCertificateNumber: exportData.qualityCertificateNumber,
+          qualityGrade: exportData.qualityGrade,
+          salesContractNumber: exportData.salesContractNumber,
+          exportPermitNumber: exportData.exportPermitNumber,
+          originCertificateNumber: exportData.originCertificateNumber,
+        }),
       );
 
-      res.status(200).json({
-        success: true,
-        message: "Export requests retrieved successfully",
-        data: result,
-      });
-    } catch (error: any) {
-      next(error);
-    }
-  };
+      const exportRecord = JSON.parse(result.toString());
 
-  /**
-   * Create new export request (draft)
-   */
-  public createExportRequest = async (
-    req: AuthenticatedRequest,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> => {
-    try {
-      const userId = req.user!.id;
-      const exportRequestData: CreateExportRequestDTO = req.body;
-
-      // Generate unique request number
-      const requestNumber = `EXP-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-
-      const exportRequest = await this.exportRequestService.createExportRequest(
-        {
-          id: uuidv4(),
-          requestNumber,
-          status: ExportRequestStatus.DRAFT,
-          exporterId: userId,
-          exporterDetails: exportRequestData.exporterDetails,
-          coffeeDetails: exportRequestData.coffeeDetails,
-          tradeDetails: exportRequestData.tradeDetails,
-          documents: [],
-          submittedAt: new Date(),
-          lastUpdated: new Date(),
-        },
+      logger.info(
+        `✅ Export created via SDK: ${exportData.exportId} (Exporter: ${exporterId})`,
       );
 
       res.status(201).json({
         success: true,
-        message: "Export request created successfully",
-        data: exportRequest,
+        message:
+          "Export request created successfully. All ECTA pre-qualifications verified.",
+        data: exportRecord,
       });
-    } catch (error: any) {
-      next(error);
+    } catch (error: unknown) {
+      logger.error("❌ Error creating export:", error);
+      const message =
+        error instanceof Error ? error.message : "Failed to create export";
+
+      res.status(500).json({
+        success: false,
+        message,
+        error: message,
+      });
     }
   };
 
   /**
-   * Get export request by ID
+   * Get all exports for the logged-in exporter
    */
-  public getExportRequestById = async (
-    req: AuthenticatedRequest,
+  public getMyExports = async (
+    req: Request,
     res: Response,
-    next: NextFunction,
+    _next: NextFunction,
   ): Promise<void> => {
     try {
-      const { id } = req.params;
-      if (!id) {
-        res
-          .status(400)
-          .json({ success: false, message: "Export request ID is required" });
-        return;
-      }
-      const userId = req.user!.id;
+      const userId = (req as any).user?.id;
 
-      const exportRequest =
-        await this.exportRequestService.getExportRequestById(id);
-
-      if (!exportRequest) {
-        res.status(404).json({
+      if (!userId) {
+        res.status(401).json({
           success: false,
-          message: "Export request not found",
+          message: "User not authenticated",
         });
         return;
       }
 
-      // Check ownership
-      if (exportRequest.exporterId !== userId) {
-        res.status(403).json({
-          success: false,
-          message: "Access denied: You can only view your own export requests",
-        });
-        return;
-      }
+      const contract = this.fabricGateway.getExportContract();
 
-      // Get available actions based on current status
-      const availableActions = this.getAvailableActions(exportRequest.status);
-
-      // Check for validation errors
-      const validationErrors =
-        await this.exportRequestService.validateExportRequest(exportRequest);
-
-      res.status(200).json({
-        success: true,
-        message: "Export request retrieved successfully",
-        data: {
-          request: exportRequest,
-          availableActions,
-          validationErrors,
-        },
-      });
-    } catch (error: any) {
-      next(error);
-    }
-  };
-
-  /**
-   * Update export request (only drafts)
-   */
-  public updateExportRequest = async (
-    req: AuthenticatedRequest,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> => {
-    try {
-      const { id } = req.params;
-      if (!id) {
-        res
-          .status(400)
-          .json({ success: false, message: "Export request ID is required" });
-        return;
-      }
-      const userId = req.user!.id;
-      const updateData: UpdateExportRequestDTO = req.body;
-
-      const existingRequest =
-        await this.exportRequestService.getExportRequestById(id);
-
-      if (!existingRequest) {
-        res.status(404).json({
-          success: false,
-          message: "Export request not found",
-        });
-        return;
-      }
-
-      // Check ownership
-      if (existingRequest.exporterId !== userId) {
-        res.status(403).json({
-          success: false,
-          message:
-            "Access denied: You can only update your own export requests",
-        });
-        return;
-      }
-
-      // Only drafts can be updated
-      if (existingRequest.status !== ExportRequestStatus.DRAFT) {
-        res.status(400).json({
-          success: false,
-          message: "Only draft export requests can be updated",
-        });
-        return;
-      }
-
-      const updatedRequest =
-        await this.exportRequestService.updateExportRequest(id, updateData);
-
-      res.status(200).json({
-        success: true,
-        message: "Export request updated successfully",
-        data: updatedRequest,
-      });
-    } catch (error: any) {
-      next(error);
-    }
-  };
-
-  /**
-   * Delete export request (only drafts)
-   */
-  public deleteExportRequest = async (
-    req: AuthenticatedRequest,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> => {
-    try {
-      const { id } = req.params;
-      if (!id) {
-        res
-          .status(400)
-          .json({ success: false, message: "Export request ID is required" });
-        return;
-      }
-      const userId = req.user!.id;
-
-      const existingRequest =
-        await this.exportRequestService.getExportRequestById(id);
-
-      if (!existingRequest) {
-        res.status(404).json({
-          success: false,
-          message: "Export request not found",
-        });
-        return;
-      }
-
-      // Check ownership
-      if (existingRequest.exporterId !== userId) {
-        res.status(403).json({
-          success: false,
-          message:
-            "Access denied: You can only delete your own export requests",
-        });
-        return;
-      }
-
-      // Only drafts can be deleted
-      if (existingRequest.status !== ExportRequestStatus.DRAFT) {
-        res.status(400).json({
-          success: false,
-          message: "Only draft export requests can be deleted",
-        });
-        return;
-      }
-
-      await this.exportRequestService.deleteExportRequest(id);
-
-      res.status(200).json({
-        success: true,
-        message: "Export request deleted successfully",
-      });
-    } catch (error: any) {
-      next(error);
-    }
-  };
-
-  /**
-   * Submit export request to consortium
-   */
-  public submitExportRequest = async (
-    req: AuthenticatedRequest,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> => {
-    try {
-      const { id } = req.params;
-      if (!id) {
-        res
-          .status(400)
-          .json({ success: false, message: "Export request ID is required" });
-        return;
-      }
-      const { finalNotes } = req.body;
-      const userId = req.user!.id;
-
-      const existingRequest =
-        await this.exportRequestService.getExportRequestById(id);
-
-      if (!existingRequest) {
-        res.status(404).json({
-          success: false,
-          message: "Export request not found",
-        });
-        return;
-      }
-
-      // Check ownership
-      if (existingRequest.exporterId !== userId) {
-        res.status(403).json({
-          success: false,
-          message:
-            "Access denied: You can only submit your own export requests",
-        });
-        return;
-      }
-
-      // Can only submit drafts
-      if (existingRequest.status !== ExportRequestStatus.DRAFT) {
-        res.status(400).json({
-          success: false,
-          message: "Only draft export requests can be submitted",
-        });
-        return;
-      }
-
-      // Validate request before submission
-      const validationErrors =
-        await this.exportRequestService.validateExportRequest(existingRequest);
-      if (validationErrors.length > 0) {
-        res.status(400).json({
-          success: false,
-          message: "Export request has validation errors",
-          errors: validationErrors,
-        });
-        return;
-      }
-
-      // Submit to consortium (this would integrate with exporter-bank API)
-      const submittedRequest =
-        await this.exportRequestService.submitToConsortium(id, finalNotes);
-
-      res.status(200).json({
-        success: true,
-        message: "Export request submitted to consortium successfully",
-        data: submittedRequest,
-      });
-    } catch (error: any) {
-      next(error);
-    }
-  };
-
-  /**
-   * Cancel export request
-   */
-  public cancelExportRequest = async (
-    req: AuthenticatedRequest,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> => {
-    try {
-      const { id } = req.params;
-      if (!id) {
-        res
-          .status(400)
-          .json({ success: false, message: "Export request ID is required" });
-        return;
-      }
-      const userId = req.user!.id;
-
-      const existingRequest =
-        await this.exportRequestService.getExportRequestById(id);
-
-      if (!existingRequest) {
-        res.status(404).json({
-          success: false,
-          message: "Export request not found",
-        });
-        return;
-      }
-
-      // Check ownership
-      if (existingRequest.exporterId !== userId) {
-        res.status(403).json({
-          success: false,
-          message:
-            "Access denied: You can only cancel your own export requests",
-        });
-        return;
-      }
-
-      // Cannot cancel completed or already cancelled requests
-      if (
-        [
-          ExportRequestStatus.APPROVED,
-          ExportRequestStatus.REJECTED,
-          ExportRequestStatus.CANCELLED,
-        ].includes(existingRequest.status)
-      ) {
-        res.status(400).json({
-          success: false,
-          message: "Cannot cancel export request in current status",
-        });
-        return;
-      }
-
-      const cancelledRequest =
-        await this.exportRequestService.cancelExportRequest(id);
-
-      res.status(200).json({
-        success: true,
-        message: "Export request cancelled successfully",
-        data: cancelledRequest,
-      });
-    } catch (error: any) {
-      next(error);
-    }
-  };
-
-  /**
-   * Upload documents for export request
-   */
-  public uploadDocuments = async (
-    req: AuthenticatedRequest,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> => {
-    try {
-      const { id } = req.params;
-      if (!id) {
-        res
-          .status(400)
-          .json({ success: false, message: "Export request ID is required" });
-        return;
-      }
-      const userId = req.user!.id;
-      const files = req.files as Express.Multer.File[];
-      const { documentTypes } = req.body; // Array of document types corresponding to files
-
-      if (!files || files.length === 0) {
-        res.status(400).json({
-          success: false,
-          message: "No files uploaded",
-        });
-        return;
-      }
-
-      const existingRequest =
-        await this.exportRequestService.getExportRequestById(id);
-
-      if (!existingRequest) {
-        res.status(404).json({
-          success: false,
-          message: "Export request not found",
-        });
-        return;
-      }
-
-      // Check ownership
-      if (existingRequest.exporterId !== userId) {
-        res.status(403).json({
-          success: false,
-          message:
-            "Access denied: You can only upload documents to your own export requests",
-        });
-        return;
-      }
-
-      // Upload documents to IPFS and create document records
-      const uploadedDocuments = await this.documentService.uploadDocuments(
-        id,
-        files,
-        documentTypes ? JSON.parse(documentTypes) : [],
+      // Query exports for this user
+      const result = await contract.evaluateTransaction(
+        "GetExportsByExporter",
+        userId,
       );
+      const exports = JSON.parse(result.toString());
 
       res.status(200).json({
         success: true,
-        message: "Documents uploaded successfully",
-        data: uploadedDocuments,
+        data: exports,
       });
-    } catch (error: any) {
-      next(error);
+    } catch (error: unknown) {
+      logger.error("❌ Error fetching exports:", error);
+      const message =
+        error instanceof Error ? error.message : "Failed to fetch exports";
+
+      res.status(500).json({
+        success: false,
+        message,
+        error: message,
+      });
     }
   };
 
   /**
-   * Get documents for export request
+   * Get single export by ID (only if owned by user)
    */
-  public getDocuments = async (
-    req: AuthenticatedRequest,
+  public getExportById = async (
+    req: Request,
     res: Response,
-    next: NextFunction,
+    _next: NextFunction,
   ): Promise<void> => {
     try {
       const { id } = req.params;
-      if (!id) {
-        res
-          .status(400)
-          .json({ success: false, message: "Export request ID is required" });
-        return;
-      }
-      const userId = req.user!.id;
+      const userId = (req as any).user?.id;
 
-      const existingRequest =
-        await this.exportRequestService.getExportRequestById(id);
+      const contract = this.fabricGateway.getExportContract();
 
-      if (!existingRequest) {
-        res.status(404).json({
+      // Query export
+      const result = await contract.evaluateTransaction("GetExport", id!);
+      const exportRecord = JSON.parse(result.toString());
+
+      // Verify ownership
+      if (exportRecord.createdBy !== userId) {
+        res.status(403).json({
           success: false,
-          message: "Export request not found",
+          message: "Access denied. You can only view your own exports.",
         });
         return;
       }
 
-      // Check ownership
-      if (existingRequest.exporterId !== userId) {
+      res.status(200).json({
+        success: true,
+        data: exportRecord,
+      });
+    } catch (error: unknown) {
+      logger.error("❌ Error fetching export:", error);
+      const message =
+        error instanceof Error ? error.message : "Failed to fetch export";
+      const statusCode = message.includes("does not exist") ? 404 : 500;
+
+      res.status(statusCode).json({
+        success: false,
+        message,
+        error: message,
+      });
+    }
+  };
+
+  /**
+   * Get export history/audit trail
+   */
+  public getExportHistory = async (
+    req: Request,
+    res: Response,
+    _next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const userId = (req as any).user?.id;
+
+      const contract = this.fabricGateway.getExportContract();
+
+      // First verify ownership
+      const exportResult = await contract.evaluateTransaction("GetExport", id!);
+      const exportRecord = JSON.parse(exportResult.toString());
+
+      if (exportRecord.createdBy !== userId) {
         res.status(403).json({
           success: false,
           message: "Access denied",
@@ -517,50 +296,109 @@ export class ExportController {
         return;
       }
 
-      const documents = await this.documentService.getDocumentsByRequestId(id);
+      // Get history
+      const historyResult = await contract.evaluateTransaction(
+        "GetExportHistory",
+        id!,
+      );
+      const history = JSON.parse(historyResult.toString());
 
       res.status(200).json({
         success: true,
-        message: "Documents retrieved successfully",
-        data: documents,
+        data: history,
       });
-    } catch (error: any) {
-      next(error);
+    } catch (error: unknown) {
+      logger.error("❌ Error fetching export history:", error);
+      const message =
+        error instanceof Error ? error.message : "Failed to fetch history";
+
+      res.status(500).json({
+        success: false,
+        message,
+        error: message,
+      });
     }
   };
 
   /**
-   * Delete document
+   * Submit export to ECX for lot verification
+   * Status: DRAFT → ECX_PENDING
    */
-  public deleteDocument = async (
-    req: AuthenticatedRequest,
+  public submitToECX = async (
+    req: Request,
     res: Response,
-    next: NextFunction,
+    _next: NextFunction,
   ): Promise<void> => {
     try {
-      const { id, documentId } = req.params;
-      if (!id || !documentId) {
+      const { id } = req.params;
+      const userId = (req as any).user?.id;
+
+      const contract = this.fabricGateway.getExportContract();
+
+      // Verify ownership
+      const exportResult = await contract.evaluateTransaction("GetExport", id!);
+      const exportRecord = JSON.parse(exportResult.toString());
+
+      if (exportRecord.createdBy !== userId) {
+        res.status(403).json({
+          success: false,
+          message: "Access denied. You can only submit your own exports.",
+        });
+        return;
+      }
+
+      // Verify status
+      if (exportRecord.status !== "DRAFT") {
         res.status(400).json({
           success: false,
-          message: "Export request ID and document ID are required",
-        });
-        return;
-      }
-      const userId = req.user!.id;
-
-      const existingRequest =
-        await this.exportRequestService.getExportRequestById(id);
-
-      if (!existingRequest) {
-        res.status(404).json({
-          success: false,
-          message: "Export request not found",
+          message: `Cannot submit to ECX. Current status: ${exportRecord.status}. Expected: DRAFT`,
         });
         return;
       }
 
-      // Check ownership
-      if (existingRequest.exporterId !== userId) {
+      // Submit to blockchain
+      await contract.submitTransaction("SubmitToECX", id!);
+
+      logger.info(`✅ Export ${id} submitted to ECX by ${userId}`);
+
+      res.status(200).json({
+        success: true,
+        message: "Export submitted to ECX for lot verification",
+        data: { exportId: id, newStatus: "ECX_PENDING" },
+      });
+    } catch (error: unknown) {
+      logger.error("❌ Error submitting to ECX:", error);
+      const message =
+        error instanceof Error ? error.message : "Failed to submit to ECX";
+
+      res.status(500).json({
+        success: false,
+        message,
+        error: message,
+      });
+    }
+  };
+
+  /**
+   * Submit export to ECTA for license approval
+   * Status: ECX_VERIFIED → ECTA_LICENSE_PENDING
+   */
+  public submitToECTA = async (
+    req: Request,
+    res: Response,
+    _next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const userId = (req as any).user?.id;
+
+      const contract = this.fabricGateway.getExportContract();
+
+      // Verify ownership
+      const exportResult = await contract.evaluateTransaction("GetExport", id!);
+      const exportRecord = JSON.parse(exportResult.toString());
+
+      if (exportRecord.createdBy !== userId) {
         res.status(403).json({
           success: false,
           message: "Access denied",
@@ -568,98 +406,58 @@ export class ExportController {
         return;
       }
 
-      await this.documentService.deleteDocument(documentId);
-
-      res.status(200).json({
-        success: true,
-        message: "Document deleted successfully",
-      });
-    } catch (error: any) {
-      next(error);
-    }
-  };
-
-  /**
-   * Download document
-   */
-  public downloadDocument = async (
-    req: AuthenticatedRequest,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> => {
-    try {
-      const { id, documentId } = req.params;
-      if (!id || !documentId) {
+      // Verify status
+      if (exportRecord.status !== "ECX_VERIFIED") {
         res.status(400).json({
           success: false,
-          message: "Export request ID and document ID are required",
-        });
-        return;
-      }
-      const userId = req.user!.id;
-
-      const existingRequest =
-        await this.exportRequestService.getExportRequestById(id);
-
-      if (!existingRequest) {
-        res.status(404).json({
-          success: false,
-          message: "Export request not found",
+          message: `Cannot submit to ECTA. Current status: ${exportRecord.status}. Expected: ECX_VERIFIED`,
         });
         return;
       }
 
-      // Check ownership
-      if (existingRequest.exporterId !== userId) {
-        res.status(403).json({
-          success: false,
-          message: "Access denied",
-        });
-        return;
-      }
+      // Submit to blockchain
+      await contract.submitTransaction("SubmitToECTA", id!);
 
-      const fileStream =
-        await this.documentService.downloadDocument(documentId);
+      logger.info(`✅ Export ${id} submitted to ECTA by ${userId}`);
 
-      // Set appropriate headers and pipe the file
-      res.setHeader("Content-Type", "application/octet-stream");
-      fileStream.pipe(res);
-    } catch (error: any) {
-      next(error);
+      res.status(200).json({
+        success: true,
+        message: "Export submitted to ECTA for license approval",
+        data: { exportId: id, newStatus: "ECTA_LICENSE_PENDING" },
+      });
+    } catch (error: unknown) {
+      logger.error("❌ Error submitting to ECTA:", error);
+      const message =
+        error instanceof Error ? error.message : "Failed to submit to ECTA";
+
+      res.status(500).json({
+        success: false,
+        message,
+        error: message,
+      });
     }
   };
 
   /**
-   * Get export request status and processing history
+   * Submit export to Commercial Bank for document verification
+   * Status: ECTA_CONTRACT_APPROVED → BANK_DOCUMENT_PENDING
    */
-  public getExportRequestStatus = async (
-    req: AuthenticatedRequest,
+  public submitToBank = async (
+    req: Request,
     res: Response,
-    next: NextFunction,
+    _next: NextFunction,
   ): Promise<void> => {
     try {
       const { id } = req.params;
-      if (!id) {
-        res
-          .status(400)
-          .json({ success: false, message: "Export request ID is required" });
-        return;
-      }
-      const userId = req.user!.id;
+      const userId = (req as any).user?.id;
 
-      const existingRequest =
-        await this.exportRequestService.getExportRequestById(id);
+      const contract = this.fabricGateway.getExportContract();
 
-      if (!existingRequest) {
-        res.status(404).json({
-          success: false,
-          message: "Export request not found",
-        });
-        return;
-      }
+      // Verify ownership
+      const exportResult = await contract.evaluateTransaction("GetExport", id!);
+      const exportRecord = JSON.parse(exportResult.toString());
 
-      // Check ownership
-      if (existingRequest.exporterId !== userId) {
+      if (exportRecord.createdBy !== userId) {
         res.status(403).json({
           success: false,
           message: "Access denied",
@@ -667,86 +465,58 @@ export class ExportController {
         return;
       }
 
-      const statusHistory =
-        await this.exportRequestService.getStatusHistory(id);
-      const consortiumStatus =
-        await this.exportRequestService.getConsortiumStatus(id);
+      // Verify status
+      if (exportRecord.status !== "ECTA_CONTRACT_APPROVED") {
+        res.status(400).json({
+          success: false,
+          message: `Cannot submit to Bank. Current status: ${exportRecord.status}. Expected: ECTA_CONTRACT_APPROVED`,
+        });
+        return;
+      }
+
+      // Submit to blockchain
+      await contract.submitTransaction("SubmitToBank", id!);
+
+      logger.info(`✅ Export ${id} submitted to Commercial Bank by ${userId}`);
 
       res.status(200).json({
         success: true,
-        message: "Status retrieved successfully",
-        data: {
-          currentStatus: existingRequest.status,
-          consortiumStatus: existingRequest.consortiumStatus,
-          statusHistory,
-          consortiumDetails: consortiumStatus,
-        },
+        message:
+          "Export submitted to Commercial Bank for document verification",
+        data: { exportId: id, newStatus: "BANK_DOCUMENT_PENDING" },
       });
-    } catch (error: any) {
-      next(error);
+    } catch (error: unknown) {
+      logger.error("❌ Error submitting to Bank:", error);
+      const message =
+        error instanceof Error ? error.message : "Failed to submit to Bank";
+
+      res.status(500).json({
+        success: false,
+        message,
+        error: message,
+      });
     }
   };
 
   /**
-   * Get document requirements
+   * Get document checklist and upload status
    */
-  public getDocumentRequirements = async (
-    req: AuthenticatedRequest,
+  public getDocumentStatus = async (
+    req: Request,
     res: Response,
-    next: NextFunction,
-  ): Promise<void> => {
-    try {
-      const { coffeeType, destinationCountry } = req.params;
-
-      // For now, return default requirements
-      // In production, this would query a requirements database
-      const requirements = {
-        ...DEFAULT_DOCUMENT_REQUIREMENTS,
-        coffeeType,
-        destinationCountry,
-      };
-
-      res.status(200).json({
-        success: true,
-        message: "Document requirements retrieved successfully",
-        data: requirements,
-      });
-    } catch (error: any) {
-      next(error);
-    }
-  };
-
-  /**
-   * Validate export request
-   */
-  public validateExportRequest = async (
-    req: AuthenticatedRequest,
-    res: Response,
-    next: NextFunction,
+    _next: NextFunction,
   ): Promise<void> => {
     try {
       const { id } = req.params;
-      if (!id) {
-        res
-          .status(400)
-          .json({ success: false, message: "Export request ID is required" });
-        return;
-      }
-      const userId = req.user!.id;
+      const userId = (req as any).user?.id;
 
-      const existingRequest =
-        await this.exportRequestService.getExportRequestById(id);
+      const contract = this.fabricGateway.getExportContract();
 
-      if (!existingRequest) {
-        res.status(404).json({
-          success: false,
-          message: "Export request not found",
-        });
-        return;
-      }
+      // Verify ownership
+      const exportResult = await contract.evaluateTransaction("GetExport", id!);
+      const exportRecord = JSON.parse(exportResult.toString());
 
-      // Check ownership
-      if (existingRequest.exporterId !== userId) {
+      if (exportRecord.createdBy !== userId) {
         res.status(403).json({
           success: false,
           message: "Access denied",
@@ -754,61 +524,43 @@ export class ExportController {
         return;
       }
 
-      const validationErrors =
-        await this.exportRequestService.validateExportRequest(existingRequest);
-      const isValid = validationErrors.length === 0;
+      // Import document tracking service
+      const {
+        getDocumentChecklist,
+        getStageRequirements,
+        getDocumentCompletionPercentage,
+      } = await import("../../../shared/documentTracking.service");
+
+      const checklist = getDocumentChecklist(exportRecord);
+      const stageRequirements = getStageRequirements(
+        exportRecord,
+        exportRecord.status,
+      );
+      const completionPercentage =
+        getDocumentCompletionPercentage(exportRecord);
 
       res.status(200).json({
         success: true,
-        message: "Validation completed",
         data: {
-          isValid,
-          errors: validationErrors,
-          canSubmit:
-            isValid && existingRequest.status === ExportRequestStatus.DRAFT,
+          exportId: id,
+          status: exportRecord.status,
+          checklist,
+          stageRequirements,
+          completionPercentage,
         },
       });
-    } catch (error: any) {
-      next(error);
+    } catch (error: unknown) {
+      logger.error("❌ Error fetching document status:", error);
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to fetch document status";
+
+      res.status(500).json({
+        success: false,
+        message,
+        error: message,
+      });
     }
   };
-
-  /**
-   * Get available actions based on export request status
-   */
-  private getAvailableActions(status: ExportRequestStatus): string[] {
-    const actions: string[] = [];
-
-    switch (status) {
-      case ExportRequestStatus.DRAFT:
-        actions.push(
-          "edit",
-          "delete",
-          "submit",
-          "validate",
-          "upload_documents",
-        );
-        break;
-      case ExportRequestStatus.SUBMITTED:
-        actions.push("cancel", "view_status");
-        break;
-      case ExportRequestStatus.UNDER_REVIEW:
-        actions.push("cancel", "view_status");
-        break;
-      case ExportRequestStatus.DOCUMENTS_REQUESTED:
-        actions.push("upload_documents", "view_status");
-        break;
-      case ExportRequestStatus.APPROVED:
-        actions.push("view_status", "download_documents");
-        break;
-      case ExportRequestStatus.REJECTED:
-        actions.push("view_status", "view_rejection_reason");
-        break;
-      case ExportRequestStatus.CANCELLED:
-        actions.push("view_status");
-        break;
-    }
-
-    return actions;
-  }
 }

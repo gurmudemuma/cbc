@@ -33,18 +33,18 @@ echo ""
 export FABRIC_CFG_PATH=/etc/hyperledger/fabric
 export CORE_PEER_TLS_ENABLED=true
 
-# Step 2: Join ExporterBank peer
-echo "Step 2: Joining ExporterBank peer..."
-export CORE_PEER_LOCALMSPID="ExporterBankMSP"
-export CORE_PEER_TLS_ROOTCERT_FILE=$WORKDIR/organizations/peerOrganizations/exporterbank.coffee-export.com/peers/peer0.exporterbank.coffee-export.com/tls/ca.crt
-export CORE_PEER_MSPCONFIGPATH=$WORKDIR/organizations/peerOrganizations/exporterbank.coffee-export.com/users/Admin@exporterbank.coffee-export.com/msp
-export CORE_PEER_ADDRESS=peer0.exporterbank.coffee-export.com:7051
+# Step 2: Join commercialbank peer
+echo "Step 2: Joining commercialbank peer..."
+export CORE_PEER_LOCALMSPID="CommercialBankMSP"
+export CORE_PEER_TLS_ROOTCERT_FILE=$WORKDIR/organizations/peerOrganizations/commercialbank.coffee-export.com/peers/peer0.commercialbank.coffee-export.com/tls/ca.crt
+export CORE_PEER_MSPCONFIGPATH=$WORKDIR/organizations/peerOrganizations/commercialbank.coffee-export.com/users/Admin@commercialbank.coffee-export.com/msp
+export CORE_PEER_ADDRESS=peer0.commercialbank.coffee-export.com:7051
 
 peer channel join -b $WORKDIR/channel-artifacts/${CHANNEL_NAME}.block
 if [ $? -eq 0 ]; then
-    echo "✅ ExporterBank peer joined"
+    echo "✅ commercialbank peer joined"
 else
-    echo "⚠️  ExporterBank peer join failed (may already be joined)"
+    echo "⚠️  commercialbank peer join failed (may already be joined)"
 fi
 echo ""
 
@@ -63,18 +63,18 @@ else
 fi
 echo ""
 
-# Step 4: Join NCAT peer
-echo "Step 4: Joining NCAT peer..."
-export CORE_PEER_LOCALMSPID="NCATMSP"
-export CORE_PEER_TLS_ROOTCERT_FILE=$WORKDIR/organizations/peerOrganizations/ncat.coffee-export.com/peers/peer0.ncat.coffee-export.com/tls/ca.crt
-export CORE_PEER_MSPCONFIGPATH=$WORKDIR/organizations/peerOrganizations/ncat.coffee-export.com/users/Admin@ncat.coffee-export.com/msp
-export CORE_PEER_ADDRESS=peer0.ncat.coffee-export.com:9051
+# Step 4: Join ECTA peer
+echo "Step 4: Joining ECTA peer..."
+export CORE_PEER_LOCALMSPID="ECTAMSP"
+export CORE_PEER_TLS_ROOTCERT_FILE=$WORKDIR/organizations/peerOrganizations/ecta.coffee-export.com/peers/peer0.ecta.coffee-export.com/tls/ca.crt
+export CORE_PEER_MSPCONFIGPATH=$WORKDIR/organizations/peerOrganizations/ecta.coffee-export.com/users/Admin@ecta.coffee-export.com/msp
+export CORE_PEER_ADDRESS=peer0.ecta.coffee-export.com:9051
 
 peer channel join -b $WORKDIR/channel-artifacts/${CHANNEL_NAME}.block
 if [ $? -eq 0 ]; then
-    echo "✅ NCAT peer joined"
+    echo "✅ ECTA peer joined"
 else
-    echo "⚠️  NCAT peer join failed (may already be joined)"
+    echo "⚠️  ECTA peer join failed (may already be joined)"
 fi
 echo ""
 

@@ -7,7 +7,7 @@ The Fabric network has been updated to use **CouchDB** instead of LevelDB for st
 ### Changes Made
 
 1. **Added CouchDB Containers** (`network/docker/docker-compose.yaml`):
-   - `couchdb0` for peer0.exporterbank (port 5984)
+   - `couchdb0` for peer0.commercialbank (port 5984)
    - `couchdb1` for peer0.nationalbank (port 6984)
    - `couchdb2` for peer0.ncat (port 7984)
    - `couchdb3` for peer0.shippingline (port 8984)
@@ -32,7 +32,7 @@ The Fabric network has been updated to use **CouchDB** instead of LevelDB for st
 ### Step 1: Stop Backend APIs
 
 ```bash
-# Stop exporter-bank API
+# Stop commercialbank API
 lsof -ti:3001 | xargs kill -9
 
 # Stop other APIs if running
@@ -94,8 +94,8 @@ cd /home/gu-da/cbc/network
 ### Step 6: Restart Backend APIs
 
 ```bash
-# Restart exporter-bank API
-cd /home/gu-da/cbc/api/exporter-bank
+# Restart commercialbank API
+cd /home/gu-da/cbc/api/commercialbank
 npm run dev &
 
 # Restart other APIs as needed
@@ -113,9 +113,9 @@ npm run dev &
 ### Check CouchDB Web UI
 
 Access CouchDB Fauxton (web UI):
-- **Exporter Bank**: http://localhost:5984/_utils
+- **commercialbank**: http://localhost:5984/_utils
 - **National Bank**: http://localhost:6984/_utils
-- **NCAT**: http://localhost:7984/_utils
+- **ECTA**: http://localhost:7984/_utils
 - **Shipping Line**: http://localhost:8984/_utils
 
 **Credentials**: `admin` / `adminpw`
@@ -138,9 +138,9 @@ curl -s -H "Authorization: Bearer $TOKEN" \
 ## CouchDB Configuration
 
 ### Ports
-- **5984**: Exporter Bank CouchDB
+- **5984**: commercialbank CouchDB
 - **6984**: National Bank CouchDB
-- **7984**: NCAT CouchDB
+- **7984**: ECTA CouchDB
 - **8984**: Shipping Line CouchDB
 
 ### Credentials
@@ -166,7 +166,7 @@ docker logs couchdb3
 ### Peer can't connect to CouchDB
 ```bash
 # Check peer logs
-docker logs peer0.exporterbank.coffee-export.com
+docker logs peer0.commercialbank.coffee-export.com
 
 # Look for CouchDB connection errors
 ```

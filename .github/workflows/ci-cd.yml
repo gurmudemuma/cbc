@@ -2,20 +2,20 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
 
 env:
-  NODE_VERSION: '16.x'
-  GO_VERSION: '1.19'
+  NODE_VERSION: "16.x"
+  GO_VERSION: "1.19"
 
 jobs:
   # Lint and Test Chaincode
   chaincode-test:
     name: Test Chaincode
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -70,8 +70,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service: [exporter-bank, national-bank, ncat, shipping-line]
-    
+        service: [commercialbank, national-bank, ncat, shipping-line]
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -80,7 +80,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+          cache: "npm"
           cache-dependency-path: api/${{ matrix.service }}/package-lock.json
 
       - name: Install dependencies
@@ -112,7 +112,7 @@ jobs:
   frontend-test:
     name: Test Frontend
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -121,7 +121,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+          cache: "npm"
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
@@ -150,7 +150,7 @@ jobs:
   security-scan:
     name: Security Scan
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -158,19 +158,19 @@ jobs:
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
+          scan-type: "fs"
+          scan-ref: "."
+          format: "sarif"
+          output: "trivy-results.sarif"
 
       - name: Upload Trivy results to GitHub Security
         uses: github/codeql-action/upload-sarif@v2
         with:
-          sarif_file: 'trivy-results.sarif'
+          sarif_file: "trivy-results.sarif"
 
       - name: Run npm audit (APIs)
         run: |
-          for service in exporter-bank national-bank ncat shipping-line; do
+          for service in commercialbank national-bank ncat shipping-line; do
             echo "Auditing api/$service"
             cd api/$service
             npm audit --audit-level=moderate || true
@@ -187,7 +187,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [chaincode-test, api-test, frontend-test]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -203,7 +203,7 @@ jobs:
 
       - name: Build and push API images
         run: |
-          for service in exporter-bank national-bank ncat shipping-line; do
+          for service in commercialbank national-bank ncat shipping-line; do
             docker build -t ${{ secrets.DOCKER_USERNAME }}/cbc-api-$service:latest \
               -t ${{ secrets.DOCKER_USERNAME }}/cbc-api-$service:${{ github.sha }} \
               -f api/$service/Dockerfile \
@@ -230,7 +230,7 @@ jobs:
     environment:
       name: staging
       url: https://staging.coffeeexport.com
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -250,7 +250,7 @@ jobs:
     environment:
       name: production
       url: https://coffeeexport.com
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -267,12 +267,12 @@ jobs:
     runs-on: ubuntu-latest
     needs: [chaincode-test, api-test, frontend-test, security-scan]
     if: always()
-    
+
     steps:
       - name: Send Slack notification
         uses: 8398a7/action-slack@v3
         with:
           status: ${{ job.status }}
-          text: 'CI/CD Pipeline completed'
+          text: "CI/CD Pipeline completed"
           webhook_url: ${{ secrets.SLACK_WEBHOOK }}
         if: always()

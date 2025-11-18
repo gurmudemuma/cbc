@@ -4,12 +4,12 @@ All test users have been successfully created and registered in the blockchain.
 
 ## Login Credentials
 
-### 1. Exporter Bank
+### 1. commercialbank
 - **Username:** `exporter1`
 - **Password:** `Wi2&yVNYeEjr9IQ&`
 - **Email:** exporter1@exporter.com
 - **User ID:** USER-908589a3-5ab5-4ab8-ad58-79e040eec04d
-- **Organization:** EXPORTER-BANK-001
+- **Organization:** commercialbank-001
 - **Role:** exporter
 - **API Endpoint:** http://localhost:3001
 - **Status:** ✅ Active (Created: 2025-10-16)
@@ -24,12 +24,12 @@ All test users have been successfully created and registered in the blockchain.
 - **API Endpoint:** http://localhost:3002
 - **Status:** ✅ Active (Created: 2025-10-16)
 
-### 3. NCAT (National Coffee Authority)
+### 3. ECTA (National Coffee Authority)
 - **Username:** `inspector1`
 - **Password:** `h2aG1&I5%cG7KGHi`
 - **Email:** inspector1@ncat.gov
 - **User ID:** USER-04975302-7eb1-42a9-8bfe-0312869716a7
-- **Organization:** NCAT-001
+- **Organization:** ECTA-001
 - **Role:** inspector
 - **API Endpoint:** http://localhost:3003
 - **Status:** ✅ Active (Created: 2025-10-16)
@@ -50,9 +50,9 @@ All test users have been successfully created and registered in the blockchain.
 
 ## API Status
 All APIs are running and fully operational:
-- ✅ Exporter Bank API: http://localhost:3001
+- ✅ commercialbank API: http://localhost:3001
 - ✅ National Bank API: http://localhost:3002
-- ✅ NCAT API: http://localhost:3003
+- ✅ ECTA API: http://localhost:3003
 - ✅ Shipping Line API: http://localhost:3004
 
 ## Password Requirements

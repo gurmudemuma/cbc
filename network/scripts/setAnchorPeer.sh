@@ -77,16 +77,16 @@ updateAnchorPeer() {
   local port=""
 
   if [ $ORG -eq 1 ]; then
-    orgmsp="ExporterBankMSP"
-    host="peer0.exporterbank.coffee-export.com"
+    orgmsp="CommercialBankMSP"
+    host="peer0.commercialbank.coffee-export.com"
     port=7051
   elif [ $ORG -eq 2 ]; then
     orgmsp="NationalBankMSP"
     host="peer0.nationalbank.coffee-export.com"
     port=8051
   elif [ $ORG -eq 3 ]; then
-    orgmsp="NCATMSP"
-    host="peer0.ncat.coffee-export.com"
+    orgmsp="ECTAMSP"
+    host="peer0.ecta.coffee-export.com"
     port=9051
   elif [ $ORG -eq 4 ]; then
     orgmsp="ShippingLineMSP"
@@ -94,7 +94,7 @@ updateAnchorPeer() {
     port=10051
   elif [ $ORG -eq 5 ]; then
     orgmsp="CustomAuthoritiesMSP"
-    host="peer0.customauthorities.coffee-export.com"
+    host="peer0.custom-authorities.coffee-export.com"
     port=11051
   else
     errorln "Unknown organization: $ORG"

@@ -86,7 +86,7 @@
 								"value": {
 									"anchor_peers": [
 										{
-											"host": "peer0.customauthorities.coffee-export.com",
+											"host": "peer0.custom-authorities.coffee-export.com",
 											"port": 11051
 										}
 									]

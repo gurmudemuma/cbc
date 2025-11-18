@@ -69,6 +69,32 @@ Thumbs.db
 *.crt
 !**/ca-cert.pem
 
-# Backup files
+# Backup files and directories
 *.bak
 *.backup
+*.backup/
+api.backup*/
+bin.backup*/
+*-backup/
+*backup*/
+
+# Empty placeholder files (often created by scripts)
+Chaincode
+Creating
+Done.
+Downloading
+Downloading:
+Endorser
+Generating
+Loaded
+Loading
+Orderer.EtcdRaft.Options
+Received
+Retrieving
+Successfully
+There
+Writing
+config.json
+modified_config.json
+update.json
+update_in_envelope.json

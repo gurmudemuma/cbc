@@ -33,7 +33,7 @@ fi
 
 # Check if network is running
 echo -e "${YELLOW}Checking if blockchain network is running...${NC}"
-if ! docker ps | grep -q "peer0.exporterbank"; then
+if ! docker ps | grep -q "peer0.commercialbank"; then
     echo -e "${RED}❌ Blockchain network is not running!${NC}"
     echo -e "${YELLOW}Please start the network first:${NC}"
     echo -e "  cd $PROJECT_ROOT/network"
@@ -57,7 +57,7 @@ fi
 
 # Install dependencies if needed
 echo -e "${YELLOW}Checking dependencies...${NC}"
-for service in exporter-bank national-bank ncat shipping-line; do
+for service in commercial-bank national-bank ecta shipping-line custom-authorities ecx; do
     if [ ! -d "$API_DIR/$service/node_modules" ]; then
         echo -e "${YELLOW}Installing dependencies for $service...${NC}"
         cd "$API_DIR/$service"
@@ -73,22 +73,28 @@ echo -e "${YELLOW}Creating tmux session 'cbc-apis'...${NC}"
 # Create session with first window
 tmux new-session -d -s cbc-apis -n "APIs"
 
-# Split into 4 panes
+# Split into 6 panes for 6 APIs
 tmux split-window -h -t cbc-apis:0
+tmux split-window -v -t cbc-apis:0.0
+tmux split-window -v -t cbc-apis:0.2
 tmux split-window -v -t cbc-apis:0.0
 tmux split-window -v -t cbc-apis:0.2
 
 # Start each API in its pane
-tmux send-keys -t cbc-apis:0.0 "cd $API_DIR/exporter-bank && echo 'Starting Exporter Bank API (Port 3001)...' && npm run dev" C-m
+tmux send-keys -t cbc-apis:0.0 "cd $API_DIR/commercial-bank && echo 'Starting Commercial Bank API (Port 3001)...' && npm run dev" C-m
 tmux send-keys -t cbc-apis:0.1 "cd $API_DIR/national-bank && echo 'Starting National Bank API (Port 3002)...' && npm run dev" C-m
-tmux send-keys -t cbc-apis:0.2 "cd $API_DIR/ncat && echo 'Starting NCAT API (Port 3003)...' && npm run dev" C-m
+tmux send-keys -t cbc-apis:0.2 "cd $API_DIR/ecta && echo 'Starting ECTA API (Port 3003)...' && npm run dev" C-m
 tmux send-keys -t cbc-apis:0.3 "cd $API_DIR/shipping-line && echo 'Starting Shipping Line API (Port 3004)...' && npm run dev" C-m
+tmux send-keys -t cbc-apis:0.4 "cd $API_DIR/custom-authorities && echo 'Starting Customs API (Port 3005)...' && npm run dev" C-m
+tmux send-keys -t cbc-apis:0.5 "cd $API_DIR/ecx && echo 'Starting ECX API (Port 3006)...' && npm run dev" C-m
 
 # Set pane titles
-tmux select-pane -t cbc-apis:0.0 -T "Exporter Bank (3001)"
+tmux select-pane -t cbc-apis:0.0 -T "Commercial Bank (3001)"
 tmux select-pane -t cbc-apis:0.1 -T "National Bank (3002)"
-tmux select-pane -t cbc-apis:0.2 -T "NCAT (3003)"
-tmux select-pane -t cbc-apis:0.3 -T "Shipping Line (3004)"
+tmux select-pane -t cbc-apis:0.2 -T "ECTA (3003)"
+tmux select-pane -t cbc-apis:0.3 -T "Shipping (3004)"
+tmux select-pane -t cbc-apis:0.4 -T "Customs (3005)"
+tmux select-pane -t cbc-apis:0.5 -T "ECX (3006)"
 
 echo ""
 echo -e "${GREEN}✅ All API services starting in tmux session 'cbc-apis'${NC}"
@@ -98,10 +104,12 @@ echo -e "${BLUE}Tmux Session Controls${NC}"
 echo -e "${BLUE}========================================${NC}"
 echo ""
 echo -e "${GREEN}Services:${NC}"
-echo -e "  • Exporter Bank API:  http://localhost:3001 (Top-Left)"
-echo -e "  • National Bank API:  http://localhost:3002 (Top-Right)"
-echo -e "  • NCAT API:           http://localhost:3003 (Bottom-Left)"
-echo -e "  • Shipping Line API:  http://localhost:3004 (Bottom-Right)"
+echo -e "  • Commercial Bank API:    http://localhost:3001"
+echo -e "  • National Bank (NBE) API: http://localhost:3002"
+echo -e "  • ECTA API:                http://localhost:3003 (License, Quality, Contract)"
+echo -e "  • Shipping Line API:       http://localhost:3004"
+echo -e "  • Customs API:             http://localhost:3005"
+echo -e "  • ECX API:                 http://localhost:3006 (Lot Verification)"
 echo ""
 echo -e "${YELLOW}Tmux Commands:${NC}"
 echo -e "  • Switch panes:       Ctrl+B then arrow keys"

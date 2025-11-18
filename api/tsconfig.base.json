@@ -20,6 +20,7 @@
     "noImplicitOverride": true,
     "noPropertyAccessFromIndexSignature": false,
     "noUncheckedIndexedAccess": true,
-    "noEmitOnError": false
+    "noEmitOnError": false,
+    "types": ["jest", "node"]
   }
 }

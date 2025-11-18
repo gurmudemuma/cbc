@@ -1,18 +1,20 @@
 import { Router } from "express";
-import { Request, Response } from "express";
+import { AuthController } from "../controllers/auth.controller";
+import {
+  validateLogin,
+  validateRegister,
+} from "../middleware/validation.middleware";
+
 const router = Router();
+const authController = new AuthController();
 
-// Placeholder auth routes to keep structure consistent; assumes shared auth is used across services
-router.post("/login", (_req: Request, res: Response) => {
-  return res
-    .status(501)
-    .json({ success: false, message: "Not implemented in this service" });
-});
+// Register new user
+router.post("/register", validateRegister, authController.register);
 
-router.post("/register", (_req: Request, res: Response) => {
-  return res
-    .status(501)
-    .json({ success: false, message: "Not implemented in this service" });
-});
+// Login user
+router.post("/login", validateLogin, authController.login);
+
+// Refresh token
+router.post("/refresh-token", authController.refreshToken);
 
 export default router;

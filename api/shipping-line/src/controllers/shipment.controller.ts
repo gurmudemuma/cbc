@@ -2,6 +2,11 @@ import { Request, Response, NextFunction } from "express";
 import { JwtPayload } from "jsonwebtoken";
 import { FabricGateway } from "../fabric/gateway";
 import { v4 as uuidv4 } from "uuid";
+import { createExportService } from "../../../shared/exportService";
+import { CacheService, CacheKeys, CacheTTL } from "../../../shared/cache.service";
+import { auditService, AuditAction } from "../../../shared/audit.service";
+import { ResilientBlockchainService } from "../../../shared/resilience.service";
+import { ErrorCode, AppError } from "../../../shared/error-codes";
 
 interface AuthJWTPayload extends JwtPayload {
   id: string;
@@ -16,9 +21,13 @@ interface RequestWithUser extends Request {
 
 export class ShipmentController {
   private fabricGateway: FabricGateway;
+  private cacheService: CacheService;
+  private resilienceService: ResilientBlockchainService;
 
   constructor() {
     this.fabricGateway = FabricGateway.getInstance();
+    this.cacheService = CacheService.getInstance();
+    this.resilienceService = new ResilientBlockchainService('shipping-line');
   }
 
   public getReadyExports = async (
@@ -27,52 +36,59 @@ export class ShipmentController {
     _next: NextFunction,
   ): Promise<void> => {
     try {
-      const contract = this.fabricGateway.getExportContract();
-      const result = await contract.evaluateTransaction(
-        "GetExportsByStatus",
-        "QUALITY_CERTIFIED",
-      );
-      const exports = JSON.parse(result.toString());
+      // Try cache first
+      const cacheKey = 'exports:shipment:ready';
+      const cached = await this.cacheService.get<any[]>(cacheKey);
+      if (cached) {
+        res.json({ success: true, data: cached, count: cached.length, cached: true });
+        return;
+      }
 
-      res.status(200).json({
-        success: true,
-        data: exports,
-        count: exports.length,
-      });
-    } catch (error: unknown) {
-      console.error("Error getting ready exports:", error);
-      const message = error instanceof Error ? error.message : "Unknown error";
-      res.status(500).json({
-        success: false,
-        message: "Failed to retrieve ready exports",
-        error: message,
-      });
+      // Fetch with resilience
+      const exports = await this.resilienceService.executeQuery(async () => {
+        const contract = this.fabricGateway.getExportContract();
+        const exportService = createExportService(contract);
+        return await exportService.getExportsByStatus('CUSTOMS_CLEARED');  // UPDATED: New status name
+      }, 'getReadyShipments');
+
+      // Cache for short time
+      await this.cacheService.set(cacheKey, exports, CacheTTL.SHORT);
+
+      res.json({ success: true, data: exports, count: exports.length });
+    } catch (error: any) {
+      this.handleError(error, res);
     }
   };
 
   public getAllExports = async (
-    _req: Request,
+    req: RequestWithUser,
     res: Response,
     _next: NextFunction,
   ): Promise<void> => {
     try {
-      const contract = this.fabricGateway.getExportContract();
-      const result = await contract.evaluateTransaction("GetAllExports");
-      const exports = JSON.parse(result.toString());
+      const user = req.user!;
+      const cacheKey = `exports:${user.organizationId}:all`;
 
-      res.status(200).json({
-        success: true,
-        data: exports,
-        count: exports.length,
-      });
-    } catch (error: unknown) {
-      console.error("Error getting all exports:", error);
-      const message = error instanceof Error ? error.message : "Unknown error";
-      res.status(500).json({
-        success: false,
-        message: "Failed to retrieve exports",
-        error: message,
-      });
+      // Try cache first
+      const cached = await this.cacheService.get(cacheKey);
+      if (cached) {
+        res.json({ success: true, data: cached, cached: true });
+        return;
+      }
+
+      // Fetch with resilience
+      const exports = await this.resilienceService.executeQuery(async () => {
+        const contract = this.fabricGateway.getExportContract();
+        const exportService = createExportService(contract);
+        return await exportService.getAllExports();
+      }, 'getAllExports');
+
+      // Cache the result
+      await this.cacheService.set(cacheKey, exports, CacheTTL.MEDIUM);
+
+      res.json({ success: true, data: exports });
+    } catch (error: any) {
+      this.handleError(error, res);
     }
   };
 
@@ -84,32 +100,30 @@ export class ShipmentController {
     try {
       const { exportId } = req.params;
       if (!exportId) {
-        res
-          .status(400)
-          .json({ success: false, message: "Export ID is required" });
+        throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Export ID is required', 400);
+      }
+
+      // Try cache first
+      const cacheKey = CacheKeys.export(exportId);
+      const cached = await this.cacheService.get(cacheKey);
+      if (cached) {
+        res.json({ success: true, data: cached, cached: true });
         return;
       }
-      const contract = this.fabricGateway.getExportContract();
 
-      const result = await contract.evaluateTransaction(
-        "GetExportRequest",
-        exportId,
-      );
-      const exportData = JSON.parse(result.toString());
+      // Fetch with resilience
+      const exportData = await this.resilienceService.executeQuery(async () => {
+        const contract = this.fabricGateway.getExportContract();
+        const exportService = createExportService(contract);
+        return await exportService.getExport(exportId);
+      }, `getExport:${exportId}`);
 
-      res.status(200).json({
-        success: true,
-        data: exportData,
-      });
-    } catch (error: unknown) {
-      console.error("Error getting export by ID:", error);
-      const message =
-        error instanceof Error ? error.message : "Export not found";
-      res.status(404).json({
-        success: false,
-        message: "Export not found",
-        error: message,
-      });
+      // Cache the result
+      await this.cacheService.set(cacheKey, exportData, CacheTTL.SHORT);
+
+      res.json({ success: true, data: exportData });
+    } catch (error: any) {
+      this.handleError(error, res);
     }
   };
 
@@ -119,83 +133,186 @@ export class ShipmentController {
     _next: NextFunction,
   ): Promise<void> => {
     try {
-      const {
-        exportId,
-        transportIdentifier,
-        departureDate,
-        arrivalDate,
-        transportMode,
-      } = req.body;
-
+      const { exportId, transportIdentifier, departureDate, arrivalDate, transportMode, documentCIDs } = req.body;
+      const user = req.user!;
       const shipmentId = `SHIP-${uuidv4()}`;
-      const shippingLineId = req.user?.organizationId || "SHIPPING-LINE-001";
 
-      const contract = this.fabricGateway.getExportContract();
-
-      await contract.submitTransaction(
-        "ScheduleShipment",
-        exportId,
-        shipmentId,
-        transportIdentifier,
-        departureDate,
-        arrivalDate,
-        shippingLineId,
-        transportMode,
-      );
-
-      res.status(200).json({
-        success: true,
-        message: "Shipment scheduled successfully",
-        data: {
-          exportId,
-          shipmentId,
+      // Submit with resilience
+      await this.resilienceService.executeTransaction(async () => {
+        const contract = this.fabricGateway.getExportContract();
+        const exportService = createExportService(contract);
+        return await exportService.scheduleShipment(exportId, {
           transportIdentifier,
           departureDate,
           arrivalDate,
-          shippingLineId,
           transportMode,
-          status: "SHIPMENT_SCHEDULED",
-        },
+          documentCIDs,
+        });
+      }, `scheduleShipment:${exportId}`);
+
+      // Audit log
+      auditService.logStatusChange(
+        user.id,
+        exportId,
+        'CUSTOMS_CLEARED',  // UPDATED: New status name
+        'SHIPMENT_SCHEDULED',
+        AuditAction.EXPORT_UPDATED,  // FIXED: Should be EXPORT_UPDATED not EXPORT_CREATED
+        {
+          ipAddress: req.ip,
+          userAgent: req.get('user-agent'),
+        }
+      );
+
+      // Invalidate cache
+      await this.cacheService.delete(CacheKeys.export(exportId));
+      await this.cacheService.deletePattern('exports:*');
+
+      res.json({
+        success: true,
+        message: 'Shipment scheduled successfully',
+        data: { exportId, shipmentId, transportIdentifier },
       });
-    } catch (error: unknown) {
-      console.error("Error scheduling shipment:", error);
-      const message = error instanceof Error ? error.message : "Unknown error";
-      res.status(500).json({
-        success: false,
-        message: "Failed to schedule shipment",
-        error: message,
-      });
+    } catch (error: any) {
+      this.handleError(error, res);
     }
   };
 
   public confirmShipment = async (
-    req: Request,
+    req: RequestWithUser,
     res: Response,
     _next: NextFunction,
   ): Promise<void> => {
     try {
       const { exportId } = req.body;
+      const user = req.user!;
 
-      const contract = this.fabricGateway.getExportContract();
+      // Submit with resilience
+      await this.resilienceService.executeTransaction(async () => {
+        const contract = this.fabricGateway.getExportContract();
+        const exportService = createExportService(contract);
+        return await exportService.markAsShipped(exportId);
+      }, `confirmShipment:${exportId}`);
 
-      await contract.submitTransaction("ConfirmShipment", exportId);
+      // Audit log
+      auditService.logStatusChange(
+        user.id,
+        exportId,
+        'SHIPMENT_SCHEDULED',
+        'SHIPPED',
+        AuditAction.EXPORT_UPDATED,
+        {
+          ipAddress: req.ip,
+          userAgent: req.get('user-agent'),
+        }
+      );
 
-      res.status(200).json({
+      // Invalidate cache
+      await this.cacheService.delete(CacheKeys.export(exportId));
+      await this.cacheService.deletePattern('exports:*');
+
+      res.json({
         success: true,
-        message: "Shipment confirmed successfully",
-        data: {
-          exportId,
-          status: "SHIPPED",
-        },
+        message: 'Shipment confirmed',
+        data: { exportId, status: 'SHIPPED' },
       });
-    } catch (error: unknown) {
-      console.error("Error confirming shipment:", error);
-      const message = error instanceof Error ? error.message : "Unknown error";
-      res.status(500).json({
-        success: false,
-        message: "Failed to confirm shipment",
-        error: message,
-      });
+    } catch (error: any) {
+      this.handleError(error, res);
     }
   };
+
+  /**
+   * Reject shipment
+   */
+  public rejectShipment = async (
+    req: RequestWithUser,
+    res: Response,
+    _next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const { exportId, reason, rejectedBy } = req.body;
+      const user = req.user!;
+
+      if (!exportId || !reason) {
+        throw new AppError(
+          ErrorCode.MISSING_REQUIRED_FIELD,
+          'Export ID and rejection reason are required',
+          400
+        );
+      }
+
+      if (reason.trim().length < 10) {
+        throw new AppError(
+          ErrorCode.INVALID_INPUT,
+          'Rejection reason must be at least 10 characters',
+          400
+        );
+      }
+
+      // Submit with resilience
+      await this.resilienceService.executeTransaction(async () => {
+        const contract = this.fabricGateway.getExportContract();
+        await contract.submitTransaction(
+          'RejectShipment',
+          exportId,
+          reason,
+          rejectedBy || user.username
+        );
+      }, `rejectShipment:${exportId}`);
+
+      // Audit log
+      auditService.logStatusChange(
+        user.id,
+        exportId,
+        'CUSTOMS_CLEARED',
+        'SHIPMENT_REJECTED',
+        AuditAction.EXPORT_UPDATED,
+        {
+          ipAddress: req.ip,
+          userAgent: req.get('user-agent'),
+          reason,
+        }
+      );
+
+      // Invalidate cache
+      await this.cacheService.delete(CacheKeys.export(exportId));
+      await this.cacheService.deletePattern('exports:*');
+
+      res.json({
+        success: true,
+        message: 'Shipment rejected',
+        data: { exportId, reason, status: 'SHIPMENT_REJECTED' },
+      });
+    } catch (error: any) {
+      this.handleError(error, res);
+    }
+  };
+
+  /**
+   * Centralized error handling
+   */
+  private handleError(error: any, res: Response): void {
+    if (error instanceof AppError) {
+      res.status(error.httpStatus).json({
+        success: false,
+        error: {
+          code: error.code,
+          message: error.message,
+          retryable: error.retryable,
+        },
+      });
+      return;
+    }
+
+    // Log unexpected errors
+    console.error('Unexpected error:', error);
+
+    res.status(500).json({
+      success: false,
+      error: {
+        code: ErrorCode.INTERNAL_SERVER_ERROR,
+        message: 'An unexpected error occurred',
+        retryable: false,
+      },
+    });
+  }
 }

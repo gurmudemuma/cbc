@@ -1,12 +1,12 @@
 #!/bin/bash
 
 # Script to apply security fixes across all services
-# This updates NCAT and Shipping Line services with the same security improvements
+# This updates ECTA and Shipping Line services with the same security improvements
 
-echo "🔒 Applying security fixes to NCAT and Shipping Line services..."
+echo "🔒 Applying security fixes to ECTA and Shipping Line services..."
 
-# Update NCAT auth middleware
-echo "Updating NCAT auth middleware..."
+# Update ECTA auth middleware
+echo "Updating ECTA auth middleware..."
 cat > api/ncat/src/middleware/auth.middleware.ts << 'EOF'
 import { Request, Response, NextFunction } from "express";
 import jwt, { JwtPayload } from "jsonwebtoken";
@@ -120,7 +120,7 @@ export const authMiddleware = (
 EOF
 
 echo "✅ Security fixes applied to auth middleware"
-echo "⚠️  Note: Auth controllers for NCAT and Shipping Line need manual update"
+echo "⚠️  Note: Auth controllers for ECTA and Shipping Line need manual update"
 echo "   Add: import { SecurityConfig } from '../../../shared/security.config';"
 echo "   Replace constructor JWT_SECRET initialization with: SecurityConfig.getJWTSecret()"
 

@@ -75,9 +75,9 @@ echo ""
 
 failed=0
 
-test_rate_limiting "Exporter Bank API" 3001 || ((failed++))
+test_rate_limiting "commercialbank API" 3001 || ((failed++))
 test_rate_limiting "National Bank API" 3002 || ((failed++))
-test_rate_limiting "NCAT API" 3003 || ((failed++))
+test_rate_limiting "ECTA API" 3003 || ((failed++))
 test_rate_limiting "Shipping Line API" 3004 || ((failed++))
 
 # Summary

@@ -18,7 +18,7 @@ const colors = {
 
 // Services to test
 const services = [
-  { name: 'Exporter Bank', port: 3001 },
+  { name: 'commercialbank', port: 3001 },
   { name: 'National Bank', port: 3002 },
   { name: 'NCAT', port: 3003 },
   { name: 'Shipping Line', port: 3004 }

@@ -65,7 +65,7 @@ docker-compose -f docker-compose-full.yml ps
 │  └──────────────┘  └──────────────┴──────────────┘          │
 │                                                               │
 │  ┌──────────────┬──────────────┬──────────────┐             │
-│  │ ExporterBank │ NationalBank │     NCAT     │             │
+│  │ commercialbank │ NationalBank │     ECTA     │             │
 │  │  Peer 7051   │  Peer 8051   │  Peer 9051   │             │
 │  └──────────────┴──────────────┴──────────────┘             │
 │                                                               │
@@ -76,7 +76,7 @@ docker-compose -f docker-compose-full.yml ps
 │                                                               │
 │  Layer 3: Application Services                               │
 │  ┌──────────────┬──────────────┬──────────────┐             │
-│  │ Exporter API │  National    │   NCAT API   │             │
+│  │ Exporter API │  National    │   ECTA API   │             │
 │  │  Port 3001   │  Bank API    │  Port 3003   │             │
 │  │              │  Port 3002   │              │             │
 │  └──────────────┴──────────────┴──────────────┘             │
@@ -96,7 +96,7 @@ cbc/
 ├── start-docker-full.sh          # Automated startup script
 ├── api/
 │   ├── .dockerignore             # Shared ignore file
-│   ├── exporter-bank/
+│   ├── commercialbank/
 │   │   └── Dockerfile            # API image definition
 │   ├── national-bank/
 │   │   └── Dockerfile
@@ -126,13 +126,13 @@ environment:
   - IPFS_HOST=ipfs               # Container name (not localhost!)
   - IPFS_PORT=5001
   - IPFS_PROTOCOL=http
-  - ORGANIZATION_ID=exporterbank
+  - ORGANIZATION_ID=commercialbank
   - MSP_ID=ExporterBankMSP
-  - PEER_ENDPOINT=peer0.exporterbank.coffee-export.com:7051
+  - PEER_ENDPOINT=peer0.commercialbank.coffee-export.com:7051
   - CHANNEL_NAME=coffeechannel
   - CHAINCODE_NAME_EXPORT=coffee-export
   - CHAINCODE_NAME_USER=user-management
-  - CONNECTION_PROFILE_PATH=/crypto/connection-exporterbank.json
+  - CONNECTION_PROFILE_PATH=/crypto/connection-commercialbank.json
   - WALLET_PATH=/app/wallet
   - JWT_SECRET=change-in-production
 ```
@@ -143,7 +143,7 @@ environment:
 environment:
   - VITE_EXPORTER_BANK_API_URL=http://localhost:3001
   - VITE_NATIONAL_BANK_API_URL=http://localhost:3002
-  - VITE_NCAT_API_URL=http://localhost:3003
+  - VITE_ECTA_API_URL=http://localhost:3003
   - VITE_SHIPPING_LINE_API_URL=http://localhost:3004
 ```
 
@@ -169,7 +169,7 @@ environment:
 docker-compose -f docker-compose-full.yml build
 
 # Build specific services
-docker-compose -f docker-compose-full.yml build exporter-bank-api
+docker-compose -f docker-compose-full.yml build commercialbank-api
 docker-compose -f docker-compose-full.yml build frontend
 
 # Build with no cache
@@ -203,10 +203,10 @@ docker-compose -f docker-compose-full.yml up -d
 docker-compose -f docker-compose-full.yml up
 
 # Start specific services
-docker-compose -f docker-compose-full.yml up -d ipfs exporter-bank-api
+docker-compose -f docker-compose-full.yml up -d ipfs commercialbank-api
 
 # Scale services (if applicable)
-docker-compose -f docker-compose-full.yml up -d --scale exporter-bank-api=2
+docker-compose -f docker-compose-full.yml up -d --scale commercialbank-api=2
 ```
 
 ### Stopping Services
@@ -219,7 +219,7 @@ docker-compose -f docker-compose-full.yml down
 docker-compose -f docker-compose-full.yml down -v
 
 # Stop specific service
-docker-compose -f docker-compose-full.yml stop exporter-bank-api
+docker-compose -f docker-compose-full.yml stop commercialbank-api
 ```
 
 ### Restarting Services
@@ -229,7 +229,7 @@ docker-compose -f docker-compose-full.yml stop exporter-bank-api
 docker-compose -f docker-compose-full.yml restart
 
 # Restart specific service
-docker-compose -f docker-compose-full.yml restart exporter-bank-api
+docker-compose -f docker-compose-full.yml restart commercialbank-api
 
 # Recreate containers (useful after config changes)
 docker-compose -f docker-compose-full.yml up -d --force-recreate
@@ -260,13 +260,13 @@ docker-compose -f docker-compose-full.yml logs
 docker-compose -f docker-compose-full.yml logs -f
 
 # Logs for specific service
-docker-compose -f docker-compose-full.yml logs -f exporter-bank-api
+docker-compose -f docker-compose-full.yml logs -f commercialbank-api
 
 # Logs for multiple services
-docker-compose -f docker-compose-full.yml logs -f exporter-bank-api national-bank-api
+docker-compose -f docker-compose-full.yml logs -f commercialbank-api national-bank-api
 
 # Tail last 100 lines
-docker-compose -f docker-compose-full.yml logs --tail=100 exporter-bank-api
+docker-compose -f docker-compose-full.yml logs --tail=100 commercialbank-api
 ```
 
 ### Resource Usage
@@ -276,10 +276,10 @@ docker-compose -f docker-compose-full.yml logs --tail=100 exporter-bank-api
 docker stats
 
 # Monitor specific containers
-docker stats exporter-bank-api national-bank-api ncat-api
+docker stats commercialbank-api national-bank-api ncat-api
 
 # Container resource limits (check compose file)
-docker inspect exporter-bank-api | grep -A 10 Resources
+docker inspect commercialbank-api | grep -A 10 Resources
 ```
 
 ## Networking
@@ -293,11 +293,11 @@ All services use the `coffee-export-network`:
 docker network inspect coffee-export-network
 
 # Test connectivity between containers
-docker exec exporter-bank-api ping ipfs
-docker exec exporter-bank-api curl http://ipfs:5001/api/v0/id
+docker exec commercialbank-api ping ipfs
+docker exec commercialbank-api curl http://ipfs:5001/api/v0/id
 
 # Check if service can reach peer
-docker exec exporter-bank-api nc -zv peer0.exporterbank.coffee-export.com 7051
+docker exec commercialbank-api nc -zv peer0.commercialbank.coffee-export.com 7051
 ```
 
 ### Port Mappings
@@ -307,14 +307,14 @@ docker exec exporter-bank-api nc -zv peer0.exporterbank.coffee-export.com 7051
 | IPFS | 5001 | 5001 | HTTP |
 | IPFS | 8080 | 8080 | HTTP |
 | Orderer | 7050 | 7050 | gRPC |
-| ExporterBank Peer | 7051 | 7051 | gRPC |
+| commercialbank Peer | 7051 | 7051 | gRPC |
 | NationalBank Peer | 8051 | 8051 | gRPC |
-| NCAT Peer | 9051 | 9051 | gRPC |
+| ECTA Peer | 9051 | 9051 | gRPC |
 | ShippingLine Peer | 10051 | 10051 | gRPC |
 | CustomAuth Peer | 11051 | 11051 | gRPC |
 | Exporter API | 3001 | 3001 | HTTP |
 | National API | 3002 | 3002 | HTTP |
-| NCAT API | 3003 | 3003 | HTTP |
+| ECTA API | 3003 | 3003 | HTTP |
 | Shipping API | 3004 | 3004 | HTTP |
 | Custom API | 3005 | 3005 | HTTP |
 | Frontend | 80 | 80 | HTTP |
@@ -341,16 +341,16 @@ docker-compose -f docker-compose-full.yml up -d --build [service-name]
 
 ```bash
 # Check health status
-docker inspect exporter-bank-api | grep -A 10 Health
+docker inspect commercialbank-api | grep -A 10 Health
 
 # Test health endpoint manually
 curl http://localhost:3001/health
 
 # Exec into container
-docker exec -it exporter-bank-api sh
+docker exec -it commercialbank-api sh
 
 # Check logs for health check failures
-docker-compose -f docker-compose-full.yml logs --tail=50 exporter-bank-api
+docker-compose -f docker-compose-full.yml logs --tail=50 commercialbank-api
 ```
 
 ### Volume Issues
@@ -383,8 +383,8 @@ docker network rm coffee-export-network
 docker-compose -f docker-compose-full.yml up -d
 
 # Check DNS resolution
-docker exec exporter-bank-api nslookup ipfs
-docker exec exporter-bank-api nslookup peer0.exporterbank.coffee-export.com
+docker exec commercialbank-api nslookup ipfs
+docker exec commercialbank-api nslookup peer0.commercialbank.coffee-export.com
 ```
 
 ### Build Issues
@@ -397,7 +397,7 @@ docker-compose -f docker-compose-full.yml build --no-cache
 docker-compose -f docker-compose-full.yml build --progress=plain
 
 # Build specific service
-docker-compose -f docker-compose-full.yml build --no-cache exporter-bank-api
+docker-compose -f docker-compose-full.yml build --no-cache commercialbank-api
 ```
 
 ## Maintenance
@@ -497,7 +497,7 @@ jobs:
         run: docker-compose -f docker-compose-full.yml build
       
       - name: Run tests
-        run: docker-compose -f docker-compose-full.yml run --rm exporter-bank-api npm test
+        run: docker-compose -f docker-compose-full.yml run --rm commercialbank-api npm test
       
       - name: Deploy
         run: ./start-docker-full.sh --build

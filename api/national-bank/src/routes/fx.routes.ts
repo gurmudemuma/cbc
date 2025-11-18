@@ -1,30 +1,42 @@
-import { Router } from "express";
-import { FXController } from "../controllers/fx.controller";
-import { authMiddleware } from "../middleware/auth.middleware";
-import {
-  validateFXApproval,
-  validateFXRejection,
-} from "../middleware/validation.middleware";
+/**
+ * FX Routes for National Bank
+ * With Zod validation middleware
+ */
+
+import { Router } from 'express';
+import { FXController } from '../controllers/fx.controller';
+import { authMiddleware } from '../../../shared/middleware/auth.middleware';
+import { validateRequest, ApproveFXSchema, RejectSchema } from '../../../shared/validation.schemas';
 
 const router = Router();
 const fxController = new FXController();
 
-// All routes require authentication
-router.use(authMiddleware);
-
-// Get all pending exports
-router.get("/pending", fxController.getPendingExports);
-
 // Get all exports
-router.get("/exports", fxController.getAllExports);
+router.get('/exports', authMiddleware, fxController.getAllExports);
 
-// Get export by ID
-router.get("/exports/:exportId", fxController.getExportById);
+// Get single export
+router.get('/exports/:exportId', authMiddleware, fxController.getExport);
 
-// Approve FX for an export
-router.post("/approve", validateFXApproval, fxController.approveFX);
+// Get pending FX approvals
+router.get('/fx/pending', authMiddleware, fxController.getPendingFXApprovals);
 
-// Reject FX for an export
-router.post("/reject", validateFXRejection, fxController.rejectFX);
+// Get exports by status
+router.get('/exports/status/:status', authMiddleware, fxController.getExportsByStatus);
+
+// Approve FX
+router.post(
+  '/fx/:exportId/approve',
+  authMiddleware,
+  validateRequest(ApproveFXSchema),
+  fxController.approveFX
+);
+
+// Reject FX
+router.post(
+  '/fx/:exportId/reject',
+  authMiddleware,
+  validateRequest(RejectSchema),
+  fxController.rejectFX
+);
 
 export default router;

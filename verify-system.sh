@@ -99,7 +99,7 @@ TOTAL_SERVICES=0
 RUNNING_SERVICES=0
 
 # Blockchain (core requirement)
-if docker ps --format "{{.Names}}" | grep -q "peer0.exporterbank"; then
+if docker ps --format "{{.Names}}" | grep -q "peer0.commercialbank"; then
     echo -e "  Blockchain Network: ${GREEN}✅ Running${NC}"
     ((RUNNING_SERVICES++))
 else

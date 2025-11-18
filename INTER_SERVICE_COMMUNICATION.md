@@ -20,9 +20,9 @@ The system consists of 4 API services that communicate through:
 
 | Service | Port | Organization | MSP ID |
 |---------|------|--------------|--------|
-| Exporter Bank API | 3001 | ExporterBank | ExporterBankMSP |
+| commercialbank API | 3001 | commercialbank | ExporterBankMSP |
 | National Bank API | 3002 | NationalBank | NationalBankMSP |
-| NCAT API | 3003 | NCAT | NCATMSP |
+| ECTA API | 3003 | ECTA | ECTAMSP |
 | Shipping Line API | 3004 | ShippingLine | ShippingLineMSP |
 | Frontend | 5173 | - | - |
 
@@ -31,9 +31,9 @@ The system consists of 4 API services that communicate through:
 | Component | Port | Description |
 |-----------|------|-------------|
 | Orderer | 7050 | Ordering service |
-| Peer0 ExporterBank | 7051 | ExporterBank peer |
+| Peer0 commercialbank | 7051 | commercialbank peer |
 | Peer0 NationalBank | 8051 | NationalBank peer |
-| Peer0 NCAT | 9051 | NCAT peer |
+| Peer0 ECTA | 9051 | ECTA peer |
 | Peer0 ShippingLine | 10051 | ShippingLine peer |
 
 ### Supporting Services
@@ -69,13 +69,13 @@ This script tests:
 Test each service individually:
 
 ```bash
-# Exporter Bank
+# commercialbank
 curl http://localhost:3001/health
 
 # National Bank
 curl http://localhost:3002/health
 
-# NCAT
+# ECTA
 curl http://localhost:3003/health
 
 # Shipping Line
@@ -87,7 +87,7 @@ Expected response:
 {
   "status": "ok",
   "timestamp": "2024-01-01T00:00:00.000Z",
-  "service": "exporter-bank-api",
+  "service": "commercialbank-api",
   "version": "1.0.0"
 }
 ```
@@ -102,7 +102,7 @@ Or use the health check script:
 Test rate limiting on each service:
 
 ```bash
-# Test Exporter Bank (should allow 100 requests, then block)
+# Test commercialbank (should allow 100 requests, then block)
 for i in {1..105}; do
   curl -s http://localhost:3001/health
 done
@@ -178,7 +178,7 @@ curl -X POST http://localhost:3001/api/coffee/exports \
 Test that organizations can read each other's data:
 
 ```bash
-# Create export as Exporter Bank
+# Create export as commercialbank
 EXPORTER_TOKEN=$(curl -s -X POST http://localhost:3001/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"username":"exporter1","password":"SecurePass123!@#"}' \
@@ -258,7 +258,7 @@ All services write to and read from the shared blockchain ledger:
 
 ```
 ┌─────────────────┐
-│ Exporter Bank   │──┐
+│ commercialbank   │──┐
 └─────────────────┘  │
                      │
 ┌─────────────────┐  │    ┌──────────────────┐
@@ -266,7 +266,7 @@ All services write to and read from the shared blockchain ledger:
 └─────────────────┘  │    │  (Shared Ledger) │
                      │    └──────────────────┘
 ┌─────────────────┐  │
-│ NCAT            │──┤
+│ ECTA            │──┤
 └─────────────────┘  │
                      │
 ┌─────────────────┐  │
@@ -319,7 +319,7 @@ Service A                    Service B
 
 3. **Check logs:**
    ```bash
-   tail -f logs/exporter-bank.log
+   tail -f logs/commercialbank.log
    tail -f logs/national-bank.log
    tail -f logs/ncat.log
    tail -f logs/shipping-line.log
@@ -328,7 +328,7 @@ Service A                    Service B
 4. **Verify network connectivity:**
    ```bash
    # From inside a container
-   docker exec -it peer0.exporterbank.coffee-export.com ping peer0.nationalbank.coffee-export.com
+   docker exec -it peer0.commercialbank.coffee-export.com ping peer0.nationalbank.coffee-export.com
    ```
 
 ### Rate Limiting Issues
@@ -348,7 +348,7 @@ If you're being rate limited:
 1. **Verify user exists:**
    ```bash
    # Check wallet directory
-   ls -la api/exporter-bank/wallet/
+   ls -la api/commercialbank/wallet/
    ```
 
 2. **Re-register user:**
@@ -372,7 +372,7 @@ If you're being rate limited:
 
 3. **Verify chaincode is installed:**
    ```bash
-   docker exec peer0.exporterbank.coffee-export.com peer lifecycle chaincode queryinstalled
+   docker exec peer0.commercialbank.coffee-export.com peer lifecycle chaincode queryinstalled
    ```
 
 ### IPFS Issues

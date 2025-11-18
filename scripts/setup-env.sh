@@ -84,13 +84,13 @@ cd ../..
 echo ""
 echo "📦 Installing API dependencies..."
 
-# Exporter Bank API
-if [ -d "api/exporter-bank" ]; then
-    echo "Installing Exporter Bank API dependencies..."
-    cd api/exporter-bank
+# commercialbank API
+if [ -d "api/commercial-bank" ]; then
+    echo "Installing commercialbank API dependencies..."
+    cd api/commercial-bank
     npm install
     cd ../..
-    echo "✅ Exporter Bank API dependencies installed"
+    echo "✅ commercialbank API dependencies installed"
 fi
 
 # National Bank API
@@ -102,13 +102,22 @@ if [ -d "api/national-bank" ]; then
     echo "✅ National Bank API dependencies installed"
 fi
 
-# NCAT API
+# Exporter API
+if [ -d "api/exporter" ]; then
+    echo "Installing Exporter API dependencies..."
+    cd api/exporter
+    npm install
+    cd ../..
+    echo "✅ Exporter API dependencies installed"
+fi
+
+# ECTA API
 if [ -d "api/ncat" ]; then
-    echo "Installing NCAT API dependencies..."
+    echo "Installing ECTA API dependencies..."
     cd api/ncat
     npm install
     cd ../..
-    echo "✅ NCAT API dependencies installed"
+    echo "✅ ECTA API dependencies installed"
 fi
 
 # Shipping Line API
@@ -132,10 +141,12 @@ create_env_file() {
     fi
 }
 
-create_env_file "api/exporter-bank"
+create_env_file "api/commercial-bank"
 create_env_file "api/national-bank"
+create_env_file "api/exporter"
 create_env_file "api/ncat"
 create_env_file "api/shipping-line"
+create_env_file "api/custom-authorities"
 
 # Make scripts executable
 echo ""

@@ -54,8 +54,8 @@ export class FabricGateway {
         wallet,
         identity: "admin",
         discovery: {
-          enabled: false, // Disabled due to TLS issues with asLocalhost
-          asLocalhost: config.NODE_ENV === "development",
+          enabled: true,
+          asLocalhost: true,
         },
       });
 

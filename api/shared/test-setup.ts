@@ -132,7 +132,7 @@ export class TestDataGenerator {
       id: 'user-123',
       username: 'testuser',
       email: 'test@example.com',
-      organizationId: 'exporterbank',
+      organizationId: 'commercialbank',
       role: 'exporter',
       ...overrides,
     };
@@ -142,7 +142,7 @@ export class TestDataGenerator {
     return {
       id: user?.id || 'user-123',
       username: user?.username || 'testuser',
-      organizationId: user?.organizationId || 'exporterbank',
+      organizationId: user?.organizationId || 'commercialbank',
       role: user?.role || 'exporter',
     };
   }

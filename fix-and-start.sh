@@ -77,14 +77,14 @@ echo ""
 
 echo -e "${YELLOW}Step 4: Generating crypto material...${NC}"
 # Manually call createOrgs to ensure crypto is generated
-if [ -f "./organizations/cryptogen/crypto-config-exporterbank.yaml" ]; then
-    echo "Creating Exporter Bank Identities..."
-    cryptogen generate --config=./organizations/cryptogen/crypto-config-exporterbank.yaml --output="organizations"
+if [ -f "./organizations/cryptogen/crypto-config-commercialbank.yaml" ]; then
+    echo "Creating commercialbank Identities..."
+    cryptogen generate --config=./organizations/cryptogen/crypto-config-commercialbank.yaml --output="organizations"
     
     echo "Creating National Bank Identities..."
     cryptogen generate --config=./organizations/cryptogen/crypto-config-nationalbank.yaml --output="organizations"
     
-    echo "Creating NCAT Identities..."
+    echo "Creating ECTA Identities..."
     cryptogen generate --config=./organizations/cryptogen/crypto-config-ncat.yaml --output="organizations"
     
     echo "Creating Shipping Line Identities..."
@@ -111,10 +111,10 @@ fi
 echo ""
 
 echo -e "${YELLOW}Step 6: Verifying crypto material...${NC}"
-if [ -d "organizations/peerOrganizations/exporterbank.coffee-export.com/msp" ]; then
-    echo -e "${GREEN}✅ Exporter Bank crypto verified${NC}"
+if [ -d "organizations/peerOrganizations/commercialbank.coffee-export.com/msp" ]; then
+    echo -e "${GREEN}✅ commercialbank crypto verified${NC}"
 else
-    echo -e "${RED}❌ Exporter Bank crypto missing${NC}"
+    echo -e "${RED}❌ commercialbank crypto missing${NC}"
     exit 1
 fi
 
@@ -138,7 +138,7 @@ echo -e "${YELLOW}Step 8: Checking container status...${NC}"
 docker ps -a | grep -E "(peer0|orderer|cli)"
 
 # Check if containers are running (not exited)
-RUNNING_COUNT=$(docker ps | grep -c "peer0.exporterbank" || echo "0")
+RUNNING_COUNT=$(docker ps | grep -c "peer0.commercialbank" || echo "0")
 if [ "$RUNNING_COUNT" -gt 0 ]; then
     echo ""
     echo -e "${GREEN}✅ Containers are running successfully!${NC}"
@@ -157,7 +157,7 @@ else
     docker logs orderer.coffee-export.com 2>&1 | tail -20
     echo ""
     echo -e "${CYAN}Peer logs:${NC}"
-    docker logs peer0.exporterbank.coffee-export.com 2>&1 | tail -20
+    docker logs peer0.commercialbank.coffee-export.com 2>&1 | tail -20
     exit 1
 fi
 

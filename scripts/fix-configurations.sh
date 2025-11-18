@@ -68,7 +68,7 @@ generate_secret() {
 }
 
 # Create production env files with unique secrets
-for api in exporter-bank national-bank ncat shipping-line; do
+for api in banker nb-regulatory exporter ncat shipping-line custom-authorities; do
     if [ -f "api/$api/.env.example" ]; then
         SECRET=$(generate_secret)
         
@@ -104,7 +104,7 @@ echo ""
 
 # Fix 3: Remove user-management contract references
 echo "Fix 3: Fixing user-management contract references..."
-for api in exporter-bank national-bank ncat shipping-line; do
+for api in banker nb-regulatory exporter ncat shipping-line custom-authorities; do
     GATEWAY_FILE="api/$api/src/fabric/gateway.ts"
     
     if [ -f "$GATEWAY_FILE" ]; then
@@ -126,7 +126,7 @@ echo ""
 
 # Fix 4: Make asLocalhost configurable
 echo "Fix 4: Making asLocalhost configurable..."
-for api in exporter-bank national-bank ncat shipping-line; do
+for api in banker nb-regulatory exporter ncat shipping-line custom-authorities; do
     GATEWAY_FILE="api/$api/src/fabric/gateway.ts"
     
     if [ -f "$GATEWAY_FILE" ]; then
@@ -199,9 +199,10 @@ PROFILE
 }
 
 # Generate profiles for all organizations
-generate_profile "ExporterBank" "exporterbank" "7051"
-generate_profile "NationalBank" "nationalbank" "8051"
-generate_profile "NCAT" "ncat" "9051"
+generate_profile "Banker" "banker" "7051"
+generate_profile "NBRegulatory" "nbregulatory" "8051"
+generate_profile "Exporter" "exporter" "6051"
+generate_profile "ECTA" "ncat" "9051"
 generate_profile "ShippingLine" "shippingline" "10051"
 
 echo "Connection profiles generated successfully!"
@@ -245,13 +246,15 @@ check_port() {
 # Check all ports
 echo "Checking port availability..."
 check_port 7050 "Orderer"
-check_port 7051 "Peer0 ExporterBank"
-check_port 8051 "Peer0 NationalBank"
-check_port 9051 "Peer0 NCAT"
+check_port 7051 "Peer0 Banker"
+check_port 8051 "Peer0 NBRegulatory"
+check_port 6051 "Peer0 Exporter"
+check_port 9051 "Peer0 ECTA"
 check_port 10051 "Peer0 ShippingLine"
-check_port 3001 "Exporter Bank API"
+check_port 3001 "commercialbank API"
 check_port 3002 "National Bank API"
-check_port 3003 "NCAT API"
+check_port 3006 "Exporter API"
+check_port 3003 "ECTA API"
 check_port 3004 "Shipping Line API"
 check_port 5173 "Frontend"
 echo ""
@@ -288,7 +291,7 @@ echo ""
 
 # Check API .env files
 echo "Checking API environment files..."
-for api in exporter-bank national-bank ncat shipping-line; do
+for api in banker nb-regulatory exporter ncat shipping-line custom-authorities; do
     if [ -f "api/$api/.env" ]; then
         echo "✅ api/$api/.env exists"
     else
@@ -369,7 +372,7 @@ npm run chaincode:deploy
 ### For Production
 ```bash
 # 1. Copy production env files
-for api in exporter-bank national-bank ncat shipping-line; do
+for api in banker nb-regulatory exporter ncat shipping-line custom-authorities; do
   cp api/$api/.env.production.example api/$api/.env.production
 done
 
@@ -397,7 +400,7 @@ If you need to rollback changes:
 ```bash
 # Restore original files from backups
 mv frontend/vite.config.js.backup frontend/vite.config.js
-mv api/exporter-bank/src/fabric/gateway.ts.backup api/exporter-bank/src/fabric/gateway.ts
+mv api/commercial-bank/src/fabric/gateway.ts.backup api/commercial-bank/src/fabric/gateway.ts
 # ... repeat for other APIs
 ```
 
@@ -411,7 +414,7 @@ grep "port:" frontend/vite.config.js
 # Should show: port: 5173
 
 # 2. Check JWT secrets are unique
-for api in exporter-bank national-bank ncat shipping-line; do
+for api in banker nb-regulatory exporter ncat shipping-line custom-authorities; do
   echo "=== $api ==="
   grep "JWT_SECRET=" api/$api/.env.production.example
 done

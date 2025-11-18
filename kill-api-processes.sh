@@ -39,8 +39,9 @@ echo "🧹 Cleaning up background processes..."
 # Kill any npm/node processes that might be related to our APIs
 pkill -f "npm run dev" 2>/dev/null || true
 pkill -f "ts-node-dev" 2>/dev/null || true
-pkill -f "exporter-bank" 2>/dev/null || true
-pkill -f "national-bank" 2>/dev/null || true
+pkill -f "banker" 2>/dev/null || true
+pkill -f "nb-regulatory" 2>/dev/null || true
+pkill -f "exporter" 2>/dev/null || true
 pkill -f "ncat.*api" 2>/dev/null || true
 pkill -f "shipping-line" 2>/dev/null || true
 
@@ -50,7 +51,9 @@ echo ""
 echo "✅ Port cleanup complete!"
 echo ""
 echo "Now you can start the APIs:"
-echo "  cd /c/cbc/api/exporter-bank && npm run dev"
+echo "  cd /c/cbc/api/commercial-bank && npm run dev"
 echo "  cd /c/cbc/api/national-bank && npm run dev"
+echo "  cd /c/cbc/api/exporter && npm run dev"
 echo "  cd /c/cbc/api/ncat && npm run dev"
 echo "  cd /c/cbc/api/shipping-line && npm run dev"
+echo "  cd /c/cbc/api/custom-authorities && npm run dev"

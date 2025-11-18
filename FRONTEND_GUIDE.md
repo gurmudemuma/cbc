@@ -166,7 +166,7 @@ Features:
 
 **Route:** `/exports`
 
-**Access:** Exporter Bank only
+**Access:** commercialbank only
 
 **Features:**
 - Export records table
@@ -183,7 +183,7 @@ Features:
 
 **Route:** `/quality`
 
-**Access:** NCAT only
+**Access:** ECTA only
 
 **Features:**
 - Certification records table
@@ -491,7 +491,7 @@ Set production environment variables:
 VITE_API_BASE_URL=https://api.yourdomain.com
 VITE_EXPORTER_API=https://api.yourdomain.com/exporter
 VITE_NATIONALBANK_API=https://api.yourdomain.com/nationalbank
-VITE_NCAT_API=https://api.yourdomain.com/ncat
+VITE_ECTA_API=https://api.yourdomain.com/ncat
 VITE_SHIPPING_API=https://api.yourdomain.com/shipping
 ```
 

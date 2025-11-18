@@ -78,7 +78,7 @@ const getEnvVar = (key, fallback) => {
 export const API_ENDPOINTS = {
   exporter: getEnvVar('VITE_EXPORTER_API', 'http://localhost:3001/api'),
   nationalbank: getEnvVar('VITE_NATIONALBANK_API', 'http://localhost:3002/api'),
-  ncat: getEnvVar('VITE_NCAT_API', 'http://localhost:3003/api'),
+  ncat: getEnvVar('VITE_ECTA_API', 'http://localhost:3003/api'),
   shipping: getEnvVar('VITE_SHIPPING_API', 'http://localhost:3004/api'),
 };
 
@@ -86,7 +86,7 @@ export const API_ENDPOINTS = {
 export const ORGANIZATIONS = [
   { 
     value: 'exporter', 
-    label: 'Exporter Bank', 
+    label: 'commercialbank', 
     apiUrl: API_ENDPOINTS.exporter,
     port: 3001 
   },
@@ -98,7 +98,7 @@ export const ORGANIZATIONS = [
   },
   { 
     value: 'ncat', 
-    label: 'NCAT', 
+    label: 'ECTA', 
     apiUrl: API_ENDPOINTS.ncat,
     port: 3003 
   },
@@ -135,7 +135,7 @@ cat > "frontend/.env.production.example" << 'EOF'
 # API Endpoints - Update these for your production environment
 VITE_EXPORTER_API=https://api.coffeeexport.com/exporter/api
 VITE_NATIONALBANK_API=https://api.coffeeexport.com/nationalbank/api
-VITE_NCAT_API=https://api.coffeeexport.com/ncat/api
+VITE_ECTA_API=https://api.coffeeexport.com/ncat/api
 VITE_SHIPPING_API=https://api.coffeeexport.com/shipping/api
 
 # Optional: Analytics, monitoring, etc.
@@ -387,7 +387,7 @@ cat > "frontend/.env.staging.example" << 'EOF'
 # API Endpoints - Staging environment
 VITE_EXPORTER_API=https://staging-api.coffeeexport.com/exporter/api
 VITE_NATIONALBANK_API=https://staging-api.coffeeexport.com/nationalbank/api
-VITE_NCAT_API=https://staging-api.coffeeexport.com/ncat/api
+VITE_ECTA_API=https://staging-api.coffeeexport.com/ncat/api
 VITE_SHIPPING_API=https://staging-api.coffeeexport.com/shipping/api
 EOF
 

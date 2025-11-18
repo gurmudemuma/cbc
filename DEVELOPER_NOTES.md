@@ -24,13 +24,13 @@ The project uses simplified directory names, not full domain names:
 
 ```typescript
 // ✅ CORRECT
-'network/organizations/exporter-bank/...'
+'network/organizations/commercialbank/...'
 'network/organizations/national-bank/...'
 'network/organizations/ncat/...'
 'network/organizations/shipping-line/...'
 
 // ❌ WRONG
-'network/organizations/peerOrganizations/exporterbank.coffee-export.com/...'
+'network/organizations/peerOrganizations/commercialbank.coffee-export.com/...'
 ```
 
 ### 3. Async/Await in Express Middleware
@@ -61,7 +61,7 @@ export const handler = async (req: Request, res: Response): Promise<void> => {
 ```
 CBC/
 ├── api/                          # Backend API services
-│   ├── exporter-bank/           # Port 3001
+│   ├── commercialbank/           # Port 3001
 │   ├── national-bank/           # Port 3002
 │   ├── ncat/                    # Port 3003
 │   └── shipping-line/           # Port 3004
@@ -91,8 +91,8 @@ cd network
 
 2. **Start API Services (in separate terminals):**
 ```bash
-# Terminal 1 - Exporter Bank
-cd api/exporter-bank
+# Terminal 1 - commercialbank
+cd api/commercialbank
 npm install
 npm run dev
 
@@ -101,7 +101,7 @@ cd api/national-bank
 npm install
 npm run dev
 
-# Terminal 3 - NCAT
+# Terminal 3 - ECTA
 cd api/ncat
 npm install
 npm run dev
@@ -243,13 +243,13 @@ PENDING
   ↓
 FX_APPROVED (by National Bank)
   ↓
-QUALITY_CERTIFIED (by NCAT)
+QUALITY_CERTIFIED (by ECTA)
   ↓
 SHIPMENT_SCHEDULED (by Shipping Line)
   ↓
 SHIPPED (by Shipping Line)
   ↓
-COMPLETED (by Exporter Bank)
+COMPLETED (by commercialbank)
 
 Rejection paths:
 PENDING → FX_REJECTED

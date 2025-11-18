@@ -20,11 +20,11 @@ setGlobals() {
   fi
   
   if [ $USING_ORG -eq 1 ]; then
-    export CORE_PEER_LOCALMSPID="ExporterBankMSP"
-    export CORE_PEER_TLS_ROOTCERT_FILE=${NETWORK_DIR}/organizations/peerOrganizations/exporterbank.coffee-export.com/peers/peer0.exporterbank.coffee-export.com/tls/ca.crt
-    export CORE_PEER_MSPCONFIGPATH=${NETWORK_DIR}/organizations/peerOrganizations/exporterbank.coffee-export.com/users/Admin@exporterbank.coffee-export.com/msp
+    export CORE_PEER_LOCALMSPID="CommercialBankMSP"
+    export CORE_PEER_TLS_ROOTCERT_FILE=${NETWORK_DIR}/organizations/peerOrganizations/commercialbank.coffee-export.com/peers/peer0.commercialbank.coffee-export.com/tls/ca.crt
+    export CORE_PEER_MSPCONFIGPATH=${NETWORK_DIR}/organizations/peerOrganizations/commercialbank.coffee-export.com/users/Admin@commercialbank.coffee-export.com/msp
     export CORE_PEER_ADDRESS=localhost:7051
-    export CORE_PEER_TLS_SERVERHOSTOVERRIDE=peer0.exporterbank.coffee-export.com
+    export CORE_PEER_TLS_SERVERHOSTOVERRIDE=peer0.commercialbank.coffee-export.com
   elif [ $USING_ORG -eq 2 ]; then
     export CORE_PEER_LOCALMSPID="NationalBankMSP"
     export CORE_PEER_TLS_ROOTCERT_FILE=${NETWORK_DIR}/organizations/peerOrganizations/nationalbank.coffee-export.com/peers/peer0.nationalbank.coffee-export.com/tls/ca.crt
@@ -32,11 +32,11 @@ setGlobals() {
     export CORE_PEER_ADDRESS=localhost:8051
     export CORE_PEER_TLS_SERVERHOSTOVERRIDE=peer0.nationalbank.coffee-export.com
   elif [ $USING_ORG -eq 3 ]; then
-    export CORE_PEER_LOCALMSPID="NCATMSP"
-    export CORE_PEER_TLS_ROOTCERT_FILE=${NETWORK_DIR}/organizations/peerOrganizations/ncat.coffee-export.com/peers/peer0.ncat.coffee-export.com/tls/ca.crt
-    export CORE_PEER_MSPCONFIGPATH=${NETWORK_DIR}/organizations/peerOrganizations/ncat.coffee-export.com/users/Admin@ncat.coffee-export.com/msp
+    export CORE_PEER_LOCALMSPID="ECTAMSP"
+    export CORE_PEER_TLS_ROOTCERT_FILE=${NETWORK_DIR}/organizations/peerOrganizations/ecta.coffee-export.com/peers/peer0.ecta.coffee-export.com/tls/ca.crt
+    export CORE_PEER_MSPCONFIGPATH=${NETWORK_DIR}/organizations/peerOrganizations/ecta.coffee-export.com/users/Admin@ecta.coffee-export.com/msp
     export CORE_PEER_ADDRESS=localhost:9051
-    export CORE_PEER_TLS_SERVERHOSTOVERRIDE=peer0.ncat.coffee-export.com
+    export CORE_PEER_TLS_SERVERHOSTOVERRIDE=peer0.ecta.coffee-export.com
   elif [ $USING_ORG -eq 4 ]; then
     export CORE_PEER_LOCALMSPID="ShippingLineMSP"
     export CORE_PEER_TLS_ROOTCERT_FILE=${NETWORK_DIR}/organizations/peerOrganizations/shippingline.coffee-export.com/peers/peer0.shippingline.coffee-export.com/tls/ca.crt
@@ -45,10 +45,16 @@ setGlobals() {
     export CORE_PEER_TLS_SERVERHOSTOVERRIDE=peer0.shippingline.coffee-export.com
   elif [ $USING_ORG -eq 5 ]; then
     export CORE_PEER_LOCALMSPID="CustomAuthoritiesMSP"
-    export CORE_PEER_TLS_ROOTCERT_FILE=${NETWORK_DIR}/organizations/peerOrganizations/customauthorities.coffee-export.com/peers/peer0.customauthorities.coffee-export.com/tls/ca.crt
-    export CORE_PEER_MSPCONFIGPATH=${NETWORK_DIR}/organizations/peerOrganizations/customauthorities.coffee-export.com/users/Admin@customauthorities.coffee-export.com/msp
+    export CORE_PEER_TLS_ROOTCERT_FILE=${NETWORK_DIR}/organizations/peerOrganizations/custom-authorities.coffee-export.com/peers/peer0.custom-authorities.coffee-export.com/tls/ca.crt
+    export CORE_PEER_MSPCONFIGPATH=${NETWORK_DIR}/organizations/peerOrganizations/custom-authorities.coffee-export.com/users/Admin@custom-authorities.coffee-export.com/msp
     export CORE_PEER_ADDRESS=localhost:11051
-    export CORE_PEER_TLS_SERVERHOSTOVERRIDE=peer0.customauthorities.coffee-export.com
+    export CORE_PEER_TLS_SERVERHOSTOVERRIDE=peer0.custom-authorities.coffee-export.com
+  elif [ $USING_ORG -eq 6 ]; then
+    export CORE_PEER_LOCALMSPID="ECXMSP"
+    export CORE_PEER_TLS_ROOTCERT_FILE=${NETWORK_DIR}/organizations/peerOrganizations/ecx.coffee-export.com/peers/peer0.ecx.coffee-export.com/tls/ca.crt
+    export CORE_PEER_MSPCONFIGPATH=${NETWORK_DIR}/organizations/peerOrganizations/ecx.coffee-export.com/users/Admin@ecx.coffee-export.com/msp
+    export CORE_PEER_ADDRESS=localhost:12051
+    export CORE_PEER_TLS_SERVERHOSTOVERRIDE=peer0.ecx.coffee-export.com
   else
     echo "================== ERROR !!! ORG Unknown =================="
   fi
@@ -71,15 +77,17 @@ setGlobalsCLI() {
   fi
   
   if [ $USING_ORG -eq 1 ]; then
-    export CORE_PEER_ADDRESS=peer0.exporterbank.coffee-export.com:7051
+    export CORE_PEER_ADDRESS=peer0.commercialbank.coffee-export.com:7051
   elif [ $USING_ORG -eq 2 ]; then
     export CORE_PEER_ADDRESS=peer0.nationalbank.coffee-export.com:8051
   elif [ $USING_ORG -eq 3 ]; then
-    export CORE_PEER_ADDRESS=peer0.ncat.coffee-export.com:9051
+    export CORE_PEER_ADDRESS=peer0.ecta.coffee-export.com:9051
   elif [ $USING_ORG -eq 4 ]; then
     export CORE_PEER_ADDRESS=peer0.shippingline.coffee-export.com:10051
   elif [ $USING_ORG -eq 5 ]; then
-    export CORE_PEER_ADDRESS=peer0.customauthorities.coffee-export.com:11051
+    export CORE_PEER_ADDRESS=peer0.custom-authorities.coffee-export.com:11051
+  elif [ $USING_ORG -eq 6 ]; then
+    export CORE_PEER_ADDRESS=peer0.ecx.coffee-export.com:12051
   else
     echo "================== ERROR !!! ORG Unknown =================="
   fi
@@ -103,19 +111,19 @@ parsePeerConnectionParameters() {
     local PEER_HOST
     local PEER_PORT
     if [ $ORG -eq 1 ]; then
-      PEER_HOST="peer0.exporterbank.coffee-export.com"
+      PEER_HOST="peer0.commercialbank.coffee-export.com"
       PEER_PORT="7051"
     elif [ $ORG -eq 2 ]; then
       PEER_HOST="peer0.nationalbank.coffee-export.com"
       PEER_PORT="8051"
     elif [ $ORG -eq 3 ]; then
-      PEER_HOST="peer0.ncat.coffee-export.com"
+      PEER_HOST="peer0.ecta.coffee-export.com"
       PEER_PORT="9051"
     elif [ $ORG -eq 4 ]; then
       PEER_HOST="peer0.shippingline.coffee-export.com"
       PEER_PORT="10051"
     elif [ $ORG -eq 5 ]; then
-      PEER_HOST="peer0.customauthorities.coffee-export.com"
+      PEER_HOST="peer0.custom-authorities.coffee-export.com"
       PEER_PORT="11051"
     fi
     

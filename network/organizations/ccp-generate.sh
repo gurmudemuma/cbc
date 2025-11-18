@@ -1,67 +1,104 @@
 #!/bin/bash
 
+# Generate connection profiles for all organizations
+
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
 function one_line_pem {
     echo "`awk 'NF {sub(/\\n/, ""); printf "%s\\\\\\\n",$0;}' $1`"
 }
 
 function json_ccp {
-    local PP=$(one_line_pem $4)
-    local CP=$(one_line_pem $5)
-    sed -e "s/\${ORG}/$1/" \
-        -e "s/\${ORGMSP}/$2/" \
-        -e "s/\${P0PORT}/$3/" \
-        -e "s#\${PEERPEM}#$PP#" \
-        -e "s#\${CAPEM}#$CP#" \
-        organizations/ccp-template.json
+    local ORG=$1
+    local ORGMSP=$2
+    local DOMAIN=$3
+    local P0PORT=$4
+    local CAPORT=$5
+    local PEERPEM=$SCRIPT_DIR/peerOrganizations/${DOMAIN}/tlsca/tlsca.${DOMAIN}-cert.pem
+    local CAPEM=$SCRIPT_DIR/peerOrganizations/${DOMAIN}/ca/ca.${DOMAIN}-cert.pem
+
+    sed -e "s/\${ORG}/$ORG/" \
+        -e "s/\${ORGMSP}/$ORGMSP/" \
+        -e "s/\${DOMAIN}/$DOMAIN/" \
+        -e "s/\${P0PORT}/$P0PORT/" \
+        -e "s/\${CAPORT}/$CAPORT/" \
+        -e "s#\${PEERPEM}#$PEERPEM#" \
+        -e "s#\${CAPEM}#$CAPEM#" \
+        $SCRIPT_DIR/ccp-template.json
 }
 
 function yaml_ccp {
-    local PP=$(one_line_pem $4)
-    local CP=$(one_line_pem $5)
-    sed -e "s/\${ORG}/$1/" \
-        -e "s/\${ORGMSP}/$2/" \
-        -e "s/\${P0PORT}/$3/" \
-        -e "s#\${PEERPEM}#$PP#" \
-        -e "s#\${CAPEM}#$CP#" \
-        organizations/ccp-template.yaml | sed -e $'s/\\\\n/\\\n          /g'
+    local ORG=$1
+    local ORGMSP=$2
+    local DOMAIN=$3
+    local P0PORT=$4
+    local CAPORT=$5
+    local PEERPEM=$SCRIPT_DIR/peerOrganizations/${DOMAIN}/tlsca/tlsca.${DOMAIN}-cert.pem
+    local CAPEM=$SCRIPT_DIR/peerOrganizations/${DOMAIN}/ca/ca.${DOMAIN}-cert.pem
+
+    sed -e "s/\${ORG}/$ORG/" \
+        -e "s/\${ORGMSP}/$ORGMSP/" \
+        -e "s/\${DOMAIN}/$DOMAIN/" \
+        -e "s/\${P0PORT}/$P0PORT/" \
+        -e "s/\${CAPORT}/$CAPORT/" \
+        -e "s#\${PEERPEM}#$PEERPEM#" \
+        -e "s#\${CAPEM}#$CAPEM#" \
+        $SCRIPT_DIR/ccp-template.yaml | sed -e $'s/\\\\n/\\\n          /g'
 }
 
-# ExporterBank
-ORG=exporterbank
-ORGMSP=ExporterBank
+# Generate connection profiles for CommercialBank
+ORG=CommercialBank
+ORGMSP=CommercialBankMSP
+DOMAIN=commercialbank.coffee-export.com
 P0PORT=7051
-PEERPEM=organizations/peerOrganizations/exporterbank.coffee-export.com/tlsca/tlsca.exporterbank.coffee-export.com-cert.pem
-CAPEM=organizations/peerOrganizations/exporterbank.coffee-export.com/ca/ca.exporterbank.coffee-export.com-cert.pem
+CAPORT=7054
 
-echo "$(json_ccp $ORG $ORGMSP $P0PORT $PEERPEM $CAPEM)" > organizations/peerOrganizations/exporterbank.coffee-export.com/connection-exporterbank.json
-echo "$(yaml_ccp $ORG $ORGMSP $P0PORT $PEERPEM $CAPEM)" > organizations/peerOrganizations/exporterbank.coffee-export.com/connection-exporterbank.yaml
+echo "Generating connection profile for ${ORG}..."
+json_ccp $ORG $ORGMSP $DOMAIN $P0PORT $CAPORT > $SCRIPT_DIR/peerOrganizations/${DOMAIN}/connection-${ORG,,}.json
+yaml_ccp $ORG $ORGMSP $DOMAIN $P0PORT $CAPORT > $SCRIPT_DIR/peerOrganizations/${DOMAIN}/connection-${ORG,,}.yaml
 
-# NationalBank
-ORG=nationalbank
-ORGMSP=NationalBank
+# Generate connection profiles for NationalBank
+ORG=NationalBank
+ORGMSP=NationalBankMSP
+DOMAIN=nationalbank.coffee-export.com
 P0PORT=8051
-PEERPEM=organizations/peerOrganizations/nationalbank.coffee-export.com/tlsca/tlsca.nationalbank.coffee-export.com-cert.pem
-CAPEM=organizations/peerOrganizations/nationalbank.coffee-export.com/ca/ca.nationalbank.coffee-export.com-cert.pem
+CAPORT=8054
 
-echo "$(json_ccp $ORG $ORGMSP $P0PORT $PEERPEM $CAPEM)" > organizations/peerOrganizations/nationalbank.coffee-export.com/connection-nationalbank.json
-echo "$(yaml_ccp $ORG $ORGMSP $P0PORT $PEERPEM $CAPEM)" > organizations/peerOrganizations/nationalbank.coffee-export.com/connection-nationalbank.yaml
+echo "Generating connection profile for ${ORG}..."
+json_ccp $ORG $ORGMSP $DOMAIN $P0PORT $CAPORT > $SCRIPT_DIR/peerOrganizations/${DOMAIN}/connection-${ORG,,}.json
+yaml_ccp $ORG $ORGMSP $DOMAIN $P0PORT $CAPORT > $SCRIPT_DIR/peerOrganizations/${DOMAIN}/connection-${ORG,,}.yaml
 
-# NCAT
-ORG=ncat
-ORGMSP=NCAT
+# Generate connection profiles for ECTA
+ORG=ECTA
+ORGMSP=ECTAMSP
+DOMAIN=ecta.coffee-export.com
 P0PORT=9051
-PEERPEM=organizations/peerOrganizations/ncat.coffee-export.com/tlsca/tlsca.ncat.coffee-export.com-cert.pem
-CAPEM=organizations/peerOrganizations/ncat.coffee-export.com/ca/ca.ncat.coffee-export.com-cert.pem
+CAPORT=9054
 
-echo "$(json_ccp $ORG $ORGMSP $P0PORT $PEERPEM $CAPEM)" > organizations/peerOrganizations/ncat.coffee-export.com/connection-ncat.json
-echo "$(yaml_ccp $ORG $ORGMSP $P0PORT $PEERPEM $CAPEM)" > organizations/peerOrganizations/ncat.coffee-export.com/connection-ncat.yaml
+echo "Generating connection profile for ${ORG}..."
+json_ccp $ORG $ORGMSP $DOMAIN $P0PORT $CAPORT > $SCRIPT_DIR/peerOrganizations/${DOMAIN}/connection-${ORG,,}.json
+yaml_ccp $ORG $ORGMSP $DOMAIN $P0PORT $CAPORT > $SCRIPT_DIR/peerOrganizations/${DOMAIN}/connection-${ORG,,}.yaml
 
-# ShippingLine
-ORG=shippingline
-ORGMSP=ShippingLine
+# Generate connection profiles for ShippingLine
+ORG=ShippingLine
+ORGMSP=ShippingLineMSP
+DOMAIN=shippingline.coffee-export.com
 P0PORT=10051
-PEERPEM=organizations/peerOrganizations/shippingline.coffee-export.com/tlsca/tlsca.shippingline.coffee-export.com-cert.pem
-CAPEM=organizations/peerOrganizations/shippingline.coffee-export.com/ca/ca.shippingline.coffee-export.com-cert.pem
+CAPORT=10054
 
-echo "$(json_ccp $ORG $ORGMSP $P0PORT $PEERPEM $CAPEM)" > organizations/peerOrganizations/shippingline.coffee-export.com/connection-shippingline.json
-echo "$(yaml_ccp $ORG $ORGMSP $P0PORT $PEERPEM $CAPEM)" > organizations/peerOrganizations/shippingline.coffee-export.com/connection-shippingline.yaml
+echo "Generating connection profile for ${ORG}..."
+json_ccp $ORG $ORGMSP $DOMAIN $P0PORT $CAPORT > $SCRIPT_DIR/peerOrganizations/${DOMAIN}/connection-${ORG,,}.json
+yaml_ccp $ORG $ORGMSP $DOMAIN $P0PORT $CAPORT > $SCRIPT_DIR/peerOrganizations/${DOMAIN}/connection-${ORG,,}.yaml
+
+# Generate connection profiles for CustomAuthorities
+ORG=CustomAuthorities
+ORGMSP=CustomAuthoritiesMSP
+DOMAIN=customauthorities.coffee-export.com
+P0PORT=11051
+CAPORT=11054
+
+echo "Generating connection profile for ${ORG}..."
+json_ccp $ORG $ORGMSP $DOMAIN $P0PORT $CAPORT > $SCRIPT_DIR/peerOrganizations/${DOMAIN}/connection-${ORG,,}.json
+yaml_ccp $ORG $ORGMSP $DOMAIN $P0PORT $CAPORT > $SCRIPT_DIR/peerOrganizations/${DOMAIN}/connection-${ORG,,}.yaml
+
+echo "Connection profiles generated successfully!"

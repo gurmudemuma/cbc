@@ -7,12 +7,12 @@ echo "Testing User-Management Chaincode"
 echo "=========================================="
 echo ""
 
-# Set environment for ExporterBank peer
-export CORE_PEER_LOCALMSPID="ExporterBankMSP"
+# Set environment for commercialbank peer
+export CORE_PEER_LOCALMSPID="CommercialBankMSP"
 export CORE_PEER_ADDRESS=localhost:7051
 export CORE_PEER_TLS_ENABLED=true
-export CORE_PEER_TLS_ROOTCERT_FILE=$PWD/network/organizations/peerOrganizations/exporterbank.coffee-export.com/peers/peer0.exporterbank.coffee-export.com/tls/ca.crt
-export CORE_PEER_MSPCONFIGPATH=$PWD/network/organizations/peerOrganizations/exporterbank.coffee-export.com/users/Admin@exporterbank.coffee-export.com/msp
+export CORE_PEER_TLS_ROOTCERT_FILE=$PWD/network/organizations/peerOrganizations/commercialbank.coffee-export.com/peers/peer0.commercialbank.coffee-export.com/tls/ca.crt
+export CORE_PEER_MSPCONFIGPATH=$PWD/network/organizations/peerOrganizations/commercialbank.coffee-export.com/users/Admin@commercialbank.coffee-export.com/msp
 
 echo "1. Querying installed chaincodes..."
 ./bin/peer lifecycle chaincode queryinstalled

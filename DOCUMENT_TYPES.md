@@ -70,7 +70,7 @@ NBE-TAX-{exportId}-{timestamp}.pdf
 
 ---
 
-## 3. NCAT Documents (Quality Certification)
+## 3. ECTA Documents (Quality Certification)
 
 ### **Storage Location**
 - Chaincode field: `qualityDocuments[]`
@@ -101,12 +101,12 @@ NBE-TAX-{exportId}-{timestamp}.pdf
 
 ### **Document Naming Convention**
 ```
-NCAT-QUALITY-CERT-{exportId}-{grade}-{timestamp}.pdf
-NCAT-INSPECTION-{exportId}-{timestamp}.pdf
-NCAT-CUPPING-{exportId}-{score}-{timestamp}.pdf
-NCAT-MOISTURE-{exportId}-{percentage}-{timestamp}.pdf
-NCAT-DEFECT-{exportId}-{timestamp}.pdf
-NCAT-SAMPLE-{exportId}-{sampleNumber}-{timestamp}.jpg
+ECTA-QUALITY-CERT-{exportId}-{grade}-{timestamp}.pdf
+ECTA-INSPECTION-{exportId}-{timestamp}.pdf
+ECTA-CUPPING-{exportId}-{score}-{timestamp}.pdf
+ECTA-MOISTURE-{exportId}-{percentage}-{timestamp}.pdf
+ECTA-DEFECT-{exportId}-{timestamp}.pdf
+ECTA-SAMPLE-{exportId}-{sampleNumber}-{timestamp}.jpg
 ```
 
 ### **Document Structure (On-Chain)**
@@ -285,7 +285,7 @@ https://ipfs.io/ipfs/QmXxXxXx...
 - FX approval letter is mandatory
 - All documents must be dated within last 90 days
 
-#### NCAT
+#### ECTA
 - Quality certificate must include grade assignment
 - Inspection report must be signed by certified inspector
 - Sample must match the export lot number
@@ -314,7 +314,7 @@ Every document action is recorded on-chain:
   "cid": "QmXxXxXx...",
   "version": 2,
   "uploadedBy": "ncat-inspector-001",
-  "organization": "NCATMSP",
+  "organization": "ECTAMSP",
   "timestamp": "2024-01-16T14:20:00Z",
   "txId": "abc123def456..."
 }
@@ -346,7 +346,7 @@ Every document action is recorded on-chain:
 
 ### **Frontend Upload Component**
 ```javascript
-// Document upload for NCAT
+// Document upload for ECTA
 const uploadQualityDocument = async (exportId, file) => {
   const formData = new FormData();
   formData.append('document', file);
@@ -411,7 +411,7 @@ router.post('/quality/:exportId/documents',
 
 For questions about document requirements:
 - **National Bank FX**: Contact Trade Finance Department
-- **NCAT Quality**: Contact Laboratory Services Division
+- **ECTA Quality**: Contact Laboratory Services Division
 - **Shipping**: Contact your designated shipping line
 - **Customs**: Contact Ethiopian Customs Commission
 

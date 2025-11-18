@@ -42,9 +42,9 @@ echo ""
 
 users_to_register=()
 
-# Check Exporter Bank
+# Check commercialbank
 if ! check_user_exists 3001 "exporter1"; then
-    users_to_register+=("3001:Exporter Bank:exporter1")
+    users_to_register+=("3001:commercialbank:exporter1")
 fi
 
 # Check National Bank
@@ -52,9 +52,9 @@ if ! check_user_exists 3002 "banker1"; then
     users_to_register+=("3002:National Bank:banker1")
 fi
 
-# Check NCAT
+# Check ECTA
 if ! check_user_exists 3003 "inspector1"; then
-    users_to_register+=("3003:NCAT:inspector1")
+    users_to_register+=("3003:ECTA:inspector1")
 fi
 
 # Check Shipping Line
@@ -67,9 +67,9 @@ if [ ${#users_to_register[@]} -eq 0 ]; then
     echo "✅ All users already exist! No registration needed."
     echo ""
     echo "📋 Current Users:"
-    echo "  Exporter Bank: exporter1 (port 3001)"
+    echo "  commercialbank: exporter1 (port 3001)"
     echo "  National Bank: banker1 (port 3002)"
-    echo "  NCAT: inspector1 (port 3003)"
+    echo "  ECTA: inspector1 (port 3003)"
     echo "  Shipping Line: shipper1 (port 3004)"
 else
     echo "🔧 ${#users_to_register[@]} users need to be registered:"

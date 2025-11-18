@@ -51,32 +51,53 @@ echo "==============================="
 pkill -f "npm run dev" 2>/dev/null || true
 
 # Create logs directory
-mkdir -p logs
+mkdir -p "$LOG_DIR"
+
+# Ensure wallets and env files exist
+mkdir -p "$API_DIR/custom-authorities/wallet" "$API_DIR/ncat/wallet" "$API_DIR/shipping-line/wallet" || true
+for svc in commercial-bank banker national-bank nb-regulatory ncat shipping-line custom-authorities; do
+  if [ -d "$API_DIR/$svc" ]; then
+    if [ ! -f "$API_DIR/$svc/.env" ] && [ -f "$API_DIR/$svc/.env.example" ]; then
+      cp "$API_DIR/$svc/.env.example" "$API_DIR/$svc/.env"
+    fi
+  fi
+done
 
 # Start APIs with proper line endings
-cd api
 
-echo "Starting Exporter Bank API..."
-nohup npm run dev --workspace=exporter-bank-api > ../logs/exporter-bank-new.log 2>&1 &
-EXPORTER_PID=$!
-echo $EXPORTER_PID > ../logs/exporter-bank-new.pid
+# Commercial Bank (supports legacy and refactored paths)
+echo "Starting Commercial Bank API..."
+if [ -d "$API_DIR/commercial-bank" ]; then
+  (cd "$API_DIR/commercial-bank" && nohup npm run dev > "$LOG_DIR/commercial-bank-new.log" 2>&1 & echo $! > "$LOG_DIR/commercial-bank-new.pid")
+elif [ -d "$API_DIR/banker" ]; then
+  (cd "$API_DIR/banker" && nohup npm run dev > "$LOG_DIR/commercial-bank-new.log" 2>&1 & echo $! > "$LOG_DIR/commercial-bank-new.pid")
+fi
 
+# National Bank (supports legacy and refactored paths)
 echo "Starting National Bank API..."
-nohup npm run dev --workspace=national-bank-api > ../logs/national-bank-new.log 2>&1 &
-NATIONAL_PID=$!
-echo $NATIONAL_PID > ../logs/national-bank-new.pid
+if [ -d "$API_DIR/national-bank" ]; then
+  (cd "$API_DIR/national-bank" && nohup npm run dev > "$LOG_DIR/national-bank-new.log" 2>&1 & echo $! > "$LOG_DIR/national-bank-new.pid")
+elif [ -d "$API_DIR/nb-regulatory" ]; then
+  (cd "$API_DIR/nb-regulatory" && nohup npm run dev > "$LOG_DIR/national-bank-new.log" 2>&1 & echo $! > "$LOG_DIR/national-bank-new.pid")
+fi
 
-echo "Starting NCAT API..."
-nohup npm run dev --workspace=ncat-api > ../logs/ncat-new.log 2>&1 &
-NCAT_PID=$!
-echo $NCAT_PID > ../logs/ncat-new.pid
+# ECTA
+echo "Starting ECTA API..."
+if [ -d "$API_DIR/ncat" ]; then
+  (cd "$API_DIR/ncat" && nohup npm run dev > "$LOG_DIR/ncat-new.log" 2>&1 & echo $! > "$LOG_DIR/ncat-new.pid")
+fi
 
+# Shipping Line
 echo "Starting Shipping Line API..."
-nohup npm run dev --workspace=shipping-line-api > ../logs/shipping-line-new.log 2>&1 &
-SHIPPING_PID=$!
-echo $SHIPPING_PID > ../logs/shipping-line-new.pid
+if [ -d "$API_DIR/shipping-line" ]; then
+  (cd "$API_DIR/shipping-line" && nohup npm run dev > "$LOG_DIR/shipping-line-new.log" 2>&1 & echo $! > "$LOG_DIR/shipping-line-new.pid")
+fi
 
-cd ..
+# Custom Authorities
+echo "Starting Custom Authorities API..."
+if [ -d "$API_DIR/custom-authorities" ]; then
+  (cd "$API_DIR/custom-authorities" && nohup npm run dev > "$LOG_DIR/custom-authorities-new.log" 2>&1 & echo $! > "$LOG_DIR/custom-authorities-new.pid")
+fi
 
 echo -e "${GREEN}✅ API services restarted${NC}"
 echo ""
@@ -86,11 +107,11 @@ echo "=========================="
 
 # Wait for services to start
 echo "Waiting for services to initialize..."
-sleep 10
+sleep 25
 
 # Check blockchain
 echo "Checking blockchain status..."
-if docker ps | grep -q "peer0.exporterbank"; then
+if docker ps | grep -q "peer0.commercialbank"; then
     echo -e "${GREEN}✅ Blockchain network is running${NC}"
 else
     echo -e "${RED}❌ Blockchain network issue${NC}"
@@ -99,7 +120,7 @@ fi
 # Check APIs
 echo "Checking API services..."
 API_COUNT=0
-for port in 3001 3002 3003 3004; do
+for port in 3001 3002 3003 3004 3005; do
     if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1; then
         echo -e "${GREEN}✅ API on port $port is running${NC}"
         ((API_COUNT++))
@@ -112,13 +133,13 @@ echo ""
 echo -e "${BLUE}📊 Final Status Report${NC}"
 echo "===================="
 
-if [ $API_COUNT -eq 4 ]; then
+if [ $API_COUNT -eq 5 ]; then
     echo -e "${GREEN}🎉 PERFECT! All services are running!${NC}"
 elif [ $API_COUNT -gt 0 ]; then
-    echo -e "${YELLOW}⚠️ Partial success: $API_COUNT/4 APIs running${NC}"
+    echo -e "${YELLOW}⚠️ Partial success: $API_COUNT/5 APIs running${NC}"
     echo -e "${YELLOW}APIs may still be starting up. Wait a few more minutes.${NC}"
 else
-    echo -e "${YELLOW}⚠️ APIs not responding yet, but blockchain is working${NC}"
+    echo -e "${RED}❌ APIs not responding yet${NC}"
 fi
 
 echo ""

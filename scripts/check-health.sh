@@ -46,16 +46,25 @@ echo ""
 
 failed=0
 
-check_health "Exporter Bank API" 3001 || ((failed++))
+check_health "Commercial Bank API" 3001 || ((failed++))
 echo ""
 
-check_health "National Bank API" 3002 || ((failed++))
+check_health "National Bank (NBE) API" 3002 || ((failed++))
 echo ""
 
-check_health "NCAT API" 3003 || ((failed++))
+check_health "ECTA API" 3003 || ((failed++))
 echo ""
 
 check_health "Shipping Line API" 3004 || ((failed++))
+echo ""
+
+check_health "Customs API" 3005 || ((failed++))
+echo ""
+
+check_health "ECX API" 3006 || ((failed++))
+echo ""
+
+check_health "Exporter Portal API" 3007 || ((failed++))
 echo ""
 
 # Summary

@@ -1,26 +1,26 @@
 ---
-# Exporter Bank API Deployment
+# commercialbank API Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: exporter-bank-api
+  name: commercialbank-api
   namespace: coffee-export
   labels:
-    app: exporter-bank-api
+    app: commercialbank-api
     tier: backend
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: exporter-bank-api
+      app: commercialbank-api
   template:
     metadata:
       labels:
-        app: exporter-bank-api
+        app: commercialbank-api
     spec:
       containers:
-      - name: exporter-bank-api
-        image: your-registry/cbc-api-exporter-bank:latest
+      - name: commercialbank-api
+        image: your-registry/cbc-api-commercialbank:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 3001
@@ -59,11 +59,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: exporter-bank-api
+  name: commercialbank-api
   namespace: coffee-export
 spec:
   selector:
-    app: exporter-bank-api
+    app: commercialbank-api
   ports:
   - protocol: TCP
     port: 3001
@@ -141,7 +141,7 @@ spec:
     targetPort: 3002
   type: ClusterIP
 ---
-# NCAT API Deployment
+# ECTA API Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:

@@ -69,7 +69,7 @@ cd /home/gu-da/cbc/network
 
 All APIs need updating for new states and functions. Here's what needs to change:
 
-#### 2.1 Update Exporter Bank API (`api/exporter-bank/`)
+#### 2.1 Update commercialbank API (`api/commercialbank/`)
 
 **New Endpoints Needed**:
 - `POST /exports/:id/submit-quality` - Submit for quality certification
@@ -90,7 +90,7 @@ All APIs need updating for new states and functions. Here's what needs to change
 - `POST /exports/:id/fx/approve` - Now requires QUALITY_CERTIFIED (not PENDING)
 - `GET /exports/pending-fx` - Filter by FX_PENDING (not PENDING)
 
-#### 2.3 Update NCAT API (`api/ncat/`)
+#### 2.3 Update ECTA API (`api/ncat/`)
 
 **New Endpoints Needed**:
 - `POST /exports/:id/origin-certificate` - Issue certificate of origin
@@ -194,7 +194,7 @@ export const StatusColors = {
 Already updated in previous work, but verify workflow sequence:
 - Exporter: Submit for Quality → Submit for FX → Submit to Customs
 - Bank: Approve FX (only after quality) → Confirm Payment → Confirm Repatriation
-- NCAT: Certify Quality → Issue Origin Certificate
+- ECTA: Certify Quality → Issue Origin Certificate
 - Shipping: Schedule (only after export customs) → Confirm Shipment → Notify Arrival
 - Customs: Clear Export Customs (new) + Clear Import Customs (new)
 

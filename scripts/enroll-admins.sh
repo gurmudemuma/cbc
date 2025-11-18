@@ -98,10 +98,12 @@ ENROLLSCRIPT
 }
 
 # Enroll admins for all organizations
-enroll_admin "Exporter Bank" "exporterbank.coffee-export.com" "ExporterBankMSP" "$PROJECT_ROOT/api/exporter-bank"
+# Note: Using actual peer organization domain names from network/organizations/peerOrganizations/
+enroll_admin "Commercial Bank" "commercialbank.coffee-export.com" "CommercialBankMSP" "$PROJECT_ROOT/api/commercial-bank"
 enroll_admin "National Bank" "nationalbank.coffee-export.com" "NationalBankMSP" "$PROJECT_ROOT/api/national-bank"
-enroll_admin "NCAT" "ncat.coffee-export.com" "NCATMSP" "$PROJECT_ROOT/api/ncat"
+enroll_admin "ECTA" "ecta.coffee-export.com" "ECTAMSP" "$PROJECT_ROOT/api/ecta"
 enroll_admin "Shipping Line" "shippingline.coffee-export.com" "ShippingLineMSP" "$PROJECT_ROOT/api/shipping-line"
+enroll_admin "Custom Authorities" "custom-authorities.coffee-export.com" "CustomAuthoritiesMSP" "$PROJECT_ROOT/api/custom-authorities"
 
 echo "=========================================="
 echo -e "${GREEN}✅ All admin users enrolled successfully!${NC}"

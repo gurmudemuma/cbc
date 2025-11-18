@@ -157,21 +157,21 @@ echo "Creating channel ${CHANNEL_NAME}"
 createChannel
 
 ## Join all the peers to the channel
-echo "Joining ExporterBank peer to the channel..."
+echo "Joining commercialbank peer to the channel..."
 joinChannel 1
 echo "Joining NationalBank peer to the channel..."
 joinChannel 2
-echo "Joining NCAT peer to the channel..."
+echo "Joining ECTA peer to the channel..."
 joinChannel 3
 echo "Joining ShippingLine peer to the channel..."
 joinChannel 4
 
 ## Set the anchor peers for each org in the channel
-echo "Setting anchor peer for ExporterBank..."
+echo "Setting anchor peer for commercialbank..."
 setAnchorPeer 1
 echo "Setting anchor peer for NationalBank..."
 setAnchorPeer 2
-echo "Setting anchor peer for NCAT..."
+echo "Setting anchor peer for ECTA..."
 setAnchorPeer 3
 echo "Setting anchor peer for ShippingLine..."
 setAnchorPeer 4

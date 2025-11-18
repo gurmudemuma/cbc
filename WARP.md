@@ -6,7 +6,7 @@ Project overview
 - Consortium blockchain for coffee exports built on Hyperledger Fabric. Components:
   - Blockchain network and ops: `network/` (Docker Compose + scripts)
   - Smart contracts (chaincode): Go in `chaincode/coffee-export` and `chaincode/user-management`
-  - API layer: TypeScript/Express services per organization in `api/` (exporter-bank, national-bank, ncat, shipping-line, custom-authorities) with shared utilities in `api/shared/`
+  - API layer: TypeScript/Express services per organization in `api/` (commercialbank, national-bank, ncat, shipping-line, custom-authorities) with shared utilities in `api/shared/`
   - Frontend: React + Vite in `frontend/`
   - IPFS daemon (required) for document storage
 
@@ -71,7 +71,7 @@ Common commands
 - APIs (per service)
   - Dev (hot reload):
     ```bash path=null start=null
-    cd api/exporter-bank        # or national-bank | ncat | shipping-line | custom-authorities
+    cd api/commercialbank        # or national-bank | ncat | shipping-line | custom-authorities
     cp .env.example .env
     npm run dev
     ```
@@ -95,7 +95,7 @@ Common commands
     ```
   - API (single service):
     ```bash path=null start=null
-    cd api/exporter-bank
+    cd api/commercialbank
     npm run lint
     ```
   - Frontend:
@@ -113,12 +113,12 @@ Common commands
   - Single workspace:
     ```bash path=null start=null
     cd api
-    npm run test --workspace exporter-bank
-    # or: npm run test -w exporter-bank
+    npm run test --workspace commercialbank
+    # or: npm run test -w commercialbank
     ```
   - From a service dir (single file / name):
     ```bash path=null start=null
-    cd api/exporter-bank
+    cd api/commercialbank
     npm test -- src/__tests__/auth.test.ts
     npm test -- -t "createExport"       # by test name pattern
     ```
@@ -154,7 +154,7 @@ High-level architecture
   - Shared `coffee-export-network` for inter-container communication
   - IPFS runs as container (ipfs/kubo:v0.32.1) on port 5001
 - Network (network/)
-  - `network.sh` manages lifecycle: generate org crypto, bring up orderer + peers (CouchDB backing), create channel, deploy chaincode (coffee-export, user-management). Compose file defines 5 peers (ExporterBank, NationalBank, NCAT, ShippingLine, CustomAuthorities), an orderer, CouchDBs, and a Fabric tools CLI.
+  - `network.sh` manages lifecycle: generate org crypto, bring up orderer + peers (CouchDB backing), create channel, deploy chaincode (coffee-export, user-management). Compose file defines 5 peers (commercialbank, NationalBank, ECTA, ShippingLine, CustomAuthorities), an orderer, CouchDBs, and a Fabric tools CLI.
 - Smart contracts (chaincode/)
   - `coffee-export`: export lifecycle state machine (Pending → FX → Quality → Shipment → Completed/Rejected/Cancelled). Implements transactions like `CreateExportRequest`, `ApproveFX`, `IssueQualityCertificate`, etc.
   - `user-management`: on-ledger user registry with username/email composite keys and bcrypt-hashed passwords.
@@ -162,7 +162,7 @@ High-level architecture
   - Per-organization Express service exposing role-specific endpoints. Uses a singleton Fabric gateway (`src/fabric/gateway.ts`) that:
     - Loads connection profile from env, enrolls/imports admin into filesystem wallet, connects to channel, and exposes contracts.
   - Shared cross-cutting concerns (`api/shared/`): env validation, security hardening (helmet/CORS/rate limiting), websocket notifications, required IPFS integration, input sanitization, password/email validation.
-  - Auth via JWT with middleware; routes segmented by domain (e.g., `exports`, `fx`, `quality`, `shipments`). Tests exist primarily in `api/exporter-bank/src/__tests__/`.
+  - Auth via JWT with middleware; routes segmented by domain (e.g., `exports`, `fx`, `quality`, `shipments`). Tests exist primarily in `api/commercialbank/src/__tests__/`.
 - Frontend (frontend/)
   - Single Vite app targeting all roles; endpoints configured via `.env` (`VITE_*` vars). Consumes APIs on `http://localhost:3001-3004` by default.
 - IPFS (required)

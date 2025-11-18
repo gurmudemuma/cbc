@@ -45,8 +45,8 @@ This handles:
 ## What's New in v2.0
 
 ### Chaincode Changes
-- **National Bank creates export requests** (not Exporter Bank)
-- **New Banking Approval stage** for Exporter Bank financial validation
+- **National Bank creates export requests** (not commercialbank)
+- **New Banking Approval stage** for commercialbank financial validation
 - **Updated status constants**:
   - `BANKING_PENDING`
   - `BANKING_APPROVED`
@@ -98,7 +98,7 @@ Choose one:
 # Install API dependencies
 cd api
 npm install
-cd exporter-bank && npm install && cd ..
+cd commercialbank && npm install && cd ..
 cd national-bank && npm install && cd ..
 cd ncat && npm install && cd ..
 cd shipping-line && npm install && cd ..
@@ -113,7 +113,7 @@ cd frontend && npm install && cd ..
 ```bash
 # Copy environment templates
 cp .env.example .env
-cp api/exporter-bank/.env.example api/exporter-bank/.env
+cp api/commercialbank/.env.example api/commercialbank/.env
 cp api/national-bank/.env.example api/national-bank/.env
 cp api/ncat/.env.example api/ncat/.env
 cp api/shipping-line/.env.example api/shipping-line/.env
@@ -138,7 +138,7 @@ cd network
 ./scripts/dev-apis.sh
 
 # Option B: Start individually
-cd api/exporter-bank && npm run dev &
+cd api/commercialbank && npm run dev &
 cd api/national-bank && npm run dev &
 cd api/ncat && npm run dev &
 cd api/shipping-line && npm run dev &
@@ -157,7 +157,7 @@ Access at: http://localhost:5173
 
 ```bash
 # Check chaincode version
-docker exec peer0.exporterbank.coffee-export.com \
+docker exec peer0.commercialbank.coffee-export.com \
   peer lifecycle chaincode querycommitted -C coffeechannel
 
 # Should show coffee-export version 2.0, sequence 2
@@ -167,7 +167,7 @@ docker exec peer0.exporterbank.coffee-export.com \
 1. Login as National Bank user
 2. Create export request (blockchain record created)
 3. Approve FX
-4. Login as Exporter Bank user
+4. Login as commercialbank user
 5. Approve banking/financial validation
 6. Continue through quality → customs → shipping
 7. Check Dashboard to see workflow chart with actor info
@@ -180,7 +180,7 @@ docker exec peer0.exporterbank.coffee-export.com \
 
 ```bash
 # Build all API images
-for service in exporter-bank national-bank ncat shipping-line; do
+for service in commercialbank national-bank ncat shipping-line; do
   docker build -t your-registry/cbc-api-$service:latest \
     -f api/$service/Dockerfile \
     api/$service
@@ -258,7 +258,7 @@ CMD ["node", "dist/index.js"]
 docker login
 
 # Push images
-for service in exporter-bank national-bank ncat shipping-line; do
+for service in commercialbank national-bank ncat shipping-line; do
   docker push your-registry/cbc-api-$service:latest
 done
 
@@ -320,7 +320,7 @@ kubectl get svc -n coffee-export
 kubectl get ingress -n coffee-export
 
 # View logs
-kubectl logs -f deployment/exporter-bank-api -n coffee-export
+kubectl logs -f deployment/commercialbank-api -n coffee-export
 ```
 
 ### 6. Horizontal Pod Autoscaling
@@ -329,13 +329,13 @@ kubectl logs -f deployment/exporter-bank-api -n coffee-export
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: exporter-bank-api-hpa
+  name: commercialbank-api-hpa
   namespace: coffee-export
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: exporter-bank-api
+    name: commercialbank-api
   minReplicas: 3
   maxReplicas: 10
   metrics:
@@ -397,11 +397,11 @@ ENCRYPTION_KEY=$(openssl rand -base64 64)
 
 # Store in AWS Secrets Manager
 aws secretsmanager create-secret \
-  --name cbc/exporter-bank/jwt-secret \
+  --name cbc/commercialbank/jwt-secret \
   --secret-string "$JWT_SECRET"
 
 aws secretsmanager create-secret \
-  --name cbc/exporter-bank/encryption-key \
+  --name cbc/commercialbank/encryption-key \
   --secret-string "$ENCRYPTION_KEY"
 ```
 
@@ -529,9 +529,9 @@ EOF
 
 upstream exporter_bank_api {
     least_conn;
-    server exporter-bank-api-1:3001 max_fails=3 fail_timeout=30s;
-    server exporter-bank-api-2:3001 max_fails=3 fail_timeout=30s;
-    server exporter-bank-api-3:3001 max_fails=3 fail_timeout=30s;
+    server commercialbank-api-1:3001 max_fails=3 fail_timeout=30s;
+    server commercialbank-api-2:3001 max_fails=3 fail_timeout=30s;
+    server commercialbank-api-3:3001 max_fails=3 fail_timeout=30s;
 }
 
 # Rate limiting
@@ -554,8 +554,8 @@ server {
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-XSS-Protection "1; mode=block" always;
 
-    # Exporter Bank API
-    location /exporter-bank/ {
+    # commercialbank API
+    location /commercialbank/ {
         limit_req zone=api_limit burst=20 nodelay;
         
         proxy_pass http://exporter_bank_api/;
@@ -602,8 +602,8 @@ server {
 version: '3.8'
 
 services:
-  exporter-bank-api:
-    image: cbc/exporter-bank-api:${VERSION}
+  commercialbank-api:
+    image: cbc/commercialbank-api:${VERSION}
     deploy:
       replicas: 3
       restart_policy:
@@ -689,7 +689,7 @@ kubectl apply -f k8s/pod-security-policy.yaml
 
 ```bash
 # Scan images for vulnerabilities
-trivy image your-registry/cbc-api-exporter-bank:latest
+trivy image your-registry/cbc-api-commercialbank:latest
 
 # Scan Kubernetes manifests
 kubesec scan k8s/api-deployment.yaml
@@ -814,8 +814,8 @@ echo "Starting backup at $TIMESTAMP"
 
 # Backup Fabric ledger data
 echo "Backing up Fabric ledger..."
-docker exec peer0.exporterbank.coffee-export.com \
-  tar czf - /var/hyperledger/production > "$BACKUP_PATH/peer-exporterbank.tar.gz"
+docker exec peer0.commercialbank.coffee-export.com \
+  tar czf - /var/hyperledger/production > "$BACKUP_PATH/peer-commercialbank.tar.gz"
 
 docker exec peer0.nationalbank.coffee-export.com \
   tar czf - /var/hyperledger/production > "$BACKUP_PATH/peer-nationalbank.tar.gz"
@@ -979,8 +979,8 @@ jobs:
         
       - name: Build Docker images
         run: |
-          docker build -t cbc/exporter-bank-api:${{ github.ref_name }} \
-            -f api/exporter-bank/Dockerfile .
+          docker build -t cbc/commercialbank-api:${{ github.ref_name }} \
+            -f api/commercialbank/Dockerfile .
 
   deploy:
     needs: build-and-test
@@ -989,8 +989,8 @@ jobs:
     steps:
       - name: Deploy to production
         run: |
-          kubectl set image deployment/exporter-bank-api \
-            exporter-bank-api=cbc/exporter-bank-api:${{ github.ref_name }} \
+          kubectl set image deployment/commercialbank-api \
+            commercialbank-api=cbc/commercialbank-api:${{ github.ref_name }} \
             -n coffee-export
           
       - name: Run smoke tests
@@ -1029,7 +1029,7 @@ kubectl get endpoints -n coffee-export
 
 # Test service connectivity
 kubectl run test-pod --image=busybox -it --rm -- \
-  wget -O- http://exporter-bank-api:3001/health
+  wget -O- http://commercialbank-api:3001/health
 ```
 
 ### High Memory Usage
@@ -1039,7 +1039,7 @@ kubectl run test-pod --image=busybox -it --rm -- \
 kubectl top pods -n coffee-export
 
 # Increase memory limits
-kubectl set resources deployment/exporter-bank-api \
+kubectl set resources deployment/commercialbank-api \
   --limits=memory=1Gi -n coffee-export
 ```
 
@@ -1059,12 +1059,12 @@ fi
 echo "Rolling back to version $PREVIOUS_VERSION"
 
 # Update image tags
-kubectl set image deployment/exporter-bank-api \
-  exporter-bank-api=cbc/exporter-bank-api:$PREVIOUS_VERSION \
+kubectl set image deployment/commercialbank-api \
+  commercialbank-api=cbc/commercialbank-api:$PREVIOUS_VERSION \
   -n coffee-export
 
 # Wait for rollout
-kubectl rollout status deployment/exporter-bank-api -n coffee-export
+kubectl rollout status deployment/commercialbank-api -n coffee-export
 
 # Run smoke tests
 ./smoke-test.sh
@@ -1087,7 +1087,7 @@ API_BASE_URL="https://api.coffeeexport.com"
 echo "Running smoke tests..."
 
 # Test health endpoints
-for service in exporter-bank national-bank ncat shipping-line; do
+for service in commercialbank national-bank ncat shipping-line; do
   echo "Testing $service health..."
   response=$(curl -s -o /dev/null -w "%{http_code}" "$API_BASE_URL/$service/health")
   if [ "$response" != "200" ]; then

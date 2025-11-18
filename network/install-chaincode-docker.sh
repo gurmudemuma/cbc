@@ -29,12 +29,12 @@ echo ""
 # Install on all peers
 echo "Step 1: Installing chaincode on all peers..."
 
-# Install on ExporterBank peer
-echo "Installing on ExporterBank peer..."
-docker exec -e CORE_PEER_LOCALMSPID=ExporterBankMSP \
-    -e CORE_PEER_ADDRESS=peer0.exporterbank.coffee-export.com:7051 \
-    -e CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/exporterbank.coffee-export.com/peers/peer0.exporterbank.coffee-export.com/tls/ca.crt \
-    -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/exporterbank.coffee-export.com/users/Admin@exporterbank.coffee-export.com/msp \
+# Install on CommercialBank peer
+echo "Installing on CommercialBank peer..."
+docker exec -e CORE_PEER_LOCALMSPID=CommercialBankMSP \
+    -e CORE_PEER_ADDRESS=peer0.commercialbank.coffee-export.com:7051 \
+    -e CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/commercialbank.coffee-export.com/peers/peer0.commercialbank.coffee-export.com/tls/ca.crt \
+    -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/commercialbank.coffee-export.com/users/Admin@commercialbank.coffee-export.com/msp \
     cli peer lifecycle chaincode install channel-artifacts/${CC_NAME}.tar.gz
 
 # Install on NationalBank peer
@@ -45,12 +45,12 @@ docker exec -e CORE_PEER_LOCALMSPID=NationalBankMSP \
     -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/nationalbank.coffee-export.com/users/Admin@nationalbank.coffee-export.com/msp \
     cli peer lifecycle chaincode install channel-artifacts/${CC_NAME}.tar.gz
 
-# Install on NCAT peer
-echo "Installing on NCAT peer..."
-docker exec -e CORE_PEER_LOCALMSPID=NCATMSP \
-    -e CORE_PEER_ADDRESS=peer0.ncat.coffee-export.com:9051 \
-    -e CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/ncat.coffee-export.com/peers/peer0.ncat.coffee-export.com/tls/ca.crt \
-    -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/ncat.coffee-export.com/users/Admin@ncat.coffee-export.com/msp \
+# Install on ECTA peer
+echo "Installing on ECTA peer..."
+docker exec -e CORE_PEER_LOCALMSPID=ECTAMSP \
+    -e CORE_PEER_ADDRESS=peer0.ecta.coffee-export.com:9051 \
+    -e CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/ecta.coffee-export.com/peers/peer0.ecta.coffee-export.com/tls/ca.crt \
+    -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/ecta.coffee-export.com/users/Admin@ecta.coffee-export.com/msp \
     cli peer lifecycle chaincode install channel-artifacts/${CC_NAME}.tar.gz
 
 # Install on ShippingLine peer
@@ -66,10 +66,10 @@ echo ""
 
 # Query installed chaincode to get package ID
 echo "Step 2: Getting chaincode package ID..."
-PACKAGE_ID=$(docker exec -e CORE_PEER_LOCALMSPID=ExporterBankMSP \
-    -e CORE_PEER_ADDRESS=peer0.exporterbank.coffee-export.com:7051 \
-    -e CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/exporterbank.coffee-export.com/peers/peer0.exporterbank.coffee-export.com/tls/ca.crt \
-    -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/exporterbank.coffee-export.com/users/Admin@exporterbank.coffee-export.com/msp \
+PACKAGE_ID=$(docker exec -e CORE_PEER_LOCALMSPID=CommercialBankMSP \
+    -e CORE_PEER_ADDRESS=peer0.commercialbank.coffee-export.com:7051 \
+    -e CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/commercialbank.coffee-export.com/peers/peer0.commercialbank.coffee-export.com/tls/ca.crt \
+    -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/commercialbank.coffee-export.com/users/Admin@commercialbank.coffee-export.com/msp \
     cli peer lifecycle chaincode queryinstalled | grep ${CC_NAME}_${CC_VERSION} | sed 's/.*Package ID: \(.*\), Label.*/\1/')
 
 echo "Package ID: $PACKAGE_ID"
@@ -78,12 +78,12 @@ echo ""
 # Approve for all organizations
 echo "Step 3: Approving chaincode for all organizations..."
 
-# Approve for ExporterBank
-echo "Approving for ExporterBank..."
-docker exec -e CORE_PEER_LOCALMSPID=ExporterBankMSP \
-    -e CORE_PEER_ADDRESS=peer0.exporterbank.coffee-export.com:7051 \
-    -e CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/exporterbank.coffee-export.com/peers/peer0.exporterbank.coffee-export.com/tls/ca.crt \
-    -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/exporterbank.coffee-export.com/users/Admin@exporterbank.coffee-export.com/msp \
+# Approve for CommercialBank
+echo "Approving for CommercialBank..."
+docker exec -e CORE_PEER_LOCALMSPID=CommercialBankMSP \
+    -e CORE_PEER_ADDRESS=peer0.commercialbank.coffee-export.com:7051 \
+    -e CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/commercialbank.coffee-export.com/peers/peer0.commercialbank.coffee-export.com/tls/ca.crt \
+    -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/commercialbank.coffee-export.com/users/Admin@commercialbank.coffee-export.com/msp \
     cli peer lifecycle chaincode approveformyorg -o orderer.coffee-export.com:7050 --channelID $CHANNEL_NAME --name $CC_NAME --version $CC_VERSION --package-id $PACKAGE_ID --sequence $CC_SEQUENCE --tls --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/ordererOrganizations/coffee-export.com/orderers/orderer.coffee-export.com/msp/tlscacerts/tlsca.coffee-export.com-cert.pem
 
 # Approve for NationalBank
@@ -94,12 +94,12 @@ docker exec -e CORE_PEER_LOCALMSPID=NationalBankMSP \
     -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/nationalbank.coffee-export.com/users/Admin@nationalbank.coffee-export.com/msp \
     cli peer lifecycle chaincode approveformyorg -o orderer.coffee-export.com:7050 --channelID $CHANNEL_NAME --name $CC_NAME --version $CC_VERSION --package-id $PACKAGE_ID --sequence $CC_SEQUENCE --tls --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/ordererOrganizations/coffee-export.com/orderers/orderer.coffee-export.com/msp/tlscacerts/tlsca.coffee-export.com-cert.pem
 
-# Approve for NCAT
-echo "Approving for NCAT..."
-docker exec -e CORE_PEER_LOCALMSPID=NCATMSP \
-    -e CORE_PEER_ADDRESS=peer0.ncat.coffee-export.com:9051 \
-    -e CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/ncat.coffee-export.com/peers/peer0.ncat.coffee-export.com/tls/ca.crt \
-    -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/ncat.coffee-export.com/users/Admin@ncat.coffee-export.com/msp \
+# Approve for ECTA
+echo "Approving for ECTA..."
+docker exec -e CORE_PEER_LOCALMSPID=ECTAMSP \
+    -e CORE_PEER_ADDRESS=peer0.ecta.coffee-export.com:9051 \
+    -e CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/ecta.coffee-export.com/peers/peer0.ecta.coffee-export.com/tls/ca.crt \
+    -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/ecta.coffee-export.com/users/Admin@ecta.coffee-export.com/msp \
     cli peer lifecycle chaincode approveformyorg -o orderer.coffee-export.com:7050 --channelID $CHANNEL_NAME --name $CC_NAME --version $CC_VERSION --package-id $PACKAGE_ID --sequence $CC_SEQUENCE --tls --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/ordererOrganizations/coffee-export.com/orderers/orderer.coffee-export.com/msp/tlscacerts/tlsca.coffee-export.com-cert.pem
 
 # Approve for ShippingLine
@@ -115,14 +115,14 @@ echo ""
 
 # Commit chaincode
 echo "Step 4: Committing chaincode to channel..."
-docker exec -e CORE_PEER_LOCALMSPID=ExporterBankMSP \
-    -e CORE_PEER_ADDRESS=peer0.exporterbank.coffee-export.com:7051 \
-    -e CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/exporterbank.coffee-export.com/peers/peer0.exporterbank.coffee-export.com/tls/ca.crt \
-    -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/exporterbank.coffee-export.com/users/Admin@exporterbank.coffee-export.com/msp \
+docker exec -e CORE_PEER_LOCALMSPID=CommercialBankMSP \
+    -e CORE_PEER_ADDRESS=peer0.commercialbank.coffee-export.com:7051 \
+    -e CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/commercialbank.coffee-export.com/peers/peer0.commercialbank.coffee-export.com/tls/ca.crt \
+    -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/commercialbank.coffee-export.com/users/Admin@commercialbank.coffee-export.com/msp \
     cli peer lifecycle chaincode commit -o orderer.coffee-export.com:7050 --channelID $CHANNEL_NAME --name $CC_NAME --version $CC_VERSION --sequence $CC_SEQUENCE --tls --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/ordererOrganizations/coffee-export.com/orderers/orderer.coffee-export.com/msp/tlscacerts/tlsca.coffee-export.com-cert.pem \
-    --peerAddresses peer0.exporterbank.coffee-export.com:7051 --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/exporterbank.coffee-export.com/peers/peer0.exporterbank.coffee-export.com/tls/ca.crt \
+    --peerAddresses peer0.commercialbank.coffee-export.com:7051 --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/commercialbank.coffee-export.com/peers/peer0.commercialbank.coffee-export.com/tls/ca.crt \
     --peerAddresses peer0.nationalbank.coffee-export.com:8051 --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/nationalbank.coffee-export.com/peers/peer0.nationalbank.coffee-export.com/tls/ca.crt \
-    --peerAddresses peer0.ncat.coffee-export.com:9051 --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/ncat.coffee-export.com/peers/peer0.ncat.coffee-export.com/tls/ca.crt \
+    --peerAddresses peer0.ecta.coffee-export.com:9051 --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/ecta.coffee-export.com/peers/peer0.ecta.coffee-export.com/tls/ca.crt \
     --peerAddresses peer0.shippingline.coffee-export.com:10051 --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/shippingline.coffee-export.com/peers/peer0.shippingline.coffee-export.com/tls/ca.crt
 
 echo ""

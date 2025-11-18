@@ -52,12 +52,13 @@ else
 fi
 
 # Check for unique secrets across services
-EXPORTER_SECRET=$(grep "JWT_SECRET=" api/exporter-bank/.env.example | cut -d'=' -f2)
-NATIONAL_SECRET=$(grep "JWT_SECRET=" api/national-bank/.env.example | cut -d'=' -f2)
-NCAT_SECRET=$(grep "JWT_SECRET=" api/ncat/.env.example | cut -d'=' -f2)
+BANKER_SECRET=$(grep "JWT_SECRET=" api/commercial-bank/.env.example | cut -d'=' -f2)
+NB_REG_SECRET=$(grep "JWT_SECRET=" api/national-bank/.env.example | cut -d'=' -f2)
+EXPORTER_SECRET=$(grep "JWT_SECRET=" api/exporter/.env.example | cut -d'=' -f2)
+ECTA_SECRET=$(grep "JWT_SECRET=" api/ncat/.env.example | cut -d'=' -f2)
 SHIPPING_SECRET=$(grep "JWT_SECRET=" api/shipping-line/.env.example | cut -d'=' -f2)
 
-if [ "$EXPORTER_SECRET" = "$NATIONAL_SECRET" ] || [ "$EXPORTER_SECRET" = "$NCAT_SECRET" ] || [ "$EXPORTER_SECRET" = "$SHIPPING_SECRET" ]; then
+if [ "$BANKER_SECRET" = "$NB_REG_SECRET" ] || [ "$BANKER_SECRET" = "$EXPORTER_SECRET" ] || [ "$BANKER_SECRET" = "$ECTA_SECRET" ] || [ "$BANKER_SECRET" = "$SHIPPING_SECRET" ]; then
     log_warning "JWT secrets are not unique across services"
 else
     log_pass "JWT secrets are unique across services"
@@ -75,7 +76,7 @@ fi
 
 # Check 3: Environment Configuration
 echo -e "\n${BLUE}3. Checking Environment Configuration...${NC}"
-for service in exporter-bank national-bank ncat shipping-line; do
+for service in banker nb-regulatory exporter ncat shipping-line custom-authorities; do
     if [ ! -f "api/$service/.env.production.example" ]; then
         log_warning "Missing production environment template for $service"
     else
@@ -115,7 +116,7 @@ fi
 # Check 7: Rate Limiting
 echo -e "\n${BLUE}7. Checking Rate Limiting Configuration...${NC}"
 MISSING_RATE_LIMITS=0
-for service in exporter-bank national-bank ncat shipping-line; do
+for service in commercial-bank national-bank ncat shipping-line; do
     if ! grep -q "rateLimit" "api/$service/src/index.ts" 2>/dev/null; then
         log_warning "Rate limiting not found in $service"
         ((MISSING_RATE_LIMITS++))
@@ -129,7 +130,7 @@ fi
 # Check 8: HTTPS/TLS Configuration
 echo -e "\n${BLUE}8. Checking TLS Configuration...${NC}"
 TLS_CONFIG_FOUND=0
-for service in exporter-bank national-bank ncat shipping-line; do
+for service in commercial-bank national-bank ncat shipping-line; do
     if grep -q "TLS_ENABLED" "api/$service/.env.production.example" 2>/dev/null; then
         ((TLS_CONFIG_FOUND++))
     fi

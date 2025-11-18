@@ -20,12 +20,12 @@ export CORE_PEER_TLS_ENABLED=true
 # Step 1: Install on all peers
 echo "Step 1: Installing chaincode on all peers..."
 
-# Install on ExporterBank
-echo "Installing on ExporterBank peer..."
-export CORE_PEER_LOCALMSPID="ExporterBankMSP"
-export CORE_PEER_ADDRESS=peer0.exporterbank.coffee-export.com:7051
-export CORE_PEER_TLS_ROOTCERT_FILE=$WORKDIR/organizations/peerOrganizations/exporterbank.coffee-export.com/peers/peer0.exporterbank.coffee-export.com/tls/ca.crt
-export CORE_PEER_MSPCONFIGPATH=$WORKDIR/organizations/peerOrganizations/exporterbank.coffee-export.com/users/Admin@exporterbank.coffee-export.com/msp
+# Install on commercialbank
+echo "Installing on commercialbank peer..."
+export CORE_PEER_LOCALMSPID="CommercialBankMSP"
+export CORE_PEER_ADDRESS=peer0.commercialbank.coffee-export.com:7051
+export CORE_PEER_TLS_ROOTCERT_FILE=$WORKDIR/organizations/peerOrganizations/commercialbank.coffee-export.com/peers/peer0.commercialbank.coffee-export.com/tls/ca.crt
+export CORE_PEER_MSPCONFIGPATH=$WORKDIR/organizations/peerOrganizations/commercialbank.coffee-export.com/users/Admin@commercialbank.coffee-export.com/msp
 peer lifecycle chaincode install channel-artifacts/${CC_NAME}.tar.gz
 
 # Install on NationalBank
@@ -36,12 +36,12 @@ export CORE_PEER_TLS_ROOTCERT_FILE=$WORKDIR/organizations/peerOrganizations/nati
 export CORE_PEER_MSPCONFIGPATH=$WORKDIR/organizations/peerOrganizations/nationalbank.coffee-export.com/users/Admin@nationalbank.coffee-export.com/msp
 peer lifecycle chaincode install channel-artifacts/${CC_NAME}.tar.gz
 
-# Install on NCAT
-echo "Installing on NCAT peer..."
-export CORE_PEER_LOCALMSPID="NCATMSP"
-export CORE_PEER_ADDRESS=peer0.ncat.coffee-export.com:9051
-export CORE_PEER_TLS_ROOTCERT_FILE=$WORKDIR/organizations/peerOrganizations/ncat.coffee-export.com/peers/peer0.ncat.coffee-export.com/tls/ca.crt
-export CORE_PEER_MSPCONFIGPATH=$WORKDIR/organizations/peerOrganizations/ncat.coffee-export.com/users/Admin@ncat.coffee-export.com/msp
+# Install on ECTA
+echo "Installing on ECTA peer..."
+export CORE_PEER_LOCALMSPID="ECTAMSP"
+export CORE_PEER_ADDRESS=peer0.ecta.coffee-export.com:9051
+export CORE_PEER_TLS_ROOTCERT_FILE=$WORKDIR/organizations/peerOrganizations/ecta.coffee-export.com/peers/peer0.ecta.coffee-export.com/tls/ca.crt
+export CORE_PEER_MSPCONFIGPATH=$WORKDIR/organizations/peerOrganizations/ecta.coffee-export.com/users/Admin@ecta.coffee-export.com/msp
 peer lifecycle chaincode install channel-artifacts/${CC_NAME}.tar.gz
 
 # Install on ShippingLine
@@ -57,10 +57,10 @@ echo ""
 
 # Step 2: Get package ID
 echo "Step 2: Getting chaincode package ID..."
-export CORE_PEER_LOCALMSPID="ExporterBankMSP"
-export CORE_PEER_ADDRESS=peer0.exporterbank.coffee-export.com:7051
-export CORE_PEER_TLS_ROOTCERT_FILE=$WORKDIR/organizations/peerOrganizations/exporterbank.coffee-export.com/peers/peer0.exporterbank.coffee-export.com/tls/ca.crt
-export CORE_PEER_MSPCONFIGPATH=$WORKDIR/organizations/peerOrganizations/exporterbank.coffee-export.com/users/Admin@exporterbank.coffee-export.com/msp
+export CORE_PEER_LOCALMSPID="CommercialBankMSP"
+export CORE_PEER_ADDRESS=peer0.commercialbank.coffee-export.com:7051
+export CORE_PEER_TLS_ROOTCERT_FILE=$WORKDIR/organizations/peerOrganizations/commercialbank.coffee-export.com/peers/peer0.commercialbank.coffee-export.com/tls/ca.crt
+export CORE_PEER_MSPCONFIGPATH=$WORKDIR/organizations/peerOrganizations/commercialbank.coffee-export.com/users/Admin@commercialbank.coffee-export.com/msp
 
 PACKAGE_ID=$(peer lifecycle chaincode queryinstalled | grep ${CC_NAME}_${CC_VERSION} | sed 's/.*Package ID: \(.*\), Label.*/\1/')
 echo "Package ID: $PACKAGE_ID"
@@ -69,12 +69,12 @@ echo ""
 # Step 3: Approve for all orgs
 echo "Step 3: Approving chaincode for all organizations..."
 
-# Approve for ExporterBank
-echo "Approving for ExporterBank..."
-export CORE_PEER_LOCALMSPID="ExporterBankMSP"
-export CORE_PEER_ADDRESS=peer0.exporterbank.coffee-export.com:7051
-export CORE_PEER_TLS_ROOTCERT_FILE=$WORKDIR/organizations/peerOrganizations/exporterbank.coffee-export.com/peers/peer0.exporterbank.coffee-export.com/tls/ca.crt
-export CORE_PEER_MSPCONFIGPATH=$WORKDIR/organizations/peerOrganizations/exporterbank.coffee-export.com/users/Admin@exporterbank.coffee-export.com/msp
+# Approve for commercialbank
+echo "Approving for commercialbank..."
+export CORE_PEER_LOCALMSPID="CommercialBankMSP"
+export CORE_PEER_ADDRESS=peer0.commercialbank.coffee-export.com:7051
+export CORE_PEER_TLS_ROOTCERT_FILE=$WORKDIR/organizations/peerOrganizations/commercialbank.coffee-export.com/peers/peer0.commercialbank.coffee-export.com/tls/ca.crt
+export CORE_PEER_MSPCONFIGPATH=$WORKDIR/organizations/peerOrganizations/commercialbank.coffee-export.com/users/Admin@commercialbank.coffee-export.com/msp
 peer lifecycle chaincode approveformyorg -o orderer.coffee-export.com:7050 --channelID $CHANNEL_NAME --name $CC_NAME --version $CC_VERSION --package-id $PACKAGE_ID --sequence $CC_SEQUENCE --tls --cafile $WORKDIR/organizations/ordererOrganizations/coffee-export.com/orderers/orderer.coffee-export.com/msp/tlscacerts/tlsca.coffee-export.com-cert.pem
 
 # Approve for NationalBank
@@ -85,12 +85,12 @@ export CORE_PEER_TLS_ROOTCERT_FILE=$WORKDIR/organizations/peerOrganizations/nati
 export CORE_PEER_MSPCONFIGPATH=$WORKDIR/organizations/peerOrganizations/nationalbank.coffee-export.com/users/Admin@nationalbank.coffee-export.com/msp
 peer lifecycle chaincode approveformyorg -o orderer.coffee-export.com:7050 --channelID $CHANNEL_NAME --name $CC_NAME --version $CC_VERSION --package-id $PACKAGE_ID --sequence $CC_SEQUENCE --tls --cafile $WORKDIR/organizations/ordererOrganizations/coffee-export.com/orderers/orderer.coffee-export.com/msp/tlscacerts/tlsca.coffee-export.com-cert.pem
 
-# Approve for NCAT
-echo "Approving for NCAT..."
-export CORE_PEER_LOCALMSPID="NCATMSP"
-export CORE_PEER_ADDRESS=peer0.ncat.coffee-export.com:9051
-export CORE_PEER_TLS_ROOTCERT_FILE=$WORKDIR/organizations/peerOrganizations/ncat.coffee-export.com/peers/peer0.ncat.coffee-export.com/tls/ca.crt
-export CORE_PEER_MSPCONFIGPATH=$WORKDIR/organizations/peerOrganizations/ncat.coffee-export.com/users/Admin@ncat.coffee-export.com/msp
+# Approve for ECTA
+echo "Approving for ECTA..."
+export CORE_PEER_LOCALMSPID="ECTAMSP"
+export CORE_PEER_ADDRESS=peer0.ecta.coffee-export.com:9051
+export CORE_PEER_TLS_ROOTCERT_FILE=$WORKDIR/organizations/peerOrganizations/ecta.coffee-export.com/peers/peer0.ecta.coffee-export.com/tls/ca.crt
+export CORE_PEER_MSPCONFIGPATH=$WORKDIR/organizations/peerOrganizations/ecta.coffee-export.com/users/Admin@ecta.coffee-export.com/msp
 peer lifecycle chaincode approveformyorg -o orderer.coffee-export.com:7050 --channelID $CHANNEL_NAME --name $CC_NAME --version $CC_VERSION --package-id $PACKAGE_ID --sequence $CC_SEQUENCE --tls --cafile $WORKDIR/organizations/ordererOrganizations/coffee-export.com/orderers/orderer.coffee-export.com/msp/tlscacerts/tlsca.coffee-export.com-cert.pem
 
 # Approve for ShippingLine
@@ -106,15 +106,15 @@ echo ""
 
 # Step 4: Commit
 echo "Step 4: Committing chaincode to channel..."
-export CORE_PEER_LOCALMSPID="ExporterBankMSP"
-export CORE_PEER_ADDRESS=peer0.exporterbank.coffee-export.com:7051
-export CORE_PEER_TLS_ROOTCERT_FILE=$WORKDIR/organizations/peerOrganizations/exporterbank.coffee-export.com/peers/peer0.exporterbank.coffee-export.com/tls/ca.crt
-export CORE_PEER_MSPCONFIGPATH=$WORKDIR/organizations/peerOrganizations/exporterbank.coffee-export.com/users/Admin@exporterbank.coffee-export.com/msp
+export CORE_PEER_LOCALMSPID="CommercialBankMSP"
+export CORE_PEER_ADDRESS=peer0.commercialbank.coffee-export.com:7051
+export CORE_PEER_TLS_ROOTCERT_FILE=$WORKDIR/organizations/peerOrganizations/commercialbank.coffee-export.com/peers/peer0.commercialbank.coffee-export.com/tls/ca.crt
+export CORE_PEER_MSPCONFIGPATH=$WORKDIR/organizations/peerOrganizations/commercialbank.coffee-export.com/users/Admin@commercialbank.coffee-export.com/msp
 
 peer lifecycle chaincode commit -o orderer.coffee-export.com:7050 --channelID $CHANNEL_NAME --name $CC_NAME --version $CC_VERSION --sequence $CC_SEQUENCE --tls --cafile $WORKDIR/organizations/ordererOrganizations/coffee-export.com/orderers/orderer.coffee-export.com/msp/tlscacerts/tlsca.coffee-export.com-cert.pem \
-    --peerAddresses peer0.exporterbank.coffee-export.com:7051 --tlsRootCertFiles $WORKDIR/organizations/peerOrganizations/exporterbank.coffee-export.com/peers/peer0.exporterbank.coffee-export.com/tls/ca.crt \
+    --peerAddresses peer0.commercialbank.coffee-export.com:7051 --tlsRootCertFiles $WORKDIR/organizations/peerOrganizations/commercialbank.coffee-export.com/peers/peer0.commercialbank.coffee-export.com/tls/ca.crt \
     --peerAddresses peer0.nationalbank.coffee-export.com:8051 --tlsRootCertFiles $WORKDIR/organizations/peerOrganizations/nationalbank.coffee-export.com/peers/peer0.nationalbank.coffee-export.com/tls/ca.crt \
-    --peerAddresses peer0.ncat.coffee-export.com:9051 --tlsRootCertFiles $WORKDIR/organizations/peerOrganizations/ncat.coffee-export.com/peers/peer0.ncat.coffee-export.com/tls/ca.crt \
+    --peerAddresses peer0.ecta.coffee-export.com:9051 --tlsRootCertFiles $WORKDIR/organizations/peerOrganizations/ecta.coffee-export.com/peers/peer0.ecta.coffee-export.com/tls/ca.crt \
     --peerAddresses peer0.shippingline.coffee-export.com:10051 --tlsRootCertFiles $WORKDIR/organizations/peerOrganizations/shippingline.coffee-export.com/peers/peer0.shippingline.coffee-export.com/tls/ca.crt
 
 echo ""

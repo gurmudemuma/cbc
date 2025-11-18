@@ -65,7 +65,7 @@ if [ "$SKIP_UPDATE" -eq 0 ]; then
     # Source envVar.sh using absolute path
     source ${SCRIPT_DIR}/envVar.sh
 
-    # Collect signatures from majority existing orgs (ExporterBank, NationalBank, NCAT)
+    # Collect signatures from majority existing orgs (commercialbank, NationalBank, ECTA)
     setGlobals 1
     peer channel signconfigtx -f ${SCRIPT_DIR}/update_in_envelope.pb
 
@@ -75,7 +75,7 @@ if [ "$SKIP_UPDATE" -eq 0 ]; then
     setGlobals 3
     peer channel signconfigtx -f ${SCRIPT_DIR}/update_in_envelope.pb
 
-    # Submit the update from ExporterBank
+    # Submit the update from commercialbank
     setGlobals 1
     peer channel update -f ${SCRIPT_DIR}/update_in_envelope.pb -c ${CHANNEL_NAME} -o localhost:7050 --ordererTLSHostnameOverride orderer.coffee-export.com --tls --cafile "${ORDERER_CA}"
   fi

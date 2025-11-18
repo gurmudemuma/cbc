@@ -1,2 +1,0 @@
-Committed chaincode definition for chaincode 'user-management' on channel 'coffeechannel':
-Version: 1.0, Sequence: 1, Endorsement Plugin: escc, Validation Plugin: vscc, Approvals: [CustomAuthoritiesMSP: false, ExporterBankMSP: true, NCATMSP: true, NationalBankMSP: true, ShippingLineMSP: true]

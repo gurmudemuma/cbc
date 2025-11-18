@@ -5,13 +5,13 @@
 echo "🔄 Updating all API services to use blockchain-based authentication..."
 
 # Array of services
-SERVICES=("exporter-bank" "national-bank" "ncat" "shipping-line")
+SERVICES=("commercial-bank" "national-bank" "ncat" "shipping-line")
 
 # Copy the updated auth controller to all services
 echo "📝 Copying updated auth controller..."
 for service in "${SERVICES[@]}"; do
     echo "  - Updating $service..."
-    cp api/exporter-bank/src/controllers/auth.controller.ts api/$service/src/controllers/auth.controller.ts
+    cp api/commercial-bank/src/controllers/auth.controller.ts api/$service/src/controllers/auth.controller.ts
 done
 
 # Update gateway files for all services
@@ -146,7 +146,7 @@ export class FabricGateway {
 }
 EOF
 
-# NCAT
+# ECTA
 cat > api/ncat/src/fabric/gateway.ts << 'EOF'
 import { Gateway, Wallets, Network, Contract, X509Identity } from 'fabric-network';
 import * as path from 'path';
@@ -172,7 +172,7 @@ export class FabricGateway {
       const ccpPath = path.resolve(
         __dirname, '..', '..', '..', '..',
         'network', 'organizations', 'peerOrganizations',
-        'ncat.coffee-export.com',
+        'ecta.coffee-export.com',
         'connection-ncat.json'
       );
 
@@ -214,8 +214,8 @@ export class FabricGateway {
       const credPath = path.join(
         __dirname, '..', '..', '..', '..',
         'network', 'organizations', 'peerOrganizations',
-        'ncat.coffee-export.com', 'users',
-        'Admin@ncat.coffee-export.com', 'msp'
+        'ecta.coffee-export.com', 'users',
+        'Admin@ecta.coffee-export.com', 'msp'
       );
 
       const certificate = fs.readFileSync(
@@ -228,7 +228,7 @@ export class FabricGateway {
 
       const identity: X509Identity = {
         credentials: { certificate, privateKey },
-        mspId: 'NCATMSP',
+        mspId: 'ECTAMSP',
         type: 'X.509',
       };
 

@@ -15,9 +15,9 @@
 
 Open **4 separate terminal windows** in VSCode or your terminal app:
 
-**Terminal 1 - Exporter Bank (Port 3001):**
+**Terminal 1 - commercialbank (Port 3001):**
 ```bash
-cd /c/cbc/api/exporter-bank
+cd /c/cbc/api/commercialbank
 npm run dev
 ```
 
@@ -27,7 +27,7 @@ cd /c/cbc/api/national-bank
 npm run dev
 ```
 
-**Terminal 3 - NCAT (Port 3003):**
+**Terminal 3 - ECTA (Port 3003):**
 ```bash
 cd /c/cbc/api/ncat
 npm run dev
@@ -43,10 +43,10 @@ npm run dev
 
 ### Method 2: Start One at a Time (Testing)
 
-Start with exporter-bank to verify everything works:
+Start with commercialbank to verify everything works:
 
 ```bash
-cd /c/cbc/api/exporter-bank
+cd /c/cbc/api/commercialbank
 npm run dev
 ```
 
@@ -58,7 +58,7 @@ Environment Configuration Summary
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   Environment: development
   Port: 3001
-  Organization: ExporterBank (exporterbank)
+  Organization: commercialbank (commercialbank)
   MSP ID: ExporterBankMSP
   Channel: coffeechannel
   Chaincode Export: coffee-export
@@ -68,11 +68,11 @@ Environment Configuration Summary
 ✅ Environment validation successful
 
 ============================================================
-  Exporter Bank API server running
+  commercialbank API server running
 ============================================================
    Port: 3001
    Environment: development
-   Organization: ExporterBank
+   Organization: commercialbank
    WebSocket: Enabled
 ============================================================
 
@@ -115,13 +115,13 @@ You need to:
 Once a service starts, verify it's healthy:
 
 ```bash
-# Exporter Bank
+# commercialbank
 curl http://localhost:3001/health
 
 # National Bank
 curl http://localhost:3002/health
 
-# NCAT
+# ECTA
 curl http://localhost:3003/health
 
 # Shipping Line
@@ -132,7 +132,7 @@ curl http://localhost:3004/health
 ```json
 {
   "status": "ok",
-  "service": "Exporter Bank API",
+  "service": "commercialbank API",
   "version": "1.0.0",
   "environment": "development",
   "timestamp": "2025-10-11T07:04:00.000Z",
@@ -150,7 +150,7 @@ curl http://localhost:3004/health
 ```json
 {
   "status": "ok",
-  "service": "Exporter Bank API",
+  "service": "commercialbank API",
   "version": "1.0.0",
   "environment": "development",
   "timestamp": "2025-10-11T07:04:00.000Z",
@@ -170,9 +170,9 @@ curl http://localhost:3004/health
 
 | Service | Port | Dev URL | Health Check |
 |---------|------|---------|--------------|
-| Exporter Bank | 3001 | http://localhost:3001 | http://localhost:3001/health |
+| commercialbank | 3001 | http://localhost:3001 | http://localhost:3001/health |
 | National Bank | 3002 | http://localhost:3002 | http://localhost:3002/health |
-| NCAT | 3003 | http://localhost:3003 | http://localhost:3003/health |
+| ECTA | 3003 | http://localhost:3003 | http://localhost:3003/health |
 | Shipping Line | 3004 | http://localhost:3004 | http://localhost:3004/health |
 
 ---
@@ -248,4 +248,4 @@ After services are running:
 
 ---
 
-**Ready to start?** Open your first terminal and run the exporter-bank service!
+**Ready to start?** Open your first terminal and run the commercialbank service!

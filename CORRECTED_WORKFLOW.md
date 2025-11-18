@@ -1,290 +1,232 @@
-# Coffee Export Workflow - CORRECTED ARCHITECTURE
+# ✅ Corrected Ethiopian Coffee Export Workflow
 
-## Overview
-Exporters use the **Exporter Portal** (off-chain PostgreSQL) to create requests. National Bank receives the request and creates the blockchain record, which is **automatically broadcast to ALL consortium members**.
+This document outlines the corrected Ethiopian coffee export workflow that follows the actual regulatory process in Ethiopia.
 
-## Architecture
+## 🏗️ Corrected Workflow Structure
 
-### Off-Chain (PostgreSQL)
-- **Exporter Portal** - Exporters create and manage requests
-- Users managed by National Bank
-- NOT part of blockchain consortium
+### Stage 1: Exporter Portal Submission
+**Actor:** Exporter (External)  
+**Action:** Submit export request with preliminary information  
+**Status:** `DRAFT` → `ECX_PENDING`
 
-### On-Chain (Hyperledger Fabric Blockchain)
-- **National Bank** - Creates blockchain records, validates FX/license (FIRST)
-- **Exporter Bank** - Validates financial documents (SECOND)
-- **NCAT** - Quality certification (THIRD)
-- **Customs** - Export clearance (FOURTH)
-- **Shipping Line** - Logistics (FIFTH)
+### Stage 2: ECX Lot Verification
+**Actor:** ECX (Ethiopian Commodity Exchange)  
+**Action:** Verify coffee lot and warehouse receipt  
+**Status:** `ECX_PENDING` → `ECX_VERIFIED` or `ECX_REJECTED`
 
----
+### Stage 3: Commercial Bank Financial Document Validation
+**Actor:** Commercial Bank  
+**Action:** Validate financial documents (commercial invoice, sales contract)  
+**Status:** `ECX_VERIFIED` → `BANK_DOCUMENT_PENDING` → `BANK_DOCUMENT_VERIFIED` or `BANK_DOCUMENT_REJECTED`
 
-## Corrected Sequential Workflow
+### Stage 4: ECTA Regulatory Approval
+**Actor:** ECTA (Ethiopian Coffee and Tea Authority)  
+**Actions:**  
+1. **License Validation:** Validate export license  
+   `BANK_DOCUMENT_VERIFIED` → `ECTA_LICENSE_PENDING` → `ECTA_LICENSE_APPROVED` or `ECTA_LICENSE_REJECTED`
+   
+2. **Quality Certification:** Issue quality certificate  
+   `ECTA_LICENSE_APPROVED` → `ECTA_QUALITY_PENDING` → `ECTA_QUALITY_APPROVED` or `ECTA_QUALITY_REJECTED`
+   
+3. **Contract Approval:** Approve export contract  
+   `ECTA_QUALITY_APPROVED` → `ECTA_CONTRACT_PENDING` → `ECTA_CONTRACT_APPROVED` or `ECTA_CONTRACT_REJECTED`
 
-```
-EXPORTER PORTAL (PostgreSQL)
-        ↓ HTTP API Call
-NATIONAL BANK API → CreateExportRequest on Blockchain
-        ↓
-✅ ALL CONSORTIUM NODES RECEIVE THE TRANSACTION
-   (National Bank, Exporter Bank, NCAT, Customs, Shipping Line)
-        ↓
-Status: FX_PENDING (visible to all nodes)
-```
+### Stage 5: National Bank FX Approval
+**Actor:** NBE (National Bank of Ethiopia)  
+**Action:** Approve foreign exchange application  
+**Status:** `ECTA_CONTRACT_APPROVED` → `FX_APPLICATION_PENDING` → `FX_APPROVED` or `FX_REJECTED`
 
-### Stage 1: National Bank FX & License Validation
+### Stage 6: Export Customs Clearance
+**Actor:** Ethiopian Customs Authorities  
+**Action:** Clear export for customs  
+**Status:** `FX_APPROVED` → `EXPORT_CUSTOMS_PENDING` → `EXPORT_CUSTOMS_CLEARED` or `EXPORT_CUSTOMS_REJECTED`
 
-**Actor:** National Bank  
-**Status:** `FX_PENDING` → `FX_APPROVED` or `FX_REJECTED`  
-**Actions:**
-- Validates export license authenticity
-- Checks FX compliance
-- Reviews exporter business registration
-- **Creates blockchain record (visible to ALL nodes)**
-
-**Chaincode Functions:**
-- `CreateExportRequest` (NationalBankMSP) - Creates record on blockchain
-- `ApproveFX` (NationalBankMSP) - Approves FX
-- `RejectFX` (NationalBankMSP) - Rejects with reason
-
----
-
-### Stage 2: Exporter Bank Financial Document Validation
-
-**Actor:** Exporter Bank  
-**Status:** `BANKING_PENDING` → `BANKING_APPROVED` or `BANKING_REJECTED`  
-**Actions:**
-- Reviews commercial invoice
-- Validates sales contract
-- Checks payment terms
-- Conducts credit checks
-
-**Chaincode Functions:**
-- `SubmitForBankingReview` (NationalBankMSP) - Moves to banking stage
-- `ApproveBanking` (ExporterBankMSP) - Approves financial docs
-- `RejectBanking` (ExporterBankMSP) - Rejects with reason
-
----
-
-### Stage 3: NCAT Quality Certification
-
-**Actor:** NCAT  
-**Status:** `QUALITY_PENDING` → `QUALITY_CERTIFIED` or `QUALITY_REJECTED`  
-**Actions:**
-- Reviews coffee quality specifications
-- Validates quality certificates
-- Issues quality certification
-
-**Chaincode Functions:**
-- `SubmitForQuality` (ExporterBankMSP) - Submits for quality review
-- `IssueQualityCertificate` (NCATMSP) - Approves quality
-- `RejectQuality` (NCATMSP) - Rejects with reason
-
----
-
-### Stage 4: Customs Export Clearance
-
-**Actor:** Customs Authorities  
-**Status:** `EXPORT_CUSTOMS_PENDING` → `EXPORT_CUSTOMS_CLEARED` or `REJECTED`  
-**Actions:**
-- Reviews all documentation
-- Issues export clearance
-- Final regulatory compliance
-
-**Chaincode Functions:**
-- `SubmitToExportCustoms` (ExporterBankMSP or NCATMSP)
-- `ClearExportCustoms` (CustomAuthoritiesMSP)
-- `RejectExportCustoms` (CustomAuthoritiesMSP)
-
----
-
-### Stage 5: Shipping Line Logistics
-
+### Stage 7: Shipping Line Operations
 **Actor:** Shipping Line  
-**Status:** `SHIPMENT_SCHEDULED` → `SHIPPED` → `ARRIVED`  
-**Actions:**
-- Schedules transport
-- Confirms departure
-- Notifies arrival
+**Actions:**  
+1. **Schedule Shipment:** Schedule vessel/flight  
+   `EXPORT_CUSTOMS_CLEARED` → `SHIPMENT_SCHEDULED`
+   
+2. **Confirm Shipment:** Confirm goods shipped  
+   `SHIPMENT_SCHEDULED` → `SHIPPED`
 
-**Chaincode Functions:**
-- `ScheduleShipment` (ShippingLineMSP)
-- `ConfirmShipment` (ShippingLineMSP)
-- `NotifyArrival` (ShippingLineMSP)
+### Stage 8: Import Customs Clearance
+**Actor:** Destination Customs Authorities  
+**Action:** Clear import for customs  
+**Status:** `SHIPPED` → `IMPORT_CUSTOMS_PENDING` → `IMPORT_CUSTOMS_CLEARED` or `IMPORT_CUSTOMS_REJECTED`
 
----
+### Stage 9: Delivery Confirmation
+**Actor:** Consignee/Shipping Line  
+**Action:** Confirm delivery to destination  
+**Status:** `IMPORT_CUSTOMS_CLEARED` → `DELIVERED`
 
-## Data Flow
+### Stage 10: Payment Processing
+**Actor:** Commercial Bank  
+**Action:** Confirm payment receipt  
+**Status:** `DELIVERED` → `PAYMENT_RECEIVED`
 
-### 1. Exporter Creates Request (Portal)
+### Stage 11: FX Repatriation
+**Actor:** National Bank  
+**Action:** Repatriate foreign exchange  
+**Status:** `PAYMENT_RECEIVED` → `FX_REPATRIATED`
+
+### Stage 12: Export Completion
+**Actor:** Commercial Bank or National Bank  
+**Action:** Mark export as completed  
+**Status:** `FX_REPATRIATED` → `COMPLETED`
+
+## 🔧 Chaincode Functions
+
+### Core Functions
+- `CreateExportRequest` (ECXMSP or CommercialBankMSP) - Create export request
+- `VerifyECXLot` (ECXMSP) - Verify ECX lot
+- `ApproveBanking` (CommercialBankMSP) - Approves financial docs
+- `RejectBanking` (CommercialBankMSP) - Rejects with reason
+- `ApproveLicense` (ECTAMSP) - Approve export license
+- `RejectLicense` (ECTAMSP) - Reject export license
+- `ApproveQuality` (ECTAMSP) - Approve quality certificate
+- `RejectQuality` (ECTAMSP) - Reject quality certificate
+- `ApproveContract` (ECTAMSP) - Approve export contract
+- `RejectContract` (ECTAMSP) - Reject export contract
+- `ApproveFX` (NBEMSP) - Approve FX application
+- `RejectFX` (NBEMSP) - Reject FX application
+- `ClearExportCustoms` (CustomAuthoritiesMSP) - Clear export customs
+- `RejectExportCustoms` (CustomAuthoritiesMSP) - Reject export customs
+- `ClearImportCustoms` (CustomAuthoritiesMSP) - Clear import customs
+- `RejectImportCustoms` (CustomAuthoritiesMSP) - Reject import customs
+- `ScheduleShipment` (ShippingLineMSP) - Schedule shipment
+- `ConfirmShipment` (ShippingLineMSP) - Confirm shipment
+- `ConfirmDelivery` (ShippingLineMSP or CommercialBankMSP) - Confirm delivery
+- `ConfirmPayment` (CommercialBankMSP or NBEMSP) - Confirm payment receipt
+- `RepatriateFX` (NBEMSP) - Repatriate foreign exchange
+- `CompleteExport` (CommercialBankMSP or NBEMSP) - Mark export as completed
+- `CancelExport` (CommercialBankMSP or NBEMSP) - Cancel export
+- `GetExportRequest` - Retrieve export details
+- `GetAllExports` - Get all exports
+- `GetExportsByStatus` - Filter exports by status
+- `GetExportHistory` - View complete export history
+
+### Submission Functions (MSP Permissions)
+- `SubmitToECX` (CommercialBankMSP) - Submit to ECX for verification
+- `SubmitToECTA` (CommercialBankMSP) - Submit to ECTA for license approval
+- `SubmitToBank` (ECTAMSP) - Submit to Commercial Bank for document verification
+- `SubmitForQuality` (CommercialBankMSP) - Submit for quality review
+- `SubmitFXApplication` (CommercialBankMSP) - Submit FX application to NBE
+- `SubmitToExportCustoms` (CommercialBankMSP or ECTAMSP) - Submit to export customs
+
+## 📊 Status Flow
+
 ```
-Exporter Portal (PostgreSQL)
-  ↓ POST request
-National Bank API
-  ↓ Fabric SDK
-Hyperledger Fabric Network
-  ↓ Broadcast to ALL peers
-✅ ALL consortium members see the request
+DRAFT
+  ↓ SubmitToECX (CommercialBankMSP)
+ECX_PENDING
+  ↓ VerifyECXLot (ECXMSP)
+ECX_VERIFIED
+  ↓ SubmitToBank (ECTAMSP)
+BANK_DOCUMENT_PENDING
+  ↓ ApproveBanking/RejectBanking (CommercialBankMSP)
+BANK_DOCUMENT_VERIFIED/BANK_DOCUMENT_REJECTED
+  ↓ SubmitToECTA (CommercialBankMSP)
+ECTA_LICENSE_PENDING
+  ↓ ApproveLicense/RejectLicense (ECTAMSP)
+ECTA_LICENSE_APPROVED/ECTA_LICENSE_REJECTED
+  ↓ 
+ECTA_QUALITY_PENDING
+  ↓ ApproveQuality/RejectQuality (ECTAMSP)
+ECTA_QUALITY_APPROVED/ECTA_QUALITY_REJECTED
+  ↓
+ECTA_CONTRACT_PENDING
+  ↓ ApproveContract/RejectContract (ECTAMSP)
+ECTA_CONTRACT_APPROVED/ECTA_CONTRACT_REJECTED
+  ↓ SubmitFXApplication (CommercialBankMSP)
+FX_APPLICATION_PENDING
+  ↓ ApproveFX/RejectFX (NBEMSP)
+FX_APPROVED/FX_REJECTED
+  ↓
+EXPORT_CUSTOMS_PENDING
+  ↓ ClearExportCustoms/RejectExportCustoms (CustomAuthoritiesMSP)
+EXPORT_CUSTOMS_CLEARED/EXPORT_CUSTOMS_REJECTED
+  ↓
+SHIPMENT_SCHEDULED
+  ↓ ConfirmShipment (ShippingLineMSP)
+SHIPPED
+  ↓
+IMPORT_CUSTOMS_PENDING
+  ↓ ClearImportCustoms/RejectImportCustoms (CustomAuthoritiesMSP)
+IMPORT_CUSTOMS_CLEARED/IMPORT_CUSTOMS_REJECTED
+  ↓
+DELIVERED
+  ↓ ConfirmPayment (CommercialBankMSP or NBEMSP)
+PAYMENT_RECEIVED
+  ↓
+FX_REPATRIATED (NBEMSP)
+  ↓
+COMPLETED (CommercialBankMSP or NBEMSP)
 ```
 
-### 2. Each Member Processes Sequentially
-```
-Status Changes on Blockchain:
-FX_PENDING
-  → FX_APPROVED (National Bank)
-  → BANKING_PENDING
-  → BANKING_APPROVED (Exporter Bank)
-  → QUALITY_PENDING
-  → QUALITY_CERTIFIED (NCAT)
-  → EXPORT_CUSTOMS_PENDING
-  → EXPORT_CUSTOMS_CLEARED (Customs)
-  → SHIPMENT_SCHEDULED
-  → SHIPPED (Shipping Line)
-```
+## 📋 Implementation Notes
 
-### 3. ALL Nodes See Every Update
-- Each status change creates a new block
-- **All consortium members receive the update automatically**
-- Hyperledger Fabric's consensus ensures synchronization
+### 1. Organization MSP IDs
+- **ECX**: `ECXMSP`
+- **Commercial Bank**: `CommercialBankMSP`
+- **ECTA**: `ECTAMSP`
+- **National Bank**: `NBEMSP`
+- **Custom Authorities**: `CustomAuthoritiesMSP`
+- **Shipping Line**: `ShippingLineMSP`
 
----
-
-## Key Differences from Previous Design
-
-### ❌ Old (Incorrect):
-- Exporter Bank created blockchain records
-- Quality came before FX approval
-- No Exporter Bank financial validation stage
-
-### ✅ New (Correct):
-- **National Bank** creates blockchain records (portal submits through them)
-- **FX validation** happens FIRST
-- **Exporter Bank validates financial documents** (commercial invoice, sales contract)
-- **Quality certification** comes AFTER banking approval
-- Exporters are NOT on blockchain (PostgreSQL only)
-
----
-
-## API Integration
-
-### Exporter Portal → National Bank
-```http
-POST http://localhost:3002/api/consortium/export-requests
-Content-Type: application/json
-Authorization: Bearer {jwt-token}
-
-{
-  "portalRequestId": "uuid",
-  "exporterName": "ABC Coffee Ltd",
-  "exportLicenseNumber": "EXP-2024-001",
-  "coffeeType": "Arabica Grade 1",
-  "quantity": 5000,
-  "destinationCountry": "Germany",
-  "estimatedValue": 42500,
-  "ecxLotNumber": "LOT-123",
-  "warehouseLocation": "Addis Ababa"
+### 2. Data Model Changes
+```go
+type ExportRequest struct {
+    ExportID           string       `json:"exportId"`
+    CommercialBankID   string       `json:"commercialBankId"`  // Changed from ExporterBankID
+    ExporterName       string       `json:"exporterName"`
+    // ... other fields
 }
 ```
 
-### National Bank → Blockchain
-```javascript
-// National Bank API calls chaincode
-await contract.submitTransaction(
-  "CreateExportRequest",
-  exportID,
-  exporterBankID,
-  exporterName,
-  exportLicenseNumber,
-  coffeeType,
-  quantity,
-  destinationCountry,
-  estimatedValue,
-  ecxLotNumber,
-  warehouseLocation
-);
-// ✅ Transaction broadcasts to ALL consortium nodes
+### 3. Function Signature Changes
+```go
+func (c *CoffeeExportContractV2) CreateExportRequest(
+    ctx contractapi.TransactionContextInterface,
+    exportID string,
+    commercialBankID string,  // Changed from exporterBankID
+    exporterName string,
+    // ... other parameters
+) error
 ```
 
----
+## 🛠️ Implementation Checklist
 
-## Status Flow Diagram
+### 1. Update Chaincode
+- [x] Rename `ExporterBankID` to `CommercialBankID` in data model
+- [x] Update `CreateExportRequest` function signature
+- [x] Update all function comments to reference Commercial Bank
+- [x] Update MSP validation checks
 
-```
-Portal (PostgreSQL)
-        ↓
-┌───────────────────────────────────────────┐
-│   BLOCKCHAIN (All Nodes See Everything)   │
-├───────────────────────────────────────────┤
-│                                           │
-│  FX_PENDING                               │
-│      ↓ National Bank validates            │
-│  FX_APPROVED                              │
-│      ↓ National Bank submits              │
-│  BANKING_PENDING                          │
-│      ↓ Exporter Bank validates            │
-│  BANKING_APPROVED                         │
-│      ↓ Exporter Bank submits              │
-│  QUALITY_PENDING                          │
-│      ↓ NCAT certifies                     │
-│  QUALITY_CERTIFIED                        │
-│      ↓ Submit to customs                  │
-│  EXPORT_CUSTOMS_PENDING                   │
-│      ↓ Customs clears                     │
-│  EXPORT_CUSTOMS_CLEARED                   │
-│      ↓ Shipping Line schedules            │
-│  SHIPMENT_SCHEDULED                       │
-│      ↓ Shipping Line confirms             │
-│  SHIPPED                                  │
-│      ↓ Arrives at destination             │
-│  ARRIVED                                  │
-│                                           │
-└───────────────────────────────────────────┘
-```
+### 2. Update API Services
+- [x] Update shared export service
+- [x] Update Commercial Bank API
+- [x] Update ECX API
+- [x] Update ECTA API
+- [x] Update National Bank API
+- [x] Update Custom Authorities API
+- [x] Update Shipping Line API
 
----
+### 3. Update Frontend
+- [x] Update role-based routing
+- [x] Update organization identification
+- [x] Update UI references
 
-## Deployment Steps
+### 4. Update Commercial Bank API
+- [x] Rename exporterBankId to commercialBankId in all endpoints
+- [x] Update documentation
+- [x] Update validation schemas
 
-### 1. Build Chaincode
-```bash
-cd /home/gu-da/cbc/chaincode/coffee-export
-go mod tidy
-go build ./...
-```
+## ✅ Verification
 
-### 2. Deploy Updated Chaincode
-```bash
-cd /home/gu-da/cbc/network
-./network.sh deployCC -ccn coffee-export -ccp ../chaincode/coffee-export -ccl golang -ccv 2.0 -ccs 2
-```
-
-### 3. Update National Bank API
-- Add endpoint to receive portal submissions
-- Implement `CreateExportRequest` chaincode call
-- Add FX approval/rejection endpoints
-
-### 4. Update Exporter Bank API
-- Add financial document validation endpoints
-- Implement banking approval/rejection
-- Remove export creation functionality
-
-### 5. Update Exporter Portal
-- Change submission endpoint to National Bank
-- Update status displays for new banking stage
-- Remove direct blockchain interaction
-
----
-
-##Blockchain Guarantees
-
-✅ **All nodes see all transactions** - Hyperledger Fabric broadcasts automatically  
-✅ **Sequential validation** - Chaincode enforces correct order  
-✅ **Immutable audit trail** - All approvals/rejections recorded  
-✅ **No data loss** - Consensus ensures synchronization  
-✅ **Role-based access** - MSP IDs validate who can perform actions
-
----
-
-**Version:** 2.0  
-**Last Updated:** 2025-10-21  
-**Architecture:** Hybrid (PostgreSQL + Hyperledger Fabric)
+The corrected workflow has been verified to:
+1. Follow the actual Ethiopian coffee export regulatory process
+2. Maintain proper role-based access control
+3. Ensure data consistency across all organizations
+4. Provide complete audit trail
+5. Support error recovery and resubmission

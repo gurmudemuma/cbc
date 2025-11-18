@@ -23,7 +23,7 @@ echo ""
 
 # Check if coffee-export is deployed
 echo -e "${BLUE}Checking coffee-export chaincode...${NC}"
-COFFEE_CHECK=$(docker exec peer0.exporterbank.coffee-export.com peer lifecycle chaincode querycommitted -C coffeechannel 2>/dev/null | grep -c "coffee-export" 2>/dev/null || echo "0")
+COFFEE_CHECK=$(docker exec peer0.commercialbank.coffee-export.com peer lifecycle chaincode querycommitted -C coffeechannel 2>/dev/null | grep -c "coffee-export" 2>/dev/null || echo "0")
 COFFEE_CHECK=$(echo "$COFFEE_CHECK" | tr -d '\n\r' | tr -d ' ')
 
 if [ "$COFFEE_CHECK" -gt 0 ] 2>/dev/null; then
@@ -67,7 +67,7 @@ echo ""
 
 # Verify both chaincodes
 echo -e "${BLUE}Verifying deployed chaincodes...${NC}"
-docker exec peer0.exporterbank.coffee-export.com peer lifecycle chaincode querycommitted -C coffeechannel
+docker exec peer0.commercialbank.coffee-export.com peer lifecycle chaincode querycommitted -C coffeechannel
 
 echo ""
 echo -e "${CYAN}╔════════════════════════════════════════════════════════════╗${NC}"

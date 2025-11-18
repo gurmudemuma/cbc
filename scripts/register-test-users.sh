@@ -10,48 +10,45 @@ echo "⏳ Waiting for APIs to be ready..."
 sleep 5
 
 # Function to register user
+# Note: All registrations go through Commercial Bank API (port 3001)
 register_user() {
-    local port=$1
-    local org_name=$2
-    local username=$3
-    local password=$(node -e "const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'; const lower = 'abcdefghijklmnopqrstuvwxyz'; const number = '0123456789'; const special = '@$!%*?&'; let pass = upper.charAt(Math.floor(Math.random() * upper.length)) + lower.charAt(Math.floor(Math.random() * lower.length)) + number.charAt(Math.floor(Math.random() * number.length)) + special.charAt(Math.floor(Math.random() * special.length)); const all = upper + lower + number + special; for (let i = 4; i < 16; i++) { pass += all.charAt(Math.floor(Math.random() * all.length)); } console.log(pass.split('').sort(() => Math.random() - 0.5).join(''));")
+    local org_name=$1
+    local username=$2
+    local password=$3
+    local email=$4
     
-    echo "📝 Registering $username in $org_name..."
-    echo "Generated password: $password"
+    echo "📝 Registering $username for $org_name..."
     
-    response=$(curl -s -X POST http://localhost:$port/api/auth/register \
+    # The API will use default values for organizationId and role
+    local json_payload=$(jq -n \
+        --arg username "$username" \
+        --arg password "$password" \
+        --arg email "$email" \
+        '{username: $username, password: $password, email: $email}')
+    
+    # Use Commercial Bank API (3001) for registration
+    response=$(curl -s -X POST http://localhost:3001/api/auth/register \
         -H "Content-Type: application/json" \
-        -d "{\"username\":\"$username\",\"password\":\"$password\",\"email\":\"$username@example.com\"}")
+        -d "$json_payload")
     
     if echo "$response" | grep -q '"success":true'; then
         echo "✅ Successfully registered $username"
-        echo "Password: $password"
-        echo ""
     else
         echo "❌ Failed to register $username"
         echo "Response: $response"
-        echo ""
     fi
+    echo ""
 }
 
-# Register users for each organization
-echo "1️⃣ Registering Exporter Portal User..."
-register_user 3001 "Exporter Portal" "portal1"
+# Register test users with simplified format
+echo "1️⃣ Registering Test User 1..."
+register_user "Test Org" "testuser1" "Test123!@#" "test1@example.com"
 
-echo "2️⃣ Registering Exporter Bank User..."
-register_user 3001 "Exporter Bank" "exporter1"
+echo "2️⃣ Registering Test User 2..."
+register_user "Test Org" "testuser2" "Test123!@#" "test2@example.com"
 
-echo "3️⃣ Registering National Bank User..."
-register_user 3002 "National Bank" "banker1"
-
-echo "4️⃣ Registering NCAT User..."
-register_user 3003 "NCAT" "inspector1"
-
-echo "5️⃣ Registering Shipping Line User..."
-register_user 3004 "Shipping Line" "shipper1"
-
-echo "6️⃣ Registering Custom Authorities User..."
-register_user 3005 "Custom Authorities" "custom1"
+echo "3️⃣ Registering Admin User..."
+register_user "Admin" "admin" "Admin123!@#" "admin@example.com"
 
 echo "=========================================="
 echo "✅ User Registration Complete!"
@@ -59,14 +56,18 @@ echo "=========================================="
 echo ""
 echo "📋 Login Credentials:"
 echo "--------------------"
-echo "Exporter Portal: username: portal1     password: [Generated - Check logs or env]"
-echo "Exporter Bank:   username: exporter1   password: [Generated - Check logs or env]"
-echo "National Bank:   username: banker1     password: [Generated - Check logs or env]"
-echo "NCAT:            username: inspector1  password: [Generated - Check logs or env]"
-echo "Shipping Line:   username: shipper1    password: [Generated - Check logs or env]"
-echo "Custom Authorities: username: custom1   password: [Generated - Check logs or env]"
+echo ""
+echo "Test User 1:"
+echo "  Username: testuser1"
+echo "  Password: Test123!@#"
+echo ""
+echo "Test User 2:"
+echo "  Username: testuser2"
+echo "  Password: Test123!@#"
+echo ""
+echo "Admin User:"
+echo "  Username: admin"
+echo "  Password: Admin123!@#"
 echo ""
 echo "🌐 Access the frontend at: http://localhost:5173"
 echo ""
-
-# Note: For security, passwords are generated randomly and not echoed. Store them securely.

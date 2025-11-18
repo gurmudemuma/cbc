@@ -23,7 +23,7 @@ The Coffee Blockchain Consortium system has multiple interdependent components t
 2. **Environment Files**
    - Create `.env` files from `.env.example` templates
    - Locations:
-     - `/api/exporter-bank/.env`
+     - `/api/commercialbank/.env`
      - `/api/national-bank/.env`
      - `/api/ncat/.env`
      - `/api/shipping-line/.env`
@@ -47,7 +47,7 @@ The Coffee Blockchain Consortium system has multiple interdependent components t
 #### Step 1: Generate Cryptographic Material
 ```bash
 cd network
-cryptogen generate --config=./organizations/cryptogen/crypto-config-exporterbank.yaml
+cryptogen generate --config=./organizations/cryptogen/crypto-config-commercialbank.yaml
 cryptogen generate --config=./organizations/cryptogen/crypto-config-nationalbank.yaml
 cryptogen generate --config=./organizations/cryptogen/crypto-config-ncat.yaml
 cryptogen generate --config=./organizations/cryptogen/crypto-config-shippingline.yaml
@@ -76,7 +76,7 @@ docker-compose -f docker/docker-compose.yaml up -d
 **Dependencies:** Cryptographic material
 **Containers Started:**
 - `orderer.coffee-export.com`
-- `peer0.exporterbank.coffee-export.com`
+- `peer0.commercialbank.coffee-export.com`
 - `peer0.nationalbank.coffee-export.com`
 - `peer0.ncat.coffee-export.com`
 - `peer0.shippingline.coffee-export.com`
@@ -113,7 +113,7 @@ osnadmin channel join \
 
 #### Step 6: Join Peers to Channel
 ```bash
-# For each peer (ExporterBank, NationalBank, NCAT, ShippingLine)
+# For each peer (commercialbank, NationalBank, ECTA, ShippingLine)
 peer channel join -b ./channel-artifacts/coffeechannel.block
 ```
 
@@ -152,7 +152,7 @@ peer lifecycle chaincode package user-management.tar.gz \
 
 ##### Step 2: Install on All Peers
 ```bash
-# Install on each peer (ExporterBank, NationalBank, NCAT, ShippingLine)
+# Install on each peer (commercialbank, NationalBank, ECTA, ShippingLine)
 peer lifecycle chaincode install user-management.tar.gz
 ```
 **Order:** Can be parallel, typically sequential
@@ -176,7 +176,7 @@ peer lifecycle chaincode commit \
   --name user-management \
   --version 1.0 \
   --sequence 1 \
-  --peerAddresses peer0.exporterbank.coffee-export.com:7051 \
+  --peerAddresses peer0.commercialbank.coffee-export.com:7051 \
   --peerAddresses peer0.nationalbank.coffee-export.com:8051 \
   --peerAddresses peer0.ncat.coffee-export.com:9051 \
   --peerAddresses peer0.shippingline.coffee-export.com:10051
@@ -208,7 +208,7 @@ Repeat the same 4 steps as user-management chaincode.
 - Connection profiles generated
 
 **Creates:**
-- `api/exporter-bank/wallet/admin.id`
+- `api/commercialbank/wallet/admin.id`
 - `api/national-bank/wallet/admin.id`
 - `api/ncat/wallet/admin.id`
 - `api/shipping-line/wallet/admin.id`
@@ -236,9 +236,9 @@ ipfs daemon &
 
 **Recommended Order:** Start in sequence to monitor logs
 
-1. **Exporter Bank API** (Port 3001)
+1. **commercialbank API** (Port 3001)
    ```bash
-   cd api/exporter-bank
+   cd api/commercialbank
    npm run dev
    ```
    **Dependencies:** 
@@ -253,15 +253,15 @@ ipfs daemon &
    cd api/national-bank
    npm run dev
    ```
-   **Dependencies:** Same as Exporter Bank API
+   **Dependencies:** Same as commercialbank API
    **Wait Time:** 10-15 seconds
 
-3. **NCAT API** (Port 3003)
+3. **ECTA API** (Port 3003)
    ```bash
    cd api/ncat
    npm run dev
    ```
-   **Dependencies:** Same as Exporter Bank API
+   **Dependencies:** Same as commercialbank API
    **Wait Time:** 10-15 seconds
 
 4. **Shipping Line API** (Port 3004)
@@ -269,7 +269,7 @@ ipfs daemon &
    cd api/shipping-line
    npm run dev
    ```
-   **Dependencies:** Same as Exporter Bank API
+   **Dependencies:** Same as commercialbank API
    **Wait Time:** 10-15 seconds
 
 **Alternative:** Use `scripts/dev-apis.sh` to start all APIs in tmux session
@@ -350,9 +350,9 @@ Chaincode Deployment
 Admin Enrollment
     ↓
 API Services (parallel)
-    ├─→ Exporter Bank API (3001)
+    ├─→ commercialbank API (3001)
     ├─→ National Bank API (3002)
-    ├─→ NCAT API (3003)
+    ├─→ ECTA API (3003)
     └─→ Shipping Line API (3004)
     ↓
 Frontend (5173)
@@ -492,8 +492,8 @@ cd ..
 After startup, verify each component:
 
 - [ ] Docker containers running: `docker ps | grep hyperledger`
-- [ ] Channel exists: `docker exec peer0.exporterbank.coffee-export.com peer channel list`
-- [ ] Chaincode installed: `docker exec peer0.exporterbank.coffee-export.com peer lifecycle chaincode queryinstalled`
+- [ ] Channel exists: `docker exec peer0.commercialbank.coffee-export.com peer channel list`
+- [ ] Chaincode installed: `docker exec peer0.commercialbank.coffee-export.com peer lifecycle chaincode queryinstalled`
 - [ ] APIs responding: `curl http://localhost:3001/health`
 - [ ] Frontend accessible: Open http://localhost:5173
 - [ ] Can login with test user
@@ -518,7 +518,7 @@ After startup, verify each component:
 - Verify all peers joined channel
 
 ### APIs Won't Start
-- Check admin is enrolled: `ls api/exporter-bank/wallet/`
+- Check admin is enrolled: `ls api/commercialbank/wallet/`
 - Verify connection profiles exist
 - Check blockchain network is running
 - Review API logs

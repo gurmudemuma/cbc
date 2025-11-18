@@ -1,38 +1,37 @@
 ---
-name: ${ORG}-network
+name: coffee-export-network-${ORG}
 version: 1.0.0
 client:
-  organization: ${ORGMSP}
+  organization: ${ORG}
   connection:
     timeout:
       peer:
         endorser: '300'
-      orderer: '300'
 
 organizations:
-  ${ORGMSP}:
-    mspid: ${ORGMSP}MSP
+  ${ORG}:
+    mspid: ${ORGMSP}
     peers:
-      - peer0.${ORG}.coffee-export.com
+      - peer0.${DOMAIN}
     certificateAuthorities:
-      - ca.${ORG}.coffee-export.com
+      - ca.${DOMAIN}
 
 peers:
-  peer0.${ORG}.coffee-export.com:
+  peer0.${DOMAIN}:
     url: grpcs://localhost:${P0PORT}
     tlsCACerts:
       pem: |
-          ${PEERPEM}
+        ${CAPEM}
     grpcOptions:
-      ssl-target-name-override: peer0.${ORG}.coffee-export.com
-      hostnameOverride: peer0.${ORG}.coffee-export.com
+      ssl-target-name-override: peer0.${DOMAIN}
+      hostnameOverride: peer0.${DOMAIN}
 
 certificateAuthorities:
-  ca.${ORG}.coffee-export.com:
-    url: https://localhost:${P0PORT}
+  ca.${DOMAIN}:
+    url: https://localhost:${CAPORT}
     caName: ca-${ORG}
     tlsCACerts:
-      pem: 
+      pem:
         - |
           ${CAPEM}
     httpOptions:

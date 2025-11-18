@@ -35,4 +35,10 @@ router.post(
   shipmentController.confirmShipment,
 );
 
+// Reject shipment
+router.post(
+  "/reject",
+  shipmentController.rejectShipment,
+);
+
 export default router;

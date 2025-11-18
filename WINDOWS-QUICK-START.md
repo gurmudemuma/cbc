@@ -61,9 +61,9 @@ The startup script will:
 
 Once started:
 - **Frontend**: http://localhost:5173
-- **Exporter Bank API**: http://localhost:3001
+- **commercialbank API**: http://localhost:3001
 - **National Bank API**: http://localhost:3002
-- **NCAT API**: http://localhost:3003
+- **ECTA API**: http://localhost:3003
 - **Shipping Line API**: http://localhost:3004
 
 ## Troubleshooting
@@ -114,9 +114,9 @@ This will:
 |---------|------|----------|
 | Orderer | 7050 | gRPC |
 | Orderer Admin | 7053 | REST |
-| Peer0 ExporterBank | 7051 | gRPC |
+| Peer0 commercialbank | 7051 | gRPC |
 | Peer0 NationalBank | 8051 | gRPC |
-| Peer0 NCAT | 9051 | gRPC |
+| Peer0 ECTA | 9051 | gRPC |
 | Peer0 ShippingLine | 10051 | gRPC |
 
 All mapped to localhost and accessible from host machine.

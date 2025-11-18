@@ -17,23 +17,23 @@ Organizations:
       OrdererEndpoints:
         - orderer.coffee-export.com:7050
 
-  - &ExporterBank
-      Name: ExporterBankMSP
-      ID: ExporterBankMSP
-      MSPDir: ../organizations/peerOrganizations/exporterbank.coffee-export.com/msp
+  - &CommercialBank
+      Name: CommercialBankMSP
+      ID: CommercialBankMSP
+      MSPDir: ../organizations/peerOrganizations/commercialbank.coffee-export.com/msp
       Policies:
         Readers:
           Type: Signature
-          Rule: "OR('ExporterBankMSP.admin', 'ExporterBankMSP.peer', 'ExporterBankMSP.client')"
+          Rule: "OR('CommercialBankMSP.admin', 'CommercialBankMSP.peer', 'CommercialBankMSP.client')"
         Writers:
           Type: Signature
-          Rule: "OR('ExporterBankMSP.admin', 'ExporterBankMSP.client')"
+          Rule: "OR('CommercialBankMSP.admin', 'CommercialBankMSP.client')"
         Admins:
           Type: Signature
-          Rule: "OR('ExporterBankMSP.admin')"
+          Rule: "OR('CommercialBankMSP.admin')"
         Endorsement:
           Type: Signature
-          Rule: "OR('ExporterBankMSP.peer')"
+          Rule: "OR('CommercialBankMSP.peer')"
 
   - &NationalBank
       Name: NationalBankMSP
@@ -53,23 +53,23 @@ Organizations:
           Type: Signature
           Rule: "OR('NationalBankMSP.peer')"
 
-  - &NCAT
-      Name: NCATMSP
-      ID: NCATMSP
-      MSPDir: ../organizations/peerOrganizations/ncat.coffee-export.com/msp
+  - &ECTA
+      Name: ECTAMSP
+      ID: ECTAMSP
+      MSPDir: ../organizations/peerOrganizations/ecta.coffee-export.com/msp
       Policies:
         Readers:
           Type: Signature
-          Rule: "OR('NCATMSP.admin', 'NCATMSP.peer', 'NCATMSP.client')"
+          Rule: "OR('ECTAMSP.admin', 'ECTAMSP.peer', 'ECTAMSP.client')"
         Writers:
           Type: Signature
-          Rule: "OR('NCATMSP.admin', 'NCATMSP.client')"
+          Rule: "OR('ECTAMSP.admin', 'ECTAMSP.client')"
         Admins:
           Type: Signature
-          Rule: "OR('NCATMSP.admin')"
+          Rule: "OR('ECTAMSP.admin')"
         Endorsement:
           Type: Signature
-          Rule: "OR('NCATMSP.peer')"
+          Rule: "OR('ECTAMSP.peer')"
 
   - &ShippingLine
       Name: ShippingLineMSP
@@ -91,7 +91,7 @@ Organizations:
   - &CustomAuthorities
       Name: CustomAuthoritiesMSP
       ID: CustomAuthoritiesMSP
-      MSPDir: ../organizations/peerOrganizations/customauthorities.coffee-export.com/msp
+      MSPDir: ../organizations/peerOrganizations/custom-authorities.coffee-export.com/msp
       Policies:
         Readers:
           Type: Signature
@@ -180,6 +180,21 @@ Channel: &ChannelDefaults
     <<: *ChannelCapabilities
 
 Profiles:
+  SystemChannel:
+    <<: *ChannelDefaults
+    Orderer:
+      <<: *OrdererDefaults
+      Organizations:
+        - *OrdererOrg
+      Capabilities: *OrdererCapabilities
+    Consortiums:
+      SampleConsortium:
+        Organizations:
+          - *CommercialBank
+          - *NationalBank
+          - *ECTA
+          - *ShippingLine
+          - *CustomAuthorities
   CoffeeExportGenesis:
     <<: *ChannelDefaults
     Orderer:
@@ -190,9 +205,22 @@ Profiles:
     Application:
       <<: *ApplicationDefaults
       Organizations:
-        - *ExporterBank
+        - *CommercialBank
         - *NationalBank
-        - *NCAT
+        - *ECTA
+        - *ShippingLine
+        - *CustomAuthorities
+      Capabilities: *ApplicationCapabilities
+  
+  CoffeeChannel:
+    <<: *ChannelDefaults
+    Consortium: SampleConsortium
+    Application:
+      <<: *ApplicationDefaults
+      Organizations:
+        - *CommercialBank
+        - *NationalBank
+        - *ECTA
         - *ShippingLine
         - *CustomAuthorities
       Capabilities: *ApplicationCapabilities

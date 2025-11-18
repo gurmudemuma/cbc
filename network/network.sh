@@ -2,6 +2,8 @@
 
 # Network management script for Coffee Export Consortium Blockchain
 
+set -euo pipefail
+
 export PATH=${PWD}/../bin:$PATH
 export FABRIC_CFG_PATH=${PWD}/configtx
 export VERBOSE=false
@@ -119,14 +121,12 @@ function checkPrereqs() {
   fi
 
   for UNSUPPORTED_VERSION in $NONWORKING_VERSIONS; do
-    echo "$LOCAL_VERSION" | grep -q $UNSUPPORTED_VERSION
-    if [ $? -eq 0 ]; then
+    if echo "$LOCAL_VERSION" | grep -q $UNSUPPORTED_VERSION; then
       echo "ERROR! Local Fabric binary version of $LOCAL_VERSION does not match the versions supported by the test network."
       exit 1
     fi
 
-    echo "$DOCKER_IMAGE_VERSION" | grep -q $UNSUPPORTED_VERSION
-    if [ $? -eq 0 ]; then
+    if echo "$DOCKER_IMAGE_VERSION" | grep -q $UNSUPPORTED_VERSION; then
       echo "ERROR! Fabric Docker image version of $DOCKER_IMAGE_VERSION does not match the versions supported by the test network."
       exit 1
     fi
@@ -171,13 +171,13 @@ function createOrgs() {
   echo "##### Generate certificates using cryptogen tool #########"
   echo "##########################################################"
 
-  echo "Creating Exporter Bank Identities"
-  "$CRYPTOGEN_CMD" generate --config=./organizations/cryptogen/crypto-config-exporterbank.yaml --output="organizations"
+  echo "Creating commercialbank Identities"
+  "$CRYPTOGEN_CMD" generate --config=./organizations/cryptogen/crypto-config-commercialbank.yaml --output="organizations"
 
   echo "Creating National Bank Identities"
   "$CRYPTOGEN_CMD" generate --config=./organizations/cryptogen/crypto-config-nationalbank.yaml --output="organizations"
 
-  echo "Creating NCAT Identities"
+  echo "Creating ECTA Identities"
   "$CRYPTOGEN_CMD" generate --config=./organizations/cryptogen/crypto-config-ncat.yaml --output="organizations"
 
   echo "Creating Shipping Line Identities"
@@ -201,9 +201,10 @@ function networkUp() {
     createOrgs
   fi
 
-  COMPOSE_FILES="-f ${PWD}/docker/docker-compose.yaml"
+  COMPOSE_FILES="-f docker/docker-compose.yaml"
   
-  IMAGE_TAG=latest docker-compose ${COMPOSE_FILES} up -d 2>&1
+  # Run docker compose from network directory so relative paths work
+  cd "${PWD}" && IMAGE_TAG=latest docker compose ${COMPOSE_FILES} up -d 2>&1
 
   docker ps -a
   if [ $? -ne 0 ]; then
@@ -216,17 +217,17 @@ function networkUp() {
 function networkDown() {
   COMPOSE_FILES="-f ${PWD}/docker/docker-compose.yaml"
   
-  docker-compose ${COMPOSE_FILES} down --volumes --remove-orphans
+  docker compose ${COMPOSE_FILES} down --volumes --remove-orphans
   
   # Bring down the network, deleting the volumes
   # Delete any ledger backups
-  docker run --rm -v $(pwd):/data busybox sh -c 'cd /data && rm -rf organizations/peerOrganizations organizations/ordererOrganizations'
+  rm -rf organizations/peerOrganizations organizations/ordererOrganizations
   
   # remove orderer block and other channel configuration transactions and certs
-  docker run --rm -v $(pwd):/data busybox sh -c 'cd /data && rm -rf channel-artifacts/*.block channel-artifacts/*.tx'
+  rm -rf channel-artifacts/*.block channel-artifacts/*.tx
   
   # remove channel and script artifacts
-  docker run --rm -v $(pwd):/data busybox sh -c 'cd /data && rm -rf channel-artifacts'
+  rm -rf channel-artifacts
   
   clearContainers
   removeUnwantedImages

@@ -42,32 +42,40 @@ cd cbc
 # IPFS: http://localhost:5001
 ```
 
-### Option 2: Docker Compose (Infrastructure Only)
+### Option 2: Docker Compose (Full Stack - Recommended)
 
 ```bash
-# 1. Start blockchain network + IPFS in containers
+# Start all services in containers (Fabric + IPFS + APIs + Frontend)
 docker-compose up -d
 
-# 2. Start APIs on host (for development)
-cd api/exporter-bank && npm run dev  # Terminal 1
-cd api/national-bank && npm run dev   # Terminal 2
-cd api/ncat && npm run dev            # Terminal 3
-cd api/shipping-line && npm run dev   # Terminal 4
-
-# 3. Start frontend
-cd frontend && npm run dev
-```
-
-### Option 3: Full Containerization (Production)
-
-```bash
-# Build and start ALL services in containers (18 containers total)
-./start-docker-full.sh --build
+# Wait for services to start (60 seconds)
+sleep 60
 
 # Access services:
 # - Frontend: http://localhost
-# - APIs: http://localhost:3001-3005
+# - commercialbank API: http://localhost:3001
+# - National Bank API: http://localhost:3002
+# - ECTA API: http://localhost:3003
+# - Shipping Line API: http://localhost:3004
+# - Custom Authorities API: http://localhost:3005
 # - IPFS: http://localhost:5001
+```
+
+### Option 3: Hybrid Mode (Development)
+
+```bash
+# 1. Start blockchain network + IPFS in containers
+docker-compose up -d ipfs orderer.coffee-export.com peer0.commercialbank.coffee-export.com
+
+# 2. Start APIs on host (for development)
+cd api/commercialbank && npm run dev  # Terminal 1
+cd api/national-bank && npm run dev   # Terminal 2
+cd api/ncat && npm run dev            # Terminal 3
+cd api/shipping-line && npm run dev   # Terminal 4
+cd api/custom-authorities && npm run dev  # Terminal 5
+
+# 3. Start frontend
+cd frontend && npm run dev
 ```
 
 **For detailed instructions, see:**
@@ -83,7 +91,7 @@ cd frontend && npm run dev
 
 ```
 ┌───���─────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│  Exporter Bank  │     │ National Bank   │     │      NCAT       │
+│  commercialbank  │     │ National Bank   │     │      ECTA       │
 │   (Port 3001)   │     │   (Port 3002)   │     │   (Port 3003)   │
 └────────┬────────┘     └────────┬────────┘     └────────┬────────┘
          │                       │                       │
@@ -116,11 +124,13 @@ cd frontend && npm run dev
 
 ## 👥 Participants
 
-1. **Exporter Bank** – Initiates export requests and completes exports
-2. **National Bank** – Grants export licenses and approves foreign currency (FX)
-3. **National Coffee and Tea Authority (NCAT)** – Issues quality certificates
-4. **Shipping Line** – Schedules and confirms export shipments
-5. **Exporter Portal** – Frontend for exporters to track/manage exports
+1. **ECX** – Ethiopian Commodity Exchange - Verifies coffee lots and warehouse receipts
+2. **ECTA** – Ethiopian Coffee and Tea Authority - Issues export licenses, quality certificates, and contract approvals
+3. **commercialbank** – Commercial bank handling exporter's documents and FX applications
+4. **National Bank (NBE)** – National Bank of Ethiopia - Approves foreign exchange (FX)
+5. **Custom Authorities** – Issues customs clearance for export
+6. **Shipping Line** – Schedules and confirms export shipments
+7. **Exporter Portal** – Frontend for exporters to track/manage exports
 
 ## 📦 Prerequisites
 
@@ -157,8 +167,8 @@ cd CBC
 #### Install API Dependencies
 
 ```bash
-# Exporter Bank API
-cd api/exporter-bank
+# commercialbank API
+cd api/commercialbank
 npm install
 cd ../..
 
@@ -167,7 +177,7 @@ cd api/national-bank
 npm install
 cd ../..
 
-# NCAT API
+# ECTA API
 cd api/ncat
 npm install
 cd ../..
@@ -216,19 +226,21 @@ docker ps
 
 You should see containers for:
 - `orderer.coffee-export.com`
-- `peer0.exporterbank.coffee-export.com`
+- `peer0.commercialbank.coffee-export.com`
 - `peer0.nationalbank.coffee-export.com`
-- `peer0.ncat.coffee-export.com`
+- `peer0.ecta.coffee-export.com`
+- `peer0.ecx.coffee-export.com`
 - `peer0.shippingline.coffee-export.com`
+- `peer0.customauthorities.coffee-export.com`
 
 ## 🔌 API Services
 
 ### Start All API Services
 
-#### 1. Exporter Bank API (Port 3001)
+#### 1. commercialbank API (Port 3001)
 
 ```bash
-cd api/exporter-bank
+cd api/commercialbank
 cp .env.example .env
 npm run dev
 ```
@@ -241,18 +253,34 @@ cp .env.example .env
 npm run dev
 ```
 
-#### 3. NCAT API (Port 3003)
+#### 3. ECTA API (Port 3003)
 
 ```bash
-cd api/ncat
+cd api/ecta
 cp .env.example .env
 npm run dev
 ```
 
-#### 4. Shipping Line API (Port 3004)
+#### 4. ECX API (Port 3006)
+
+```bash
+cd api/ecx
+cp .env.example .env
+npm run dev
+```
+
+#### 5. Shipping Line API (Port 3004)
 
 ```bash
 cd api/shipping-line
+cp .env.example .env
+npm run dev
+```
+
+#### 6. Custom Authorities API (Port 3005)
+
+```bash
+cd api/custom-authorities
 cp .env.example .env
 npm run dev
 ```
@@ -264,7 +292,7 @@ npm run dev
 The coffee export chaincode provides the following functions:
 
 #### Export Management
-- `CreateExportRequest` - Create a new export request (Exporter Bank)
+- `CreateExportRequest` - Create a new export request (commercialbank)
 - `GetExportRequest` - Retrieve export details
 - `GetAllExports` - Get all exports
 - `GetExportsByStatus` - Filter exports by status
@@ -274,7 +302,7 @@ The coffee export chaincode provides the following functions:
 - `ApproveFX` - Approve foreign exchange
 - `RejectFX` - Reject foreign exchange
 
-#### Quality Certification (NCAT)
+#### Quality Certification (ECTA)
 - `IssueQualityCertificate` - Issue quality certificate
 - `RejectQuality` - Reject quality
 
@@ -283,8 +311,8 @@ The coffee export chaincode provides the following functions:
 - `ConfirmShipment` - Confirm goods shipped
 
 #### Export Completion
-- `CompleteExport` - Mark export as completed (Exporter Bank)
-- `CancelExport` - Cancel export request (Exporter Bank)
+- `CompleteExport` - Mark export as completed (commercialbank)
+- `CancelExport` - Cancel export request (commercialbank)
 
 ### Export Status Flow
 
@@ -316,7 +344,7 @@ Access at http://localhost:5173 (default Vite port).
 
 ### Example Workflow
 
-#### 1. Register and Login (Exporter Bank)
+#### 1. Register and Login (commercialbank)
 
 ```bash
 # Register
@@ -363,12 +391,12 @@ curl -X POST http://localhost:3002/api/fx/approve \
   }'
 ```
 
-#### 4. Issue Quality Certificate (NCAT)
+#### 4. Issue Quality Certificate (ECTA)
 
 ```bash
 curl -X POST http://localhost:3003/api/quality/certify \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <NCAT_TOKEN>" \
+  -H "Authorization: Bearer <ECTA_TOKEN>" \
   -d '{
     "exportId": "EXP-xxxxx",
     "qualityGrade": "Grade A"
@@ -409,7 +437,7 @@ curl -X PUT http://localhost:3001/api/exports/EXP-xxxxx/complete \
 
 ## 📚 API Documentation
 
-### Exporter Bank API (Port 3001)
+### commercialbank API (Port 3001)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -436,7 +464,7 @@ curl -X PUT http://localhost:3001/api/exports/EXP-xxxxx/complete \
 | POST | `/api/fx/approve` | Approve FX |
 | POST | `/api/fx/reject` | Reject FX |
 
-### NCAT API (Port 3003)
+### ECTA API (Port 3003)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -499,7 +527,7 @@ docker network prune -f
 
 ```bash
 # View chaincode logs
-docker logs -f peer0.exporterbank.coffee-export.com
+docker logs -f peer0.commercialbank.coffee-export.com
 
 # Redeploy chaincode with new version
 ./network.sh deployCC -ccn coffee-export -ccs 2 -ccv 1.1
