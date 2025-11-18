@@ -26,7 +26,7 @@ Error: No valid responses from any peers. Errors:
 func (c *CoffeeExportContractV2) CreateExportRequest(
     ctx contractapi.TransactionContextInterface,
     exportID string,                  // 1
-    exporterBankID string,            // 2
+    commercialbankID string,            // 2
     exporterName string,              // 3
     exportLicenseNumber string,       // 4 ← MISSING
     coffeeType string,                // 5
@@ -43,7 +43,7 @@ func (c *CoffeeExportContractV2) CreateExportRequest(
 await this.contract.submitTransaction(
     'CreateExportRequest',
     exportId,                    // 1
-    exporterBankId,              // 2
+    commercialbankId,              // 2
     data.exporterName,           // 3
     data.coffeeType,             // 4 (should be 5)
     data.quantity.toString(),    // 5 (should be 6)
@@ -61,11 +61,11 @@ await this.contract.submitTransaction(
 
 **Fixed createExport method:**
 ```typescript
-async createExport(exportId: string, exporterBankId: string, data: CreateExportData): Promise<ExportRequest> {
+async createExport(exportId: string, commercialbankId: string, data: CreateExportData): Promise<ExportRequest> {
     await this.contract.submitTransaction(
         'CreateExportRequest',
         exportId,                           // 1
-        exporterBankId,                     // 2
+        commercialbankId,                     // 2
         data.exporterName,                  // 3
         data.exportLicenseNumber || '',     // 4 ← ADDED (optional)
         data.coffeeType,                    // 5
@@ -146,7 +146,7 @@ curl -X POST http://localhost:3001/api/exports \
   "success": true,
   "data": {
     "exportId": "EXP-1699876543210-abc123xyz",
-    "exporterBankId": "commercialbank",
+    "commercialbankId": "commercialbank",
     "exporterName": "Test Exporter",
     "coffeeType": "Arabica",
     "quantity": 1000,

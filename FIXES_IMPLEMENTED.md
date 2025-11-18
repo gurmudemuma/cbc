@@ -499,7 +499,7 @@ cat .env.secrets
 ```bash
 # Copy JWT secrets from .env.secrets to each service
 # Example for commercialbank:
-echo "JWT_SECRET=$(grep JWT_SECRET_EXPORTER_BANK .env.secrets | cut -d'=' -f2)" >> api/commercialbank/.env
+echo "JWT_SECRET=$(grep JWT_SECRET_commercialbank .env.secrets | cut -d'=' -f2)" >> api/commercialbank/.env
 ```
 
 ### Step 4: Start Redis (Optional but Recommended)
@@ -576,18 +576,18 @@ import MetricsService from '../../shared/metrics.service';
 const metrics = MetricsService.getInstance();
 
 // Add middleware
-app.use(metrics.middleware('ExporterBankAPI'));
+app.use(metrics.middleware('commercialbankAPI'));
 
 // Manual metrics
 app.post('/api/exports', async (req, res) => {
   const start = Date.now();
   try {
     // ... create export logic
-    metrics.recordExportCreated('ExporterBankAPI');
-    metrics.recordBlockchainOperation('CreateExport', 'success', (Date.now() - start) / 1000, 'ExporterBankAPI');
+    metrics.recordExportCreated('commercialbankAPI');
+    metrics.recordBlockchainOperation('CreateExport', 'success', (Date.now() - start) / 1000, 'commercialbankAPI');
   } catch (error) {
-    metrics.recordError('export_creation', 'ExporterBankAPI');
-    metrics.recordBlockchainOperation('CreateExport', 'failure', (Date.now() - start) / 1000, 'ExporterBankAPI');
+    metrics.recordError('export_creation', 'commercialbankAPI');
+    metrics.recordBlockchainOperation('CreateExport', 'failure', (Date.now() - start) / 1000, 'commercialbankAPI');
   }
 });
 ```

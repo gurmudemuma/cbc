@@ -28,7 +28,7 @@ Automation scripts for the Coffee Export Blockchain system.
 secrets/
 ├── couchdb_user.txt
 ├── couchdb_password.txt
-├── jwt_secret_exporter_bank.txt
+├── jwt_secret_commercialbank.txt
 ├── jwt_secret_national_bank.txt
 ├── jwt_secret_ncat.txt
 ├── jwt_secret_shipping_line.txt

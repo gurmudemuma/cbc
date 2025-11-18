@@ -43,7 +43,7 @@ echo ""
 
 # Generate JWT secrets for each service
 echo "Generating JWT secrets..."
-create_secret_file "jwt_secret_exporter_bank.txt" "$(generate_secret)"
+create_secret_file "jwt_secret_commercialbank.txt" "$(generate_secret)"
 create_secret_file "jwt_secret_national_bank.txt" "$(generate_secret)"
 create_secret_file "jwt_secret_ncat.txt" "$(generate_secret)"
 create_secret_file "jwt_secret_shipping_line.txt" "$(generate_secret)"
@@ -70,7 +70,7 @@ COUCHDB_PASSWORD=$COUCHDB_PASSWORD
 REDIS_PASSWORD=$REDIS_PASSWORD
 
 # JWT Secrets (use these in your API .env files)
-JWT_SECRET_EXPORTER_BANK=$(cat "$PROJECT_ROOT/$SECRETS_DIR/jwt_secret_exporter_bank.txt")
+JWT_SECRET_commercialbank=$(cat "$PROJECT_ROOT/$SECRETS_DIR/jwt_secret_commercialbank.txt")
 JWT_SECRET_NATIONAL_BANK=$(cat "$PROJECT_ROOT/$SECRETS_DIR/jwt_secret_national_bank.txt")
 JWT_SECRET_ECTA=$(cat "$PROJECT_ROOT/$SECRETS_DIR/jwt_secret_ncat.txt")
 JWT_SECRET_SHIPPING_LINE=$(cat "$PROJECT_ROOT/$SECRETS_DIR/jwt_secret_shipping_line.txt")

@@ -62,7 +62,7 @@ export class EnhancedExportController {
       const result = await this.resilienceService.executeTransaction(async () => {
         const contract = this.fabricGateway.getExportContract();
         const exportService = createExportService(contract);
-        const commercialBankId = user.organizationId; // Changed from exporterBankId
+        const commercialBankId = user.organizationId; // Changed from commercialbankId
         return await exportService.createExport(
           exportId,
           commercialBankId,
@@ -223,7 +223,7 @@ export class EnhancedExportController {
    */
   public getExportsByCommercialBank = async (req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
     try {
-      const { commercialBankId } = req.params; // Changed from exporterBankId
+      const { commercialBankId } = req.params; // Changed from commercialbankId
       if (!commercialBankId) {
         res.status(400).json({ success: false, message: 'Commercial bank ID is required' });
         return;
@@ -352,7 +352,7 @@ export class EnhancedExportController {
       await notificationService.notifyFXDecision(
         exportId,
         true,
-        exportData.commercialBankId, // Changed from exportData.exporterBankId
+        exportData.commercialBankId, // Changed from exportData.commercialbankId
         undefined,
         undefined
       );

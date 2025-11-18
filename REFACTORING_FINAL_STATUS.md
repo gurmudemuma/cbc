@@ -211,7 +211,7 @@ nationalbank      →  nb-regulatory
 ```
 OLD                  NEW
 -------------------  ---------------
-ExporterBankAPI   →  BankerAPI
+commercialbankAPI   →  BankerAPI
 ExporterPortalAPI →  ExporterAPI
 NationalBankAPI   →  NBRegulatoryAPI
 ```

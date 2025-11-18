@@ -1,14 +1,14 @@
 # commercialbank to CommercialBank - Final Cleanup
 
 ## Issue Found
-The chaincode still had "ExporterBankMSP" references in several functions, even though we renamed the organization to "CommercialBank".
+The chaincode still had "commercialbankMSP" references in several functions, even though we renamed the organization to "CommercialBank".
 
 ## Functions Fixed
 
 ### 1. ConfirmPayment
 **Before:**
 ```go
-if clientMSPID != "ExporterBankMSP" && clientMSPID != "NationalBankMSP" {
+if clientMSPID != "commercialbankMSP" && clientMSPID != "NationalBankMSP" {
     return fmt.Errorf("only commercialbank or National Bank can confirm payment")
 }
 ```
@@ -23,7 +23,7 @@ if clientMSPID != "CommercialBankMSP" && clientMSPID != "NationalBankMSP" {
 ### 2. CompleteExport
 **Before:**
 ```go
-if clientMSPID != "ExporterBankMSP" && clientMSPID != "NationalBankMSP" {
+if clientMSPID != "commercialbankMSP" && clientMSPID != "NationalBankMSP" {
     return fmt.Errorf("only commercialbank or National Bank can complete exports")
 }
 ```
@@ -38,7 +38,7 @@ if clientMSPID != "CommercialBankMSP" && clientMSPID != "NationalBankMSP" {
 ### 3. UpdateExport
 **Before:**
 ```go
-if clientMSPID != "ExporterBankMSP" {
+if clientMSPID != "commercialbankMSP" {
     return fmt.Errorf("only commercialbank can update exports")
 }
 ```
@@ -53,7 +53,7 @@ if clientMSPID != "CommercialBankMSP" {
 ### 4. ResubmitRejectedExport
 **Before:**
 ```go
-if clientMSPID != "ExporterBankMSP" {
+if clientMSPID != "commercialbankMSP" {
     return fmt.Errorf("only commercialbank can resubmit exports")
 }
 ```
@@ -68,7 +68,7 @@ if clientMSPID != "CommercialBankMSP" {
 ### 5. CancelExport
 **Before:**
 ```go
-if clientMSPID != "ExporterBankMSP" {
+if clientMSPID != "commercialbankMSP" {
     return fmt.Errorf("only commercialbank can cancel exports")
 }
 ```
@@ -198,7 +198,7 @@ curl -X POST http://localhost:3001/api/exports/EXP-123/cancel \
 ## Summary
 
 ### ✅ Fixed in Chaincode
-- All MSP checks updated from `ExporterBankMSP` to `CommercialBankMSP`
+- All MSP checks updated from `commercialbankMSP` to `CommercialBankMSP`
 - All error messages updated from "commercialbank" to "Commercial Bank"
 - 5 functions affected: ConfirmPayment, CompleteExport, UpdateExport, ResubmitRejectedExport, CancelExport
 
@@ -225,4 +225,4 @@ This will deploy the latest chaincode with all MSP fixes.
    - Line 1422: ResubmitRejectedExport MSP check
    - Line 1768: CancelExport MSP check
 
-**All references to "ExporterBankMSP" in critical functions are now "CommercialBankMSP"!** ✅
+**All references to "commercialbankMSP" in critical functions are now "CommercialBankMSP"!** ✅

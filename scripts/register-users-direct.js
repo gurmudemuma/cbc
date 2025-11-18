@@ -15,7 +15,7 @@ const users = [
         organizationId: 'commercialbank-001',
         role: 'exporter',
         org: 'commercialbank',
-        mspId: 'ExporterBankMSP'
+        mspId: 'commercialbankMSP'
     },
     {
         username: 'banker1',

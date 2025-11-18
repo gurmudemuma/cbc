@@ -114,7 +114,7 @@ router.post('/verify-and-create', ecxController.verifyAndCreateExport.bind(ecxCo
  *             type: object
  *             required:
  *               - exportId
- *               - exporterBankId
+ *               - commercialbankId
  *               - exporterName
  *               - exporterTIN
  *               - exportLicenseNumber

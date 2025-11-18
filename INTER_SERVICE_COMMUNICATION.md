@@ -20,7 +20,7 @@ The system consists of 4 API services that communicate through:
 
 | Service | Port | Organization | MSP ID |
 |---------|------|--------------|--------|
-| commercialbank API | 3001 | commercialbank | ExporterBankMSP |
+| commercialbank API | 3001 | commercialbank | commercialbankMSP |
 | National Bank API | 3002 | NationalBank | NationalBankMSP |
 | ECTA API | 3003 | ECTA | ECTAMSP |
 | Shipping Line API | 3004 | ShippingLine | ShippingLineMSP |

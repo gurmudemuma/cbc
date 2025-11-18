@@ -246,11 +246,11 @@ services:
       - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
       - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.commercialbank.coffee-export.com:7051
       - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.commercialbank.coffee-export.com:7051
-      - CORE_PEER_LOCALMSPID=ExporterBankMSP
+      - CORE_PEER_LOCALMSPID=commercialbankMSP
       - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/fabric/msp
       - CORE_OPERATIONS_LISTENADDRESS=peer0.commercialbank.coffee-export.com:9444
       - CORE_METRICS_PROVIDER=prometheus
-      - CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG={"peername":"peer0exporterbank"}
+      - CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG={"peername":"peer0commercialbank"}
       - CORE_CHAINCODE_EXECUTETIMEOUT=600s
       - CORE_VM_ENDPOINT=unix:///var/run/docker.sock
       - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=coffee-export-network
@@ -587,7 +587,7 @@ services:
       - WALLET_PATH=/app/wallet
       - CHANNEL_NAME=coffeechannel
       - CHAINCODE_NAME_EXPORT=coffee-export
-      - MSP_ID=ExporterBankMSP
+      - MSP_ID=commercialbankMSP
       - ORGANIZATION_ID=commercialbank
       - ADMIN_CERT_PATH=/app/crypto/users/Admin@commercialbank.coffee-export.com/msp/signcerts/Admin@commercialbank.coffee-export.com-cert.pem
       - ADMIN_KEY_PATH=/app/crypto/users/Admin@commercialbank.coffee-export.com/msp/keystore/priv_sk

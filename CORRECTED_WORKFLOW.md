@@ -178,7 +178,7 @@ COMPLETED (CommercialBankMSP or NBEMSP)
 ```go
 type ExportRequest struct {
     ExportID           string       `json:"exportId"`
-    CommercialBankID   string       `json:"commercialBankId"`  // Changed from ExporterBankID
+    CommercialBankID   string       `json:"commercialBankId"`  // Changed from commercialbankID
     ExporterName       string       `json:"exporterName"`
     // ... other fields
 }
@@ -189,7 +189,7 @@ type ExportRequest struct {
 func (c *CoffeeExportContractV2) CreateExportRequest(
     ctx contractapi.TransactionContextInterface,
     exportID string,
-    commercialBankID string,  // Changed from exporterBankID
+    commercialBankID string,  // Changed from commercialbankID
     exporterName string,
     // ... other parameters
 ) error
@@ -198,7 +198,7 @@ func (c *CoffeeExportContractV2) CreateExportRequest(
 ## 🛠️ Implementation Checklist
 
 ### 1. Update Chaincode
-- [x] Rename `ExporterBankID` to `CommercialBankID` in data model
+- [x] Rename `commercialbankID` to `CommercialBankID` in data model
 - [x] Update `CreateExportRequest` function signature
 - [x] Update all function comments to reference Commercial Bank
 - [x] Update MSP validation checks
@@ -218,7 +218,7 @@ func (c *CoffeeExportContractV2) CreateExportRequest(
 - [x] Update UI references
 
 ### 4. Update Commercial Bank API
-- [x] Rename exporterBankId to commercialBankId in all endpoints
+- [x] Rename commercialbankId to commercialBankId in all endpoints
 - [x] Update documentation
 - [x] Update validation schemas
 

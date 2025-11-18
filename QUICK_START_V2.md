@@ -277,7 +277,7 @@ curl http://localhost:3001/metrics
 # Sample output:
 # http_requests_total{method="GET",route="/api/exports",status_code="200"} 1523
 # blockchain_operations_total{operation="GetExport",status="success"} 856
-# cache_hit_rate{service="ExporterBankAPI"} 0.75
+# cache_hit_rate{service="commercialbankAPI"} 0.75
 ```
 
 ---

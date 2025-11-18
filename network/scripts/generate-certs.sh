@@ -1,6 +1,6 @@
 #!/bin/bash
 
-function createExporterBank() {
+function createcommercialbank() {
   echo "Enrolling the CA admin for commercialbank"
   mkdir -p organizations/peerOrganizations/commercialbank.coffee-export.com/
 
@@ -30,7 +30,7 @@ function createExporterBank() {
   fabric-ca-client register --caname ca-commercialbank --id.name user1 --id.secret user1pw --id.type client --tls.certfiles "${PWD}/organizations/fabric-ca/commercialbank/tls-cert.pem"
 
   echo "Registering the org admin"
-  fabric-ca-client register --caname ca-commercialbank --id.name exporterbankadmin --id.secret exporterbankadminpw --id.type admin --tls.certfiles "${PWD}/organizations/fabric-ca/commercialbank/tls-cert.pem"
+  fabric-ca-client register --caname ca-commercialbank --id.name commercialbankadmin --id.secret commercialbankadminpw --id.type admin --tls.certfiles "${PWD}/organizations/fabric-ca/commercialbank/tls-cert.pem"
 
   echo "Generating the peer0 msp"
   fabric-ca-client enroll -u https://peer0:peer0pw@localhost:7054 --caname ca-commercialbank -M "${PWD}/organizations/peerOrganizations/commercialbank.coffee-export.com/peers/peer0.commercialbank.coffee-export.com/msp" --tls.certfiles "${PWD}/organizations/fabric-ca/commercialbank/tls-cert.pem"
@@ -59,7 +59,7 @@ function createExporterBank() {
   cp "${PWD}/organizations/peerOrganizations/commercialbank.coffee-export.com/msp/config.yaml" "${PWD}/organizations/peerOrganizations/commercialbank.coffee-export.com/users/User1@commercialbank.coffee-export.com/msp/config.yaml"
 
   echo "Generating the org admin msp"
-  fabric-ca-client enroll -u https://exporterbankadmin:exporterbankadminpw@localhost:7054 --caname ca-commercialbank -M "${PWD}/organizations/peerOrganizations/commercialbank.coffee-export.com/users/Admin@commercialbank.coffee-export.com/msp" --tls.certfiles "${PWD}/organizations/fabric-ca/commercialbank/tls-cert.pem"
+  fabric-ca-client enroll -u https://commercialbankadmin:commercialbankadminpw@localhost:7054 --caname ca-commercialbank -M "${PWD}/organizations/peerOrganizations/commercialbank.coffee-export.com/users/Admin@commercialbank.coffee-export.com/msp" --tls.certfiles "${PWD}/organizations/fabric-ca/commercialbank/tls-cert.pem"
 
   cp "${PWD}/organizations/peerOrganizations/commercialbank.coffee-export.com/msp/config.yaml" "${PWD}/organizations/peerOrganizations/commercialbank.coffee-export.com/users/Admin@commercialbank.coffee-export.com/msp/config.yaml"
 }

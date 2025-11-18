@@ -62,7 +62,7 @@ export type ExportStatus =
 
 export interface ExportRequest {
   exportId: string;
-  exporterBankId: string;
+  commercialbankId: string;
   exporterName: string;
   coffeeType: string;
   quantity: number; // in kg

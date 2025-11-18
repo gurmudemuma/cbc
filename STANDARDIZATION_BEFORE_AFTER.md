@@ -102,7 +102,7 @@ export const ORGANIZATIONS = [
     label: 'commercialbank', 
     apiUrl: API_ENDPOINTS.commercialbank,
     port: 3001,                        // ✅ CORRECT PORT
-    mspId: 'ExporterBankMSP',          // ✅ ADDED
+    mspId: 'commercialbankMSP',          // ✅ ADDED
     description: 'commercialbank - Initiates and completes exports'
   },
   { 
@@ -154,7 +154,7 @@ export const getOrganization = (orgValue) => {
 
 export const getMspId = (orgValue) => {
   const org = getOrganization(orgValue);
-  return org ? org.mspId : 'ExporterBankMSP';
+  return org ? org.mspId : 'commercialbankMSP';
 };
 ```
 
@@ -325,7 +325,7 @@ const getOrgClass = (org) => {
 |-----------|---------------|---------------|------|----------|---------|
 | API Dir | `exporter` | `nb-regulatory` | `ncat` | `shipping-line` | `custom-authorities` |
 | Frontend | `banker` | `nb-regulatory` | `ncat` | `shipping` | `customs` |
-| MSP | `ExporterBankMSP` | `NationalBankMSP` | `ECTAMSP` | `ShippingLineMSP` | `CustomAuthoritiesMSP` |
+| MSP | `commercialbankMSP` | `NationalBankMSP` | `ECTAMSP` | `ShippingLineMSP` | `CustomAuthoritiesMSP` |
 | Port | 3006 | 3002 | 3003 | 3004 | 3005 |
 
 **Issues:**
@@ -341,7 +341,7 @@ const getOrgClass = (org) => {
 |-----------|---------------|---------------|------|----------|---------|
 | API Dir | `commercialbank` | `national-bank` | `ncat` | `shipping-line` | `custom-authorities` |
 | Frontend | `commercialbank` | `national-bank` | `ncat` | `shipping-line` | `custom-authorities` |
-| MSP | `ExporterBankMSP` | `NationalBankMSP` | `ECTAMSP` | `ShippingLineMSP` | `CustomAuthoritiesMSP` |
+| MSP | `commercialbankMSP` | `NationalBankMSP` | `ECTAMSP` | `ShippingLineMSP` | `CustomAuthoritiesMSP` |
 | Port | 3001 | 3002 | 3003 | 3004 | 3005 |
 
 **Improvements:**
@@ -400,7 +400,7 @@ Result: ✅ MATCH - System works correctly
 
 ORGANIZATION_ID=commercialbank
 ORGANIZATION_NAME=commercialbank
-MSP_ID=ExporterBankMSP
+MSP_ID=commercialbankMSP
 PORT=3001
 
 # Clear, consistent, and documented

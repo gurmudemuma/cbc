@@ -127,7 +127,7 @@ environment:
   - IPFS_PORT=5001
   - IPFS_PROTOCOL=http
   - ORGANIZATION_ID=commercialbank
-  - MSP_ID=ExporterBankMSP
+  - MSP_ID=commercialbankMSP
   - PEER_ENDPOINT=peer0.commercialbank.coffee-export.com:7051
   - CHANNEL_NAME=coffeechannel
   - CHAINCODE_NAME_EXPORT=coffee-export
@@ -141,7 +141,7 @@ environment:
 
 ```yaml
 environment:
-  - VITE_EXPORTER_BANK_API_URL=http://localhost:3001
+  - VITE_commercialbank_API_URL=http://localhost:3001
   - VITE_NATIONAL_BANK_API_URL=http://localhost:3002
   - VITE_ECTA_API_URL=http://localhost:3003
   - VITE_SHIPPING_LINE_API_URL=http://localhost:3004
@@ -360,17 +360,17 @@ docker-compose -f docker-compose-full.yml logs --tail=50 commercialbank-api
 docker volume ls
 
 # Inspect volume
-docker volume inspect cbc_exporter-bank-wallet
+docker volume inspect cbc_commercialbank-wallet
 
 # Remove unused volumes
 docker volume prune
 
 # Backup volume
-docker run --rm -v cbc_exporter-bank-wallet:/data -v $(pwd):/backup \
+docker run --rm -v cbc_commercialbank-wallet:/data -v $(pwd):/backup \
   alpine tar czf /backup/wallet-backup.tar.gz /data
 
 # Restore volume
-docker run --rm -v cbc_exporter-bank-wallet:/data -v $(pwd):/backup \
+docker run --rm -v cbc_commercialbank-wallet:/data -v $(pwd):/backup \
   alpine tar xzf /backup/wallet-backup.tar.gz -C /
 ```
 

@@ -23,7 +23,7 @@ A comprehensive naming standardization effort has been completed for the Coffee 
 ```javascript
 // Now consistent across all components
 export const ORGANIZATIONS = [
-  { id: 'commercialbank', value: 'commercialbank', apiUrl: '/api/commercialbank', port: 3001, mspId: 'ExporterBankMSP' },
+  { id: 'commercialbank', value: 'commercialbank', apiUrl: '/api/commercialbank', port: 3001, mspId: 'commercialbankMSP' },
   { id: 'national-bank', value: 'national-bank', apiUrl: '/api/national-bank', port: 3002, mspId: 'NationalBankMSP' },
   { id: 'ncat', value: 'ncat', apiUrl: '/api/ncat', port: 3003, mspId: 'ECTAMSP' },
   { id: 'shipping-line', value: 'shipping-line', apiUrl: '/api/shipping-line', port: 3004, mspId: 'ShippingLineMSP' },
@@ -99,7 +99,7 @@ export const ORGANIZATIONS = [
 Organization Identifier Format: <organization>-<component>
 
 Examples:
-- commercialbank      (Port 3001, MSP: ExporterBankMSP)
+- commercialbank      (Port 3001, MSP: commercialbankMSP)
 - national-bank      (Port 3002, MSP: NationalBankMSP)
 - ncat               (Port 3003, MSP: ECTAMSP)
 - shipping-line      (Port 3004, MSP: ShippingLineMSP)
@@ -110,7 +110,7 @@ Examples:
 
 | Organization | Directory | Port | MSP ID | API Endpoint |
 |--------------|-----------|------|--------|--------------|
-| commercialbank | commercialbank | 3001 | ExporterBankMSP | /api/commercialbank |
+| commercialbank | commercialbank | 3001 | commercialbankMSP | /api/commercialbank |
 | National Bank | national-bank | 3002 | NationalBankMSP | /api/national-bank |
 | ECTA | ncat | 3003 | ECTAMSP | /api/ncat |
 | Shipping Line | shipping-line | 3004 | ShippingLineMSP | /api/shipping-line |

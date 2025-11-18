@@ -114,7 +114,7 @@ Test all 6 users:
    - governor1 → National Bank (NEW user)
 
 ### Frontend Changes
-1. Environment variables updated (EXPORTER_BANK → COMMERCIAL_BANK)
+1. Environment variables updated (commercialbank → COMMERCIAL_BANK)
 2. No code changes needed (already using correct config)
 
 ## ✅ Verification Checklist

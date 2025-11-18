@@ -38,7 +38,7 @@ peer lifecycle chaincode approveformyorg -o localhost:7050 --ordererTLSHostnameO
 # Commit the chaincode
 echo "Committing chaincode definition..."
 setGlobals 1
-peer lifecycle chaincode commit -o localhost:7050 --ordererTLSHostnameOverride orderer.coffee-export.com --tls --cafile "$ORDERER_CA" --channelID $CHANNEL_NAME --name ${CC_NAME} --peerAddresses localhost:7051 --tlsRootCertFiles "${PEER0_EXPORTERBANK_CA}" --peerAddresses localhost:9051 --tlsRootCertFiles "${PEER0_NATIONALBANK_CA}" --peerAddresses localhost:11051 --tlsRootCertFiles "${PEER0_ECTA_CA}" --peerAddresses localhost:13051 --tlsRootCertFiles "${PEER0_SHIPPINGLINE_CA}" --version ${CC_VERSION} --sequence ${CC_SEQUENCE}
+peer lifecycle chaincode commit -o localhost:7050 --ordererTLSHostnameOverride orderer.coffee-export.com --tls --cafile "$ORDERER_CA" --channelID $CHANNEL_NAME --name ${CC_NAME} --peerAddresses localhost:7051 --tlsRootCertFiles "${PEER0_commercialbank_CA}" --peerAddresses localhost:9051 --tlsRootCertFiles "${PEER0_NATIONALBANK_CA}" --peerAddresses localhost:11051 --tlsRootCertFiles "${PEER0_ECTA_CA}" --peerAddresses localhost:13051 --tlsRootCertFiles "${PEER0_SHIPPINGLINE_CA}" --version ${CC_VERSION} --sequence ${CC_SEQUENCE}
 
 echo "Verifying commit..."
 peer lifecycle chaincode querycommitted --channelID $CHANNEL_NAME --name ${CC_NAME}

@@ -81,7 +81,7 @@ PORT=<port>
 ```bash
 ORGANIZATION_ID=commercialbank
 ORGANIZATION_NAME=commercialbank
-MSP_ID=ExporterBankMSP
+MSP_ID=commercialbankMSP
 PORT=3001
 ```
 
@@ -299,7 +299,7 @@ docker-compose logs -f
 ### Organization IDs
 
 ```
-commercialbank      (Port 3001, MSP: ExporterBankMSP)
+commercialbank      (Port 3001, MSP: commercialbankMSP)
 national-bank      (Port 3002, MSP: NationalBankMSP)
 ncat               (Port 3003, MSP: ECTAMSP)
 shipping-line      (Port 3004, MSP: ShippingLineMSP)

@@ -576,7 +576,7 @@ class ExportErrorBoundary extends React.Component {
 #### **Efficient Data Fetching**
 ```typescript
 const fetchExports = async () => {
-  const endpoint = isExporterPortal || isExporterBank 
+  const endpoint = isExporterPortal || iscommercialbank 
     ? '/portal/exports' 
     : '/exports';
   const response = await apiClient.get(endpoint);
@@ -735,7 +735,7 @@ describe('Export Management E2E', () => {
 ```typescript
 export interface ExportRequest {
   exportId: string;
-  exporterBankId: string;
+  commercialbankId: string;
   exporterName: string;
   coffeeType: string;
   quantity: number;

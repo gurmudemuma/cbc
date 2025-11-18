@@ -11,7 +11,7 @@ This document provides the complete standardized configuration for all component
 ### Standard Organization Identifiers
 
 ```
-commercialbank      → commercialbank (Port 3001, MSP: ExporterBankMSP)
+commercialbank      → commercialbank (Port 3001, MSP: commercialbankMSP)
 national-bank      → National Bank (Port 3002, MSP: NationalBankMSP)
 ncat               → ECTA (Port 3003, MSP: ECTAMSP)
 shipping-line      → Shipping Line (Port 3004, MSP: ShippingLineMSP)
@@ -22,7 +22,7 @@ custom-authorities → Custom Authorities (Port 3005, MSP: CustomAuthoritiesMSP)
 
 | ID | Label | Port | MSP ID | API Endpoint | Directory | Description |
 |----|-------|------|--------|--------------|-----------|-------------|
-| commercialbank | commercialbank | 3001 | ExporterBankMSP | /api/commercialbank | api/commercialbank | Initiates and completes exports |
+| commercialbank | commercialbank | 3001 | commercialbankMSP | /api/commercialbank | api/commercialbank | Initiates and completes exports |
 | national-bank | National Bank | 3002 | NationalBankMSP | /api/national-bank | api/national-bank | Approves FX and regulatory compliance |
 | ncat | ECTA | 3003 | ECTAMSP | /api/ncat | api/ncat | Quality assurance and certification |
 | shipping-line | Shipping Line | 3004 | ShippingLineMSP | /api/shipping-line | api/shipping-line | Manages shipments and logistics |
@@ -42,7 +42,7 @@ export const ORGANIZATIONS = [
     label: 'commercialbank', 
     apiUrl: '/api/commercialbank',
     port: 3001,
-    mspId: 'ExporterBankMSP',
+    mspId: 'commercialbankMSP',
     description: 'commercialbank - Initiates and completes exports'
   },
   { 
@@ -113,7 +113,7 @@ const getOrgClass = (org) => {
 # ============================================
 ORGANIZATION_ID=commercialbank
 ORGANIZATION_NAME=commercialbank
-MSP_ID=ExporterBankMSP
+MSP_ID=commercialbankMSP
 
 # ============================================
 # Server Configuration
@@ -158,7 +158,7 @@ JWT_REFRESH_EXPIRY=7d
 # ============================================
 DB_HOST=localhost
 DB_PORT=5432
-DB_NAME=cbc_exporter_bank
+DB_NAME=cbc_commercialbank
 DB_USER=postgres
 DB_PASSWORD=postgres
 
@@ -199,7 +199,7 @@ SMTP_FROM=noreply@coffeeblockchain.com
 ```bash
 ORGANIZATION_ID=commercialbank
 ORGANIZATION_NAME=commercialbank
-MSP_ID=ExporterBankMSP
+MSP_ID=commercialbankMSP
 PORT=3001
 FABRIC_NETWORK_CONFIG_PATH=../../network/organizations/peerOrganizations/commercialbank.coffee-export.com/connection-profile.json
 ```
@@ -260,7 +260,7 @@ commercialbank-api:
     - PORT=3001
     - ORGANIZATION_ID=commercialbank
     - ORGANIZATION_NAME=commercialbank
-    - MSP_ID=ExporterBankMSP
+    - MSP_ID=commercialbankMSP
     - CHANNEL_NAME=coffeechannel
     - CHAINCODE_NAME_EXPORT=coffee-export
     - IPFS_HOST=ipfs
@@ -290,7 +290,7 @@ commercialbank-api:
 ```yaml
 services:
   commercialbank-api:
-    # Port 3001, ExporterBankMSP
+    # Port 3001, commercialbankMSP
     
   national-bank-api:
     # Port 3002, NationalBankMSP
@@ -520,7 +520,7 @@ Import Customs:
 
 ```
 Organization: commercialbank
-  MSP ID: ExporterBankMSP
+  MSP ID: commercialbankMSP
   Peer: peer0.commercialbank.coffee-export.com
   Port: 7051
   

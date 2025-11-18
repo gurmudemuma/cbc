@@ -13,7 +13,7 @@ The chaincode uses **OLD** MSP names that don't match the actual network configu
 
 ### 1. Commercial Bank (formerly commercialbank)
 **Network Config:** `CommercialBankMSP`
-**Chaincode Uses:** `ExporterBankMSP` ❌
+**Chaincode Uses:** `commercialbankMSP` ❌
 
 **Affected Functions:**
 - `ApproveBanking()` - Line 495
@@ -56,11 +56,11 @@ The chaincode uses **OLD** MSP names that don't match the actual network configu
 
 | Organization | Responsibility | Current MSP | Should Be | Fix Required |
 |-------------|----------------|-------------|-----------|--------------|
-| **Commercial Bank** | Approve banking documents | `ExporterBankMSP` | `CommercialBankMSP` | ✅ YES |
-| **Commercial Bank** | Reject banking | `ExporterBankMSP` | `CommercialBankMSP` | ✅ YES |
-| **Commercial Bank** | Submit for quality | `ExporterBankMSP` | `CommercialBankMSP` | ✅ YES |
-| **Commercial Bank** | Submit for FX | `ExporterBankMSP` | `CommercialBankMSP` | ✅ YES |
-| **Commercial Bank** | Submit to customs | `ExporterBankMSP` | `CommercialBankMSP` | ✅ YES |
+| **Commercial Bank** | Approve banking documents | `commercialbankMSP` | `CommercialBankMSP` | ✅ YES |
+| **Commercial Bank** | Reject banking | `commercialbankMSP` | `CommercialBankMSP` | ✅ YES |
+| **Commercial Bank** | Submit for quality | `commercialbankMSP` | `CommercialBankMSP` | ✅ YES |
+| **Commercial Bank** | Submit for FX | `commercialbankMSP` | `CommercialBankMSP` | ✅ YES |
+| **Commercial Bank** | Submit to customs | `commercialbankMSP` | `CommercialBankMSP` | ✅ YES |
 | **ECTA** | Issue quality certificate | `NCATMSP` | `ECTAMSP` | ✅ YES |
 | **ECTA** | Reject quality | `NCATMSP` | `ECTAMSP` | ✅ YES |
 
@@ -71,7 +71,7 @@ The chaincode uses **OLD** MSP names that don't match the actual network configu
 #### Fix 1: ApproveBanking (Line 495)
 ```go
 // BEFORE:
-if clientMSPID != "ExporterBankMSP" {
+if clientMSPID != "commercialbankMSP" {
     return fmt.Errorf("only commercialbank can approve banking/financial documents")
 }
 
@@ -84,7 +84,7 @@ if clientMSPID != "CommercialBankMSP" {
 #### Fix 2: RejectBanking (Line 537)
 ```go
 // BEFORE:
-if clientMSPID != "ExporterBankMSP" {
+if clientMSPID != "commercialbankMSP" {
     return fmt.Errorf("only commercialbank can reject banking review")
 }
 
@@ -97,7 +97,7 @@ if clientMSPID != "CommercialBankMSP" {
 #### Fix 3: SubmitForQuality (Line 572)
 ```go
 // BEFORE:
-if clientMSPID != "ExporterBankMSP" {
+if clientMSPID != "commercialbankMSP" {
     return fmt.Errorf("only commercialbank can submit for quality")
 }
 
@@ -110,7 +110,7 @@ if clientMSPID != "CommercialBankMSP" {
 #### Fix 4: SubmitForFX (Line 736)
 ```go
 // BEFORE:
-if clientMSPID != "ExporterBankMSP" {
+if clientMSPID != "commercialbankMSP" {
     return fmt.Errorf("only commercialbank can submit for FX")
 }
 
@@ -123,7 +123,7 @@ if clientMSPID != "CommercialBankMSP" {
 #### Fix 5: SubmitToExportCustoms (Line 853)
 ```go
 // BEFORE:
-if clientMSPID != "ExporterBankMSP" {
+if clientMSPID != "commercialbankMSP" {
     return fmt.Errorf("only commercialbank can submit to export customs")
 }
 

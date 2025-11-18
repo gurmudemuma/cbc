@@ -215,7 +215,7 @@
             },
             "version": "1"
           },
-          "ExporterBankMSP": {
+          "commercialbankMSP": {
             "groups": {},
             "mod_policy": "Admins",
             "policies": {
@@ -227,7 +227,7 @@
                     "identities": [
                       {
                         "principal": {
-                          "msp_identifier": "ExporterBankMSP",
+                          "msp_identifier": "commercialbankMSP",
                           "role": "ADMIN"
                         },
                         "principal_classification": "ROLE"
@@ -256,7 +256,7 @@
                     "identities": [
                       {
                         "principal": {
-                          "msp_identifier": "ExporterBankMSP",
+                          "msp_identifier": "commercialbankMSP",
                           "role": "PEER"
                         },
                         "principal_classification": "ROLE"
@@ -285,21 +285,21 @@
                     "identities": [
                       {
                         "principal": {
-                          "msp_identifier": "ExporterBankMSP",
+                          "msp_identifier": "commercialbankMSP",
                           "role": "ADMIN"
                         },
                         "principal_classification": "ROLE"
                       },
                       {
                         "principal": {
-                          "msp_identifier": "ExporterBankMSP",
+                          "msp_identifier": "commercialbankMSP",
                           "role": "PEER"
                         },
                         "principal_classification": "ROLE"
                       },
                       {
                         "principal": {
-                          "msp_identifier": "ExporterBankMSP",
+                          "msp_identifier": "commercialbankMSP",
                           "role": "CLIENT"
                         },
                         "principal_classification": "ROLE"
@@ -334,14 +334,14 @@
                     "identities": [
                       {
                         "principal": {
-                          "msp_identifier": "ExporterBankMSP",
+                          "msp_identifier": "commercialbankMSP",
                           "role": "ADMIN"
                         },
                         "principal_classification": "ROLE"
                       },
                       {
                         "principal": {
-                          "msp_identifier": "ExporterBankMSP",
+                          "msp_identifier": "commercialbankMSP",
                           "role": "CLIENT"
                         },
                         "principal_classification": "ROLE"
@@ -408,7 +408,7 @@
                       }
                     },
                     "intermediate_certs": [],
-                    "name": "ExporterBankMSP",
+                    "name": "commercialbankMSP",
                     "organizational_unit_identifiers": [],
                     "revocation_list": [],
                     "root_certs": [

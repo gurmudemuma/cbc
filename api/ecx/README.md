@@ -89,7 +89,7 @@ Create export request on blockchain (after verification).
 ```json
 {
   "exportId": "EXP-2024-001",
-  "exporterBankId": "BANK-001",
+  "commercialbankId": "BANK-001",
   "exporterName": "ABC Coffee Exporters",
   "exporterTIN": "TIN123456789",
   "exportLicenseNumber": "EXP-LIC-2024-001",

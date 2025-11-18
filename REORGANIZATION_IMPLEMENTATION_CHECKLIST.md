@@ -283,13 +283,13 @@
   StatusBankDocumentRejected ExportStatus = "BANK_DOCUMENT_REJECTED"
   ```
 
-- [ ] Implement `VerifyDocuments()` (ExporterBankMSP)
-- [ ] Implement `SubmitFXApplication()` (ExporterBankMSP)
+- [ ] Implement `VerifyDocuments()` (commercialbankMSP)
+- [ ] Implement `SubmitFXApplication()` (commercialbankMSP)
 - [ ] Add prerequisite validation (ECTA approval required)
 
 #### Update NBE Stage
 - [ ] Rename `ApproveFX()` → `ApproveFXApplication()`
-- [ ] Update to validate caller is ExporterBankMSP (not exporter)
+- [ ] Update to validate caller is commercialbankMSP (not exporter)
 - [ ] Add prerequisite validation (Bank verification required)
 - [ ] Implement `RejectFXApplication()`
 - [ ] Implement `ConfirmFXRepatriation()`

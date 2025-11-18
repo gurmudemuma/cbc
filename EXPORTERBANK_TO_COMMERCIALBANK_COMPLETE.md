@@ -14,7 +14,7 @@ All references to "commercialbank" have been updated to "CommercialBank" through
 ## ✅ Changes Summary
 
 ### 1. **MSP Name** ✅
-- `ExporterBankMSP` → `CommercialBankMSP`
+- `commercialbankMSP` → `CommercialBankMSP`
 
 ### 2. **Domain Name** ✅
 - `commercialbank.coffee-export.com` → `commercialbank.coffee-export.com`
@@ -127,8 +127,8 @@ All references to "commercialbank" have been updated to "CommercialBank" through
 
 ### Check for remaining old references:
 ```bash
-# Check for ExporterBankMSP
-grep -r "ExporterBankMSP" network/ scripts/ --include="*.sh" --include="*.yaml"
+# Check for commercialbankMSP
+grep -r "commercialbankMSP" network/ scripts/ --include="*.sh" --include="*.yaml"
 # Should return: 0 results
 
 # Check for commercialbank domain

@@ -19,7 +19,7 @@ Created standardized `.env` files for all 5 API services:
 1. **api/commercialbank/.env**
    - ORGANIZATION_ID=commercialbank
    - PORT=3001
-   - MSP_ID=ExporterBankMSP
+   - MSP_ID=commercialbankMSP
 
 2. **api/national-bank/.env**
    - ORGANIZATION_ID=national-bank

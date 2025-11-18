@@ -122,7 +122,7 @@ const getEnvVar = (key, fallback) => {
 };
 
 export const API_ENDPOINTS = {
-  commercialbank: getEnvVar('VITE_API_EXPORTER_BANK', 'http://localhost:3001'),
+  commercialbank: getEnvVar('VITE_API_commercialbank', 'http://localhost:3001'),
   nationalBank: getEnvVar('VITE_API_NATIONAL_BANK', 'http://localhost:3002'),
   ncat: getEnvVar('VITE_API_ECTA', 'http://localhost:3003'),
   shippingLine: getEnvVar('VITE_API_SHIPPING_LINE', 'http://localhost:3004'),
@@ -134,7 +134,7 @@ export const API_ENDPOINTS = {
 
 ```env
 # API Configuration - Individual service endpoints
-VITE_API_EXPORTER_BANK=http://localhost:3001
+VITE_API_commercialbank=http://localhost:3001
 VITE_API_NATIONAL_BANK=http://localhost:3002
 VITE_API_ECTA=http://localhost:3003
 VITE_API_SHIPPING_LINE=http://localhost:3004
@@ -306,7 +306,7 @@ npm run dev
 **For Production:**
 ```bash
 # Create .env.production
-VITE_API_EXPORTER_BANK=https://api.example.com/commercialbank
+VITE_API_commercialbank=https://api.example.com/commercialbank
 VITE_API_NATIONAL_BANK=https://api.example.com/national-bank
 # ... etc
 
@@ -345,7 +345,7 @@ localStorage.removeItem('token');
 
 1. Create `.env` file:
 ```env
-VITE_API_EXPORTER_BANK=http://custom-url:3001
+VITE_API_commercialbank=http://custom-url:3001
 ```
 
 2. Restart dev server

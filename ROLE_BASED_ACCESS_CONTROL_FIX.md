@@ -15,7 +15,7 @@ Implemented proper role-based access control that checks **BOTH** `organizationI
 
 **Before:**
 ```javascript
-const isExporterBank = orgId === 'commercialbank' || orgId === 'commercialbank';
+const iscommercialbank = orgId === 'commercialbank' || orgId === 'commercialbank';
 const isNationalBank = orgId === 'national-bank' || orgId === 'nationalbank';
 ```
 

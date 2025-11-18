@@ -40,7 +40,7 @@ All services require these variables as validated by `env.validator.ts`:
 | `ORGANIZATION_ID` | Unique organization identifier | `commercialbank`, `nationalbank`, `ncat`, `shippingline` |
 | `ORGANIZATION_NAME` | Human-readable organization name | `commercialbank`, `National Bank`, `ECTA`, `Shipping Line` |
 | `PEER_ENDPOINT` | Hyperledger Fabric peer endpoint | `peer0.commercialbank.coffee-export.com:7051` |
-| `MSP_ID` | Membership Service Provider ID | `ExporterBankMSP`, `NationalBankMSP`, `ECTAMSP`, `ShippingLineMSP` |
+| `MSP_ID` | Membership Service Provider ID | `commercialbankMSP`, `NationalBankMSP`, `ECTAMSP`, `ShippingLineMSP` |
 | `CHANNEL_NAME` | Fabric channel name | `coffeechannel` |
 | `CHAINCODE_NAME_EXPORT` | Export chaincode name | `coffee-export` |
 | `CHAINCODE_NAME_USER` | User management chaincode name | `user-management` |
@@ -87,7 +87,7 @@ REFRESH_TOKEN_EXPIRY=7d
 # Organization
 ORGANIZATION_ID=commercialbank
 ORGANIZATION_NAME=commercialbank
-MSP_ID=ExporterBankMSP
+MSP_ID=commercialbankMSP
 PEER_ENDPOINT=peer0.commercialbank.coffee-export.com:7051
 
 # Fabric Network
@@ -334,7 +334,7 @@ Environment Configuration Summary
   Environment: development
   Port: 3001
   Organization: commercialbank (commercialbank)
-  MSP ID: ExporterBankMSP
+  MSP ID: commercialbankMSP
   Channel: coffeechannel
   Chaincode Export: coffee-export
   Chaincode User: user-management
@@ -379,7 +379,7 @@ ENCRYPTION_KEY=<use-kms-or-vault>
 
 ORGANIZATION_ID=commercialbank
 ORGANIZATION_NAME=commercialbank
-MSP_ID=ExporterBankMSP
+MSP_ID=commercialbankMSP
 PEER_ENDPOINT=peer0.commercialbank.coffee-export.com:7051
 
 CHANNEL_NAME=coffeechannel

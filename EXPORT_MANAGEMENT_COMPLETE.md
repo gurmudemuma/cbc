@@ -25,7 +25,7 @@ Complete blockchain service with:
 
 - ✅ `EXPORT_MANAGEMENT_QUICK_GUIDE.md` - Quick reference
 - ✅ `EXPORT_CONTROLLERS_CREATED.md` - Controller details & route examples
-- ✅ `EXPORTER_BANK_CONTROLLER_UPDATES.md` - Update instructions
+- ✅ `commercialbank_CONTROLLER_UPDATES.md` - Update instructions
 - ✅ `EXPORT_MANAGEMENT_COMPLETE.md` - This file
 
 ---

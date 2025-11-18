@@ -42,7 +42,7 @@ All blockchain peer nodes have been successfully added to `docker-compose.yml`. 
 
 | # | Organization | Container Name | Port | CouchDB | MSP ID |
 |---|--------------|----------------|------|---------|--------|
-| 1 | **commercialbank** | peer0.commercialbank.coffee-export.com | 7051 | couchdb0 (5984) | ExporterBankMSP |
+| 1 | **commercialbank** | peer0.commercialbank.coffee-export.com | 7051 | couchdb0 (5984) | commercialbankMSP |
 | 2 | **National Bank** | peer0.nationalbank.coffee-export.com | 8051 | couchdb1 (6984) | NationalBankMSP |
 | 3 | **ECTA** | peer0.ecta.coffee-export.com | 9051 | couchdb2 (7984) | ECTAMSP |
 | 4 | **Shipping Line** | peer0.shippingline.coffee-export.com | 10051 | couchdb3 (8984) | ShippingLineMSP |

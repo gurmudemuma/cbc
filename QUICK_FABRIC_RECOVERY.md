@@ -92,7 +92,7 @@ docker exec cli osnadmin channel list \
 ### Check Peers Joined
 ```bash
 cd network
-export CORE_PEER_LOCALMSPID=ExporterBankMSP
+export CORE_PEER_LOCALMSPID=commercialbankMSP
 export CORE_PEER_TLS_ROOTCERT_FILE=organizations/peerOrganizations/commercialbank.coffee-export.com/peers/peer0.commercialbank.coffee-export.com/tls/ca.crt
 export CORE_PEER_MSPCONFIGPATH=organizations/peerOrganizations/commercialbank.coffee-export.com/users/Admin@commercialbank.coffee-export.com/msp
 export CORE_PEER_ADDRESS=peer0.commercialbank.coffee-export.com:7051

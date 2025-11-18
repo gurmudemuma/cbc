@@ -62,7 +62,7 @@ export interface ECXVerificationResponse {
 
 export interface CreateExportRequestPayload {
   exportId: string;
-  commercialBankId: string; // Changed from exporterBankId
+  commercialBankId: string; // Changed from commercialbankId
   exporterName: string;
   exporterTIN: string;
   exportLicenseNumber: string;

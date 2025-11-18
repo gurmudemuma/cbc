@@ -114,7 +114,7 @@ These are consortium members with their own peer nodes:
 
 1. **commercialbank** (Port 3001)
    - Peer: peer0.commercialbank.coffee-export.com:7051
-   - Organization: ExporterBankMSP
+   - Organization: commercialbankMSP
    - Role: Financial institution for exporters
 
 2. **National Bank** (Port 3002)

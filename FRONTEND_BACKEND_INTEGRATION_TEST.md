@@ -57,7 +57,7 @@ The following test users were successfully registered in the blockchain:
 
 ### Updated Files
 1. `/home/gu-da/cbc/frontend/.env.example`
-   - Changed `VITE_API_EXPORTER_BANK` → `VITE_API_COMMERCIAL_BANK`
+   - Changed `VITE_API_commercialbank` → `VITE_API_COMMERCIAL_BANK`
    - Added `VITE_API_EXPORTER_PORTAL` for future external portal
 
 2. `/home/gu-da/cbc/frontend/src/config/api.config.js`

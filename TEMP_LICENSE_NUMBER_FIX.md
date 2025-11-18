@@ -15,7 +15,7 @@ Instead of modifying chaincode (which requires rebuild and redeployment), we gen
 
 **Changes:**
 ```typescript
-async createExport(exportId: string, exporterBankId: string, data: CreateExportData): Promise<ExportRequest> {
+async createExport(exportId: string, commercialbankId: string, data: CreateExportData): Promise<ExportRequest> {
     // Generate temporary license number if not provided
     const licenseNumber = data.exportLicenseNumber || 
         `TEMP-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
@@ -30,7 +30,7 @@ async createExport(exportId: string, exporterBankId: string, data: CreateExportD
     await this.contract.submitTransaction(
         'CreateExportRequest',
         exportId,
-        exporterBankId,
+        commercialbankId,
         data.exporterName,
         licenseNumber,        // Always non-empty
         data.coffeeType,
@@ -142,7 +142,7 @@ curl -X POST http://localhost:3001/api/exports \
   "success": true,
   "data": {
     "exportId": "EXP-1699876543210-abc123xyz",
-    "exporterBankId": "commercialbank",
+    "commercialbankId": "commercialbank",
     "exporterName": "Test Exporter",
     "coffeeType": "Arabica",
     "quantity": 1000,

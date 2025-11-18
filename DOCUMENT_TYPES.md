@@ -24,7 +24,7 @@ This document provides a comprehensive reference of all document types that can 
 ```
 EXPORT-CONTRACT-{exportId}-{timestamp}.pdf
 EXPORT-PO-{exportId}-{timestamp}.pdf
-EXPORT-LICENSE-{exporterBankId}-{timestamp}.pdf
+EXPORT-LICENSE-{commercialbankId}-{timestamp}.pdf
 ```
 
 ---

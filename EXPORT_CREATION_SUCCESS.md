@@ -132,7 +132,7 @@ const validateExportForm = (data) => {
   "success": true,
   "data": {
     "exportId": "EXP-1699876543210-abc123xyz",
-    "exporterBankId": "commercialbank",
+    "commercialbankId": "commercialbank",
     "exporterName": "Test Exporter",
     "coffeeType": "Arabica",
     "quantity": 1000,

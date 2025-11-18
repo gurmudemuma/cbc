@@ -32,7 +32,7 @@ All naming standardization has been completed and all scripts have been updated 
 ## Standardized Organization Names
 
 ```
-commercialbank      → Port 3001, MSP: ExporterBankMSP
+commercialbank      → Port 3001, MSP: commercialbankMSP
 national-bank      → Port 3002, MSP: NationalBankMSP
 ncat               → Port 3003, MSP: ECTAMSP
 shipping-line      → Port 3004, MSP: ShippingLineMSP

@@ -59,7 +59,7 @@ Environment Configuration Summary
   Environment: development
   Port: 3001
   Organization: commercialbank (commercialbank)
-  MSP ID: ExporterBankMSP
+  MSP ID: commercialbankMSP
   Channel: coffeechannel
   Chaincode Export: coffee-export
   Chaincode User: user-management

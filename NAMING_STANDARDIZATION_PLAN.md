@@ -39,7 +39,7 @@ Root package.json workspaces:
 |-----------|---------------|---------------|------|----------|---------|
 | API Dir | `exporter` | `nb-regulatory` | `ncat` | `shipping-line` | `custom-authorities` |
 | Frontend | `banker` | `nb-regulatory` | `ncat` | `shipping` | `customs` |
-| Chaincode MSP | `ExporterBankMSP` | `NationalBankMSP` | `ECTAMSP` | `ShippingLineMSP` | `CustomAuthoritiesMSP` |
+| Chaincode MSP | `commercialbankMSP` | `NationalBankMSP` | `ECTAMSP` | `ShippingLineMSP` | `CustomAuthoritiesMSP` |
 | Docker Service | `commercialbank-api` | `national-bank-api` | `ncat-api` | `shipping-line-api` | `custom-authorities-api` |
 
 ### Issue 3: Environment Variables & Configuration
@@ -115,7 +115,7 @@ export const ORGANIZATIONS = [
     shortCode: 'eb',
     apiUrl: '/api/commercialbank',
     port: 3001,
-    mspId: 'ExporterBankMSP'
+    mspId: 'commercialbankMSP'
   },
   { 
     id: 'national-bank',
@@ -166,7 +166,7 @@ services:
     environment:
       - PORT=3001
       - ORGANIZATION_ID=commercialbank
-      - MSP_ID=ExporterBankMSP
+      - MSP_ID=commercialbankMSP
     ports:
       - "3001:3001"
 
@@ -219,7 +219,7 @@ services:
 # Organization Configuration
 ORGANIZATION_ID=commercialbank
 ORGANIZATION_NAME=commercialbank
-MSP_ID=ExporterBankMSP
+MSP_ID=commercialbankMSP
 
 # Server Configuration
 PORT=3001
@@ -313,7 +313,7 @@ export const ORGANIZATIONS = [
     label: 'commercialbank',
     apiUrl: '/api/commercialbank',
     port: 3001,
-    mspId: 'ExporterBankMSP'
+    mspId: 'commercialbankMSP'
   },
   // ... rest of organizations
 ];

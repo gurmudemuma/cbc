@@ -70,7 +70,7 @@ sed -i 's/ECTA/ECTA/g' approve-commit-user-management.sh
 ### Current (After Updates):
 | Org # | Name | MSP ID | Port | Domain |
 |-------|------|--------|------|--------|
-| 1 | commercialbank | ExporterBankMSP | 7051 | commercialbank.coffee-export.com |
+| 1 | commercialbank | commercialbankMSP | 7051 | commercialbank.coffee-export.com |
 | 2 | National Bank | NationalBankMSP | 8051 | nationalbank.coffee-export.com |
 | 3 | **ECTA** | **ECTAMSP** | 9051 | **ecta.coffee-export.com** |
 | 4 | Shipping Line | ShippingLineMSP | 10051 | shippingline.coffee-export.com |

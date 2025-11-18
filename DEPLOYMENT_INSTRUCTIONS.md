@@ -161,7 +161,7 @@ curl -X POST http://localhost:3001/api/exports \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "exporterBankId": "BANK-001",
+    "commercialbankId": "BANK-001",
     "exporterName": "Test Exporter",
     "coffeeType": "Arabica",
     "quantity": 1000,

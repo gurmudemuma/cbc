@@ -60,7 +60,7 @@ export class ExportService {
         `${ECX_API_URL}/api/ecx/create-export`,
         {
           exportId: data.exportId,
-          exporterBankId: data.exporterBankId,
+          commercialbankId: data.commercialbankId,
           exporterName: data.exporterName,
           exporterTIN: data.exporterTIN,
           exportLicenseNumber: data.exportLicenseNumber,
@@ -123,7 +123,7 @@ export class ExportService {
 // TypeScript interfaces
 interface CreateExportDTO {
   exportId: string;
-  exporterBankId: string;
+  commercialbankId: string;
   exporterName: string;
   exporterTIN: string;
   exportLicenseNumber: string;

@@ -94,7 +94,7 @@ api/exporter-portal/
   fullName: 'Commercial Bank',
   apiUrl: 'http://localhost:3001',
   port: 3001,
-  mspId: 'ExporterBankMSP',
+  mspId: 'commercialbankMSP',
   type: 'consortium',
 }
 ```

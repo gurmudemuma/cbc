@@ -340,7 +340,7 @@ export const ExportFilterSchema = z.object({
     ])
     .optional(),
   
-  exporterBankId: z
+  commercialbankId: z
     .string()
     .optional(),
   

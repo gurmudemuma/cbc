@@ -97,13 +97,13 @@ const apiUrl = formData.organization === 'exporter'
 
 **Issues Found:**
 - Line 20: `isExporterPortal = user?.organizationId === 'exporter-portal'`
-- Line 21: `isExporterBank = user?.organizationId === 'commercialbank'`
+- Line 21: `iscommercialbank = user?.organizationId === 'commercialbank'`
 
 **Recommended Fix:**
 ```javascript
 // OLD
 const isExporterPortal = user?.organizationId === 'exporter-portal';
-const isExporterBank = user?.organizationId === 'commercialbank';
+const iscommercialbank = user?.organizationId === 'commercialbank';
 
 // NEW
 const isExporter = user?.organizationId === 'exporter';

@@ -32,7 +32,7 @@ The frontend is trying to call `/api/exporter-portal/exports` but this endpoint 
 
 Frontend (`ExportManagement.jsx`, line ~150):
 ```javascript
-const endpoint = isExporterPortal || isExporterBank ? '/portal/exports' : '/exports';
+const endpoint = isExporterPortal || iscommercialbank ? '/portal/exports' : '/exports';
 ```
 
 Backend (`exporter-portal/src/index.ts`, line ~75):
@@ -107,7 +107,7 @@ Frontend (`ExportManagement.jsx`, line ~150-170):
 ```javascript
 const fetchExports = async () => {
   try {
-    const endpoint = isExporterPortal || isExporterBank ? '/portal/exports' : '/exports';
+    const endpoint = isExporterPortal || iscommercialbank ? '/portal/exports' : '/exports';
     const response = await apiClient.get(endpoint);
     setExports(response.data.data || []);
   } catch (error) {

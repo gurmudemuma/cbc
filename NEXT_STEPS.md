@@ -48,7 +48,7 @@ chmod +x scripts/generate-secrets.sh
 
 # Example for commercialbank:
 cd api/commercialbank
-echo "JWT_SECRET=$(grep JWT_SECRET_EXPORTER_BANK ../../.env.secrets | cut -d'=' -f2)" >> .env
+echo "JWT_SECRET=$(grep JWT_SECRET_commercialbank ../../.env.secrets | cut -d'=' -f2)" >> .env
 
 # Repeat for:
 # - national-bank

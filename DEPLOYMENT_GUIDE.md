@@ -527,7 +527,7 @@ EOF
 ```nginx
 # /etc/nginx/sites-available/cbc-api
 
-upstream exporter_bank_api {
+upstream commercialbank_api {
     least_conn;
     server commercialbank-api-1:3001 max_fails=3 fail_timeout=30s;
     server commercialbank-api-2:3001 max_fails=3 fail_timeout=30s;
@@ -558,7 +558,7 @@ server {
     location /commercialbank/ {
         limit_req zone=api_limit burst=20 nodelay;
         
-        proxy_pass http://exporter_bank_api/;
+        proxy_pass http://commercialbank_api/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -577,13 +577,13 @@ server {
     # Auth endpoints with stricter rate limiting
     location ~ ^/[^/]+/api/auth/(login|register) {
         limit_req zone=auth_limit burst=3 nodelay;
-        proxy_pass http://exporter_bank_api;
+        proxy_pass http://commercialbank_api;
     }
 
     # Health check endpoint (no rate limiting)
     location ~ ^/[^/]+/health {
         access_log off;
-        proxy_pass http://exporter_bank_api;
+        proxy_pass http://commercialbank_api;
     }
 }
 

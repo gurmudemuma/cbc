@@ -348,8 +348,8 @@ export class EnhancedExportController {
       filtered = filtered.filter((exp) => exp.status === filters.status);
     }
 
-    if (filters.exporterBankId) {
-      filtered = filtered.filter((exp) => exp.exporterBankId === filters.exporterBankId);
+    if (filters.commercialbankId) {
+      filtered = filtered.filter((exp) => exp.commercialbankId === filters.commercialbankId);
     }
 
     if (filters.destinationCountry) {

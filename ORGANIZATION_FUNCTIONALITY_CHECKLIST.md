@@ -10,7 +10,7 @@ This document verifies that every action for each organization is correctly work
 
 ### **Primary Actions**
 - [x] **Create Export Request** - `CreateExportRequest` chaincode
-  - MSP: `CommercialBankMSP` ✅ (Updated from ExporterBankMSP)
+  - MSP: `CommercialBankMSP` ✅ (Updated from commercialbankMSP)
   - API: `POST /api/exports`
   - Generates temporary license numbers if not provided
   - Validates quantity (0.1 - 1,000,000 kg)
@@ -260,7 +260,7 @@ This document verifies that every action for each organization is correctly work
 ## Chaincode Function Access Control
 
 ### **CreateExportRequest**
-- ✅ CommercialBankMSP (updated from ExporterBankMSP)
+- ✅ CommercialBankMSP (updated from commercialbankMSP)
 - ✅ ECXMSP
 
 ### **ApproveFX / RejectFX**
@@ -398,7 +398,7 @@ This document verifies that every action for each organization is correctly work
 
 ### **✅ Fixed Issues**
 
-1. **ExporterBankMSP References**
+1. **commercialbankMSP References**
    - ✅ Updated to CommercialBankMSP in all chaincode functions
 
 2. **License Number Validation**

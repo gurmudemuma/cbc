@@ -8,7 +8,7 @@ The system currently uses **5 active organizations**:
 - **Domain:** commercialbank.coffee-export.com
 - **Peer Port:** 7051
 - **API Port:** 3001
-- **MSP ID:** ExporterBankMSP
+- **MSP ID:** commercialbankMSP
 - **Role:** Coffee exporter, initiates export records
 - **Crypto Config:** `crypto-config-commercialbank.yaml`
 

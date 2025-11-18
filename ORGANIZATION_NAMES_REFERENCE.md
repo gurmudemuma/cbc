@@ -16,7 +16,7 @@ The actual peer organization directories in `network/organizations/peerOrganizat
 
 | Organization Domain | MSP ID | API Directory | Port | Service Name |
 |---------------------|--------|---------------|------|--------------|
-| `commercialbank.coffee-export.com` | ExporterBankMSP | `api/banker` | 3001 | commercialbank API |
+| `commercialbank.coffee-export.com` | commercialbankMSP | `api/banker` | 3001 | commercialbank API |
 | `nationalbank.coffee-export.com` | NationalBankMSP | `api/nb-regulatory` | 3002 | National Bank API |
 | `ncat.coffee-export.com` | ECTAMSP | `api/ncat` | 3003 | ECTA API |
 | `shippingline.coffee-export.com` | ShippingLineMSP | `api/shipping-line` | 3004 | Shipping Line API |
@@ -87,7 +87,7 @@ The network configuration in `network/configtx/configtx.yaml` defines these orga
 ## Chaincode Endorsement
 
 For multi-organization transactions, ensure endorsement policies reference the correct MSP IDs:
-- ExporterBankMSP
+- commercialbankMSP
 - NationalBankMSP
 - ECTAMSP
 - ShippingLineMSP

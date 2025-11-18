@@ -88,7 +88,7 @@ async createExport(data: ExportData) {
     },
     body: JSON.stringify({
       exportId: data.exportId,
-      exporterBankId: data.exporterBankId,
+      commercialbankId: data.commercialbankId,
       exporterName: data.exporterName,
       exporterTIN: data.exporterTIN,
       exportLicenseNumber: data.exportLicenseNumber,

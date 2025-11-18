@@ -439,8 +439,8 @@ Each organization has its own MSP (Membership Service Provider):
 ```yaml
 Organizations:
   - &commercialbank
-    Name: ExporterBankMSP
-    ID: ExporterBankMSP
+    Name: commercialbankMSP
+    ID: commercialbankMSP
     MSPDir: organizations/peerOrganizations/commercialbank/msp
     
   - &NationalBank
@@ -457,7 +457,7 @@ Require multiple organizations to endorse transactions:
 // Chaincode endorsement policy
 const policy = {
   identities: [
-    { role: { name: "member", mspId: "ExporterBankMSP" }},
+    { role: { name: "member", mspId: "commercialbankMSP" }},
     { role: { name: "member", mspId: "NationalBankMSP" }},
     { role: { name: "member", mspId: "ECTAMSP" }}
   ],
@@ -477,8 +477,8 @@ Sensitive data stored in private collections:
 
 ```json
 {
-  "name": "exporterBankPrivateDetails",
-  "policy": "OR('ExporterBankMSP.member', 'NationalBankMSP.member')",
+  "name": "commercialbankPrivateDetails",
+  "policy": "OR('commercialbankMSP.member', 'NationalBankMSP.member')",
   "requiredPeerCount": 1,
   "maxPeerCount": 2,
   "blockToLive": 1000,
@@ -499,7 +499,7 @@ func (s *SmartContract) CreateExport(ctx contractapi.TransactionContextInterface
     }
     
     // Only commercialbank can create exports
-    if mspID != "ExporterBankMSP" {
+    if mspID != "commercialbankMSP" {
         return fmt.Errorf("only commercialbank can create exports")
     }
     

@@ -236,7 +236,7 @@ export class ECXService {
       // Create blockchain record
       const txId = await fabricService.createExportRequest(
         payload.exportId,
-        payload.commercialBankId, // Changed from exporterBankId
+        payload.commercialBankId, // Changed from commercialbankId
         payload.exporterName,
         payload.exportLicenseNumber,
         payload.coffeeType,

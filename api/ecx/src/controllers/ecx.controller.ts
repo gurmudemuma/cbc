@@ -145,7 +145,7 @@ export class ECXController {
     try {
       const payload: CreateExportRequestPayload = {
         exportId: req.body.exportId,
-        exporterBankId: req.body.exporterBankId,
+        commercialbankId: req.body.commercialbankId,
         exporterName: req.body.exporterName,
         exporterTIN: req.body.exporterTIN,
         exportLicenseNumber: req.body.exportLicenseNumber,

@@ -66,7 +66,7 @@ export const ORGANIZATIONS = [
     label: 'commercialbank', 
     apiUrl: '/api/commercialbank',
     port: 3001,
-    mspId: 'ExporterBankMSP'
+    mspId: 'commercialbankMSP'
   },
   // ... rest of organizations
 ];
@@ -200,7 +200,7 @@ ls -la api/ | grep "^d" | awk '{print $NF}'
 # Organization Configuration
 ORGANIZATION_ID=commercialbank
 ORGANIZATION_NAME=commercialbank
-MSP_ID=ExporterBankMSP
+MSP_ID=commercialbankMSP
 
 # Server Configuration
 PORT=3001
@@ -257,7 +257,7 @@ services:
       - PORT=3001
       - ORGANIZATION_ID=commercialbank
       - ORGANIZATION_NAME=commercialbank
-      - MSP_ID=ExporterBankMSP
+      - MSP_ID=commercialbankMSP
       - CHANNEL_NAME=coffeechannel
       - CHAINCODE_NAME_EXPORT=coffee-export
       - IPFS_HOST=ipfs
@@ -465,7 +465,7 @@ services:
 
 | Organization | Directory | Port | MSP ID | API Endpoint |
 |--------------|-----------|------|--------|--------------|
-| commercialbank | commercialbank | 3001 | ExporterBankMSP | /api/commercialbank |
+| commercialbank | commercialbank | 3001 | commercialbankMSP | /api/commercialbank |
 | National Bank | national-bank | 3002 | NationalBankMSP | /api/national-bank |
 | ECTA | ncat | 3003 | ECTAMSP | /api/ncat |
 | Shipping Line | shipping-line | 3004 | ShippingLineMSP | /api/shipping-line |

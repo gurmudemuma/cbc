@@ -7,7 +7,7 @@ export interface SearchCriteria {
   exporterName?: string;
   coffeeType?: string;
   destinationCountry?: string;
-  commercialBankId?: string; // Changed from exporterBankId
+  commercialBankId?: string; // Changed from commercialbankId
   minQuantity?: number;
   maxQuantity?: number;
   minEstimatedValue?: number;
@@ -19,7 +19,7 @@ interface ExportFilters {
   exporterName?: string;
   coffeeType?: string;
   destinationCountry?: string;
-  commercialBankId?: string; // Changed from exporterBankId
+  commercialBankId?: string; // Changed from commercialbankId
   quantityRange?: { min?: number; max?: number };
   valueRange?: { min?: number; max?: number };
 }
@@ -114,7 +114,7 @@ export class SearchService {
       );
     }
 
-    // Commercial bank ID filter (Changed from exporterBankId)
+    // Commercial bank ID filter (Changed from commercialbankId)
     if (criteria.commercialBankId) {
       filtered = filtered.filter(
         (exp) => exp.commercialBankId === criteria.commercialBankId
