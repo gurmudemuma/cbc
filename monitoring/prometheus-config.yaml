@@ -98,11 +98,11 @@ data:
             tier: 'backend'
 
       # ECTA API
-      - job_name: 'ncat-api'
+      - job_name: 'ecta-api'
         static_configs:
-        - targets: ['ncat-api:3003']
+        - targets: ['ecta-api:3003']
           labels:
-            service: 'ncat-api'
+            service: 'ecta-api'
             tier: 'backend'
 
       # Shipping Line API

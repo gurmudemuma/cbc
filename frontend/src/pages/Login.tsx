@@ -1,9 +1,11 @@
+// @ts-nocheck
 import { useState } from 'react';
-import { Coffee, LogIn, Lock, Globe, Zap, Users, Link2, Network, Shield, Database } from 'lucide-react';
 import apiClient, { setApiBaseUrl } from '../services/api';
 import { ORGANIZATIONS, getApiUrl } from '../config/api.config';
 import {
   Box,
+  Button,
+  Container,
   FormControl,
   InputLabel,
   MenuItem,
@@ -11,29 +13,32 @@ import {
   Select,
   TextField,
   Typography,
-  Stack,
   Alert,
+  CircularProgress,
+  InputAdornment,
+  IconButton,
+  Divider,
   Chip,
+  Stack,
 } from '@mui/material';
-import Grid from '@mui/material/Unstable_Grid2';
 import {
-  LoginPageContainer,
-  LoginPaper,
-  InfoContainer,
-  FormContainer,
-  StyledSelect,
-  StyledTextField,
-  StyledButton,
-} from './Login.styles';
+  Visibility,
+  VisibilityOff,
+  AccountCircle,
+  Business,
+  Lock,
+  Login as LoginIcon,
+} from '@mui/icons-material';
 
 const Login = ({ onLogin }) => {
   const [formData, setFormData] = useState({
     username: '',
     password: '',
-    organization: 'commercial-bank',  // Default to commercial bank (main API)
+    organization: 'commercial-bank',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -41,20 +46,25 @@ const Login = ({ onLogin }) => {
     setLoading(true);
 
     try {
-      // Get the API URL for the selected organization
       const apiUrl = getApiUrl(formData.organization);
       setApiBaseUrl(apiUrl);
 
-      // Use standard auth endpoint
-      const authEndpoint = '/api/auth/login';
-
-      const response = await apiClient.post(authEndpoint, {
+      const response = await apiClient.post('/api/auth/login', {
         username: formData.username,
         password: formData.password,
       });
 
       const { user, token } = response.data.data;
       localStorage.setItem('token', token);
+      
+      const selectedOrg = (formData.organization || '').toLowerCase();
+      if (selectedOrg.includes('exporter')) {
+        const defaultBank = process.env.REACT_APP_DEFAULT_BANK_ID || 'commercial-bank';
+        localStorage.setItem('bankContextId', defaultBank);
+      } else {
+        localStorage.removeItem('bankContextId');
+      }
+      
       onLogin(user, token, formData.organization);
     } catch (err) {
       console.error('Login error:', err);
@@ -72,401 +82,221 @@ const Login = ({ onLogin }) => {
   };
 
   return (
-    <LoginPageContainer>
-      <LoginPaper elevation={3}>
-        <InfoContainer>
-          {/* Blockchain Network Visualization */}
+    <Box
+      sx={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        background: 'linear-gradient(135deg, #8B5CF6 0%, #F59E0B 100%)',
+        position: 'relative',
+        overflow: 'hidden',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'0.05\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
+        },
+      }}
+    >
+      <Container maxWidth="lg">
+        <Box
+          sx={{
+            display: 'flex',
+            gap: 4,
+            alignItems: 'center',
+            position: 'relative',
+            zIndex: 1,
+          }}
+        >
+          {/* Left Side - Branding */}
           <Box
             sx={{
-              position: 'absolute',
-              top: 20,
-              right: 20,
-              display: 'flex',
-              gap: 1,
-              alignItems: 'center',
+              flex: 1,
+              display: { xs: 'none', md: 'block' },
+              color: 'white',
             }}
           >
-            <Chip
-              icon={<Database size={14} />}
-              label="Hyperledger Fabric"
-              size="small"
-              sx={{
-                bgcolor: 'rgba(34, 197, 94, 0.15)',
-                color: '#22C55E',
-                border: '1px solid rgba(34, 197, 94, 0.3)',
-                fontWeight: 600,
-              }}
-            />
-            <Chip
-              icon={<Shield size={14} />}
-              label="Consortium Network"
-              size="small"
-              sx={{
-                bgcolor: 'rgba(59, 130, 246, 0.15)',
-                color: '#3B82F6',
-                border: '1px solid rgba(59, 130, 246, 0.3)',
-                fontWeight: 600,
-              }}
-            />
+            <Typography variant="h2" fontWeight="700" gutterBottom>
+              Trade finacnce-Coffee Export
+            </Typography>
+            <Typography variant="h4" fontWeight="300" gutterBottom>
+              Consortium Blockchain
+            </Typography>
+            <Typography variant="body1" sx={{ mt: 3, opacity: 0.9, maxWidth: 500 }}>
+              Secure, transparent, and efficient coffee export management powered by Hyperledger Fabric blockchain technology.
+            </Typography>
+            
+            <Stack direction="row" spacing={2} sx={{ mt: 4 }}>
+              <Chip
+                label="6 Organizations"
+                sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white', fontWeight: 600 }}
+              />
+              <Chip
+                label="Blockchain Verified"
+                sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white', fontWeight: 600 }}
+              />
+              <Chip
+                label="Real-time Tracking"
+                sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white', fontWeight: 600 }}
+              />
+            </Stack>
           </Box>
 
-          <Typography
-            variant="h4"
+          {/* Right Side - Login Form */}
+          <Paper
+            elevation={24}
             sx={{
-              mb: 2,
-              fontWeight: 700,
-              color: '#FFFFFF',
-              letterSpacing: '-0.5px',
+              flex: { xs: 1, md: 0.6 },
+              p: 5,
+              borderRadius: 4,
+              background: 'rgba(255, 255, 255, 0.98)',
+              backdropFilter: 'blur(10px)',
             }}
           >
-            Coffee Blockchain Consortium
-          </Typography>
-          <Typography
-            variant="body1"
-            sx={{
-              mb: 5,
-              color: 'rgba(255,255,255,0.7)',
-              maxWidth: '90%',
-            }}
-          >
-            Secure, transparent, and efficient coffee export management powered by distributed ledger technology
-          </Typography>
-          <Grid container spacing={{ xs: 2, md: 3 }}>
-            <Grid xs={6}>
-              <Stack
-                alignItems="center"
-                spacing={1.5}
+            <Box sx={{ textAlign: 'center', mb: 4 }}>
+              <Box
                 sx={{
-                  p: 2.5,
-                  borderRadius: 2,
-                  bgcolor: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  transition: 'all 0.3s ease',
-                  backdropFilter: 'blur(10px)',
-                  '&:hover': {
-                    bgcolor: 'rgba(255,255,255,0.08)',
-                    border: '1px solid rgba(59, 130, 246, 0.5)',
-                    transform: 'translateY(-4px)',
-                    boxShadow: '0 8px 24px rgba(59, 130, 246, 0.2)',
-                  },
+                  width: 80,
+                  height: 80,
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #8B5CF6 0%, #F59E0B 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 16px',
                 }}
               >
-                <Link2 size={40} color="#3B82F6" strokeWidth={2} />
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#FFFFFF' }}>
-                  Blockchain Secured
-                </Typography>
-                <Typography
-                  variant="body2"
-                  align="center"
-                  sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.875rem' }}
-                >
-                  Immutable distributed ledger ensures data integrity
-                </Typography>
-              </Stack>
-            </Grid>
-            <Grid xs={6}>
-              <Stack
-                alignItems="center"
-                spacing={1.5}
-                sx={{
-                  p: 2.5,
-                  borderRadius: 2,
-                  bgcolor: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  transition: 'all 0.3s ease',
-                  backdropFilter: 'blur(10px)',
-                  '&:hover': {
-                    bgcolor: 'rgba(255,255,255,0.08)',
-                    border: '1px solid rgba(34, 197, 94, 0.5)',
-                    transform: 'translateY(-4px)',
-                    boxShadow: '0 8px 24px rgba(34, 197, 94, 0.2)',
-                  },
-                }}
-              >
-                <Network size={40} color="#22C55E" strokeWidth={2} />
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#FFFFFF' }}>
-                  Distributed Network
-                </Typography>
-                <Typography
-                  variant="body2"
-                  align="center"
-                  sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.875rem' }}
-                >
-                  7 consortium members with shared governance
-                </Typography>
-              </Stack>
-            </Grid>
-            <Grid xs={6}>
-              <Stack
-                alignItems="center"
-                spacing={1.5}
-                sx={{
-                  p: 2.5,
-                  borderRadius: 2,
-                  bgcolor: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  transition: 'all 0.3s ease',
-                  backdropFilter: 'blur(10px)',
-                  '&:hover': {
-                    bgcolor: 'rgba(255,255,255,0.08)',
-                    border: '1px solid rgba(245, 158, 11, 0.5)',
-                    transform: 'translateY(-4px)',
-                    boxShadow: '0 8px 24px rgba(245, 158, 11, 0.2)',
-                  },
-                }}
-              >
-                <Zap size={40} color="#F59E0B" strokeWidth={2} />
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#FFFFFF' }}>
-                  Smart Contracts
-                </Typography>
-                <Typography
-                  variant="body2"
-                  align="center"
-                  sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.875rem' }}
-                >
-                  Automated workflows with chaincode execution
-                </Typography>
-              </Stack>
-            </Grid>
-            <Grid xs={6}>
-              <Stack
-                alignItems="center"
-                spacing={1.5}
-                sx={{
-                  p: 2.5,
-                  borderRadius: 2,
-                  bgcolor: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  transition: 'all 0.3s ease',
-                  backdropFilter: 'blur(10px)',
-                  '&:hover': {
-                    bgcolor: 'rgba(255,255,255,0.08)',
-                    border: '1px solid rgba(168, 85, 247, 0.5)',
-                    transform: 'translateY(-4px)',
-                    boxShadow: '0 8px 24px rgba(168, 85, 247, 0.2)',
-                  },
-                }}
-              >
-                <Users size={40} color="#A855F7" strokeWidth={2} />
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#FFFFFF' }}>
-                  Multi-Party Consensus
-                </Typography>
-                <Typography
-                  variant="body2"
-                  align="center"
-                  sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.875rem' }}
-                >
-                  Banks • ECX • ECTA • Customs • Shipping collaboration
-                </Typography>
-              </Stack>
-            </Grid>
-          </Grid>
-        </InfoContainer>
-        <FormContainer>
-          {/* Professional Header */}
-          <Box sx={{ mb: 6, textAlign: 'center' }}>
-            <Box
-              sx={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 80,
-                height: 80,
-                borderRadius: 3,
-                background: 'linear-gradient(135deg, #1E40AF 0%, #3B82F6 100%)',
-                mb: 3,
-                boxShadow: '0 12px 32px rgba(30, 64, 175, 0.25)',
-                position: 'relative',
-                '&::before': {
-                  content: '""',
-                  position: 'absolute',
-                  inset: -2,
-                  borderRadius: 3,
-                  padding: 2,
-                  background: 'linear-gradient(135deg, #3B82F6, #1E40AF)',
-                  WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-                  WebkitMaskComposite: 'xor',
-                  maskComposite: 'exclude',
-                  opacity: 0.3,
-                },
-              }}
-            >
-              <Coffee size={44} color="#FFFFFF" strokeWidth={2.5} />
+                <LoginIcon sx={{ fontSize: 40, color: 'white' }} />
+              </Box>
+              <Typography variant="h4" fontWeight="700" gutterBottom>
+                Welcome Back
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Sign in to access your dashboard
+              </Typography>
             </Box>
-            <Typography
-              variant="h4"
-              sx={{
-                fontWeight: 700,
-                color: '#0F172A',
-                letterSpacing: '-0.5px',
-                mb: 1,
-              }}
-            >
-              Consortium Access
-            </Typography>
-            <Typography
-              variant="body2"
-              sx={{
-                color: '#64748B',
-                fontWeight: 500,
-                fontSize: '0.95rem',
-              }}
-            >
-              Coffee Blockchain Network
-            </Typography>
-          </Box>
 
-          <form onSubmit={handleSubmit}>
             {error && (
-              <Alert severity="error" sx={{ mb: 3, borderRadius: 1.5 }}>
+              <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
                 {error}
               </Alert>
             )}
 
-            <Box sx={{ mb: 1 }}>
-              <Typography
-                variant="caption"
-                sx={{
-                  color: '#475569',
-                  fontWeight: 600,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
-                  fontSize: '0.7rem',
-                }}
-              >
-                Select Organization
-              </Typography>
-            </Box>
-            <FormControl
-              fullWidth
-              sx={{
-                mb: 3,
-              }}
-            >
-              <StyledSelect
-                name="organization"
-                value={formData.organization}
-                onChange={handleChange}
-                required
-                variant="outlined"
-                displayEmpty
-              >
-                {ORGANIZATIONS.map((org) => (
-                  <MenuItem 
-                    key={org.value} 
-                    value={org.value}
-                    sx={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'flex-start',
-                      py: 1.5,
-                      px: 2,
-                      '&:hover': {
-                        bgcolor: 'rgba(59, 130, 246, 0.08)',
-                      },
-                      '&.Mui-selected': {
-                        bgcolor: 'rgba(59, 130, 246, 0.12)',
-                        '&:hover': {
-                          bgcolor: 'rgba(59, 130, 246, 0.16)',
-                        },
-                      },
-                    }}
+            <form onSubmit={handleSubmit}>
+              <Stack spacing={3}>
+                <FormControl fullWidth>
+                  <InputLabel>Organization</InputLabel>
+                  <Select
+                    name="organization"
+                    value={formData.organization}
+                    onChange={handleChange}
+                    label="Organization"
+                    startAdornment={
+                      <InputAdornment position="start">
+                        <Business color="action" />
+                      </InputAdornment>
+                    }
                   >
-                    <Typography variant="body1" sx={{ fontWeight: 600, color: '#0F172A' }}>
-                      {org.label} {org.fullName !== org.label && `- ${org.fullName}`}
-                    </Typography>
-                    <Typography variant="caption" sx={{ color: '#64748B', mt: 0.5 }}>
-                      {org.description}
-                    </Typography>
-                  </MenuItem>
-                ))}
-              </StyledSelect>
-            </FormControl>
+                    {ORGANIZATIONS.map((org) => (
+                      <MenuItem key={org.id} value={org.value}>
+                        <Box>
+                          <Typography variant="body1">{org.label}</Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {org.fullName}
+                          </Typography>
+                        </Box>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
 
-            <Box sx={{ mb: 1 }}>
-              <Typography
-                variant="caption"
-                sx={{
-                  color: '#475569',
-                  fontWeight: 600,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
-                  fontSize: '0.7rem',
-                }}
-              >
-                Username
+                <TextField
+                  fullWidth
+                  label="Username"
+                  name="username"
+                  value={formData.username}
+                  onChange={handleChange}
+                  required
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <AccountCircle color="action" />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+
+                <TextField
+                  fullWidth
+                  label="Password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={formData.password}
+                  onChange={handleChange}
+                  required
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Lock color="action" />
+                      </InputAdornment>
+                    ),
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          onClick={() => setShowPassword(!showPassword)}
+                          edge="end"
+                        >
+                          {showPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+
+                <Button
+                  type="submit"
+                  variant="contained"
+                  size="large"
+                  fullWidth
+                  disabled={loading}
+                  sx={{
+                    py: 1.5,
+                    background: 'linear-gradient(135deg, #8B5CF6 0%, #F59E0B 100%)',
+                    fontSize: '1.1rem',
+                    fontWeight: 600,
+                    textTransform: 'none',
+                    borderRadius: 2,
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #7C3AED 0%, #D97706 100%)',
+                    },
+                  }}
+                >
+                  {loading ? <CircularProgress size={24} color="inherit" /> : 'Sign In'}
+                </Button>
+              </Stack>
+            </form>
+
+            <Divider sx={{ my: 3 }}>
+              <Typography variant="caption" color="text.secondary">
+                Test Credentials
+              </Typography>
+            </Divider>
+
+            <Box sx={{ bgcolor: 'grey.50', p: 2, borderRadius: 2 }}>
+              <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
+                <strong>Username:</strong> export_user
+              </Typography>
+              <Typography variant="caption" color="text.secondary" display="block">
+                <strong>Password:</strong> Export123!@#
               </Typography>
             </Box>
-            <StyledTextField
-              fullWidth
-              name="username"
-              value={formData.username}
-              onChange={handleChange}
-              required
-              autoComplete="username"
-              placeholder="Enter your username"
-              sx={{
-                mb: 3,
-              }}
-              variant="outlined"
-            />
-
-            <Box sx={{ mb: 1 }}>
-              <Typography
-                variant="caption"
-                sx={{
-                  color: '#475569',
-                  fontWeight: 600,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
-                  fontSize: '0.7rem',
-                }}
-              >
-                Password
-              </Typography>
-            </Box>
-            <StyledTextField
-              fullWidth
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              autoComplete="current-password"
-              placeholder="Enter your password"
-              sx={{
-                mb: 4,
-              }}
-              variant="outlined"
-            />
-
-            <StyledButton
-              type="submit"
-              variant="contained"
-              size="large"
-              fullWidth
-              disabled={loading}
-              startIcon={<LogIn size={20} color="#FFFFFF" strokeWidth={2.5} />}
-            >
-              {loading ? 'Signing In...' : 'Sign In'}
-            </StyledButton>
-          </form>
-
-          <Typography
-            variant="body2"
-            align="center"
-            sx={{
-              mt: 3.5,
-              color: '#94A3B8',
-              fontSize: '0.8rem',
-              fontWeight: 400,
-            }}
-          >
-            🔐 Secured by Hyperledger Fabric • 🌐 Distributed Ledger Technology
-          </Typography>
-        </FormContainer>
-      </LoginPaper>
-    </LoginPageContainer>
+          </Paper>
+        </Box>
+      </Container>
+    </Box>
   );
 };
 

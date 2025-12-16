@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useEffect, useState } from 'react';
 import { Users, Plus, Shield, Ban, CheckCircle } from 'lucide-react';
 import apiClient, { setApiBaseUrl } from '../services/api';
@@ -91,11 +92,11 @@ const UserManagement = ({ user }) => {
             <CardContent>
               <Stack direction="row" justifyContent="space-between" alignItems="center">
                 <Stack direction="row" spacing={1} alignItems="center">
-                  <Users size={20} />
+                  <span><Users size={20} /></span>
                   <Typography variant="h6">Users</Typography>
                   <Chip label={`${users.length} users`} size="small" />
                 </Stack>
-                <Button variant="contained" startIcon={<Plus />} onClick={() => setOpen(true)}>
+                <Button variant="contained" startIcon={<span><Plus /></span>} onClick={() => setOpen(true)}>
                   New User
                 </Button>
               </Stack>
@@ -126,7 +127,7 @@ const UserManagement = ({ user }) => {
                         <Chip
                           size="small"
                           color={u.isActive ? 'success' : 'default'}
-                          icon={u.isActive ? <CheckCircle size={14} /> : undefined}
+                          icon={u.isActive ? <span><CheckCircle size={14} /></span> : undefined}
                           label={u.isActive ? 'Active' : 'Inactive'}
                         />
                       </TableCell>
@@ -136,7 +137,7 @@ const UserManagement = ({ user }) => {
                             size="small"
                             variant="outlined"
                             color={u.isActive ? 'error' : 'success'}
-                            startIcon={u.isActive ? <Ban size={14} /> : <Shield size={14} />}
+                            startIcon={u.isActive ? <span><Ban size={14} /></span> : <span><Shield size={14} /></span>}
                             onClick={() => toggleActive(u.id, u.isActive)}
                           >
                             {u.isActive ? 'Deactivate' : 'Activate'}

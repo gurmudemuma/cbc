@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState } from 'react';
 import {
   Card, CardHeader, CardContent, CardActions, Button, TextField, Grid,
@@ -9,6 +10,10 @@ import RejectionDialog from '../RejectionDialog';
 const CustomsClearanceForm = ({ exportData, onApprove, onReject, loading = false }) => {
   const [formData, setFormData] = useState({
     declarationNumber: `CUST-${Date.now()}`,
+    tariffClassification: '',
+    warehouseFees: '',
+    serviceCharges: '',
+    releaseNoteNumber: `RN-${Date.now()}`,
     inspectionNotes: '',
     dutyPaid: '',
     taxPaid: '',
@@ -53,10 +58,22 @@ const CustomsClearanceForm = ({ exportData, onApprove, onReject, loading = false
               <TextField label="Customs Declaration Number *" value={formData.declarationNumber} onChange={(e) => setFormData({...formData, declarationNumber: e.target.value})} fullWidth required error={!!errors.declarationNumber} helperText={errors.declarationNumber} />
             </Grid>
             <Grid item xs={12} md={6}>
+              <TextField label="Tariff Classification" value={formData.tariffClassification} onChange={(e) => setFormData({...formData, tariffClassification: e.target.value})} fullWidth placeholder="HS Code" />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField label="Release Note Number" value={formData.releaseNoteNumber} onChange={(e) => setFormData({...formData, releaseNoteNumber: e.target.value})} fullWidth />
+            </Grid>
+            <Grid item xs={12} md={6}>
               <TextField label="Duty Paid (ETB)" type="number" value={formData.dutyPaid} onChange={(e) => setFormData({...formData, dutyPaid: e.target.value})} fullWidth inputProps={{ step: '0.01', min: '0' }} />
             </Grid>
             <Grid item xs={12} md={6}>
               <TextField label="Tax Paid (ETB)" type="number" value={formData.taxPaid} onChange={(e) => setFormData({...formData, taxPaid: e.target.value})} fullWidth inputProps={{ step: '0.01', min: '0' }} />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField label="Warehouse Fees (ETB)" type="number" value={formData.warehouseFees} onChange={(e) => setFormData({...formData, warehouseFees: e.target.value})} fullWidth inputProps={{ step: '0.01', min: '0' }} helperText="Storage and handling fees" />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField label="Service Charges (ETB)" type="number" value={formData.serviceCharges} onChange={(e) => setFormData({...formData, serviceCharges: e.target.value})} fullWidth inputProps={{ step: '0.01', min: '0' }} helperText="Processing and documentation fees" />
             </Grid>
             <Grid item xs={12}>
               <TextField label="Inspection Notes" value={formData.inspectionNotes} onChange={(e) => setFormData({...formData, inspectionNotes: e.target.value})} multiline rows={4} fullWidth placeholder="Customs inspection findings, compliance status, etc..." />

@@ -28,6 +28,29 @@ import {
 import { motion } from 'framer-motion';
 import exporterService from '../services/exporterService';
 
+const VerificationCard = ({ verified, title, description }) => (
+  <Card variant="outlined">
+    <CardContent>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 1 }}>
+        {verified ? (
+          <span><CheckCircle size={20} color="#4caf50" /></span>
+        ) : (
+          <span><AlertCircle size={20} color="#ff9800" /></span>
+        )}
+        <Typography variant="h6">{title}</Typography>
+      </Box>
+      <Typography variant="body2" color="text.secondary">
+        {description}
+      </Typography>
+    </CardContent>
+  </Card>
+);
+
+const TabPanel = ({ children, value, index }) => {
+  if (value !== index) return null;
+  return <Box sx={{ p: 3 }}>{children}</Box>;
+};
+
 const ExporterProfile = ({ user, org }) => {
   const [activeTab, setActiveTab] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
@@ -129,20 +152,6 @@ const ExporterProfile = ({ user, org }) => {
     }
   };
 
-  const getVerificationIcon = (verified) => {
-    return verified ? (
-      <CheckCircle size={20} color="#4caf50" />
-    ) : (
-      <AlertCircle size={20} color="#ff9800" />
-    );
-  };
-
-  const TabPanel = ({ children, value, index }) => (
-    <div hidden={value !== index}>
-      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
-    </div>
-  );
-
   return (
     <Box sx={{ p: 3 }}>
       <motion.div
@@ -158,7 +167,7 @@ const ExporterProfile = ({ user, org }) => {
           <CardContent>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
               <Avatar sx={{ width: 80, height: 80, mr: 3, bgcolor: 'primary.main' }}>
-                <User size={40} />
+                <span><User size={40} /></span>
               </Avatar>
               <Box>
                 <Typography variant="h5" gutterBottom>
@@ -187,9 +196,9 @@ const ExporterProfile = ({ user, org }) => {
             textColor="primary"
             variant="fullWidth"
           >
-            <Tab icon={<User size={20} />} label="Personal Info" />
-            <Tab icon={<Building size={20} />} label="Business Info" />
-            <Tab icon={<CheckCircle size={20} />} label="Verification Status" />
+            <Tab icon={<span><User size={20} /></span>} label="Personal Info" />
+            <Tab icon={<span><Building size={20} /></span>} label="Business Info" />
+            <Tab icon={<span><CheckCircle size={20} /></span>} label="Verification Status" />
           </Tabs>
 
           {/* Personal Information Tab */}
@@ -319,67 +328,35 @@ const ExporterProfile = ({ user, org }) => {
               </Grid>
               
               <Grid item xs={12} md={6}>
-                <Card variant="outlined">
-                  <CardContent>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                      {getVerificationIcon(profileData.verificationStatus.profileComplete)}
-                      <Typography variant="h6" sx={{ ml: 1 }}>
-                        Profile Complete
-                      </Typography>
-                    </Box>
-                    <Typography variant="body2" color="text.secondary">
-                      All required profile information has been provided
-                    </Typography>
-                  </CardContent>
-                </Card>
+                <VerificationCard
+                  verified={profileData.verificationStatus.profileComplete}
+                  title="Profile Complete"
+                  description="All required profile information has been provided"
+                />
               </Grid>
 
               <Grid item xs={12} md={6}>
-                <Card variant="outlined">
-                  <CardContent>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                      {getVerificationIcon(profileData.verificationStatus.documentsSubmitted)}
-                      <Typography variant="h6" sx={{ ml: 1 }}>
-                        Documents Submitted
-                      </Typography>
-                    </Box>
-                    <Typography variant="body2" color="text.secondary">
-                      Required business documents have been uploaded
-                    </Typography>
-                  </CardContent>
-                </Card>
+                <VerificationCard
+                  verified={profileData.verificationStatus.documentsSubmitted}
+                  title="Documents Submitted"
+                  description="Required business documents have been uploaded"
+                />
               </Grid>
 
               <Grid item xs={12} md={6}>
-                <Card variant="outlined">
-                  <CardContent>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                      {getVerificationIcon(profileData.verificationStatus.identityVerified)}
-                      <Typography variant="h6" sx={{ ml: 1 }}>
-                        Identity Verified
-                      </Typography>
-                    </Box>
-                    <Typography variant="body2" color="text.secondary">
-                      Personal identity has been verified by authorities
-                    </Typography>
-                  </CardContent>
-                </Card>
+                <VerificationCard
+                  verified={profileData.verificationStatus.identityVerified}
+                  title="Identity Verified"
+                  description="Personal identity has been verified by authorities"
+                />
               </Grid>
 
               <Grid item xs={12} md={6}>
-                <Card variant="outlined">
-                  <CardContent>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                      {getVerificationIcon(profileData.verificationStatus.businessVerified)}
-                      <Typography variant="h6" sx={{ ml: 1 }}>
-                        Business Verified
-                      </Typography>
-                    </Box>
-                    <Typography variant="body2" color="text.secondary">
-                      Business registration has been verified by ECTA
-                    </Typography>
-                  </CardContent>
-                </Card>
+                <VerificationCard
+                  verified={profileData.verificationStatus.businessVerified}
+                  title="Business Verified"
+                  description="Business registration has been verified by ECTA"
+                />
               </Grid>
             </Grid>
           </TabPanel>
@@ -391,7 +368,7 @@ const ExporterProfile = ({ user, org }) => {
               <>
                 <Button
                   variant="outlined"
-                  startIcon={<X size={20} />}
+                  startIcon={<span><X size={20} /></span>}
                   onClick={() => setIsEditing(false)}
                   disabled={loading}
                 >
@@ -399,17 +376,17 @@ const ExporterProfile = ({ user, org }) => {
                 </Button>
                 <Button
                   variant="contained"
-                  startIcon={loading ? <CircularProgress size={20} /> : <Save size={20} />}
+                  startIcon={loading ? <CircularProgress size={16} color="inherit" /> : <Save size={20} />}
                   onClick={handleSave}
                   disabled={loading}
                 >
-                  Save Changes
+                  {loading ? 'Saving...' : 'Save Changes'}
                 </Button>
               </>
             ) : (
               <Button
                 variant="contained"
-                startIcon={<Edit size={20} />}
+                startIcon={<span><Edit size={20} /></span>}
                 onClick={() => setIsEditing(true)}
               >
                 Edit Profile

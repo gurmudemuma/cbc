@@ -1,583 +1,187 @@
-# ✅ Consortium Blockchain for Coffee Export
+# Coffee Export Consortium - Hyperledger Fabric Blockchain Platform
 
-A comprehensive end-to-end consortium blockchain application built with **Hyperledger Fabric**, **Golang**, and **TypeScript** for managing coffee exports across multiple organizations.
+Enterprise-grade blockchain solution for managing coffee export operations across multiple stakeholders including exporters, banks, customs authorities, and shipping lines.
 
-## 📋 Table of Contents
+## Architecture
 
-- [Overview](#overview)
-- [Quick Start](#quick-start)
-- [Architecture](#architecture)
-- [Tech Stack](#tech-stack)
-- [Participants](#participants)
-- [Prerequisites](#prerequisites)
-- [Installation](#installation)
-- [Network Setup](#network-setup)
-- [API Services](#api-services)
-- [Smart Contract](#smart-contract)
-- [Frontend](#frontend)
-- [Usage](#usage)
-- [API Documentation](#api-documentation)
-- [Troubleshooting](#troubleshooting)
-- [Documentation](#documentation)
+**Blockchain Network:** Hyperledger Fabric 2.5  
+**Organizations:** 6 (Commercial Bank, National Bank, ECTA, ECX, Shipping Line, Custom Authorities)  
+**Channels:** coffee-export-channel  
+**Chaincodes:** coffee-export, user-management  
+**Database:** PostgreSQL + CouchDB  
+**Storage:** IPFS  
+**Frontend:** React 18
 
-## 🎯 Overview
+## Prerequisites
 
-This project implements a consortium blockchain network for managing the complete coffee export lifecycle, from initial export request to final shipment confirmation. The system ensures transparency, traceability, and trust among all participating organizations.
+- Docker 20.0+
+- Docker Compose 2.0+
+- Node.js 18+
+- Go 1.21+
+- 16GB RAM minimum
 
-## 🚀 Quick Start
-
-### Option 1: Automated Startup (Recommended)
+## Quick Start
 
 ```bash
-# 1. Clone and navigate to project
+# 1. Clone and setup
 git clone <repository-url>
 cd cbc
 
-# 2. Start everything with one command
-./start-system.sh
+# 2. Generate secrets
+./scripts/generate-strong-secrets.sh
 
-# 3. Access the application
-# Frontend: http://localhost:5173
-# APIs: http://localhost:3001-3004
-# IPFS: http://localhost:5001
+# 3. Start the network
+./scripts/start.sh
+
+# 4. Access the frontend
+open http://localhost:3000
 ```
 
-### Option 2: Docker Compose (Full Stack - Recommended)
-
-```bash
-# Start all services in containers (Fabric + IPFS + APIs + Frontend)
-docker-compose up -d
-
-# Wait for services to start (60 seconds)
-sleep 60
-
-# Access services:
-# - Frontend: http://localhost
-# - commercialbank API: http://localhost:3001
-# - National Bank API: http://localhost:3002
-# - ECTA API: http://localhost:3003
-# - Shipping Line API: http://localhost:3004
-# - Custom Authorities API: http://localhost:3005
-# - IPFS: http://localhost:5001
-```
-
-### Option 3: Hybrid Mode (Development)
-
-```bash
-# 1. Start blockchain network + IPFS in containers
-docker-compose up -d ipfs orderer.coffee-export.com peer0.commercialbank.coffee-export.com
-
-# 2. Start APIs on host (for development)
-cd api/commercialbank && npm run dev  # Terminal 1
-cd api/national-bank && npm run dev   # Terminal 2
-cd api/ncat && npm run dev            # Terminal 3
-cd api/shipping-line && npm run dev   # Terminal 4
-cd api/custom-authorities && npm run dev  # Terminal 5
-
-# 3. Start frontend
-cd frontend && npm run dev
-```
-
-**For detailed instructions, see:**
-- **[FULL_CONTAINERIZATION_GUIDE.md](FULL_CONTAINERIZATION_GUIDE.md)** - Complete containerization (recommended for production)
-- **[DOCKER_COMPOSE_GUIDE.md](DOCKER_COMPOSE_GUIDE.md)** - Docker Compose deployment guide
-- **[STARTUP_QUICK_REFERENCE.md](STARTUP_QUICK_REFERENCE.md)** - Quick reference card
-- **[STARTUP_ORDER.md](STARTUP_ORDER.md)** - Complete startup documentation
-- **[QUICK_START.md](QUICK_START.md)** - Step-by-step guide
-
-> ⚠️ **Important:** This project uses **Docker Compose** for containerized deployment. Choose between hybrid (Option 2) or full containerization (Option 3).
-
-## 🏗️ Architecture
+## Project Structure
 
 ```
-┌───���─────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│  commercialbank  │     │ National Bank   │     │      ECTA       │
-│   (Port 3001)   │     │   (Port 3002)   │     │   (Port 3003)   │
-└────────┬────────┘     └────────┬────────┘     └────────┬────────┘
-         │                       │                       │
-         └───────────────────────┼───────────────────────┘
-                                 │
-                    ┌────────────▼────────────┐
-                    │  Hyperledger Fabric     │
-                    │  Consortium Network     │
-                    │  (Coffee Export Chain)  │
-                    └────────────┬────────────┘
-                                 │
-         ┌───────────────────────┼───────────────────────┐
-         │                       │                       │
-┌────────▼────────┐     ┌────────▼────────┐     ┌──────▼──────┐
-│ Shipping Line   │     │  Smart Contract │     │   Orderer   │
-│  (Port 3004)    │     │   (Chaincode)   │     │   Service   │
-└─────────────────┘     └─────────────────┘     └─────────────┘
+cbc/
+├── apis/                    # Microservices for each organization
+│   ├── commercial-bank/
+│   ├── national-bank/
+│   ├── ecta/
+│   ├── ecx/
+│   ├── shipping-line/
+│   ├── custom-authorities/
+│   └── shared/             # Shared utilities
+├── chaincode/              # Smart contracts
+│   ├── coffee-export/
+│   └── user-management/
+├── frontend/               # React application
+├── network/                # Fabric network configuration
+├── scripts/                # Deployment scripts
+└── docker-compose.yml      # Container orchestration
 ```
 
-## 💻 Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| **Smart Contracts** | Golang (Hyperledger Fabric chaincode) |
-| **Blockchain** | Hyperledger Fabric v2.5+ |
-| **API Layer** | TypeScript + Express.js |
-| **Frontend** | TypeScript + React |
-| **Identity/Auth** | Fabric MSPs + JWT |
-| **Storage** | Ledger (on-chain) + optional off-chain |
-
-## 👥 Participants
-
-1. **ECX** – Ethiopian Commodity Exchange - Verifies coffee lots and warehouse receipts
-2. **ECTA** – Ethiopian Coffee and Tea Authority - Issues export licenses, quality certificates, and contract approvals
-3. **commercialbank** – Commercial bank handling exporter's documents and FX applications
-4. **National Bank (NBE)** – National Bank of Ethiopia - Approves foreign exchange (FX)
-5. **Custom Authorities** – Issues customs clearance for export
-6. **Shipping Line** – Schedules and confirms export shipments
-7. **Exporter Portal** – Frontend for exporters to track/manage exports
-
-## 📦 Prerequisites
-
-Before you begin, ensure you have the following installed:
-
-- **Docker** (v20.10+) and **Docker Compose** (v2.0+)
-- **Node.js** (v16+) and **npm** (v8+)
-- **Go** (v1.19+)
-- **IPFS** (v0.18+) - Required for document storage
-  ```bash
-  # Install IPFS - see https://docs.ipfs.tech/install/
-  wget https://dist.ipfs.tech/kubo/v0.32.1/kubo_v0.32.1_linux-amd64.tar.gz
-  tar -xvzf kubo_v0.32.1_linux-amd64.tar.gz
-  cd kubo
-  sudo bash install.sh
-  ipfs init
-  ```
-- **Hyperledger Fabric binaries** (v2.5+)
-  ```bash
-  curl -sSL https://bit.ly/2ysbOFE | bash -s -- 2.5.0 1.5.5
-  ```
-
-## 🚀 Installation
-
-### 1. Clone the Repository
-
-```bash
-git clone <repository-url>
-cd CBC
-```
-
-### 2. Install Dependencies
-
-#### Install API Dependencies
-
-```bash
-# commercialbank API
-cd api/commercialbank
-npm install
-cd ../..
-
-# National Bank API
-cd api/national-bank
-npm install
-cd ../..
-
-# ECTA API
-cd api/ncat
-npm install
-cd ../..
-
-# Shipping Line API
-cd api/shipping-line
-npm install
-cd ../..
-```
-
-#### Install Chaincode Dependencies
-
-```bash
-cd chaincode/coffee-export
-go mod tidy
-cd ../..
-```
-
-## 🌐 Network Setup
-
-### 1. Start the Hyperledger Fabric Network
-
-```bash
-cd network
-chmod +x network.sh
-./network.sh up
-```
-
-### 2. Create the Channel
-
-```bash
-./network.sh createChannel -c coffeechannel
-```
-
-### 3. Deploy the Chaincode
-
-```bash
-./network.sh deployCC -ccn coffee-export -ccs 1 -ccv 1.0
-```
-
-### 4. Verify Network Status
-
-```bash
-docker ps
-```
-
-You should see containers for:
-- `orderer.coffee-export.com`
-- `peer0.commercialbank.coffee-export.com`
-- `peer0.nationalbank.coffee-export.com`
-- `peer0.ecta.coffee-export.com`
-- `peer0.ecx.coffee-export.com`
-- `peer0.shippingline.coffee-export.com`
-- `peer0.customauthorities.coffee-export.com`
-
-## 🔌 API Services
-
-### Start All API Services
-
-#### 1. commercialbank API (Port 3001)
-
-```bash
-cd api/commercialbank
-cp .env.example .env
-npm run dev
-```
-
-#### 2. National Bank API (Port 3002)
-
-```bash
-cd api/national-bank
-cp .env.example .env
-npm run dev
-```
-
-#### 3. ECTA API (Port 3003)
-
-```bash
-cd api/ecta
-cp .env.example .env
-npm run dev
-```
-
-#### 4. ECX API (Port 3006)
-
-```bash
-cd api/ecx
-cp .env.example .env
-npm run dev
-```
-
-#### 5. Shipping Line API (Port 3004)
-
-```bash
-cd api/shipping-line
-cp .env.example .env
-npm run dev
-```
-
-#### 6. Custom Authorities API (Port 3005)
-
-```bash
-cd api/custom-authorities
-cp .env.example .env
-npm run dev
-```
-
-## 📜 Smart Contract
-
-### Chaincode Functions
-
-The coffee export chaincode provides the following functions:
-
-#### Export Management
-- `CreateExportRequest` - Create a new export request (commercialbank)
-- `GetExportRequest` - Retrieve export details
-- `GetAllExports` - Get all exports
-- `GetExportsByStatus` - Filter exports by status
-- `GetExportHistory` - View complete export history
-
-#### FX Approval (National Bank)
-- `ApproveFX` - Approve foreign exchange
-- `RejectFX` - Reject foreign exchange
-
-#### Quality Certification (ECTA)
-- `IssueQualityCertificate` - Issue quality certificate
-- `RejectQuality` - Reject quality
-
-#### Shipping (Shipping Line)
-- `ScheduleShipment` - Schedule shipment
-- `ConfirmShipment` - Confirm goods shipped
-
-#### Export Completion
-- `CompleteExport` - Mark export as completed (commercialbank)
-- `CancelExport` - Cancel export request (commercialbank)
-
-### Export Status Flow
-
-```
-PENDING → FX_APPROVED → QUALITY_CERTIFIED → SHIPMENT_SCHEDULED → SHIPPED → COMPLETED
-   ↓           ↓              ↓
-FX_REJECTED  QUALITY_REJECTED  CANCELLED
-```
-
-## 🎨 Frontend
-
-The Exporter Portal provides a user-friendly interface for exporters to:
-- Create new export requests
-- Track export status in real-time
-- View export history
-- Manage export documents
-
-To start the frontend:
-
-```bash
-cd frontend/exporter-portal
-npm install
-npm run dev
-```
-
-Access at http://localhost:5173 (default Vite port).
-
-## 📖 Usage
-
-### Example Workflow
-
-#### 1. Register and Login (commercialbank)
-
-```bash
-# Register
-curl -X POST http://localhost:3001/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "exporter1",
-    "password": "password123",
-    "email": "exporter1@bank.com"
-  }'
-
-# Login
-curl -X POST http://localhost:3001/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "exporter1",
-    "password": "password123"
-  }'
-```
-
-#### 2. Create Export Request
-
-```bash
-curl -X POST http://localhost:3001/api/exports \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <YOUR_TOKEN>" \
-  -d '{
-    "exporterName": "ABC Coffee Exporters",
-    "coffeeType": "Arabica",
-    "quantity": 5000,
-    "destinationCountry": "USA",
-    "estimatedValue": 50000
-  }'
-```
-
-#### 3. Approve FX (National Bank)
-
-```bash
-curl -X POST http://localhost:3002/api/fx/approve \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <NATIONAL_BANK_TOKEN>" \
-  -d '{
-    "exportId": "EXP-xxxxx"
-  }'
-```
-
-#### 4. Issue Quality Certificate (ECTA)
-
-```bash
-curl -X POST http://localhost:3003/api/quality/certify \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <ECTA_TOKEN>" \
-  -d '{
-    "exportId": "EXP-xxxxx",
-    "qualityGrade": "Grade A"
-  }'
-```
-
-#### 5. Schedule Shipment (Shipping Line)
-
-```bash
-curl -X POST http://localhost:3004/api/shipments/schedule \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <SHIPPING_TOKEN>" \
-  -d '{
-    "exportId": "EXP-xxxxx",
-    "vesselName": "MV Coffee Carrier",
-    "departureDate": "2024-02-01",
-    "arrivalDate": "2024-02-15"
-  }'
-```
-
-#### 6. Confirm Shipment
-
-```bash
-curl -X POST http://localhost:3004/api/shipments/confirm \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <SHIPPING_TOKEN>" \
-  -d '{
-    "exportId": "EXP-xxxxx"
-  }'
-```
-
-#### 7. Complete Export
-
-```bash
-curl -X PUT http://localhost:3001/api/exports/EXP-xxxxx/complete \
-  -H "Authorization: Bearer <EXPORTER_TOKEN>"
-```
-
-## 📚 API Documentation
-
-### commercialbank API (Port 3001)
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/auth/register` | Register new user |
-| POST | `/api/auth/login` | Login user |
-| POST | `/api/auth/refresh` | Refresh auth token |
-| POST | `/api/exports` | Create export request |
-| GET | `/api/exports` | Get all exports |
-| GET | `/api/exports/:id` | Get export by ID |
-| GET | `/api/exports/status/:status` | Get exports by status |
-| GET | `/api/exports/:id/history` | Get export history |
-| PUT | `/api/exports/:id/complete` | Complete export |
-| PUT | `/api/exports/:id/cancel` | Cancel export |
+## API Endpoints
+
+### Commercial Bank API (Port 3001)
+- `POST /api/auth/login` - Authentication
+- `POST /api/exports` - Create export request
+- `GET /api/exports/:id` - Get export details
 
 ### National Bank API (Port 3002)
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/auth/register` | Register new user |
-| POST | `/api/auth/login` | Login user |
-| GET | `/api/fx/pending` | Get pending exports |
-| GET | `/api/fx/exports` | Get all exports |
-| GET | `/api/fx/exports/:id` | Get export by ID |
-| POST | `/api/fx/approve` | Approve FX |
-| POST | `/api/fx/reject` | Reject FX |
+- `POST /api/auth/login`
+- `GET /api/fx-rates` - Foreign exchange rates
+- `POST /api/approvals` - Approve transactions
 
 ### ECTA API (Port 3003)
+- `POST /api/preregistration` - Exporter registration
+- `POST /api/compliance/verify` - Compliance verification
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/auth/register` | Register new user |
-| POST | `/api/auth/login` | Login user |
-| GET | `/api/quality/pending` | Get pending exports |
-| GET | `/api/quality/exports` | Get all exports |
-| GET | `/api/quality/exports/:id` | Get export by ID |
-| POST | `/api/quality/certify` | Issue quality certificate |
-| POST | `/api/quality/reject` | Reject quality |
+### ECX API (Port 3004)
+- `GET /api/coffee/prices` - Coffee market prices
+- `POST /api/quality/certify` - Quality certification
 
-### Shipping Line API (Port 3004)
+### Shipping Line API (Port 3005)
+- `POST /api/bookings` - Create shipping booking
+- `GET /api/tracking/:id` - Track shipment
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/auth/register` | Register new user |
-| POST | `/api/auth/login` | Login user |
-| GET | `/api/shipments/ready` | Get ready exports |
-| GET | `/api/shipments/exports` | Get all exports |
-| GET | `/api/shipments/exports/:id` | Get export by ID |
-| POST | `/api/shipments/schedule` | Schedule shipment |
-| POST | `/api/shipments/confirm` | Confirm shipment |
+### Custom Authorities API (Port 3006)
+- `POST /api/clearance` - Customs clearance
+- `GET /api/documents/:id` - Document verification
 
-## 🔧 Troubleshooting
-
-### Network Issues
+## Development
 
 ```bash
-# Stop and clean the network
-cd network
-./network.sh down
+# Install dependencies
+npm install
+cd frontend && npm install
+cd ../apis && npm install
 
-# Restart the network
-./network.sh up
-./network.sh createChannel
-./network.sh deployCC
+# Run tests
+npm test
+
+# Start individual API
+cd apis/commercial-bank
+npm run dev
+
+# Build chaincode
+cd chaincode/coffee-export
+go build
 ```
 
-### Docker Issues
+## Testing
 
 ```bash
-# Remove all containers
-docker rm -f $(docker ps -aq)
+# Run all tests
+./scripts/tests/run-all-tests.sh
 
-# Remove all volumes
-docker volume prune -f
+# Test specific API
+cd apis/commercial-bank
+npm test
 
-# Remove all networks
-docker network prune -f
+# Test chaincode
+cd chaincode/coffee-export
+go test -v
 ```
 
-### API Connection Issues
-
-1. Ensure the Fabric network is running
-2. Check if all peers are up: `docker ps`
-3. Verify connection profiles exist in `network/organizations/peerOrganizations/`
-4. Check API logs for connection errors
-
-### Chaincode Issues
-
-```bash
-# View chaincode logs
-docker logs -f peer0.commercialbank.coffee-export.com
-
-# Redeploy chaincode with new version
-./network.sh deployCC -ccn coffee-export -ccs 2 -ccv 1.1
-```
-
-## 📚 Documentation
-
-### Getting Started
-- **[QUICK_START.md](QUICK_START.md)** - Quick start guide for new users
-- **[STARTUP_ORDER.md](STARTUP_ORDER.md)** - Detailed component startup order and dependencies
-- **[STARTUP_QUICK_REFERENCE.md](STARTUP_QUICK_REFERENCE.md)** - Quick reference card for startup
-
-### Architecture & Design
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System architecture and design decisions
-- **[SYSTEM_DIAGRAM.md](SYSTEM_DIAGRAM.md)** - Visual system diagrams
+## Deployment
 
 ### Development
-- **[DEVELOPER_NOTES.md](DEVELOPER_NOTES.md)** - Developer guidelines and notes
-- **[TESTING_GUIDE.md](TESTING_GUIDE.md)** - Testing procedures and guidelines
-- **[FRONTEND_GUIDE.md](FRONTEND_GUIDE.md)** - Frontend development guide
+```bash
+./scripts/start.sh
+```
 
-### Deployment & Operations
-- **[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)** - Production deployment guide
-- **[PROJECT_STATUS.md](PROJECT_STATUS.md)** - Current project status
-- **[CHANGELOG.md](CHANGELOG.md)** - Version history and changes
+### Production
+```bash
+docker-compose -f docker-compose.production.yml up -d
+```
 
-### Security
-- **[SECURITY.md](SECURITY.md)** - Security guidelines and best practices
-- **[INTER_SERVICE_COMMUNICATION.md](INTER_SERVICE_COMMUNICATION.md)** - Service communication security
+### Kubernetes
+```bash
+kubectl apply -f k8s/
+```
 
-### Reference
-- **[DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md)** - Complete documentation index
-- **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** - Quick reference for common tasks
+## Monitoring
 
-## 📝 License
+- **Prometheus:** http://localhost:9090
+- **Grafana:** http://localhost:3001
+- **Logs:** `docker-compose logs -f`
 
-MIT License
+## Security
 
-## 👨‍💻 Contributors
+- JWT authentication
+- Rate limiting
+- Input sanitization
+- TLS encryption
+- Secret management via Docker secrets
 
-- Coffee Blockchain Consortium Team
+## Troubleshooting
 
-## 🤝 Contributing
+### Network won't start
+```bash
+./cleanup-system.sh
+./scripts/start.sh
+```
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+### API connection issues
+```bash
+./diagnose-api-issues.sh
+```
 
-## 📧 Support
+### Chaincode deployment fails
+```bash
+./network/retry-chaincode-deployment.sh
+```
 
-For support, email support@coffeeexport.com or open an issue in the repository.
+## Contributing
 
----
+1. Fork the repository
+2. Create feature branch (`git checkout -b feature/name`)
+3. Commit changes (`git commit -am 'Add feature'`)
+4. Push to branch (`git push origin feature/name`)
+5. Create Pull Request
 
-**Built with ❤️ using Hyperledger Fabric**
+## License
+
+MIT License - see LICENSE file
+
+## Support
+
+For issues and questions, please open a GitHub issue.

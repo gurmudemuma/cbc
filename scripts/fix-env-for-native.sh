@@ -33,7 +33,7 @@ fix_env_for_native() {
 # Fix .env files for all API services
 fix_env_for_native "$PROJECT_ROOT/api/commercial-bank/.env"
 fix_env_for_native "$PROJECT_ROOT/api/national-bank/.env"
-fix_env_for_native "$PROJECT_ROOT/api/ncat/.env"
+fix_env_for_native "$PROJECT_ROOT/api/ecta/.env"
 fix_env_for_native "$PROJECT_ROOT/api/shipping-line/.env"
 fix_env_for_native "$PROJECT_ROOT/api/custom-authorities/.env"
 

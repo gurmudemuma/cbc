@@ -19,6 +19,9 @@ DELAY=${10:-"3"}
 MAX_RETRY=${11:-"5"}
 VERBOSE=${12:-"false"}
 
+# Sequential installation delay to prevent broken pipe errors
+INSTALL_DELAY=${13:-"60"}
+
 println() {
   echo "$1"
 }
@@ -72,12 +75,35 @@ packageChaincode() {
 # installChaincode PEER ORG
 installChaincode() {
   ORG=$1
+  
+  # Add delay to prevent broken pipe errors during sequential installation
+  infoln "Waiting ${INSTALL_DELAY} seconds before installing on peer0.org${ORG}..."
+  sleep ${INSTALL_DELAY}
+  
+  # Check if chaincode is already installed
   set -x
   MSYS_NO_PATHCONV=1 docker exec cli bash -c "\
     cd /opt/gopath/src/github.com/hyperledger/fabric/peer && \
     . ./scripts/envVar.sh && \
     setGlobalsCLI ${ORG} && \
-    (peer lifecycle chaincode queryinstalled | grep -q '${CC_NAME}_${CC_VERSION}' && echo 'Chaincode already installed') || peer lifecycle chaincode install ${CC_NAME}.tar.gz" >&log.txt
+    peer lifecycle chaincode queryinstalled" >&log.txt
+  res=$?
+  { set +x; } 2>/dev/null
+  cat log.txt
+  
+  # Check if the chaincode is already installed
+  if grep -q "${CC_NAME}_${CC_VERSION}" log.txt; then
+    successln "Chaincode ${CC_NAME}_${CC_VERSION} is already installed on peer0.org${ORG}"
+    return 0
+  fi
+  
+  # Install the chaincode if not already installed
+  set -x
+  MSYS_NO_PATHCONV=1 docker exec cli bash -c "\
+    cd /opt/gopath/src/github.com/hyperledger/fabric/peer && \
+    . ./scripts/envVar.sh && \
+    setGlobalsCLI ${ORG} && \
+    peer lifecycle chaincode install ${CC_NAME}.tar.gz" >&log.txt
   res=$?
   { set +x; } 2>/dev/null
   cat log.txt

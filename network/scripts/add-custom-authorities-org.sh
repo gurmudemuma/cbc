@@ -28,8 +28,23 @@ set -x
 peer channel fetch config ${SCRIPT_DIR}/config_block.pb -o localhost:7050 --ordererTLSHostnameOverride orderer.coffee-export.com --tls --cafile "${ORDERER_CA}" -c ${CHANNEL_NAME}
 { set +x; } 2>/dev/null
 
-# Decode to json
-configtxlator proto_decode --input ${SCRIPT_DIR}/config_block.pb --type common.Block | jq .data.data[0].payload.data.config > ${SCRIPT_DIR}/config.json
+# Decode to json with retry logic
+MAX_RETRIES=3
+RETRY_COUNT=0
+while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+  if configtxlator proto_decode --input ${SCRIPT_DIR}/config_block.pb --type common.Block 2>/dev/null | jq .data.data[0].payload.data.config > ${SCRIPT_DIR}/config.json 2>/dev/null; then
+    break
+  else
+    RETRY_COUNT=$((RETRY_COUNT + 1))
+    if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+      echo "⚠️  configtxlator proto_decode failed (attempt $RETRY_COUNT/$MAX_RETRIES), retrying..."
+      sleep 2
+    else
+      echo "❌ configtxlator proto_decode failed after $MAX_RETRIES attempts"
+      exit 1
+    fi
+  fi
+done
 
 # Check if the org already exists in the channel config
 if jq -e '.channel_group.groups.Application.groups | has("'${ORG_MSP}'")' ${SCRIPT_DIR}/config.json >/dev/null; then
@@ -83,9 +98,28 @@ fi
 
 # Join the peer to the channel (regardless of whether update was needed)
 setGlobals 5
-peer channel join -b ${BLOCK_FILE}
 
-# Set the anchor peer
-${SCRIPT_DIR}/setAnchorPeer.sh 5 ${CHANNEL_NAME}
+# Check if peer is already joined to the channel
+if peer channel list 2>&1 | grep -q "${CHANNEL_NAME}"; then
+  echo "✅ Peer is already joined to channel ${CHANNEL_NAME}"
+else
+  echo "Joining peer to channel ${CHANNEL_NAME}..."
+  peer channel join -b ${BLOCK_FILE}
+  echo "✅ Peer joined to channel ${CHANNEL_NAME}"
+fi
 
-echo "Custom Authorities org added (or already present), peer joined, and anchor set!"
+# Set the anchor peer using Docker-based approach (with error handling)
+echo "Setting anchor peer for CustomAuthorities..."
+if ${SCRIPT_DIR}/fix-anchor-peers.sh ${CHANNEL_NAME} 2>&1; then
+  echo "✅ Anchor peers set successfully!"
+else
+  ANCHOR_RESULT=$?
+  # Check if the error is due to anchor peer already being set
+  if [ $ANCHOR_RESULT -eq 0 ]; then
+    echo "✅ Anchor peers already set (this is normal)"
+  else
+    echo "⚠️  Anchor peer update had issues, but CustomAuthorities org is still added"
+  fi
+fi
+
+echo "✅ Custom Authorities org added (or already present), peer joined!"

@@ -1,0 +1,18 @@
+# syntax=docker/dockerfile:1
+ARG SERVICE_NAME
+FROM coffee-export-api-base:latest
+
+# Copy only this service's files
+COPY ${SERVICE_NAME}/package*.json ./${SERVICE_NAME}/
+COPY ${SERVICE_NAME}/tsconfig.json ./${SERVICE_NAME}/
+
+# Install only this service's dependencies
+RUN --mount=type=cache,target=/root/.npm cd ${SERVICE_NAME} && npm ci --only=production --silent
+
+# Copy service source
+COPY ${SERVICE_NAME}/src ./${SERVICE_NAME}/src
+
+WORKDIR /app/${SERVICE_NAME}
+EXPOSE 3000
+
+CMD ["npm", "start"]

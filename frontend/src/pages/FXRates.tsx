@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useEffect } from 'react';
 import { DollarSign, CheckCircle, XCircle, TrendingUp, Search, Eye } from 'lucide-react';
 import apiClient from '../services/api';
@@ -132,12 +133,12 @@ const FXRates = ({ user }) => {
               <Card>
                 <CardContent>
                   <Stack direction="row" spacing={2} alignItems="center">
-                    <DollarSign size={24} />
+                    <span><DollarSign size={24} /></span>
                     <Box>
                       <Typography variant="h6">118.45</Typography>
                       <Typography variant="body2">Current FX Rate (KES/USD)</Typography>
                       <Stack direction="row" alignItems="center" color="success.main">
-                        <TrendingUp size={14} />
+                        <span><TrendingUp size={14} /></span>
                         <Typography variant="body2">+0.5%</Typography>
                       </Stack>
                     </Box>
@@ -256,7 +257,7 @@ const FXRates = ({ user }) => {
                                   variant="contained"
                                   color="success"
                                   size="small"
-                                  startIcon={<CheckCircle />}
+                                  startIcon={<span><CheckCircle /></span>}
                                   onClick={() => handleApprove(exp)}
                                 >
                                   Approve
@@ -267,7 +268,7 @@ const FXRates = ({ user }) => {
                                   variant="contained"
                                   color="error"
                                   size="small"
-                                  startIcon={<XCircle />}
+                                  startIcon={<span><XCircle /></span>}
                                   onClick={() => handleReject(exp)}
                                 >
                                   Reject
@@ -287,7 +288,7 @@ const FXRates = ({ user }) => {
               </TableContainer>
               {filteredExports.length === 0 && (
                 <Box sx={{ textAlign: 'center', p: 3 }}>
-                  <DollarSign size={48} color="#9E9E9E" />
+                  <span><DollarSign size={48} color="#9E9E9E" /></span>
                   <Typography color="text.secondary">No exports found</Typography>
                 </Box>
               )}

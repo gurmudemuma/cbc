@@ -98,3 +98,13 @@ config.json
 modified_config.json
 update.json
 update_in_envelope.json
+
+# Secrets directory
+secrets/
+.env.production
+**/priv_sk
+**/*_sk
+**/keystore/*
+**/priv_sk
+**/*_sk
+**/keystore/*

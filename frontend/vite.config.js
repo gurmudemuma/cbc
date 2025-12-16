@@ -47,53 +47,14 @@ export default defineConfig({
     },
     open: true,
     proxy: {
-      // Exporter API - External exporters (port 3007)
-      '/api/exporter': {
-        target: 'http://localhost:3007',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/exporter/, '/api/exporter')
-      },
-      // Banker API - Banking operations (port 3001)
-      '/api/banker': {
-        target: 'http://localhost:3001',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/banker/, '/api')
-      },
-      // NB Regulatory API - National Bank regulatory (port 3002)
-      '/api/nb-regulatory': {
-        target: 'http://localhost:3002',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/nb-regulatory/, '/api')
-      },
-      // NCAT API - Quality assurance (port 3003)
-      '/api/ncat': {
-        target: 'http://localhost:3003',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/ncat/, '/api')
-      },
-      // Shipping Line API (port 3004)
-      '/api/shipping': {
-        target: 'http://localhost:3004',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/shipping/, '/api')
-      },
-      // Custom Authorities API (port 3005)
-      '/api/customs': {
-        target: 'http://localhost:3005',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/customs/, '/api')
-      },
-      // Legacy support - redirect to banker
-      '/api-portal': {
-        target: 'http://localhost:3001',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api-portal/, '/api')
-      },
-      // Default /api routes to banker (port 3001)
-      '/api': {
-        target: 'http://localhost:3001',
-        changeOrigin: true
-      }
+      '/api/approvals': { target: 'http://localhost:3002', changeOrigin: true },
+      '/api/fx-rates': { target: 'http://localhost:3002', changeOrigin: true },
+      '/api/bookings': { target: 'http://localhost:3003', changeOrigin: true },
+      '/api/quality': { target: 'http://localhost:3004', changeOrigin: true },
+      '/api/contracts': { target: 'http://localhost:3005', changeOrigin: true },
+      '/api/clearance': { target: 'http://localhost:3006', changeOrigin: true },
+      '/api/documents': { target: 'http://localhost:3001', changeOrigin: true },
+      '/api': { target: 'http://localhost:3001', changeOrigin: true }
     }
   }
 })

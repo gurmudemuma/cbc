@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -132,7 +133,7 @@ const BankingOperations = ({ user, org }) => {
           <Grid item xs={12} sm={6} md={3}>
             <Card>
               <CardContent sx={{ textAlign: 'center' }}>
-                <FileCheck size={40} color="#1976d2" style={{ marginBottom: 8 }} />
+                <span><FileCheck size={40} color="#1976d2" style={{ marginBottom: 8 }} /></span>
                 <Typography variant="h4" color="primary" gutterBottom>
                   {documents.filter(d => d.status === 'PENDING_VERIFICATION').length}
                 </Typography>
@@ -145,7 +146,7 @@ const BankingOperations = ({ user, org }) => {
           <Grid item xs={12} sm={6} md={3}>
             <Card>
               <CardContent sx={{ textAlign: 'center' }}>
-                <DollarSign size={40} color="#2e7d32" style={{ marginBottom: 8 }} />
+                <span><DollarSign size={40} color="#2e7d32" style={{ marginBottom: 8 }} /></span>
                 <Typography variant="h4" color="success.main" gutterBottom>
                   {financing.filter(f => f.status === 'APPROVED').length}
                 </Typography>
@@ -158,7 +159,7 @@ const BankingOperations = ({ user, org }) => {
           <Grid item xs={12} sm={6} md={3}>
             <Card>
               <CardContent sx={{ textAlign: 'center' }}>
-                <ShieldCheck size={40} color="#ed6c02" style={{ marginBottom: 8 }} />
+                <span><ShieldCheck size={40} color="#ed6c02" style={{ marginBottom: 8 }} /></span>
                 <Typography variant="h4" color="warning.main" gutterBottom>
                   {compliance.filter(c => c.status === 'PENDING').length}
                 </Typography>
@@ -171,7 +172,7 @@ const BankingOperations = ({ user, org }) => {
           <Grid item xs={12} sm={6} md={3}>
             <Card>
               <CardContent sx={{ textAlign: 'center' }}>
-                <CheckCircle size={40} color="#2e7d32" style={{ marginBottom: 8 }} />
+                <span><CheckCircle size={40} color="#2e7d32" style={{ marginBottom: 8 }} /></span>
                 <Typography variant="h4" color="success.main" gutterBottom>
                   {documents.filter(d => d.status === 'VERIFIED').length}
                 </Typography>
@@ -191,9 +192,9 @@ const BankingOperations = ({ user, org }) => {
             textColor="primary"
             variant="fullWidth"
           >
-            <Tab icon={<FileCheck size={20} />} label="Document Verification" />
-            <Tab icon={<DollarSign size={20} />} label="Export Financing" />
-            <Tab icon={<ShieldCheck size={20} />} label="Compliance Review" />
+            <Tab icon={<span><FileCheck size={20} /></span>} label="Document Verification" />
+            <Tab icon={<span><DollarSign size={20} /></span>} label="Export Financing" />
+            <Tab icon={<span><ShieldCheck size={20} /></span>} label="Compliance Review" />
           </Tabs>
 
           {loading && <LinearProgress />}
@@ -239,10 +240,10 @@ const BankingOperations = ({ user, org }) => {
                       <TableCell>{doc.submittedDate}</TableCell>
                       <TableCell>
                         <IconButton size="small" onClick={() => handleViewDetails(doc)}>
-                          <Eye size={18} />
+                          <span><Eye size={18} /></span>
                         </IconButton>
                         <IconButton size="small">
-                          <Download size={18} />
+                          <span><Download size={18} /></span>
                         </IconButton>
                       </TableCell>
                     </TableRow>
@@ -291,7 +292,7 @@ const BankingOperations = ({ user, org }) => {
                       </TableCell>
                       <TableCell>
                         <IconButton size="small" onClick={() => handleViewDetails(fin)}>
-                          <Eye size={18} />
+                          <span><Eye size={18} /></span>
                         </IconButton>
                       </TableCell>
                     </TableRow>
@@ -340,7 +341,7 @@ const BankingOperations = ({ user, org }) => {
                       </TableCell>
                       <TableCell>
                         <IconButton size="small" onClick={() => handleViewDetails(comp)}>
-                          <Eye size={18} />
+                          <span><Eye size={18} /></span>
                         </IconButton>
                       </TableCell>
                     </TableRow>

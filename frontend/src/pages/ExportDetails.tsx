@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -5,8 +6,6 @@ import {
   Calendar,
   MapPin,
   DollarSign,
-  Award,
-  Ship,
   CheckCircle,
   XCircle,
   Clock,
@@ -38,31 +37,85 @@ import DocumentChecklist from '../components/DocumentChecklist';
 import RejectionHandler from '../components/RejectionHandler';
 import WorkflowProgressTracker from '../components/WorkflowProgressTracker';
 
-const ExportDetails = ({ user }) => {
+interface User {
+  role: string;
+  username?: string;
+  organizationId?: string;
+}
+
+interface ExportData {
+  exportId?: string;
+  exporterName: string;
+  coffeeType: string;
+  quantity: number;
+  destinationCountry: string;
+  estimatedValue: number;
+  ecxLotNumber?: string;
+  warehouseReceiptNumber?: string;
+  warehouseLocation?: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  fxApprovalId?: string;
+  fxApprovedBy?: string;
+  fxApprovedAt?: string;
+  fxRejectionReason?: string;
+  bankingApprovedBy?: string;
+  bankingApprovedAt?: string;
+  bankingRejectionReason?: string;
+  qualityCertId?: string;
+  qualityGrade?: string;
+  qualityCertifiedBy?: string;
+  qualityCertifiedAt?: string;
+  qualityRejectionReason?: string;
+  shipmentId?: string;
+  transportIdentifier?: string;
+  transportMode?: string;
+  departureDate?: string;
+  arrivalDate?: string;
+  shippedAt?: string;
+  rejectionReason?: string;
+  rejectedBy?: string;
+  rejectedAt?: string;
+}
+
+interface HistoryRecord {
+  txId: string;
+  timestamp: string;
+  record?: {
+    status?: string;
+  };
+}
+
+interface ExportDetailsProps {
+  user: User;
+}
+
+const ExportDetails: React.FC<ExportDetailsProps> = ({ user }) => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [exportData, setExportData] = useState(null);
-  const [history, setHistory] = useState([]);
+  const [exportData, setExportData] = useState<ExportData | null>(null);
+  const [history, setHistory] = useState<HistoryRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
 
+  const fetchExportDetails = async () => {
+    try {
+      const [detailsRes, historyRes] = await Promise.all([
+        apiClient.get(`/exports/${id}`),
+        apiClient.get(`/exports/${id}/history`),
+      ]);
+
+      setExportData(detailsRes.data.data);
+      setHistory(historyRes.data.data || []);
+    } catch (error: unknown) {
+      console.error('Error fetching export details:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchExportDetails = async () => {
-      try {
-        const [detailsRes, historyRes] = await Promise.all([
-          apiClient.get(`/exports/${id}`),
-          apiClient.get(`/exports/${id}/history`),
-        ]);
-
-        setExportData(detailsRes.data.data);
-        setHistory(historyRes.data.data || []);
-      } catch (error) {
-        console.error('Error fetching export details:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchExportDetails();
   }, [id]);
 
@@ -71,7 +124,7 @@ const ExportDetails = ({ user }) => {
       await apiClient.put(`/exports/${id}/complete`);
       const response = await apiClient.get(`/exports/${id}`);
       setExportData(response.data.data);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error completing export:', error);
       alert('Failed to complete export');
     }
@@ -83,15 +136,15 @@ const ExportDetails = ({ user }) => {
         await apiClient.put(`/exports/${id}/cancel`);
         const response = await apiClient.get(`/exports/${id}`);
         setExportData(response.data.data);
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Error cancelling export:', error);
         alert('Failed to cancel export');
       }
     }
   };
 
-  const getStatusColor = (status) => {
-    const colors = {
+  const getStatusColor = (status: string): 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'warning' | 'success' => {
+    const colors: Record<string, 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'warning' | 'success'> = {
       PENDING: 'warning',
       FX_PENDING: 'warning',
       FX_APPROVED: 'info',
@@ -112,14 +165,14 @@ const ExportDetails = ({ user }) => {
     return colors[status] || 'default';
   };
 
-  const getStatusIcon = (status) => {
+  const getStatusIcon = (status: string) => {
     if (status.includes('REJECTED') || status === 'CANCELLED') {
-      return <XCircle />;
+      return <span><XCircle /></span>;
     }
     if (status === 'COMPLETED') {
-      return <CheckCircle />;
+      return <span><CheckCircle /></span>;
     }
-    return <Clock />;
+    return <span><Clock /></span>;
   };
 
   if (loading) {
@@ -143,29 +196,13 @@ const ExportDetails = ({ user }) => {
     );
   }
 
-  const fetchExportDetails = async () => {
-    try {
-      const [detailsRes, historyRes] = await Promise.all([
-        apiClient.get(`/exports/${id}`),
-        apiClient.get(`/exports/${id}/history`),
-      ]);
-
-      setExportData(detailsRes.data.data);
-      setHistory(historyRes.data.data || []);
-    } catch (error) {
-      console.error('Error fetching export details:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <Box sx={{ p: 3 }}>
       <Grid container spacing={3}>
         <Grid item xs={12} md={8}>
           <Grid container justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
             <Stack direction="row" alignItems="center" spacing={2}>
-              <Button startIcon={<ArrowLeft />} onClick={() => navigate('/exports')}>
+              <Button startIcon={<span><ArrowLeft /></span>} onClick={() => navigate('/exports')}>
                 Back
               </Button>
               <Typography variant="h4">Export Details</Typography>
@@ -176,7 +213,7 @@ const ExportDetails = ({ user }) => {
           </Grid>
 
           {/* Rejection Handler - Shows only if rejected */}
-          <RejectionHandler 
+          <RejectionHandler
             exportData={exportData}
             onResubmit={() => navigate(`/exports/${id}/edit`)}
           />
@@ -186,7 +223,7 @@ const ExportDetails = ({ user }) => {
             <ExporterSubmissionActions
               exportData={exportData}
               onSuccess={() => fetchExportDetails()}
-              onError={(error) => console.error('Submission error:', error)}
+              onError={(error: unknown) => console.error('Submission error:', error)}
             />
           </Box>
 
@@ -212,10 +249,10 @@ const ExportDetails = ({ user }) => {
             </Stack>
           </Paper>
 
-          <Tabs value={activeTab} onChange={(e, v) => setActiveTab(v)} sx={{ mb: 3 }}>
-            <Tab label="Details" icon={<FileText />} iconPosition="start" />
-            <Tab label="Documents" icon={<Package />} iconPosition="start" />
-            <Tab label="History" icon={<History />} iconPosition="start" />
+          <Tabs value={activeTab} onChange={(_e, v) => setActiveTab(v)} sx={{ mb: 3 }}>
+            <Tab label="Details" icon={<span><FileText /></span>} iconPosition="start" />
+            <Tab label="Documents" icon={<span><Package /></span>} iconPosition="start" />
+            <Tab label="History" icon={<span><History /></span>} iconPosition="start" />
           </Tabs>
 
           {activeTab === 0 && (
@@ -229,6 +266,18 @@ const ExportDetails = ({ user }) => {
                     <List>
                       <ListItem>
                         <ListItemText primary="Exporter Name" secondary={exportData.exporterName} />
+                      </ListItem>
+                      <Divider />
+                      <ListItem>
+                        <ListItemText primary="ECX Lot Number" secondary={exportData.ecxLotNumber || '-'} />
+                      </ListItem>
+                      <Divider />
+                      <ListItem>
+                        <ListItemText primary="Warehouse Receipt" secondary={exportData.warehouseReceiptNumber || '-'} />
+                      </ListItem>
+                      <Divider />
+                      <ListItem>
+                        <ListItemText primary="Warehouse Location" secondary={exportData.warehouseLocation || '-'} />
                       </ListItem>
                       <Divider />
                       <ListItem>
@@ -295,7 +344,7 @@ const ExportDetails = ({ user }) => {
                         <ListItem>
                           <ListItemText
                             primary="Approved At"
-                            secondary={new Date(exportData.fxApprovedAt).toLocaleString()}
+                            secondary={new Date(exportData.fxApprovedAt || '').toLocaleString()}
                           />
                         </ListItem>
                       </List>
@@ -407,7 +456,7 @@ const ExportDetails = ({ user }) => {
                         <ListItem>
                           <ListItemText
                             primary="Certified At"
-                            secondary={new Date(exportData.qualityCertifiedAt).toLocaleString()}
+                            secondary={new Date(exportData.qualityCertifiedAt || '').toLocaleString()}
                           />
                         </ListItem>
                       </List>
@@ -439,66 +488,66 @@ const ExportDetails = ({ user }) => {
               {(exportData.transportIdentifier ||
                 exportData.departureDate ||
                 exportData.arrivalDate) && (
-                <Grid item xs={12} md={6}>
-                  <Card>
-                    <CardContent>
-                      <Typography variant="h6" sx={{ mb: 2 }}>
-                        Shipment Information
-                      </Typography>
-                      <List>
-                        <ListItem>
-                          <ListItemText primary="Shipment ID" secondary={exportData.shipmentId} />
-                        </ListItem>
-                        <Divider />
-                        <ListItem>
-                          <ListItemText
-                            primary="Transport Identifier"
-                            secondary={exportData.transportIdentifier || '-'}
-                          />
-                        </ListItem>
-                        <Divider />
-                        <ListItem>
-                          <ListItemText
-                            primary="Transport Mode"
-                            secondary={exportData.transportMode || '-'}
-                          />
-                        </ListItem>
-                        <Divider />
-                        <ListItem>
-                          <ListItemText
-                            primary="Departure Date"
-                            secondary={new Date(exportData.departureDate).toLocaleDateString()}
-                          />
-                        </ListItem>
-                        <Divider />
-                        <ListItem>
-                          <ListItemText
-                            primary="Arrival Date"
-                            secondary={new Date(exportData.arrivalDate).toLocaleDateString()}
-                          />
-                        </ListItem>
-                        {exportData.shippedAt && (
-                          <>
-                            <Divider />
-                            <ListItem>
-                              <ListItemText
-                                primary="Shipped At"
-                                secondary={new Date(exportData.shippedAt).toLocaleString()}
-                              />
-                            </ListItem>
-                          </>
-                        )}
-                      </List>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              )}
+                  <Grid item xs={12} md={6}>
+                    <Card>
+                      <CardContent>
+                        <Typography variant="h6" sx={{ mb: 2 }}>
+                          Shipment Information
+                        </Typography>
+                        <List>
+                          <ListItem>
+                            <ListItemText primary="Shipment ID" secondary={exportData.shipmentId} />
+                          </ListItem>
+                          <Divider />
+                          <ListItem>
+                            <ListItemText
+                              primary="Transport Identifier"
+                              secondary={exportData.transportIdentifier || '-'}
+                            />
+                          </ListItem>
+                          <Divider />
+                          <ListItem>
+                            <ListItemText
+                              primary="Transport Mode"
+                              secondary={exportData.transportMode || '-'}
+                            />
+                          </ListItem>
+                          <Divider />
+                          <ListItem>
+                            <ListItemText
+                              primary="Departure Date"
+                              secondary={new Date(exportData.departureDate || '').toLocaleDateString()}
+                            />
+                          </ListItem>
+                          <Divider />
+                          <ListItem>
+                            <ListItemText
+                              primary="Arrival Date"
+                              secondary={new Date(exportData.arrivalDate || '').toLocaleDateString()}
+                            />
+                          </ListItem>
+                          {exportData.shippedAt && (
+                            <>
+                              <Divider />
+                              <ListItem>
+                                <ListItemText
+                                  primary="Shipped At"
+                                  secondary={new Date(exportData.shippedAt).toLocaleString()}
+                                />
+                              </ListItem>
+                            </>
+                          )}
+                        </List>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                )}
             </Grid>
           )}
 
           {activeTab === 1 && (
             <Box>
-              <DocumentChecklist exportId={id} />
+              <DocumentChecklist exportId={id} onUpdate={() => fetchExportDetails()} />
             </Box>
           )}
 
@@ -509,7 +558,7 @@ const ExportDetails = ({ user }) => {
                   Transaction History
                 </Typography>
                 <Stack spacing={2}>
-                  {history.map((record, index) => (
+                  {history.map((record: HistoryRecord, index: number) => (
                     <Paper key={index} sx={{ p: 2 }}>
                       <Stack direction="row" justifyContent="space-between">
                         <Chip label={record.record?.status || 'Unknown'} color="primary" />

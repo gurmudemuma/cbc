@@ -71,7 +71,7 @@ echo ""
 
 # Check API .env files
 echo "Checking API environment files..."
-for api in commercial-bank national-bank ncat shipping-line; do
+for api in commercial-bank national-bank ecta shipping-line custom-authorities; do
     if [ -f "api/$api/.env" ]; then
         echo "✅ api/$api/.env exists"
     else

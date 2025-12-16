@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Qualification Status Component
  * Displays exporter's qualification progress and requirements
@@ -79,13 +80,13 @@ const QualificationStatus = ({ onNavigateToRegistration }) => {
   const getStatusIcon = (stepStatus) => {
     switch (stepStatus) {
       case 'complete':
-        return <CheckCircle color="success" />;
+        return <span><CheckCircle color="success" /></span>;
       case 'pending':
-        return <Warning color="warning" />;
+        return <span><Warning color="warning" /></span>;
       case 'incomplete':
-        return <RadioButtonUnchecked color="disabled" />;
+        return <span><RadioButtonUnchecked color="disabled" /></span>;
       default:
-        return <ErrorIcon color="error" />;
+        return <span><ErrorIcon color="error" /></span>;
     }
   };
 

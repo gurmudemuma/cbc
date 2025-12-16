@@ -1,7 +1,8 @@
-import { forwardRef, useState } from 'react';
+import { forwardRef, useState, MouseEvent } from 'react';
 import { styled } from '@mui/material/styles';
 import {
   Button,
+  ButtonProps,
   CircularProgress,
   Tooltip,
   Dialog,
@@ -12,8 +13,25 @@ import {
 } from '@mui/material';
 import { AlertTriangle } from 'lucide-react';
 
+interface ActionButtonProps extends Omit<ButtonProps, 'variant' | 'color'> {
+  children: React.ReactNode;
+  icon?: React.ReactNode;
+  tooltip?: string;
+  loading?: boolean;
+  confirmTitle?: string;
+  confirmMessage?: string;
+  onClick?: (event?: MouseEvent<HTMLButtonElement>) => void;
+  variant?: 'contained' | 'outlined' | 'text' | 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'success';
+  color?: 'primary' | 'secondary' | 'error' | 'success' | 'info' | 'warning';
+  size?: 'small' | 'medium' | 'large';
+  fullWidth?: boolean;
+  disabled?: boolean;
+}
+
 // Styled button with enhanced features
-const StyledActionButton = styled(Button)(({ theme, variant, color, size, fullWidth, loading }) => ({
+const StyledActionButton = styled(Button, {
+  shouldForwardProp: (prop: string) => !['loading'].includes(prop),
+})<{ loading?: boolean }>(({ theme }) => ({
   // Consistent sizing
   minWidth: 100,
   padding: theme.spacing(1, 2),
@@ -21,14 +39,14 @@ const StyledActionButton = styled(Button)(({ theme, variant, color, size, fullWi
   transition: theme.transitions.create(['all'], {
     duration: theme.transitions.duration.shortest,
   }),
-  
+
   // Better mobile touch targets (44px minimum for iOS)
   [theme.breakpoints.down('sm')]: {
     minHeight: 44,
     fontSize: '0.9rem',
     padding: theme.spacing(1.25, 2),
   },
-  
+
   // Loading state
   '&.loading': {
     pointerEvents: 'none',
@@ -46,51 +64,51 @@ const StyledActionButton = styled(Button)(({ theme, variant, color, size, fullWi
   },
 
   // Full width
-  ...(fullWidth && {
+  '&.fullWidth': {
     width: '100%',
-  }),
+  },
 
   // Size variants
-  ...(size === 'small' && {
+  '&.size-small': {
     padding: theme.spacing(0.75, 2),
     fontSize: '0.875rem',
-  }),
-  ...(size === 'medium' && {
+  },
+  '&.size-medium': {
     padding: theme.spacing(1.25, 3),
     fontSize: '1rem',
-  }),
-  ...(size === 'large' && {
+  },
+  '&.size-large': {
     padding: theme.spacing(2.25, 4),
     fontSize: '1.125rem',
-  }),
+  },
 
   // Gradient backgrounds for primary actions
-  ...(variant === 'contained' && color === 'primary' && {
+  '&.variant-contained.color-primary': {
     background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.light} 100%)`,
     '&:hover': {
       background: `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 100%)`,
     },
-  }),
+  },
 
   // Error/destructive actions
-  ...(variant === 'contained' && color === 'error' && {
+  '&.variant-contained.color-error': {
     background: `linear-gradient(135deg, ${theme.palette.error.dark} 0%, ${theme.palette.error.main} 100%)`,
     '&:hover': {
       background: `linear-gradient(135deg, ${theme.palette.error.dark} 0%, ${theme.palette.error.light} 100%)`,
     },
-  }),
+  },
 
   // Success actions
-  ...(variant === 'contained' && color === 'success' && {
+  '&.variant-contained.color-success': {
     background: `linear-gradient(135deg, ${theme.palette.success.dark} 0%, ${theme.palette.success.main} 100%)`,
     '&:hover': {
       background: `linear-gradient(135deg, ${theme.palette.success.dark} 0%, ${theme.palette.success.light} 100%)`,
     },
-  }),
+  },
 }));
 
 // Loading spinner component
-const LoadingSpinner = styled(CircularProgress)(({ theme }) => ({
+const LoadingSpinner = styled(CircularProgress)(() => ({
   color: 'inherit',
 }));
 
@@ -118,7 +136,7 @@ const LoadingSpinner = styled(CircularProgress)(({ theme }) => ({
  * @param {boolean} props.fullWidth - Full width button
  * @param {boolean} props.disabled - Disabled state
  */
-const ActionButton = forwardRef(({
+const ActionButton = forwardRef<HTMLButtonElement, ActionButtonProps>(({
   children,
   icon,
   tooltip,
@@ -136,26 +154,28 @@ const ActionButton = forwardRef(({
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   // Map old variant names to MUI variants
-  const muiVariant = {
-    primary: 'contained',
-    secondary: 'contained',
-    outline: 'outlined',
-    ghost: 'text',
-    danger: 'contained',
-    success: 'contained',
-  }[variant] || variant;
+  const muiVariant: 'contained' | 'outlined' | 'text' = (
+    variant === 'primary' || variant === 'secondary' || variant === 'danger' || variant === 'success'
+      ? 'contained'
+      : variant === 'outline'
+        ? 'outlined'
+        : variant === 'ghost'
+          ? 'text'
+          : variant
+  ) as 'contained' | 'outlined' | 'text';
 
   // Map old variant names to MUI colors
-  const muiColor = {
-    primary: 'primary',
-    secondary: 'secondary',
-    outline: 'primary',
-    ghost: 'primary',
-    danger: 'error',
-    success: 'success',
-  }[variant] || color;
+  const muiColor: 'primary' | 'secondary' | 'error' | 'success' | 'info' | 'warning' = (
+    variant === 'danger'
+      ? 'error'
+      : variant === 'success'
+        ? 'success'
+        : variant === 'outline' || variant === 'ghost'
+          ? 'primary'
+          : color
+  ) as 'primary' | 'secondary' | 'error' | 'success' | 'info' | 'warning';
 
-  const handleClick = (event) => {
+  const handleClick = (event: MouseEvent<HTMLButtonElement>) => {
     if (confirmMessage || confirmTitle) {
       setConfirmOpen(true);
     } else if (onClick) {
@@ -181,10 +201,17 @@ const ActionButton = forwardRef(({
       color={muiColor}
       size={size}
       fullWidth={fullWidth}
-      startIcon={!loading && icon}
+      startIcon={!loading && icon ? icon : undefined}
       onClick={handleClick}
       disabled={disabled || loading}
-      className={loading ? 'loading' : ''}
+      className={[
+        loading ? 'loading' : '',
+        fullWidth ? 'fullWidth' : '',
+        `size-${size}`,
+        `variant-${muiVariant}`,
+        `color-${muiColor}`,
+      ].filter(Boolean).join(' ')}
+      loading={loading}
       {...props}
     >
       {loading ? (
@@ -234,7 +261,7 @@ const ActionButton = forwardRef(({
             Confirm
           </Button>
         </DialogActions>
-      </D>
+      </Dialog>
     </>
   );
 });
@@ -242,30 +269,36 @@ const ActionButton = forwardRef(({
 ActionButton.displayName = 'ActionButton';
 
 // Export variants for convenience
-export const PrimaryButton = (props) => (
-  <ActionButton variant="contained" color="primary" {...props} />
-);
+export const PrimaryButton = forwardRef<HTMLButtonElement, Omit<ActionButtonProps, 'variant' | 'color'>>((props, ref) => (
+  <ActionButton ref={ref} variant="contained" color="primary" {...props} />
+));
+PrimaryButton.displayName = 'PrimaryButton';
 
-export const SecondaryButton = (props) => (
-  <ActionButton variant="outlined" color="primary" {...props} />
-);
+export const SecondaryButton = forwardRef<HTMLButtonElement, Omit<ActionButtonProps, 'variant' | 'color'>>((props, ref) => (
+  <ActionButton ref={ref} variant="outlined" color="primary" {...props} />
+));
+SecondaryButton.displayName = 'SecondaryButton';
 
-export const DangerButton = (props) => (
-  <ActionButton 
-    variant="contained" 
-    color="error" 
+export const DangerButton = forwardRef<HTMLButtonElement, Omit<ActionButtonProps, 'variant' | 'color' | 'confirmTitle' | 'confirmMessage'>>((props, ref) => (
+  <ActionButton
+    ref={ref}
+    variant="contained"
+    color="error"
     confirmTitle="Confirm Deletion"
     confirmMessage="This action cannot be undone. Are you sure you want to continue?"
-    {...props} 
+    {...props}
   />
-);
+));
+DangerButton.displayName = 'DangerButton';
 
-export const SuccessButton = (props) => (
-  <ActionButton variant="contained" color="success" {...props} />
-);
+export const SuccessButton = forwardRef<HTMLButtonElement, Omit<ActionButtonProps, 'variant' | 'color'>>((props, ref) => (
+  <ActionButton ref={ref} variant="contained" color="success" {...props} />
+));
+SuccessButton.displayName = 'SuccessButton';
 
-export const TextButton = (props) => (
-  <ActionButton variant="text" color="primary" {...props} />
-);
+export const TextButton = forwardRef<HTMLButtonElement, Omit<ActionButtonProps, 'variant' | 'color'>>((props, ref) => (
+  <ActionButton ref={ref} variant="text" color="primary" {...props} />
+));
+TextButton.displayName = 'TextButton';
 
 export default ActionButton;

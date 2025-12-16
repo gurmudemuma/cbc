@@ -15,7 +15,7 @@ export const SkeletonCard = ({ height = 200, width = '100%', borderRadius = 2 })
         width={width}
         height={height}
         sx={{ 
-          borderRadius: `${theme.shape.borderRadius * borderRadius}px`,
+          borderRadius: borderRadius,
           bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.11)' : 'rgba(0, 0, 0, 0.11)'
         }}
       />

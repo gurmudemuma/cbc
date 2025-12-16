@@ -1,6 +1,11 @@
 import { Button } from '@mui/material';
 
-const ContinueModal = ({ onContinue, onStop }) => {
+interface ContinueModalProps {
+  onContinue: () => void;
+  onStop: () => void;
+}
+
+const ContinueModal = ({ onContinue, onStop }: ContinueModalProps) => {
   return (
     <div className="modal-overlay">
       <div className="modal">

@@ -71,24 +71,6 @@ if ! (cd "$PROJECT_ROOT/api/ecta" && npm run build); then
 fi
 echo "✅ ECTA API built successfully"
 
-# ECX API (Ethiopian Commodity Exchange)
-print_header "Building ECX API..."
-echo "Compiling TypeScript for ECX API..."
-if ! (cd "$PROJECT_ROOT/api/ecx" && npm run build); then
-  echo "❌ Failed to build ECX API"
-  exit 1
-fi
-echo "✅ ECX API built successfully"
-
-# Exporter Portal API
-print_header "Building Exporter Portal API..."
-echo "Compiling TypeScript for Exporter Portal API..."
-if ! (cd "$PROJECT_ROOT/api/exporter-portal" && npm run build); then
-  echo "❌ Failed to build Exporter Portal API"
-  exit 1
-fi
-echo "✅ Exporter Portal API built successfully"
-
 # Shipping Line API
 print_header "Building Shipping Line API..."
 echo "Compiling TypeScript for Shipping Line API..."
@@ -136,22 +118,6 @@ kill "$(cat $PID_FILE)" 2>/dev/null
 echo $! > "$PID_FILE"
 echo "🚀 ECTA API started in dev mode. Log: $LOG_FILE"
 
-# ECX API (Ethiopian Commodity Exchange)
-LOG_FILE="$PROJECT_ROOT/logs/ecx.log"
-PID_FILE="$PROJECT_ROOT/logs/ecx.pid"
-kill "$(cat $PID_FILE)" 2>/dev/null
-(cd "$PROJECT_ROOT/api/ecx" && ts-node-dev --respawn --transpile-only src/index.ts &> "$LOG_FILE") &
-echo $! > "$PID_FILE"
-echo "🚀 ECX API started in dev mode. Log: $LOG_FILE"
-
-# Exporter Portal API
-LOG_FILE="$PROJECT_ROOT/logs/exporter-portal.log"
-PID_FILE="$PROJECT_ROOT/logs/exporter-portal.pid"
-kill "$(cat $PID_FILE)" 2>/dev/null
-(cd "$PROJECT_ROOT/api/exporter-portal" && ts-node-dev --respawn --transpile-only src/index.ts &> "$LOG_FILE") &
-echo $! > "$PID_FILE"
-echo "🚀 Exporter Portal API started in dev mode. Log: $LOG_FILE"
-
 # Shipping Line API
 LOG_FILE="$PROJECT_ROOT/logs/shipping-line.log"
 PID_FILE="$PROJECT_ROOT/logs/shipping-line.pid"
@@ -177,11 +143,10 @@ echo "  🏦 Commercial Bank API: http://localhost:3001"
 echo "  🏦 National Bank (NBE) API: http://localhost:3002"
 echo "  🏛️  ECTA API: http://localhost:3003 (License, Quality, Contract)"
 echo "  🚢 Shipping Line API: http://localhost:3004"
-echo "  🛃 Customs API: http://localhost:3005"
-echo "  📊 ECX API: http://localhost:3006 (Lot Verification)"
-echo "  👤 Exporter Portal API: http://localhost:3007"
+echo "  🛃 Custom Authorities API: http://localhost:3005"
 echo ""
 echo "Logs are available in: $PROJECT_ROOT/logs/"
 echo ""
 echo "To stop Redis: redis-cli shutdown"
 echo ""
+

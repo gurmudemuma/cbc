@@ -61,6 +61,14 @@ docker exec -e CORE_PEER_LOCALMSPID=ShippingLineMSP \
     -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/shippingline.coffee-export.com/users/Admin@shippingline.coffee-export.com/msp \
     cli peer lifecycle chaincode install channel-artifacts/${CC_NAME}.tar.gz
 
+# Install on CustomAuthorities peer
+echo "Installing on CustomAuthorities peer..."
+docker exec -e CORE_PEER_LOCALMSPID=CustomAuthoritiesMSP \
+    -e CORE_PEER_ADDRESS=peer0.custom-authorities.coffee-export.com:11051 \
+    -e CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/custom-authorities.coffee-export.com/peers/peer0.custom-authorities.coffee-export.com/tls/ca.crt \
+    -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/custom-authorities.coffee-export.com/users/Admin@custom-authorities.coffee-export.com/msp \
+    cli peer lifecycle chaincode install channel-artifacts/${CC_NAME}.tar.gz
+
 echo "✅ Chaincode installed on all peers"
 echo ""
 
@@ -110,6 +118,14 @@ docker exec -e CORE_PEER_LOCALMSPID=ShippingLineMSP \
     -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/shippingline.coffee-export.com/users/Admin@shippingline.coffee-export.com/msp \
     cli peer lifecycle chaincode approveformyorg -o orderer.coffee-export.com:7050 --channelID $CHANNEL_NAME --name $CC_NAME --version $CC_VERSION --package-id $PACKAGE_ID --sequence $CC_SEQUENCE --tls --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/ordererOrganizations/coffee-export.com/orderers/orderer.coffee-export.com/msp/tlscacerts/tlsca.coffee-export.com-cert.pem
 
+# Approve for CustomAuthorities
+echo "Approving for CustomAuthorities..."
+docker exec -e CORE_PEER_LOCALMSPID=CustomAuthoritiesMSP \
+    -e CORE_PEER_ADDRESS=peer0.custom-authorities.coffee-export.com:11051 \
+    -e CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/custom-authorities.coffee-export.com/peers/peer0.custom-authorities.coffee-export.com/tls/ca.crt \
+    -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/custom-authorities.coffee-export.com/users/Admin@custom-authorities.coffee-export.com/msp \
+    cli peer lifecycle chaincode approveformyorg -o orderer.coffee-export.com:7050 --channelID $CHANNEL_NAME --name $CC_NAME --version $CC_VERSION --package-id $PACKAGE_ID --sequence $CC_SEQUENCE --tls --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/ordererOrganizations/coffee-export.com/orderers/orderer.coffee-export.com/msp/tlscacerts/tlsca.coffee-export.com-cert.pem
+
 echo "✅ Chaincode approved by all organizations"
 echo ""
 
@@ -123,7 +139,8 @@ docker exec -e CORE_PEER_LOCALMSPID=CommercialBankMSP \
     --peerAddresses peer0.commercialbank.coffee-export.com:7051 --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/commercialbank.coffee-export.com/peers/peer0.commercialbank.coffee-export.com/tls/ca.crt \
     --peerAddresses peer0.nationalbank.coffee-export.com:8051 --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/nationalbank.coffee-export.com/peers/peer0.nationalbank.coffee-export.com/tls/ca.crt \
     --peerAddresses peer0.ecta.coffee-export.com:9051 --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/ecta.coffee-export.com/peers/peer0.ecta.coffee-export.com/tls/ca.crt \
-    --peerAddresses peer0.shippingline.coffee-export.com:10051 --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/shippingline.coffee-export.com/peers/peer0.shippingline.coffee-export.com/tls/ca.crt
+    --peerAddresses peer0.shippingline.coffee-export.com:10051 --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/shippingline.coffee-export.com/peers/peer0.shippingline.coffee-export.com/tls/ca.crt \
+    --peerAddresses peer0.custom-authorities.coffee-export.com:11051 --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/custom-authorities.coffee-export.com/peers/peer0.custom-authorities.coffee-export.com/tls/ca.crt
 
 echo ""
 echo "=========================================="

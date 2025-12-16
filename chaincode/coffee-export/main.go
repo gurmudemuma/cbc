@@ -7,12 +7,12 @@ import (
 )
 
 func main() {
-	coffeeChaincode, err := contractapi.NewChaincode(&CoffeeExportContractV2{})
+	contract, err := contractapi.NewChaincode(&CoffeeExportContract{})
 	if err != nil {
-		log.Panicf("Error creating coffee export chaincode: %v", err)
+		log.Panicf("Error creating chaincode: %v", err)
 	}
 
-	if err := coffeeChaincode.Start(); err != nil {
-		log.Panicf("Error starting coffee export chaincode: %v", err)
+	if err := contract.Start(); err != nil {
+		log.Panicf("Error starting chaincode: %v", err)
 	}
 }

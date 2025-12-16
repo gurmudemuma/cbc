@@ -1,2 +1,1 @@
-Committed chaincode definition for chaincode 'user-management' on channel 'coffeechannel':
-Version: 1.0, Sequence: 1, Endorsement Plugin: escc, Validation Plugin: vscc, Approvals: [CommercialBankMSP: true, CustomAuthoritiesMSP: true, ECTAMSP: true, NationalBankMSP: true, ShippingLineMSP: true]
+Error: chaincode install failed with status: 500 - failed to invoke backing implementation of 'InstallChaincode': could not build chaincode: docker build failed: docker image build failed: write unix @->/run/docker.sock: write: broken pipe

@@ -1,0 +1,19 @@
+# syntax=docker/dockerfile:1
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+COPY commercial-bank/package*.json ./commercial-bank/
+COPY national-bank/package*.json ./national-bank/
+COPY ecta/package*.json ./ecta/
+COPY shipping-line/package*.json ./shipping-line/
+COPY custom-authorities/package*.json ./custom-authorities/
+COPY shared/package*.json ./shared/
+
+# Install dependencies
+RUN npm install --legacy-peer-deps --omit=dev
+
+# Copy shared code
+COPY shared ./shared

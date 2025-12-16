@@ -164,10 +164,10 @@ const RejectionHandler = ({ exportData, onResubmit }) => {
           Rejection Reason:
         </Typography>
         <Paper sx={{ p: 2, bgcolor: '#fff3e0', border: '1px solid #ff9800' }}>
-          <Typography variant="body1" sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
             <AlertCircle size={20} color="#ff9800" style={{ marginTop: 2, flexShrink: 0 }} />
-            <span>{rejectionReason}</span>
-          </Typography>
+            <Typography variant="body1">{rejectionReason}</Typography>
+          </Box>
         </Paper>
       </Box>
 

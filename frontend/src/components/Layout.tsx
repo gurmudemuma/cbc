@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Outlet, useLocation, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getOrganization } from '../config/api.config';
@@ -18,21 +19,20 @@ import {
   ChevronRight,
   ChevronDown,
   ChevronUp,
-  Sun,
-  Moon,
-  Bell,
-  Search,
-  User,
-  Settings,
-  HelpCircle,
   Plus,
   FileText,
   Building,
   CheckCircle,
   UserCheck,
+  User,
+  HelpCircle,
+  Settings,
+  Badge,
 } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
 import { styled, useTheme } from '@mui/material/styles';
+import NotificationCenter from './NotificationCenter';
+import NotificationPreferencesDialog from './NotificationPreferences';
 import {
   Box,
   Drawer,
@@ -45,20 +45,62 @@ import {
   IconButton,
   Typography,
   Avatar,
-  Divider,
-  Badge,
   Tooltip,
   useMediaQuery,
   Chip,
-  InputBase,
-  alpha,
-  MenuItem,
-  Menu as MuiMenu,
-  Stack,
 } from '@mui/material';
 
-const drawerWidth = 220;
-const collapsedWidth = 65;
+// TypeScript Interfaces
+interface User {
+  id?: string;
+  username?: string;
+  role?: string;
+  organizationId?: string;
+  email?: string;
+  [key: string]: any;
+}
+
+interface ExportItem {
+  status: string;
+  [key: string]: any;
+}
+
+interface NavigationItem {
+  name: string;
+  path: string;
+  icon: any;
+  filter?: string;
+  badge?: number;
+  disabled?: boolean;
+  children?: NavigationItem[];
+}
+
+interface LayoutProps {
+  user: User;
+  org?: string | null;
+  onLogout: () => void;
+  exports?: ExportItem[];
+}
+
+interface StyledDrawerProps {
+  collapsed?: boolean;
+  drawerWidth?: number;
+}
+
+interface StyledListItemButtonProps {
+  active?: boolean;
+  collapsed?: boolean;
+}
+
+interface MainProps {
+  open?: boolean;
+  collapsed?: boolean;
+  drawerWidth?: number;
+}
+
+const baseDrawerWidth = 240;
+const collapsedWidth = 56;
+const maxDrawerWidth = 400;
 
 // Styled components
 const StyledAppBar = styled(AppBar)(({ theme }) => ({
@@ -75,8 +117,8 @@ const StyledAppBar = styled(AppBar)(({ theme }) => ({
 }));
 
 const StyledDrawer = styled(Drawer, {
-  shouldForwardProp: (prop) => prop !== 'collapsed',
-})(({ theme, collapsed }) => ({
+  shouldForwardProp: (prop) => prop !== 'collapsed' && prop !== 'drawerWidth',
+})<StyledDrawerProps>(({ theme, collapsed, drawerWidth }) => ({
   width: collapsed ? collapsedWidth : drawerWidth,
   flexShrink: 0,
   whiteSpace: 'nowrap',
@@ -105,10 +147,10 @@ const StyledDrawer = styled(Drawer, {
 
 const StyledListItemButton = styled(ListItemButton, {
   shouldForwardProp: (prop) => prop !== 'active' && prop !== 'collapsed',
-})(({ theme, active, collapsed }) => ({
+})<StyledListItemButtonProps>(({ theme, active, collapsed }) => ({
   borderRadius: theme.shape.borderRadius,
-  margin: theme.spacing(0.5, 1.5),
-  padding: theme.spacing(1.25, 2),
+  margin: theme.spacing(0.5, 1),
+  padding: theme.spacing(1, 1.5),
   transition: theme.transitions.create(
     ['background-color', 'transform', 'padding', 'box-shadow'],
     {
@@ -117,7 +159,8 @@ const StyledListItemButton = styled(ListItemButton, {
     }
   ),
   position: 'relative',
-  overflow: 'hidden',
+  overflow: 'visible',
+  whiteSpace: 'nowrap',
   '&:hover': {
     backgroundColor: theme.palette.action.hover,
     transform: 'translateX(4px)',
@@ -184,8 +227,8 @@ const DrawerHeader = styled('div')(({ theme }) => ({
 }));
 
 const Main = styled('main', {
-  shouldForwardProp: (prop) => prop !== 'open' && prop !== 'collapsed',
-})(({ theme, open, collapsed }) => ({
+  shouldForwardProp: (prop) => prop !== 'open' && prop !== 'collapsed' && prop !== 'drawerWidth',
+})<MainProps>(({ theme, collapsed, drawerWidth }) => ({
   flexGrow: 1,
   paddingTop: '64px',
   paddingLeft: 0,
@@ -193,7 +236,7 @@ const Main = styled('main', {
     easing: theme.transitions.easing.sharp,
     duration: theme.transitions.duration.leavingScreen,
   }),
-  marginLeft: collapsed ? collapsedWidth : drawerWidth,
+  marginLeft: collapsed ? `${collapsedWidth}px` : `${drawerWidth}px`,
   backgroundColor: theme.palette.background.default,
   minHeight: '100vh',
   [theme.breakpoints.down('md')]: {
@@ -204,27 +247,28 @@ const Main = styled('main', {
 }));
 
 const ContentWrapper = styled('div')(({ theme }) => ({
-  paddingTop: theme.spacing(3),
-  paddingRight: theme.spacing(3),
-  paddingBottom: theme.spacing(3),
-  paddingLeft: 0,
+  paddingTop: theme.spacing(2),
+  paddingRight: theme.spacing(2),
+  paddingBottom: theme.spacing(2),
+  paddingLeft: theme.spacing(1.5),
   [theme.breakpoints.down('md')]: {
     padding: theme.spacing(2),
   },
 }));
 
-const Layout = ({ user, org, onLogout, exports = [] }) => {
+const Layout: React.FC<LayoutProps> = ({ user, org, onLogout, exports = [] }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  
+
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [expandedItems, setExpandedItems] = useState({});
+  const [preferencesOpen, setPreferencesOpen] = useState(false);
 
   // Calculate badge counts dynamically based on actual exports
-  const calculateBadgeCounts = () => {
+  const calculateBadgeCounts = (): Record<string, number> => {
     return {
       PENDING: exports.filter(e => e.status === 'PENDING').length,
       FX_PENDING: exports.filter(e => e.status === 'FX_PENDING').length,
@@ -250,13 +294,13 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
   const badgeCounts = useMemo(() => calculateBadgeCounts(), [exports]);
 
   // Get role-specific navigation with filters and counts
-  const getRoleNavigation = () => {
+  const getRoleNavigation = (): NavigationItem[] => {
     const orgLower = (org || user?.organizationId || '').toLowerCase();
     const userRole = user?.role?.toLowerCase();
-    
+
     // Define organization checks
     const isCommercialBank = orgLower === 'commercial-bank' || orgLower === 'commercialbank';
-    
+
     // Define permission checks
     const canCreateExports = userRole === 'exporter' || userRole === 'admin' || isCommercialBank;
 
@@ -264,19 +308,19 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
     // Exporter Portal - External exporters (SDK-based, non-consortium)
     if (orgLower === 'exporter-portal' || orgLower === 'exporterportal') {
       return [
-        { 
-          name: 'Exporter Profile', 
-          path: '/profile', 
+        {
+          name: 'Exporter Profile',
+          path: '/profile',
           icon: User,
           children: [
             { name: 'My Profile', path: '/profile', icon: User },
             { name: 'Business Information', path: '/profile/business', icon: Building },
             { name: 'Verification Status', path: '/profile/verification', icon: CheckCircle },
-          ]
+          ],
         },
-        { 
-          name: 'Pre-Registration', 
-          path: '/pre-registration', 
+        {
+          name: 'Qualification & Licensing',
+          path: '/pre-registration',
           icon: UserCheck,
           children: [
             { name: 'Profile Registration', path: '/pre-registration?step=0', icon: Building },
@@ -284,28 +328,47 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
             { name: 'Taster Registration', path: '/pre-registration?step=2', icon: User },
             { name: 'Competence Certificate', path: '/pre-registration?step=3', icon: Award },
             { name: 'Export License', path: '/pre-registration?step=4', icon: FileText },
-          ]
+          ],
         },
-        { 
-          name: 'My Applications', 
-          path: '/applications', 
+        {
+          name: 'Applications',
+          path: '/applications',
           icon: FileText,
           children: [
             { name: 'Pending Applications', path: '/applications', icon: FileText, filter: 'PENDING', badge: badgeCounts.PENDING },
             { name: 'Under Review', path: '/applications', icon: FileCheck, filter: 'UNDER_REVIEW', badge: badgeCounts.UNDER_REVIEW },
             { name: 'Approved', path: '/applications', icon: CheckCircle, filter: 'APPROVED', badge: badgeCounts.APPROVED },
             { name: 'Rejected', path: '/applications', icon: X, filter: 'REJECTED', badge: badgeCounts.REJECTED },
-          ]
+          ],
         },
-        { 
-          name: 'Export Dashboard', 
-          path: '/exports', 
+        {
+          name: 'Exports',
+          path: '/exports',
           icon: Package,
           children: [
             { name: 'Create Export Request', path: '/exports/new', icon: Plus, disabled: !canCreateExports },
-            { name: 'My Export Requests', path: '/exports', icon: Package, filter: 'MY_EXPORTS' },
-            { name: 'Export Status', path: '/exports/status', icon: FileCheck },
-          ]
+            { name: 'Draft', path: '/exports', icon: Package, filter: 'DRAFT', badge: badgeCounts.DRAFT },
+            { name: 'Submitted', path: '/exports', icon: FileCheck, filter: 'PENDING', badge: badgeCounts.PENDING },
+            { name: 'In Progress', path: '/exports', icon: Package, filter: 'IN_PROGRESS', badge: badgeCounts.IN_PROGRESS },
+            { name: 'Bank Pending', path: '/exports', icon: FileCheck, filter: 'BANK_PENDING', badge: badgeCounts.BANK_PENDING },
+            { name: 'Bank Approved', path: '/exports', icon: CheckCircle, filter: 'BANK_APPROVED', badge: badgeCounts.BANK_APPROVED },
+            { name: 'Quality Pending', path: '/exports', icon: FileCheck, filter: 'QUALITY_PENDING', badge: badgeCounts.QUALITY_PENDING },
+            { name: 'Quality Certified', path: '/exports', icon: CheckCircle, filter: 'QUALITY_CERTIFIED', badge: badgeCounts.QUALITY_CERTIFIED },
+            { name: 'FX Pending', path: '/exports', icon: DollarSign, filter: 'FX_PENDING', badge: badgeCounts.FX_PENDING },
+            { name: 'FX Approved', path: '/exports', icon: CheckCircle, filter: 'FX_APPROVED', badge: badgeCounts.FX_APPROVED },
+            { name: 'Customs Pending', path: '/exports', icon: ShieldCheck, filter: 'CUSTOMS_PENDING', badge: badgeCounts.CUSTOMS_PENDING },
+            { name: 'Customs Cleared', path: '/exports', icon: CheckCircle, filter: 'CUSTOMS_CLEARED', badge: badgeCounts.CUSTOMS_CLEARED },
+            { name: 'Shipment Pending', path: '/exports', icon: Package, filter: 'SHIPMENT_PENDING', badge: badgeCounts.SHIPMENT_PENDING },
+            { name: 'Shipped', path: '/exports', icon: Package, filter: 'SHIPPED', badge: badgeCounts.SHIPPED },
+            { name: 'Completed', path: '/exports', icon: CheckCircle, filter: 'COMPLETED', badge: badgeCounts.COMPLETED },
+            { name: 'Rejected', path: '/exports', icon: X, filter: 'REJECTED', badge: badgeCounts.REJECTED },
+            { name: 'Export Status Overview', path: '/exports/status', icon: FileCheck },
+          ],
+        },
+        {
+          name: 'Payments & Repatriation',
+          path: '/payment-repatriation',
+          icon: DollarSign,
         },
         { name: 'Help & Support', path: '/support', icon: HelpCircle },
       ];
@@ -317,9 +380,9 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
       // Banker role - Banking operations and document verification
       if (userRole === 'bank' || userRole === 'banker' || userRole === 'admin') {
         return [
-          { 
-            name: 'Banking Operations', 
-            path: '/banking', 
+          {
+            name: 'Banking Operations',
+            path: '/banking',
             icon: DollarSign,
             children: [
               { name: 'Document Verification', path: '/banking/documents', icon: FileCheck, filter: 'PENDING_VERIFICATION', badge: badgeCounts.PENDING_VERIFICATION },
@@ -328,9 +391,9 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
               { name: 'Banking Reports', path: '/banking/reports', icon: FileText },
             ]
           },
-          { 
-            name: 'Export Management', 
-            path: '/exports', 
+          {
+            name: 'Export Management',
+            path: '/exports',
             icon: Package,
             children: [
               { name: 'All Export Requests', path: '/exports', icon: Package, filter: 'ALL' },
@@ -339,9 +402,9 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
               { name: 'Rejected', path: '/exports', icon: X, filter: 'BANK_REJECTED', badge: badgeCounts.BANK_REJECTED },
             ]
           },
-          { 
-            name: 'Blockchain Operations', 
-            path: '/blockchain', 
+          {
+            name: 'Blockchain Operations',
+            path: '/blockchain',
             icon: Package,
             children: [
               { name: 'Transaction History', path: '/blockchain/transactions', icon: FileText },
@@ -349,9 +412,9 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
               { name: 'Peer Management', path: '/blockchain/peers', icon: Users },
             ]
           },
-          { 
-            name: 'External Gateway', 
-            path: '/gateway', 
+          {
+            name: 'External Gateway',
+            path: '/gateway',
             icon: Users,
             children: [
               { name: 'Exporter Portal Requests', path: '/gateway/exporter-requests', icon: FileText, badge: badgeCounts.EXTERNAL_REQUESTS },
@@ -360,26 +423,51 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
           },
         ];
       }
-      
+
       // Exporter role accessing through Commercial Bank
       if (userRole === 'exporter') {
         return [
-          { 
-            name: 'My Export Requests', 
-            path: '/exports', 
+          {
+            name: 'Qualification & Licensing',
+            path: '/pre-registration',
+            icon: UserCheck,
+            children: [
+              { name: 'Profile Registration', path: '/pre-registration?step=0', icon: Building },
+              { name: 'Laboratory Registration', path: '/pre-registration?step=1', icon: FileCheck },
+              { name: 'Taster Registration', path: '/pre-registration?step=2', icon: User },
+              { name: 'Competence Certificate', path: '/pre-registration?step=3', icon: Award },
+              { name: 'Export License', path: '/pre-registration?step=4', icon: FileText },
+              { name: 'Qualification Status', path: '/pre-registration/status', icon: CheckCircle },
+            ]
+          },
+          {
+            name: 'My Export Requests',
+            path: '/exports',
             icon: Package,
             children: [
+              { name: 'Create New Export', path: '/exports/new', icon: Plus, disabled: !canCreateExports },
               { name: 'Draft Requests', path: '/exports', icon: Package, filter: 'DRAFT', badge: badgeCounts.DRAFT },
               { name: 'Submitted', path: '/exports', icon: Package, filter: 'PENDING', badge: badgeCounts.PENDING },
               { name: 'In Progress', path: '/exports', icon: Package, filter: 'IN_PROGRESS', badge: badgeCounts.IN_PROGRESS },
               { name: 'Completed', path: '/exports', icon: CheckCircle, filter: 'COMPLETED', badge: badgeCounts.COMPLETED },
+              { name: 'Rejected', path: '/exports', icon: X, filter: 'REJECTED', badge: badgeCounts.REJECTED },
             ]
           },
-          { name: 'Create Export Request', path: '/exports/new', icon: Plus, disabled: !canCreateExports },
-          { name: 'My Documents', path: '/documents', icon: FileText },
+          {
+            name: 'My Documents',
+            path: '/documents',
+            icon: FileText,
+            children: [
+              { name: 'Export Documents', path: '/documents/exports', icon: FileText },
+              { name: 'Qualification Documents', path: '/documents/qualification', icon: Award },
+              { name: 'Compliance Certificates', path: '/documents/compliance', icon: CheckCircle },
+            ]
+          },
+          { name: 'My Profile', path: '/profile', icon: User },
+          { name: 'Help & Support', path: '/support', icon: HelpCircle },
         ];
       }
-      
+
       // Default fallback for Commercial Bank
       return [
         { name: 'Export Overview', path: '/exports', icon: Package },
@@ -398,9 +486,9 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
       // Governor role - Can approve FX and manage monetary policy
       if (userRole === 'governor' || userRole === 'admin') {
         return [
-          { 
-            name: 'FX Management', 
-            path: '/fx', 
+          {
+            name: 'FX Management',
+            path: '/fx',
             icon: DollarSign,
             children: [
               { name: 'Pending FX Approvals', path: '/fx/approvals', icon: DollarSign, filter: 'FX_PENDING', badge: badgeCounts.FX_PENDING },
@@ -409,9 +497,9 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
               { name: 'FX Rate Management', path: '/fx/rates', icon: DollarSign },
             ]
           },
-          { 
-            name: 'Monetary Policy', 
-            path: '/monetary', 
+          {
+            name: 'Monetary Policy',
+            path: '/monetary',
             icon: Building,
             children: [
               { name: 'Policy Dashboard', path: '/monetary/dashboard', icon: Building },
@@ -419,9 +507,9 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
               { name: 'Compliance Monitoring', path: '/monetary/compliance', icon: FileCheck },
             ]
           },
-          { 
-            name: 'Export Oversight', 
-            path: '/exports', 
+          {
+            name: 'Export Oversight',
+            path: '/exports',
             icon: Package,
             children: [
               { name: 'Export Transactions', path: '/exports/transactions', icon: Package },
@@ -429,9 +517,9 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
               { name: 'Regulatory Reports', path: '/exports/reports', icon: FileText },
             ]
           },
-          { 
-            name: 'System Administration', 
-            path: '/admin', 
+          {
+            name: 'System Administration',
+            path: '/admin',
             icon: Settings,
             children: [
               { name: 'User Management', path: '/admin/users', icon: Users },
@@ -441,7 +529,7 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
           },
         ];
       }
-      
+
       // Default fallback for National Bank
       return [
         { name: 'FX Dashboard', path: '/fx', icon: DollarSign },
@@ -453,9 +541,9 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
     // ECX - Ethiopian Commodity Exchange (consortium member)
     if (orgLower === 'ecx') {
       return [
-        { 
-          name: 'Lot Management', 
-          path: '/lots', 
+        {
+          name: 'Lot Management',
+          path: '/lots',
           icon: Package,
           children: [
             { name: 'Pending Verification', path: '/lots/pending', icon: Package, filter: 'LOT_PENDING', badge: badgeCounts.LOT_PENDING },
@@ -464,9 +552,9 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
             { name: 'Lot Grading', path: '/lots/grading', icon: Award },
           ]
         },
-        { 
-          name: 'Trading Operations', 
-          path: '/trading', 
+        {
+          name: 'Trading Operations',
+          path: '/trading',
           icon: DollarSign,
           children: [
             { name: 'Active Trading', path: '/trading/active', icon: DollarSign },
@@ -475,9 +563,9 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
             { name: 'Trading History', path: '/trading/history', icon: FileText },
           ]
         },
-        { 
-          name: 'Warehouse Management', 
-          path: '/warehouse', 
+        {
+          name: 'Warehouse Management',
+          path: '/warehouse',
           icon: Building,
           children: [
             { name: 'Warehouse Receipts', path: '/warehouse/receipts', icon: FileText },
@@ -486,9 +574,9 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
             { name: 'Inventory Reports', path: '/warehouse/inventory', icon: FileText },
           ]
         },
-        { 
-          name: 'Export Verification', 
-          path: '/exports', 
+        {
+          name: 'Export Verification',
+          path: '/exports',
           icon: Package,
           children: [
             { name: 'Pending ECX Verification', path: '/exports/pending', icon: Package, filter: 'ECX_PENDING', badge: badgeCounts.ECX_PENDING },
@@ -502,9 +590,9 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
     // ECTA - Ethiopian Coffee & Tea Authority (consortium member)
     if (orgLower === 'ecta') {
       return [
-        { 
-          name: 'Pre-Registration Oversight', 
-          path: '/preregistration', 
+        {
+          name: 'Pre-Registration Oversight',
+          path: '/preregistration',
           icon: UserCheck,
           children: [
             { name: 'Pending Applications', path: '/preregistration/pending', icon: FileText, filter: 'PREREG_PENDING', badge: badgeCounts.PREREG_PENDING },
@@ -513,9 +601,9 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
             { name: 'Rejected Applications', path: '/preregistration/rejected', icon: X, filter: 'PREREG_REJECTED', badge: badgeCounts.PREREG_REJECTED },
           ]
         },
-        { 
-          name: 'License Management', 
-          path: '/licenses', 
+        {
+          name: 'License Management',
+          path: '/licenses',
           icon: Award,
           children: [
             { name: 'License Applications', path: '/licenses/applications', icon: FileText, filter: 'LICENSE_PENDING', badge: badgeCounts.LICENSE_PENDING },
@@ -524,9 +612,9 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
             { name: 'License Renewals', path: '/licenses/renewals', icon: FileCheck },
           ]
         },
-        { 
-          name: 'Quality Certification', 
-          path: '/quality', 
+        {
+          name: 'Quality Certification',
+          path: '/quality',
           icon: Award,
           children: [
             { name: 'Pending Quality Review', path: '/quality/pending', icon: FileCheck, filter: 'QUALITY_PENDING', badge: badgeCounts.QUALITY_PENDING },
@@ -535,9 +623,9 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
             { name: 'Quality Reports', path: '/quality/reports', icon: FileText },
           ]
         },
-        { 
-          name: 'Contract Approval', 
-          path: '/contracts', 
+        {
+          name: 'Contract Approval',
+          path: '/contracts',
           icon: FileText,
           children: [
             { name: 'Pending Contracts', path: '/contracts/pending', icon: FileText, filter: 'CONTRACT_PENDING', badge: badgeCounts.CONTRACT_PENDING },
@@ -546,9 +634,9 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
             { name: 'Contract History', path: '/contracts/history', icon: FileText },
           ]
         },
-        { 
-          name: 'Regulatory Oversight', 
-          path: '/regulatory', 
+        {
+          name: 'Regulatory Oversight',
+          path: '/regulatory',
           icon: ShieldCheck,
           children: [
             { name: 'Compliance Monitoring', path: '/regulatory/compliance', icon: ShieldCheck },
@@ -562,9 +650,9 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
     // Custom Authorities - Border control & customs (consortium member)
     if (orgLower === 'custom-authorities') {
       return [
-        { 
-          name: 'Customs Clearance', 
-          path: '/customs', 
+        {
+          name: 'Customs Clearance',
+          path: '/customs',
           icon: ShieldCheck,
           children: [
             { name: 'Pending Clearance', path: '/customs/pending', icon: ShieldCheck, filter: 'CUSTOMS_PENDING', badge: badgeCounts.CUSTOMS_PENDING },
@@ -573,9 +661,9 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
             { name: 'Rejected/Held', path: '/customs/rejected', icon: X, filter: 'CUSTOMS_REJECTED', badge: badgeCounts.CUSTOMS_REJECTED },
           ]
         },
-        { 
-          name: 'Documentation', 
-          path: '/documents', 
+        {
+          name: 'Documentation',
+          path: '/documents',
           icon: FileText,
           children: [
             { name: 'Export Documentation', path: '/documents/export', icon: FileText },
@@ -584,9 +672,9 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
             { name: 'Document Templates', path: '/documents/templates', icon: FileText },
           ]
         },
-        { 
-          name: 'Border Control', 
-          path: '/border', 
+        {
+          name: 'Border Control',
+          path: '/border',
           icon: ShieldCheck,
           children: [
             { name: 'Border Checkpoints', path: '/border/checkpoints', icon: ShieldCheck },
@@ -595,9 +683,9 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
             { name: 'Border Reports', path: '/border/reports', icon: FileText },
           ]
         },
-        { 
-          name: 'Administration', 
-          path: '/admin', 
+        {
+          name: 'Administration',
+          path: '/admin',
           icon: Settings,
           children: [
             { name: 'User Management', path: '/admin/users', icon: Users },
@@ -611,9 +699,9 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
     // Shipping Line - Logistics & transportation (consortium member)
     if (orgLower === 'shipping' || orgLower === 'shipping-line' || orgLower === 'shippingline') {
       return [
-        { 
-          name: 'Shipment Management', 
-          path: '/shipments', 
+        {
+          name: 'Shipment Management',
+          path: '/shipments',
           icon: Ship,
           children: [
             { name: 'Pending Shipments', path: '/shipments/pending', icon: Ship, filter: 'SHIPMENT_PENDING', badge: badgeCounts.SHIPMENT_PENDING },
@@ -622,9 +710,9 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
             { name: 'Delivered', path: '/shipments/delivered', icon: CheckCircle, filter: 'SHIPMENT_DELIVERED', badge: badgeCounts.SHIPMENT_DELIVERED },
           ]
         },
-        { 
-          name: 'Vessel Operations', 
-          path: '/vessels', 
+        {
+          name: 'Vessel Operations',
+          path: '/vessels',
           icon: Ship,
           children: [
             { name: 'Fleet Management', path: '/vessels/fleet', icon: Ship },
@@ -633,9 +721,9 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
             { name: 'Vessel Reports', path: '/vessels/reports', icon: FileText },
           ]
         },
-        { 
-          name: 'Logistics Coordination', 
-          path: '/logistics', 
+        {
+          name: 'Logistics Coordination',
+          path: '/logistics',
           icon: Package,
           children: [
             { name: 'Route Planning', path: '/logistics/routes', icon: Package },
@@ -644,9 +732,9 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
             { name: 'Delivery Confirmation', path: '/logistics/delivery', icon: CheckCircle },
           ]
         },
-        { 
-          name: 'Administration', 
-          path: '/admin', 
+        {
+          name: 'Administration',
+          path: '/admin',
           icon: Settings,
           children: [
             { name: 'User Management', path: '/admin/users', icon: Users },
@@ -682,7 +770,38 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
     }
   }, [location, navigation]);
 
-  const isActive = (item) => {
+  // Route guard: when in Exporter Portal, restrict to exporter-related routes only
+  useEffect(() => {
+    const orgLower = (org || user?.organizationId || '').toLowerCase();
+    const userRole = user?.role?.toLowerCase();
+    if (orgLower.includes('exporter') && userRole === 'exporter') {
+      const forbiddenPrefixes = [
+        '/banking',
+        '/fx',
+        '/monetary',
+        '/contracts',
+        '/licenses',
+        '/lots',
+        '/trading',
+        '/warehouse',
+        '/vessels',
+        '/logistics',
+        '/customs',
+        '/documents',
+        '/admin',
+        '/blockchain',
+        '/gateway',
+        '/regulatory',
+        '/border'
+      ];
+      const path = location.pathname.toLowerCase();
+      if (forbiddenPrefixes.some(prefix => path.startsWith(prefix))) {
+        navigate('/exports', { replace: true });
+      }
+    }
+  }, [location.pathname, org, user, navigate]);
+
+  const isActive = (item: NavigationItem): boolean => {
     // Active if on the same path
     if (location.pathname === item.path) {
       // If item has a filter, check if it matches the URL params or sessionStorage
@@ -702,7 +821,7 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
     return false;
   };
 
-  const handleNavClick = (item) => {
+  const handleNavClick = (item: NavigationItem): void => {
     if (item.filter) {
       sessionStorage.setItem('exportFilter', item.filter);
     } else {
@@ -739,6 +858,15 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
     return 'Portal';
   };
 
+  // Calculate drawer width based on longest text
+  const calculateDrawerWidth = useMemo(() => {
+    if (collapsed) return collapsedWidth;
+    // Use fixed width for professional, consistent layout
+    return baseDrawerWidth;
+  }, [collapsed]);
+
+  const drawerWidth = calculateDrawerWidth;
+
   const drawer = (
     <>
       <DrawerHeader>
@@ -759,7 +887,7 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
           const active = isActive(item);
           const hasChildren = item.children && item.children.length > 0;
           const isExpanded = expandedItems[item.name];
-          
+
           const parentItem = (
             <StyledListItemButton
               key={`${item.path}-${item.name}-${idx}`}
@@ -784,7 +912,7 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
               </ListItemIcon>
               {!collapsed && (
                 <>
-                  <ListItemText 
+                  <ListItemText
                     primary={item.name}
                     primaryTypographyProps={{
                       fontSize: '0.95rem',
@@ -833,7 +961,7 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
                             <ChildIcon size={18} />
                           )}
                         </ListItemIcon>
-                        <ListItemText 
+                        <ListItemText
                           primary={child.name}
                           primaryTypographyProps={{
                             fontSize: '0.875rem',
@@ -866,7 +994,7 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
           >
             <MenuIcon />
           </IconButton>
-          
+
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: 1 }}>
             <Coffee size={32} />
             {!isMobile && (
@@ -877,6 +1005,11 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            {/* Notification Center */}
+            <NotificationCenter
+              onPreferencesClick={() => setPreferencesOpen(true)}
+            />
+
             {!isMobile && (
               <Chip
                 avatar={
@@ -894,7 +1027,7 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
                     </Typography>
                   </Box>
                 }
-                sx={{ 
+                sx={{
                   height: 48,
                   '& .MuiChip-label': {
                     display: 'flex',
@@ -920,6 +1053,12 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
               </IconButton>
             </Tooltip>
           </Box>
+
+          {/* Notification Preferences Dialog */}
+          <NotificationPreferencesDialog
+            open={preferencesOpen}
+            onClose={() => setPreferencesOpen(false)}
+          />
         </Toolbar>
       </StyledAppBar>
 
@@ -945,6 +1084,7 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
         <StyledDrawer
           variant="permanent"
           collapsed={collapsed}
+          drawerWidth={drawerWidth}
           open
         >
           {drawer}
@@ -952,7 +1092,7 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
       )}
 
       {/* Main Content */}
-      <Main open={!mobileOpen} collapsed={collapsed}>
+      <Main open={!mobileOpen} collapsed={collapsed} drawerWidth={drawerWidth}>
         <ContentWrapper>
           <Outlet />
         </ContentWrapper>

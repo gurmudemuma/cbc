@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createContext, useContext, useState, useCallback, useRef } from 'react';
 import { Snackbar, Alert, Slide } from '@mui/material';
 

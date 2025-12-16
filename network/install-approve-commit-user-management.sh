@@ -20,7 +20,7 @@ echo "Installing on peer0.nationalbank..."
 setGlobals 2
 peer lifecycle chaincode install ${CC_NAME}.tar.gz 2>&1 | grep -v "already successfully installed" || echo "Already installed or installed successfully"
 
-echo "Installing on peer0.ncat..."
+echo "Installing on peer0.ecta..."
 setGlobals 3
 peer lifecycle chaincode install ${CC_NAME}.tar.gz 2>&1 | grep -v "already successfully installed" || echo "Already installed or installed successfully"
 

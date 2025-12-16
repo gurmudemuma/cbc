@@ -35,7 +35,7 @@ check_peer() {
 
 check_peer "commercialbank" "7051" "CommercialBankMSP"
 check_peer "nationalbank" "8051" "NationalBankMSP"
-check_peer "ncat" "9051" "ECTAMSP"
+check_peer "ecta" "9051" "ECTAMSP"
 check_peer "shippingline" "10051" "ShippingLineMSP"
 check_peer "customauthorities" "11051" "CustomAuthoritiesMSP"
 
@@ -72,7 +72,7 @@ test_channel_access() {
 
 test_channel_access "commercialbank" "7051" "CommercialBankMSP"
 test_channel_access "nationalbank" "8051" "NationalBankMSP"
-test_channel_access "ncat" "9051" "ECTAMSP"
+test_channel_access "ecta" "9051" "ECTAMSP"
 test_channel_access "shippingline" "10051" "ShippingLineMSP"
 test_channel_access "customauthorities" "11051" "CustomAuthoritiesMSP"
 

@@ -1,8 +1,8 @@
 import { styled } from '@mui/material/styles';
-import { Box, Card, Typography, Button, Chip, LinearProgress, Popover } from '@mui/material';
+import { Box, Card, Chip } from '@mui/material';
 
 export const DashboardContainer = styled(Box)(({ theme }) => ({
-  padding: theme.spacing(3),
+  padding: theme.spacing(2), // Reduced from 3
 }));
 
 export const StatCard = styled(Card)(({ theme }) => ({

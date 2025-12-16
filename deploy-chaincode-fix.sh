@@ -6,7 +6,7 @@
 set -e
 
 echo "=========================================="
-echo "Deploying Coffee Export Chaincode"
+echo "Deploying Chaincodes"
 echo "=========================================="
 
 # Set environment variables

@@ -32,6 +32,9 @@ import {
   CheckCircle,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { createLogger } from '../utils/logger';
+
+const logger = createLogger('HelpSupport');
 
 const HelpSupport = ({ user, org }) => {
   const [supportForm, setSupportForm] = useState({
@@ -121,7 +124,7 @@ const HelpSupport = ({ user, org }) => {
 
   const handleSubmitSupport = () => {
     // TODO: Implement support ticket submission
-    console.log('Support ticket:', supportForm);
+    logger.info('Support ticket submitted', supportForm);
     setSubmitted(true);
     setSupportForm({ subject: '', category: '', message: '' });
   };
@@ -173,7 +176,7 @@ const HelpSupport = ({ user, org }) => {
                 <Typography variant="h6" gutterBottom>
                   Submit Support Ticket
                 </Typography>
-                
+
                 {submitted && (
                   <Alert severity="success" sx={{ mb: 2 }}>
                     Your support ticket has been submitted successfully. We'll respond within 24 hours.
@@ -264,13 +267,13 @@ const HelpSupport = ({ user, org }) => {
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                   Download guides and documentation to help you through the export process.
                 </Typography>
-                
+
                 <List>
                   {resources.map((resource, index) => (
                     <React.Fragment key={index}>
                       <ListItem>
                         <ListItemIcon>
-                          <FileText size={24} />
+                          <span><FileText size={24} /></span>
                         </ListItemIcon>
                         <ListItemText
                           primary={resource.title}
@@ -283,8 +286,8 @@ const HelpSupport = ({ user, org }) => {
                           </Typography>
                           <Button
                             size="small"
-                            startIcon={<Download size={16} />}
-                            onClick={() => console.log('Download:', resource.title)}
+                            startIcon={<span><Download size={16} /></span>}
+                            onClick={() => logger.debug('Download resource', { title: resource.title })}
                           >
                             Download
                           </Button>
@@ -308,7 +311,7 @@ const HelpSupport = ({ user, org }) => {
                     <Button
                       variant="outlined"
                       fullWidth
-                      startIcon={<ExternalLink size={16} />}
+                      startIcon={<span><ExternalLink size={16} /></span>}
                       onClick={() => window.open('https://ecta.gov.et', '_blank')}
                     >
                       ECTA Official Website
@@ -318,7 +321,7 @@ const HelpSupport = ({ user, org }) => {
                     <Button
                       variant="outlined"
                       fullWidth
-                      startIcon={<ExternalLink size={16} />}
+                      startIcon={<span><ExternalLink size={16} /></span>}
                       onClick={() => window.open('https://eic.gov.et', '_blank')}
                     >
                       EIC Registration
@@ -328,7 +331,7 @@ const HelpSupport = ({ user, org }) => {
                     <Button
                       variant="outlined"
                       fullWidth
-                      startIcon={<Clock size={16} />}
+                      startIcon={<span><Clock size={16} /></span>}
                     >
                       Service Hours
                     </Button>
@@ -337,7 +340,7 @@ const HelpSupport = ({ user, org }) => {
                     <Button
                       variant="outlined"
                       fullWidth
-                      startIcon={<CheckCircle size={16} />}
+                      startIcon={<span><CheckCircle size={16} /></span>}
                     >
                       System Status
                     </Button>

@@ -15,6 +15,7 @@ function printHelp() {
   echo "    Modes:"
   echo "      up - Bring up Fabric network with docker-compose"
   echo "      down - Clear the network with docker-compose down"
+  echo "      down-soft - Stop the network containers but preserve organizations and channel artifacts"
   echo "      restart - Restart the network"
   echo "      createChannel - Create and join a channel"
   echo "      deployCC - Deploy chaincode"
@@ -178,7 +179,7 @@ function createOrgs() {
   "$CRYPTOGEN_CMD" generate --config=./organizations/cryptogen/crypto-config-nationalbank.yaml --output="organizations"
 
   echo "Creating ECTA Identities"
-  "$CRYPTOGEN_CMD" generate --config=./organizations/cryptogen/crypto-config-ncat.yaml --output="organizations"
+  "$CRYPTOGEN_CMD" generate --config=./organizations/cryptogen/crypto-config-ecta.yaml --output="organizations"
 
   echo "Creating Shipping Line Identities"
   "$CRYPTOGEN_CMD" generate --config=./organizations/cryptogen/crypto-config-shippingline.yaml --output="organizations"
@@ -231,6 +232,16 @@ function networkDown() {
   
   clearContainers
   removeUnwantedImages
+}
+
+# Tear down running network but preserve crypto material and channel artifacts
+function networkDownSoft() {
+  COMPOSE_FILES="-f ${PWD}/docker/docker-compose.yaml"
+
+  # Only stop and remove containers/volumes created by compose
+  docker compose ${COMPOSE_FILES} down --volumes --remove-orphans
+
+  echo "Soft shutdown complete. Organizations and channel artifacts have been preserved."
 }
 
 # Using crpto vs CA. default is cryptogen
@@ -319,6 +330,9 @@ elif [ "$MODE" == "createChannel" ]; then
 elif [ "$MODE" == "down" ]; then
   echo "Stopping network"
   networkDown
+elif [ "$MODE" == "down-soft" ]; then
+  echo "Stopping network (soft, preserving organizations and channel artifacts)"
+  networkDownSoft
 elif [ "$MODE" == "restart" ]; then
   echo "Restarting network"
   networkDown
@@ -330,7 +344,7 @@ elif [ "$MODE" == "deployCC" ]; then
     CC_RUNTIME_LANGUAGE="golang"
   fi
   export FABRIC_CFG_PATH=$PWD/../config/
-  ./scripts/deployCC.sh $CHANNEL_NAME $CC_NAME $CC_SRC_PATH $CC_RUNTIME_LANGUAGE $CC_VERSION $CC_SEQUENCE
+  ./scripts/deployCC.sh $CHANNEL_NAME $CC_NAME $CC_SRC_PATH $CC_RUNTIME_LANGUAGE $CC_VERSION $CC_SEQUENCE "" "" "" "" "" 60
 else
   printHelp
   exit 1

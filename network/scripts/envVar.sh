@@ -49,12 +49,6 @@ setGlobals() {
     export CORE_PEER_MSPCONFIGPATH=${NETWORK_DIR}/organizations/peerOrganizations/custom-authorities.coffee-export.com/users/Admin@custom-authorities.coffee-export.com/msp
     export CORE_PEER_ADDRESS=localhost:11051
     export CORE_PEER_TLS_SERVERHOSTOVERRIDE=peer0.custom-authorities.coffee-export.com
-  elif [ $USING_ORG -eq 6 ]; then
-    export CORE_PEER_LOCALMSPID="ECXMSP"
-    export CORE_PEER_TLS_ROOTCERT_FILE=${NETWORK_DIR}/organizations/peerOrganizations/ecx.coffee-export.com/peers/peer0.ecx.coffee-export.com/tls/ca.crt
-    export CORE_PEER_MSPCONFIGPATH=${NETWORK_DIR}/organizations/peerOrganizations/ecx.coffee-export.com/users/Admin@ecx.coffee-export.com/msp
-    export CORE_PEER_ADDRESS=localhost:12051
-    export CORE_PEER_TLS_SERVERHOSTOVERRIDE=peer0.ecx.coffee-export.com
   else
     echo "================== ERROR !!! ORG Unknown =================="
   fi
@@ -86,8 +80,6 @@ setGlobalsCLI() {
     export CORE_PEER_ADDRESS=peer0.shippingline.coffee-export.com:10051
   elif [ $USING_ORG -eq 5 ]; then
     export CORE_PEER_ADDRESS=peer0.custom-authorities.coffee-export.com:11051
-  elif [ $USING_ORG -eq 6 ]; then
-    export CORE_PEER_ADDRESS=peer0.ecx.coffee-export.com:12051
   else
     echo "================== ERROR !!! ORG Unknown =================="
   fi

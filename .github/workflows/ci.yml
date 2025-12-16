@@ -21,7 +21,7 @@ jobs:
           [
             commercialbank,
             national-bank,
-            ncat,
+            ecta,
             shipping-line,
             custom-authorities,
           ]
@@ -180,7 +180,7 @@ jobs:
 
       - name: Build and push API images
         run: |
-          services=("commercialbank" "national-bank" "ncat" "shipping-line" "custom-authorities")
+          services=("commercialbank" "national-bank" "ecta" "shipping-line" "custom-authorities")
           for service in "${services[@]}"; do
             docker build -t ${{ secrets.DOCKER_USERNAME }}/cbc-$service:${{ github.sha }} \
               -t ${{ secrets.DOCKER_USERNAME }}/cbc-$service:latest \

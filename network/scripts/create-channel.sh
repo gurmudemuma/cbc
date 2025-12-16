@@ -75,11 +75,11 @@ createChannel() {
 		# MSYS_NO_PATHCONV=1 prevents Git Bash from converting Linux paths to Windows paths
 		MSYS_NO_PATHCONV=1 docker exec cli osnadmin channel join \
 			--channelID $CHANNEL_NAME \
-			--config-block //opt//gopath//src//github.com//hyperledger//fabric//peer//channel-artifacts//${CHANNEL_NAME}.block \
+			--config-block /opt/gopath/src/github.com/hyperledger/fabric/peer/channel-artifacts/${CHANNEL_NAME}.block \
 			-o $ORDERER_ADMIN_ENDPOINT \
-			--ca-file //opt//gopath//src//github.com//hyperledger//fabric//peer//organizations//ordererOrganizations//coffee-export.com//orderers//orderer.coffee-export.com//msp//tlscacerts//tlsca.coffee-export.com-cert.pem \
-			--client-cert //opt//gopath//src//github.com//hyperledger//fabric//peer//organizations//ordererOrganizations//coffee-export.com//orderers//orderer.coffee-export.com//tls//server.crt \
-			--client-key //opt//gopath//src//github.com//hyperledger//fabric//peer//organizations//ordererOrganizations//coffee-export.com//orderers//orderer.coffee-export.com//tls//server.key >&log.txt
+			--ca-file /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/ordererOrganizations/coffee-export.com/orderers/orderer.coffee-export.com/msp/tlscacerts/tlsca.coffee-export.com-cert.pem \
+			--client-cert /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/ordererOrganizations/coffee-export.com/orderers/orderer.coffee-export.com/tls/server.crt \
+			--client-key /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/ordererOrganizations/coffee-export.com/orderers/orderer.coffee-export.com/tls/server.key >&log.txt
 		res=$?
 		{ set +x; } 2>/dev/null
 		let rc=$res
@@ -94,29 +94,7 @@ createChannel() {
 
 # joinChannel ORG
 joinChannel() {
-  FABRIC_CFG_PATH=$PWD/../config/
   ORG=$1
-  setGlobals $ORG
-  
-  # Find peer command (Windows/Linux compatible)
-  PEER_CMD=""
-  if command -v peer.exe &> /dev/null; then
-    PEER_CMD="peer.exe"
-  elif command -v peer &> /dev/null; then
-    PEER_CMD="peer"
-  else
-    # Try direct path as fallback
-    if [ -x "${PWD}/../bin/peer.exe" ]; then
-      PEER_CMD="${PWD}/../bin/peer.exe"
-    elif [ -x "${PWD}/../bin/peer" ]; then
-      PEER_CMD="${PWD}/../bin/peer"
-    fi
-  fi
-  
-  if [ -z "$PEER_CMD" ]; then
-    echo "peer tool not found."
-    exit 1
-  fi
   
 	local rc=1
 	local COUNTER=1
@@ -124,7 +102,8 @@ joinChannel() {
 	while [ $rc -ne 0 -a $COUNTER -lt $MAX_RETRY ] ; do
     sleep $DELAY
     set -x
-    $PEER_CMD channel join -b $BLOCKFILE >&log.txt
+    # Execute peer command inside CLI container with correct environment
+    MSYS_NO_PATHCONV=1 docker exec cli bash -c "cd /opt/gopath/src/github.com/hyperledger/fabric/peer && . ./scripts/envVar.sh && setGlobalsCLI $ORG && peer channel join -b $BLOCKFILE" >&log.txt
     res=$?
     { set +x; } 2>/dev/null
 		let rc=$res
@@ -165,6 +144,8 @@ echo "Joining ECTA peer to the channel..."
 joinChannel 3
 echo "Joining ShippingLine peer to the channel..."
 joinChannel 4
+echo "Joining CustomAuthorities peer to the channel..."
+joinChannel 5
 
 ## Set the anchor peers for each org in the channel
 echo "Setting anchor peer for commercialbank..."
@@ -175,5 +156,7 @@ echo "Setting anchor peer for ECTA..."
 setAnchorPeer 3
 echo "Setting anchor peer for ShippingLine..."
 setAnchorPeer 4
+echo "Setting anchor peer for CustomAuthorities..."
+setAnchorPeer 5
 
 echo "Channel '$CHANNEL_NAME' created and peers joined successfully"

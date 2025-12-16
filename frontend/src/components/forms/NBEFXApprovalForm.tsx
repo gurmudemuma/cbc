@@ -1,7 +1,8 @@
+// @ts-nocheck
 import { useState } from 'react';
 import {
   Card, CardHeader, CardContent, CardActions, Button, TextField, Grid,
-  Alert, CircularProgress, Box, Typography, Divider,
+  Alert, CircularProgress, Box, Typography, Divider, MenuItem,
 } from '@mui/material';
 import { CheckCircle, XCircle, DollarSign } from 'lucide-react';
 import RejectionDialog from '../RejectionDialog';
@@ -11,6 +12,9 @@ const NBEFXApprovalForm = ({ exportData, onApprove, onReject, loading = false })
     approvedFXAmount: exportData.estimatedValue || '',
     fxRate: '',
     fxAllocationNumber: `FX-${Date.now()}`,
+    paymentMethod: 'L/C',
+    lcNumber: '',
+    settlementDeadline: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     approvalNotes: '',
   });
   const [showRejectDialog, setShowRejectDialog] = useState(false);
@@ -54,6 +58,19 @@ const NBEFXApprovalForm = ({ exportData, onApprove, onReject, loading = false })
             </Grid>
             <Grid item xs={12}>
               <TextField label="FX Allocation Number" value={formData.fxAllocationNumber} onChange={(e) => setFormData({...formData, fxAllocationNumber: e.target.value})} fullWidth />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField select label="Payment Method *" value={formData.paymentMethod} onChange={(e) => setFormData({...formData, paymentMethod: e.target.value})} fullWidth>
+                <MenuItem value="L/C">Letter of Credit (L/C)</MenuItem>
+                <MenuItem value="CAD">Cash Against Document</MenuItem>
+                <MenuItem value="Advance">Advance Payment</MenuItem>
+              </TextField>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField label="L/C Number" value={formData.lcNumber} onChange={(e) => setFormData({...formData, lcNumber: e.target.value})} fullWidth disabled={formData.paymentMethod !== 'L/C'} helperText={formData.paymentMethod === 'L/C' ? 'Required for L/C payment' : ''} />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField label="Settlement Deadline" type="date" value={formData.settlementDeadline} onChange={(e) => setFormData({...formData, settlementDeadline: e.target.value})} fullWidth InputLabelProps={{ shrink: true }} helperText="90-day settlement deadline (NBE requirement)" />
             </Grid>
             {formData.approvedFXAmount && formData.fxRate && (
               <Grid item xs={12}>

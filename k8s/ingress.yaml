@@ -61,11 +61,11 @@ spec:
             port:
               number: 3002
       # ECTA API
-      - path: /ncat
+      - path: /ecta
         pathType: Prefix
         backend:
           service:
-            name: ncat-api
+            name: ecta-api
             port:
               number: 3003
       # Shipping Line API

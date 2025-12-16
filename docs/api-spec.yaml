@@ -1,0 +1,85 @@
+openapi: 3.0.0
+info:
+  title: Coffee Export Consortium API
+  version: 2.0.0
+  description: Enterprise blockchain API for coffee export management
+
+servers:
+  - url: http://localhost:3001
+    description: Commercial Bank API
+  - url: http://localhost:3002
+    description: National Bank API
+  - url: http://localhost:3003
+    description: ECTA API
+
+paths:
+  /api/auth/login:
+    post:
+      summary: User authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  user:
+                    type: object
+
+  /api/exports:
+    post:
+      summary: Create export request
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExportRequest'
+      responses:
+        '201':
+          description: Export created
+    get:
+      summary: List exports
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of exports
+
+components:
+  schemas:
+    ExportRequest:
+      type: object
+      properties:
+        exporterId:
+          type: string
+        coffeeType:
+          type: string
+        quantity:
+          type: integer
+        destination:
+          type: string
+        estimatedValue:
+          type: number
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

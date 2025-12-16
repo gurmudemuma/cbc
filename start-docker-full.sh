@@ -107,7 +107,7 @@ if [ "$BUILD_IMAGES" = true ]; then
     echo -e "${CYAN}Building API images...${NC}"
     docker-compose -f docker-compose-full.yml build commercialbank-api
     docker-compose -f docker-compose-full.yml build national-bank-api
-    docker-compose -f docker-compose-full.yml build ncat-api
+    docker-compose -f docker-compose-full.yml build ecta-api
     docker-compose -f docker-compose-full.yml build shipping-line-api
     docker-compose -f docker-compose-full.yml build custom-authorities-api
     

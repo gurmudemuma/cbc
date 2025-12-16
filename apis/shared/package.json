@@ -1,0 +1,13 @@
+{
+  "name": "shared",
+  "version": "1.0.0",
+  "description": "Shared utilities for Coffee Blockchain Consortium APIs",
+  "main": "index.ts",
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint . --ext .ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

@@ -30,8 +30,24 @@ PeerOrgs:
     Users:
       Count: 1
 
+  - Name: ECX
+    Domain: ecx.coffee-export.com
+    EnableNodeOUs: true
+    Template:
+      Count: 1
+    Users:
+      Count: 1
+
   - Name: ShippingLine
     Domain: shippingline.coffee-export.com
+    EnableNodeOUs: true
+    Template:
+      Count: 1
+    Users:
+      Count: 1
+
+  - Name: CustomAuthorities
+    Domain: custom-authorities.coffee-export.com
     EnableNodeOUs: true
     Template:
       Count: 1

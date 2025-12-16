@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Coffee Export Consortium</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        .api-test { margin: 10px 0; padding: 10px; border: 1px solid #ccc; }
+        button { padding: 5px 10px; margin: 5px; }
+        .result { background: #f0f0f0; padding: 10px; margin: 5px 0; }
+    </style>
+</head>
+<body>
+    <h1>Coffee Export Consortium</h1>
+    
+    <div class="api-test">
+        <h3>Test APIs</h3>
+        <button onclick="testAPI(3001, 'Commercial Bank')">Test Commercial Bank</button>
+        <button onclick="testAPI(3002, 'National Bank')">Test National Bank</button>
+        <button onclick="testAPI(3003, 'ECTA')">Test ECTA</button>
+        <div id="results"></div>
+    </div>
+
+    <div class="api-test">
+        <h3>Create Export</h3>
+        <input id="exportId" placeholder="Export ID" value="EXP001">
+        <input id="quantity" placeholder="Quantity" value="1000">
+        <input id="destination" placeholder="Destination" value="USA">
+        <button onclick="createExport()">Create Export</button>
+    </div>
+
+    <script>
+        async function testAPI(port, name) {
+            try {
+                const response = await fetch(`http://localhost:${port}/health`);
+                const data = await response.json();
+                showResult(`${name} (${port}): ✅ ${data.status}`);
+            } catch (error) {
+                showResult(`${name} (${port}): ❌ ${error.message}`);
+            }
+        }
+
+        async function createExport() {
+            const exportData = {
+                exportId: document.getElementById('exportId').value,
+                quantity: parseInt(document.getElementById('quantity').value),
+                destination: document.getElementById('destination').value,
+                coffeeType: 'Arabica'
+            };
+            
+            try {
+                const response = await fetch('http://localhost:3001/api/exports', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(exportData)
+                });
+                const data = await response.json();
+                showResult(`Export Created: ${JSON.stringify(data)}`);
+            } catch (error) {
+                showResult(`Error: ${error.message}`);
+            }
+        }
+
+        function showResult(message) {
+            const div = document.createElement('div');
+            div.className = 'result';
+            div.textContent = message;
+            document.getElementById('results').appendChild(div);
+        }
+
+        // Auto-test on load
+        window.onload = () => {
+            testAPI(3001, 'Commercial Bank');
+            testAPI(3002, 'National Bank');
+            testAPI(3003, 'ECTA');
+        };
+    </script>
+</body>
+</html>

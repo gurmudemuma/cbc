@@ -1,12 +1,24 @@
 import { styled } from '@mui/material/styles';
-import { Card as MuiCard, CardHeader, CardContent, CardActions, Typography, Box, IconButton } from '@mui/material';
-import { forwardRef } from 'react';
+import { Card as MuiCard, CardHeader, CardContent, Typography, Box } from '@mui/material';
+import { forwardRef, MouseEvent } from 'react';
+
+interface CardProps {
+  children: React.ReactNode;
+  title?: React.ReactNode;
+  subtitle?: React.ReactNode;
+  icon?: React.ReactNode;
+  actions?: React.ReactNode;
+  variant?: 'outlined' | 'elevation';
+  compact?: boolean;
+  interactive?: boolean;
+  onClick?: (event: MouseEvent<HTMLDivElement>) => void;
+}
 
 // Styled MUI Card with custom variants
 const StyledCard = styled(MuiCard, {
-  shouldForwardProp: (prop) => 
+  shouldForwardProp: (prop: string) =>
     !['interactive', 'variant', 'compact'].includes(prop),
-})(({ theme, variant, interactive, compact }) => ({
+})<{ variant?: string; interactive?: boolean; compact?: boolean }>(({ theme, variant, interactive, compact }) => ({
   background: theme.palette.background.paper,
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: theme.shape.borderRadius * 1.5,
@@ -28,17 +40,12 @@ const StyledCard = styled(MuiCard, {
   },
 
   // Variants
-  ...(variant === 'elevated' && {
+  ...(variant === 'elevation' && {
     boxShadow: theme.shadows[5],
     '&:hover': {
       transform: 'translateY(-4px)',
       boxShadow: theme.shadows[6],
     },
-  }),
-
-  ...(variant === 'highlight' && {
-    borderColor: theme.palette.primary.main,
-    boxShadow: theme.shadows[4],
   }),
 
   // Interactive
@@ -86,22 +93,16 @@ const IconWrapper = styled(Box)(({ theme }) => ({
   flexShrink: 0,
 }));
 
-// Styled header content wrapper
-const HeaderContent = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  alignItems: 'center',
-  gap: theme.spacing(2),
-  flex: 1,
-}));
+
 
 // Main Card component
-const Card = forwardRef(({
+const Card = forwardRef<HTMLDivElement, CardProps>(({
   children,
   title,
   subtitle,
   icon,
   actions,
-  variant = 'default',
+  variant,
   compact = false,
   interactive = false,
   onClick,

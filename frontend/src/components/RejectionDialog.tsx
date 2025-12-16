@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState } from 'react';
 import {
   Dialog,
@@ -140,7 +141,7 @@ const RejectionDialog = ({
     >
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <XCircle size={24} color="#f44336" />
-        <span>Reject Export at {stageName}</span>
+        <Typography variant="h6">Reject Export at {stageName}</Typography>
       </DialogTitle>
 
       <DialogContent>

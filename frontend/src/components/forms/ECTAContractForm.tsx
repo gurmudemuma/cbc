@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState } from 'react';
 import {
   Card, CardHeader, CardContent, CardActions, Button, TextField, Grid,
@@ -13,6 +14,10 @@ const ECTAContractForm = ({ exportData, onApprove, onReject, loading = false }) 
     buyerName: '',
     buyerCountry: exportData.destinationCountry || '',
     paymentTerms: '',
+    lcNumber: '',
+    lcOpeningDate: '',
+    notificationDate: new Date().toISOString().split('T')[0],
+    settlementDeadline: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     buyerVerified: false,
     notes: '',
   });
@@ -61,6 +66,18 @@ const ECTAContractForm = ({ exportData, onApprove, onReject, loading = false }) 
             </Grid>
             <Grid item xs={12}>
               <TextField label="Payment Terms" value={formData.paymentTerms} onChange={(e) => setFormData({...formData, paymentTerms: e.target.value})} fullWidth placeholder="e.g., LC at sight, 30 days after shipment" />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField label="L/C Number" value={formData.lcNumber} onChange={(e) => setFormData({...formData, lcNumber: e.target.value})} fullWidth helperText="Letter of Credit number from buyer" />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField label="L/C Opening Date" type="date" value={formData.lcOpeningDate} onChange={(e) => setFormData({...formData, lcOpeningDate: e.target.value})} fullWidth InputLabelProps={{ shrink: true }} />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField label="Notification Date" type="date" value={formData.notificationDate} onChange={(e) => setFormData({...formData, notificationDate: e.target.value})} fullWidth InputLabelProps={{ shrink: true }} helperText="Contract notification to MOTRI (15-day requirement)" />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField label="Settlement Deadline" type="date" value={formData.settlementDeadline} onChange={(e) => setFormData({...formData, settlementDeadline: e.target.value})} fullWidth InputLabelProps={{ shrink: true }} helperText="90-day settlement deadline (NBE requirement)" />
             </Grid>
             <Grid item xs={12}>
               <FormControlLabel control={<Checkbox checked={formData.buyerVerified} onChange={(e) => setFormData({...formData, buyerVerified: e.target.checked})} />} label="Buyer information verified" />

@@ -1,55 +1,45 @@
-# Multi-stage build for production
+# Multi-stage build for optimized production image
 FROM node:20-alpine AS builder
 
-# Configure npm for better network resilience and use multiple registries
-RUN npm config set fetch-retry-mintimeout 60000 && \
-    npm config set fetch-retry-maxtimeout 300000 && \
-    npm config set fetch-retries 10 && \
-    npm config set fetch-timeout 600000 && \
-    npm config set maxsockets 1 && \
-    npm config set registry https://registry.npmjs.org/
-
-# Set working directory
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies with network-friendly options
-# Use ci for faster, more reliable installs and break into chunks if needed
-RUN npm install --legacy-peer-deps --prefer-offline --no-audit --maxsockets=1 && \
-    npm cache clean --force
+# Install dependencies (use existing node_modules if available)
+RUN npm ci --only=production || npm install --legacy-peer-deps
 
 # Copy source code
 COPY . .
 
-# Build application
+# Build the application
 RUN npm run build
 
-# Production stage with nginx
+# Production stage
 FROM nginx:alpine
 
-# Copy custom nginx config
-COPY nginx.conf /etc/nginx/nginx.conf
+# Install security updates
+RUN apk upgrade --no-cache
 
-# Copy built application from builder
-COPY --from=builder /app/dist /usr/share/nginx/html
+# Copy custom nginx configuration
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Create nginx user
+# Copy built files from builder stage
+COPY --from=builder /app/build /usr/share/nginx/html
+
+# Add healthcheck
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget --quiet --tries=1 --spider http://localhost:80/ || exit 1
+
+# Create nginx user and set permissions
 RUN chown -R nginx:nginx /usr/share/nginx/html && \
-    chown -R nginx:nginx /var/cache/nginx && \
-    chown -R nginx:nginx /var/log/nginx && \
-    chown -R nginx:nginx /etc/nginx/conf.d
-
-# Switch to non-root user
-USER nginx
+    chmod -R 755 /usr/share/nginx/html
 
 # Expose port
 EXPOSE 80
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-  CMD wget --quiet --tries=1 --spider http://localhost/ || exit 1
+# Run as non-root user
+USER nginx
 
 # Start nginx
 CMD ["nginx", "-g", "daemon off;"]

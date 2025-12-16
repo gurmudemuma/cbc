@@ -102,7 +102,7 @@ add_org_to_channel() {
 
 # Add each organization
 add_org_to_channel "National Bank" "nationalbank" "NationalBankMSP"
-add_org_to_channel "ECTA" "ncat" "ECTAMSP"
+add_org_to_channel "ECTA" "ecta" "ECTAMSP"
 add_org_to_channel "Shipping Line" "shippingline" "ShippingLineMSP"
 add_org_to_channel "Custom Authorities" "customauthorities" "CustomAuthoritiesMSP"
 

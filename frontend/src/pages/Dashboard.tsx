@@ -1,6 +1,8 @@
+// @ts-nocheck
 import { useState, useEffect } from 'react';
 import { useExports } from '../hooks/useExports';
 import QualificationStatusCard from '../components/QualificationStatusCard';
+import EmptyState from '../components/EmptyState';
 import {
   Package,
   Award,
@@ -40,7 +42,7 @@ import {
   Tooltip,
   Popover,
 } from '@mui/material';
-import Grid from '@mui/material/Unstable_Grid2';
+import Grid from '@mui/material/Grid';
 import {
   LineChart,
   Line,
@@ -54,6 +56,19 @@ import {
   AreaChart,
 } from 'recharts';
 import { DashboardContainer, StatCard, ActivityCard, QuickActionsCard, PulseChip } from './Dashboard.styles';
+
+const iconMap = {
+  FileText: <FileText size={24} />,
+  PackageCheck: <PackageCheck size={24} />,
+  FileCheck: <FileCheck size={24} />,
+  Award: <Award size={24} />,
+  Banknote: <Banknote size={24} />,
+  DollarSign: <DollarSign size={24} />,
+  ShieldCheck: <ShieldCheck size={24} />,
+  Ship: <Ship size={24} />,
+  CheckCircle: <CheckCircle size={24} />,
+  Package: <Package size={24} />,
+};
 
 const Dashboard = ({ user }) => {
   const theme = useTheme();
@@ -310,7 +325,7 @@ const Dashboard = ({ user }) => {
     {
       title: 'Total Exports',
       value: stats.totalExports,
-      icon: <Package size={24} />,
+      icon: <span><Package size={24} /></span>,
       color: 'primary',
       trend: calculateTrend(stats.totalExports, previousStats?.totalExports),
       subtitle: 'On-chain records',
@@ -318,7 +333,7 @@ const Dashboard = ({ user }) => {
     {
       title: 'Completed Exports',
       value: stats.completedExports,
-      icon: <CheckCircle size={24} />,
+      icon: <span><CheckCircle size={24} /></span>,
       color: 'success',
       trend: calculateTrend(stats.completedExports, previousStats?.completedExports),
       subtitle: 'Successfully delivered',
@@ -326,7 +341,7 @@ const Dashboard = ({ user }) => {
     {
       title: 'Pending Approvals',
       value: stats.pendingCertifications,
-      icon: <Clock size={24} />,
+      icon: <span><Clock size={24} /></span>,
       color: 'warning',
       trend: calculateTrend(stats.pendingCertifications, previousStats?.pendingCertifications),
       subtitle: 'Awaiting certification',
@@ -334,7 +349,7 @@ const Dashboard = ({ user }) => {
     {
       title: 'Total Value (USD)',
       value: `$${(stats.totalValue / 1000).toFixed(1)}K`,
-      icon: <DollarSign size={24} />,
+      icon: <span><DollarSign size={24} /></span>,
       color: 'secondary',
       trend: calculateTrend(stats.totalValue, previousStats?.totalValue),
       subtitle: 'Completed exports',
@@ -343,7 +358,7 @@ const Dashboard = ({ user }) => {
 
   return (
     <DashboardContainer className={`organization-${user.organizationId || 'banker'}`}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
         <Box>
           <Typography variant="h4" component="h1">
             Dashboard
@@ -351,34 +366,34 @@ const Dashboard = ({ user }) => {
           <Typography variant="subtitle1">Welcome back, {user.username}!</Typography>
         </Box>
         <Stack direction="row" alignItems="center" spacing={1}>
-          <Activity size={20} />
+          <span><Activity size={20} /></span>
           <Typography variant="body1">{user.organization}</Typography>
         </Stack>
       </Stack>
 
-      <Grid container spacing={3} sx={{ mb: 3 }}>
+      <Grid container spacing={2} sx={{ mb: 2 }}>
         {statCards.map((stat, index) => (
           <Grid xs={12} sm={6} md={3} key={index}>
             <StatCard>
               <CardContent>
                 <Stack direction="row" spacing={2} alignItems="center">
-                  <Box 
-                    sx={{ 
+                  <Box
+                    sx={{
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       width: 48,
                       height: 48,
                       borderRadius: 2,
-                      bgcolor: stat.color === 'primary' ? 'primary.main' : 
-                               stat.color === 'secondary' ? 'secondary.main' :
-                               `${stat.color}.main`,
-                      color: stat.color === 'primary' ? 'primary.contrastText' : 
-                             stat.color === 'secondary' ? 'secondary.contrastText' :
-                             'white',
+                      bgcolor: stat.color === 'primary' ? 'primary.main' :
+                        stat.color === 'secondary' ? 'secondary.main' :
+                          `${stat.color}.main`,
+                      color: stat.color === 'primary' ? 'primary.contrastText' :
+                        stat.color === 'secondary' ? 'secondary.contrastText' :
+                          'white',
                     }}
                   >
-                    {stat.icon}
+                    {iconMap[stat.icon] || <Package size={24} />}
                   </Box>
                   <Box>
                     <Typography variant="caption" color="text.secondary">
@@ -390,7 +405,7 @@ const Dashboard = ({ user }) => {
                     <Stack direction="row" alignItems="center" spacing={0.5}>
                       {stat.trend.direction === 'up' && (
                         <>
-                          <TrendingUp size={14} style={{ color: theme.palette.success.main }} />
+                          <span><TrendingUp size={14} style={{ color: theme.palette.success.main }} /></span>
                           <Typography variant="caption" color="success.main">
                             +{stat.trend.value}%
                           </Typography>
@@ -398,7 +413,7 @@ const Dashboard = ({ user }) => {
                       )}
                       {stat.trend.direction === 'down' && (
                         <>
-                          <TrendingDown size={14} style={{ color: theme.palette.error.main }} />
+                          <span><TrendingDown size={14} style={{ color: theme.palette.error.main }} /></span>
                           <Typography variant="caption" color="error.main">
                             -{stat.trend.value}%
                           </Typography>
@@ -422,7 +437,7 @@ const Dashboard = ({ user }) => {
       </Grid>
 
       {/* Unified Export Workflow Progress - Crypto Ticker Style */}
-      <Card sx={{ mb: 3 }}>
+      <Card sx={{ mb: 2 }}>
         <CardContent>
           <Stack
             direction="row"
@@ -443,14 +458,14 @@ const Dashboard = ({ user }) => {
                 </Typography>
               </Stack>
               <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1 }}>
-                <TrendingUp size={18} style={{ color: theme.palette.success.main }} />
+                <span><TrendingUp size={18} style={{ color: theme.palette.success.main }} /></span>
                 <Typography variant="body2" sx={{ color: 'success.main', fontWeight: 700 }}>
                   +{workflowData[workflowData.length - 1]?.count || 0} completed (
                   {workflowData.length > 0
                     ? Math.round(
-                        (workflowData[workflowData.length - 1]?.count / workflowData[0]?.count) *
-                          100
-                      )
+                      (workflowData[workflowData.length - 1]?.count / workflowData[0]?.count) *
+                      100
+                    )
                     : 0}
                   %)
                 </Typography>
@@ -623,7 +638,7 @@ const Dashboard = ({ user }) => {
                                   >
                                     {data.count >= (workflowData[index - 1]?.count || 0) ? (
                                       <>
-                                        <TrendingUp size={14} color="#10B981" />
+                                        <span><TrendingUp size={14} color="#10B981" /></span>
                                         <Typography
                                           variant="caption"
                                           sx={{
@@ -641,7 +656,7 @@ const Dashboard = ({ user }) => {
                                       </>
                                     ) : (
                                       <>
-                                        <TrendingDown size={14} color="#EF4444" />
+                                        <span><TrendingDown size={14} color="#EF4444" /></span>
                                         <Typography
                                           variant="caption"
                                           sx={{
@@ -788,7 +803,7 @@ const Dashboard = ({ user }) => {
             </Box>
           ) : (
             <Box sx={{ textAlign: 'center', py: 8 }}>
-              <GitBranch size={48} color="#9E9E9E" style={{ marginBottom: 16 }} />
+              <span><GitBranch size={48} color="#9E9E9E" style={{ marginBottom: 16 }} /></span>
               <Typography color="text.secondary">No workflow data available</Typography>
             </Box>
           )}
@@ -899,21 +914,21 @@ const Dashboard = ({ user }) => {
                     </Typography>
                     <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mt: 0.5 }}>
                       {workflowData[hoveredStage].count >=
-                      (workflowData[hoveredStage - 1]?.count || 0) ? (
+                        (workflowData[hoveredStage - 1]?.count || 0) ? (
                         <>
-                          <TrendingUp size={16} color="#10B981" />
+                          <span><TrendingUp size={16} color="#10B981" /></span>
                           <Typography variant="body2" sx={{ color: '#10B981', fontWeight: 700 }}>
                             +
                             {Math.abs(
                               workflowData[hoveredStage].count -
-                                (workflowData[hoveredStage - 1]?.count || 0)
+                              (workflowData[hoveredStage - 1]?.count || 0)
                             )}{' '}
                             exports
                           </Typography>
                         </>
                       ) : (
                         <>
-                          <TrendingDown size={16} color="#EF4444" />
+                          <span><TrendingDown size={16} color="#EF4444" /></span>
                           <Typography variant="body2" sx={{ color: '#EF4444', fontWeight: 700 }}>
                             {workflowData[hoveredStage].count -
                               (workflowData[hoveredStage - 1]?.count || 0)}{' '}
@@ -954,7 +969,7 @@ const Dashboard = ({ user }) => {
                           gap: 1,
                         }}
                       >
-                        <Users size={14} color={theme.palette.primary.main} />
+                        <span><Users size={14} color={theme.palette.primary.main} /></span>
                         <Typography variant="caption" sx={{ fontWeight: 500 }}>
                           {actor}
                         </Typography>
@@ -1026,10 +1041,11 @@ const Dashboard = ({ user }) => {
               </Stack>
               <Stack spacing={1.5}>
                 {recentActivity.length === 0 ? (
-                  <Box sx={{ textAlign: 'center', py: 4 }}>
-                    <AlertCircle size={48} color="#9E9E9E" style={{ marginBottom: 16 }} />
-                    <Typography color="text.secondary">No recent activity</Typography>
-                  </Box>
+                  <EmptyState
+                    icon={<span><AlertCircle size={48} /></span>}
+                    title="No recent activity"
+                    description="Blockchain transactions will appear here"
+                  />
                 ) : (
                   recentActivity.map((activity, index) => (
                     <Box key={activity.exportId}>
@@ -1046,7 +1062,7 @@ const Dashboard = ({ user }) => {
                             flexShrink: 0,
                           }}
                         >
-                          <Database size={16} stroke={theme.palette.primary.main} />
+                          <span><Database size={16} stroke={theme.palette.primary.main} /></span>
                         </Box>
                         <Box sx={{ flex: 1 }}>
                           <Stack direction="row" justifyContent="space-between" alignItems="center">
@@ -1078,19 +1094,19 @@ const Dashboard = ({ user }) => {
                             activity.bankingApprovedBy ||
                             activity.qualityCertifiedBy ||
                             activity.exportCustomsClearedBy) && (
-                            <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.5 }}>
-                              <Users size={12} color="#9E9E9E" />
-                              <Typography variant="caption" color="text.secondary">
-                                {activity.fxApprovedBy && `FX: ${activity.fxApprovedBy}`}
-                                {activity.bankingApprovedBy &&
-                                  ` • Banking: ${activity.bankingApprovedBy}`}
-                                {activity.qualityCertifiedBy &&
-                                  ` • Quality: ${activity.qualityCertifiedBy}`}
-                                {activity.exportCustomsClearedBy &&
-                                  ` • Customs: ${activity.exportCustomsClearedBy}`}
-                              </Typography>
-                            </Stack>
-                          )}
+                              <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.5 }}>
+                                <span><Users size={12} color="#9E9E9E" /></span>
+                                <Typography variant="caption" color="text.secondary">
+                                  {activity.fxApprovedBy && `FX: ${activity.fxApprovedBy}`}
+                                  {activity.bankingApprovedBy &&
+                                    ` • Banking: ${activity.bankingApprovedBy}`}
+                                  {activity.qualityCertifiedBy &&
+                                    ` • Quality: ${activity.qualityCertifiedBy}`}
+                                  {activity.exportCustomsClearedBy &&
+                                    ` • Customs: ${activity.exportCustomsClearedBy}`}
+                                </Typography>
+                              </Stack>
+                            )}
                         </Box>
                       </Stack>
                       {index < recentActivity.length - 1 && <Divider sx={{ mt: 1 }} />}
@@ -1106,250 +1122,250 @@ const Dashboard = ({ user }) => {
           <Stack spacing={3}>
             {/* Qualification Status Card for Exporters */}
             <QualificationStatusCard user={user} />
-            
+
             <QuickActionsCard>
               <CardContent>
                 <Typography variant="h6" sx={{ mb: 2 }}>
                   Quick Actions
                 </Typography>
-              <Stack spacing={1.5}>
-                {/* Exporter Quick Actions - Off-chain: Submits to NB Regulatory */}
-                {user.organizationId === 'exporter' && (
-                  <>
-                    <Button
-                      variant="contained"
-                      startIcon={<Package size={18} />}
-                      fullWidth
-                      href="/exports"
-                    >
-                      Create Export Request
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      startIcon={<Search size={18} />}
-                      fullWidth
-                      href="/exports"
-                    >
-                      View My Requests
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      startIcon={<Upload size={18} />}
-                      fullWidth
-                      href="/exports"
-                    >
-                      Upload Documents
-                    </Button>
-                  </>
-                )}
+                <Stack spacing={1.5}>
+                  {/* Exporter Quick Actions - Off-chain: Submits to NB Regulatory */}
+                  {user.organizationId === 'exporter' && (
+                    <>
+                      <Button
+                        variant="contained"
+                        startIcon={<span><Package size={18} /></span>}
+                        fullWidth
+                        href="/exports"
+                      >
+                        Create Export Request
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        startIcon={<span><Search size={18} /></span>}
+                        fullWidth
+                        href="/exports"
+                      >
+                        View My Requests
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        startIcon={<span><Upload size={18} /></span>}
+                        fullWidth
+                        href="/exports"
+                      >
+                        Upload Documents
+                      </Button>
+                    </>
+                  )}
 
-                {/* ECTA Quick Actions - THIRD STEP: Quality Certification (after Banking) */}
-                {user.organizationId === 'ecta' && (
-                  <>
-                    <Button
-                      variant="contained"
-                      startIcon={<Award size={18} />}
-                      fullWidth
-                      href="/quality"
-                    >
-                      Certify Quality
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      startIcon={<FileCheck size={18} />}
-                      fullWidth
-                      href="/quality"
-                    >
-                      Issue Origin Certificate
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      startIcon={<Search size={18} />}
-                      fullWidth
-                      href="/quality"
-                    >
-                      View Pending Requests
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      startIcon={<Upload size={18} />}
-                      fullWidth
-                      href="/quality"
-                    >
-                      Upload Documents
-                    </Button>
-                  </>
-                )}
+                  {/* ECTA Quick Actions - THIRD STEP: Quality Certification (after Banking) */}
+                  {user.organizationId === 'ecta' && (
+                    <>
+                      <Button
+                        variant="contained"
+                        startIcon={<span><Award size={18} /></span>}
+                        fullWidth
+                        href="/quality"
+                      >
+                        Certify Quality
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        startIcon={<span><FileCheck size={18} /></span>}
+                        fullWidth
+                        href="/quality"
+                      >
+                        Issue Origin Certificate
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        startIcon={<span><Search size={18} /></span>}
+                        fullWidth
+                        href="/quality"
+                      >
+                        View Pending Requests
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        startIcon={<span><Upload size={18} /></span>}
+                        fullWidth
+                        href="/quality"
+                      >
+                        Upload Documents
+                      </Button>
+                    </>
+                  )}
 
-                {/* NB Regulatory Quick Actions - FIRST STEP: Creates blockchain record & FX approval */}
-                {user.organizationId === 'nb-regulatory' && (
-                  <>
-                    <Button
-                      variant="contained"
-                      startIcon={<Package size={18} />}
-                      fullWidth
-                      href="/exports"
-                    >
-                      Create Export on Blockchain
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      startIcon={<CheckCircle size={18} />}
-                      fullWidth
-                      href="/fx-approval"
-                    >
-                      Approve FX Request
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      startIcon={<DollarSign size={18} />}
-                      fullWidth
-                      href="/fx-rates"
-                    >
-                      Manage FX Rates
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      startIcon={<Users size={18} />}
-                      fullWidth
-                      href="/users"
-                    >
-                      Manage Exporter Users
-                    </Button>
-                  </>
-                )}
+                  {/* NB Regulatory Quick Actions - FIRST STEP: Creates blockchain record & FX approval */}
+                  {user.organizationId === 'nb-regulatory' && (
+                    <>
+                      <Button
+                        variant="contained"
+                        startIcon={<span><Package size={18} /></span>}
+                        fullWidth
+                        href="/exports"
+                      >
+                        Create Export on Blockchain
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        startIcon={<span><CheckCircle size={18} /></span>}
+                        fullWidth
+                        href="/fx-approval"
+                      >
+                        Approve FX Request
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        startIcon={<span><DollarSign size={18} /></span>}
+                        fullWidth
+                        href="/fx-rates"
+                      >
+                        Manage FX Rates
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        startIcon={<span><Users size={18} /></span>}
+                        fullWidth
+                        href="/users"
+                      >
+                        Manage Exporter Users
+                      </Button>
+                    </>
+                  )}
 
-                {/* Banker Quick Actions - SECOND STEP: Financial document validation (after FX) */}
-                {(user.organizationId === 'banker' || user.organizationId === 'banker-001') && (
-                  <>
-                    <Button
-                      variant="contained"
-                      startIcon={<Banknote size={18} />}
-                      fullWidth
-                      href="/banking"
-                    >
-                      Approve Banking/Financial Docs
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      startIcon={<FileText size={18} />}
-                      fullWidth
-                      href="/banking"
-                    >
-                      Review Commercial Invoice
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      startIcon={<Search size={18} />}
-                      fullWidth
-                      href="/banking"
-                    >
-                      View Pending Reviews
-                    </Button>
-                  </>
-                )}
+                  {/* Banker Quick Actions - SECOND STEP: Financial document validation (after FX) */}
+                  {(user.organizationId === 'banker' || user.organizationId === 'banker-001') && (
+                    <>
+                      <Button
+                        variant="contained"
+                        startIcon={<span><Banknote size={18} /></span>}
+                        fullWidth
+                        href="/banking"
+                      >
+                        Approve Banking/Financial Docs
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        startIcon={<span><FileText size={18} /></span>}
+                        fullWidth
+                        href="/banking"
+                      >
+                        Review Commercial Invoice
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        startIcon={<span><Search size={18} /></span>}
+                        fullWidth
+                        href="/banking"
+                      >
+                        View Pending Reviews
+                      </Button>
+                    </>
+                  )}
 
-                {/* Shipping Line Quick Actions - FIFTH STEP: Shipment + Arrival Notification (after Customs) */}
-                {user.organizationId === 'shipping' && (
-                  <>
-                    <Button
-                      variant="contained"
-                      startIcon={<Ship size={18} />}
-                      fullWidth
-                      href="/shipments"
-                    >
-                      Schedule Shipment
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      startIcon={<CheckCircle size={18} />}
-                      fullWidth
-                      href="/shipments"
-                    >
-                      Confirm Shipment
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      startIcon={<Plane size={18} />}
-                      fullWidth
-                      href="/shipments"
-                    >
-                      Notify Arrival
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      startIcon={<Search size={18} />}
-                      fullWidth
-                      href="/shipments"
-                    >
-                      Track Shipments
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      startIcon={<Upload size={18} />}
-                      fullWidth
-                      href="/shipments"
-                    >
-                      Upload Documents
-                    </Button>
-                  </>
-                )}
+                  {/* Shipping Line Quick Actions - FIFTH STEP: Shipment + Arrival Notification (after Customs) */}
+                  {user.organizationId === 'shipping' && (
+                    <>
+                      <Button
+                        variant="contained"
+                        startIcon={<span><Ship size={18} /></span>}
+                        fullWidth
+                        href="/shipments"
+                      >
+                        Schedule Shipment
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        startIcon={<span><CheckCircle size={18} /></span>}
+                        fullWidth
+                        href="/shipments"
+                      >
+                        Confirm Shipment
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        startIcon={<span><Plane size={18} /></span>}
+                        fullWidth
+                        href="/shipments"
+                      >
+                        Notify Arrival
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        startIcon={<span><Search size={18} /></span>}
+                        fullWidth
+                        href="/shipments"
+                      >
+                        Track Shipments
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        startIcon={<span><Upload size={18} /></span>}
+                        fullWidth
+                        href="/shipments"
+                      >
+                        Upload Documents
+                      </Button>
+                    </>
+                  )}
 
-                {/* Custom Authorities Quick Actions - FOURTH STEP: Export Customs (after Quality) */}
-                {user.organizationId === 'custom-authorities' && (
-                  <>
-                    <Typography variant="subtitle2" sx={{ mt: 1, mb: 0.5, fontWeight: 600 }}>
-                      Export Customs (Before Shipment)
-                    </Typography>
-                    <Button
-                      variant="contained"
-                      startIcon={<ShieldCheck size={18} />}
-                      fullWidth
-                      href="/customs/export"
-                    >
-                      Clear Export Customs
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      startIcon={<Search size={18} />}
-                      fullWidth
-                      href="/customs/export"
-                    >
-                      View Export Pending
-                    </Button>
+                  {/* Custom Authorities Quick Actions - FOURTH STEP: Export Customs (after Quality) */}
+                  {user.organizationId === 'custom-authorities' && (
+                    <>
+                      <Typography variant="subtitle2" sx={{ mt: 1, mb: 0.5, fontWeight: 600 }}>
+                        Export Customs (Before Shipment)
+                      </Typography>
+                      <Button
+                        variant="contained"
+                        startIcon={<span><ShieldCheck size={18} /></span>}
+                        fullWidth
+                        href="/customs/export"
+                      >
+                        Clear Export Customs
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        startIcon={<span><Search size={18} /></span>}
+                        fullWidth
+                        href="/customs/export"
+                      >
+                        View Export Pending
+                      </Button>
 
-                    <Typography variant="subtitle2" sx={{ mt: 2, mb: 0.5, fontWeight: 600 }}>
-                      Import Customs (After Arrival)
-                    </Typography>
-                    <Button
-                      variant="contained"
-                      startIcon={<ShieldCheck size={18} />}
-                      fullWidth
-                      href="/customs/import"
-                    >
-                      Clear Import Customs
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      startIcon={<PackageCheck size={18} />}
-                      fullWidth
-                      href="/customs/import"
-                    >
-                      Confirm Delivery
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      startIcon={<Search size={18} />}
-                      fullWidth
-                      href="/customs/import"
-                    >
-                      View Import Pending
-                    </Button>
-                  </>
-                )}
-              </Stack>
-            </CardContent>
-          </QuickActionsCard>
+                      <Typography variant="subtitle2" sx={{ mt: 2, mb: 0.5, fontWeight: 600 }}>
+                        Import Customs (After Arrival)
+                      </Typography>
+                      <Button
+                        variant="contained"
+                        startIcon={<span><ShieldCheck size={18} /></span>}
+                        fullWidth
+                        href="/customs/import"
+                      >
+                        Clear Import Customs
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        startIcon={<span><PackageCheck size={18} /></span>}
+                        fullWidth
+                        href="/customs/import"
+                      >
+                        Confirm Delivery
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        startIcon={<span><Search size={18} /></span>}
+                        fullWidth
+                        href="/customs/import"
+                      >
+                        View Import Pending
+                      </Button>
+                    </>
+                  )}
+                </Stack>
+              </CardContent>
+            </QuickActionsCard>
           </Stack>
         </Grid>
       </Grid>

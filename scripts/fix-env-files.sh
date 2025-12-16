@@ -65,9 +65,23 @@ fix_env_file() {
 # Fix .env files for all API services
 fix_env_file "$PROJECT_ROOT/api/commercial-bank"
 fix_env_file "$PROJECT_ROOT/api/national-bank"
-fix_env_file "$PROJECT_ROOT/api/ncat"
+fix_env_file "$PROJECT_ROOT/api/ecta"
 fix_env_file "$PROJECT_ROOT/api/shipping-line"
 fix_env_file "$PROJECT_ROOT/api/custom-authorities"
+
+# Remove obsolete NCAT directory
+if [ -d "$PROJECT_ROOT/api/ncat" ] && [ -z "$(ls -A "$PROJECT_ROOT/api/ncat")" ]; then
+    echo "Removing obsolete NCAT directory..."
+    rmdir "$PROJECT_ROOT/api/ncat"
+    echo "✅ Removed obsolete NCAT directory"
+fi
+
+# Remove empty ECTA directory if it exists but is empty
+if [ -d "$PROJECT_ROOT/api/ecta" ] && [ -z "$(ls -A "$PROJECT_ROOT/api/ecta")" ]; then
+    echo "Removing empty ECTA directory..."
+    rmdir "$PROJECT_ROOT/api/ecta"
+    echo "✅ Removed empty ECTA directory"
+fi
 
 echo ""
 echo "=========================================="

@@ -1,0 +1,17 @@
+.
+./dist
+./dist/assets
+./public
+./src
+./src/components
+./src/config
+./src/contexts
+./src/hooks
+./src/pages
+./src/services
+./src/styles
+./src/test
+./src/__tests__
+./src/types
+./src/utils
+./.vscode

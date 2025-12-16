@@ -145,24 +145,24 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ncat-api
+  name: ecta-api
   namespace: coffee-export
   labels:
-    app: ncat-api
+    app: ecta-api
     tier: backend
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: ncat-api
+      app: ecta-api
   template:
     metadata:
       labels:
-        app: ncat-api
+        app: ecta-api
     spec:
       containers:
-      - name: ncat-api
-        image: your-registry/cbc-api-ncat:latest
+      - name: ecta-api
+        image: your-registry/cbc-api-ecta:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 3003
@@ -201,11 +201,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: ncat-api
+  name: ecta-api
   namespace: coffee-export
 spec:
   selector:
-    app: ncat-api
+    app: ecta-api
   ports:
   - protocol: TCP
     port: 3003

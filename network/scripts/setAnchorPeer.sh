@@ -55,15 +55,101 @@ createConfigUpdate() {
   ORIGINAL=$2
   MODIFIED=$3
   OUTPUT=$4
+  MAX_RETRIES=3
+  RETRY_COUNT=0
 
-  set -x
-  configtxlator proto_encode --input "${ORIGINAL}" --type common.Config --output original_config.pb
-  configtxlator proto_encode --input "${MODIFIED}" --type common.Config --output modified_config.pb
-  configtxlator compute_update --channel_id "${CHANNEL}" --original original_config.pb --updated modified_config.pb --output config_update.pb
-  configtxlator proto_decode --input config_update.pb --type common.ConfigUpdate --output config_update.json
-  jq --arg channel "$CHANNEL" '{payload: {header: {channel_header: {channel_id: $channel, type: 2}}, data: {config_update: .}}}' config_update.json > config_update_in_envelope.json
-  configtxlator proto_encode --input config_update_in_envelope.json --type common.Envelope --output "${OUTPUT}"
-  { set +x; } 2>/dev/null
+  while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+    set -x
+    configtxlator proto_encode --input "${ORIGINAL}" --type common.Config --output original_config.pb 2>&1
+    ENCODE1_RESULT=$?
+    { set +x; } 2>/dev/null
+
+    if [ $ENCODE1_RESULT -ne 0 ]; then
+      RETRY_COUNT=$((RETRY_COUNT + 1))
+      if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+        errorln "configtxlator proto_encode failed (attempt $RETRY_COUNT/$MAX_RETRIES), retrying..."
+        sleep 2
+        continue
+      else
+        errorln "configtxlator proto_encode failed after $MAX_RETRIES attempts"
+        return 1
+      fi
+    fi
+
+    set -x
+    configtxlator proto_encode --input "${MODIFIED}" --type common.Config --output modified_config.pb 2>&1
+    ENCODE2_RESULT=$?
+    { set +x; } 2>/dev/null
+
+    if [ $ENCODE2_RESULT -ne 0 ]; then
+      RETRY_COUNT=$((RETRY_COUNT + 1))
+      if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+        errorln "configtxlator proto_encode (modified) failed (attempt $RETRY_COUNT/$MAX_RETRIES), retrying..."
+        sleep 2
+        continue
+      else
+        errorln "configtxlator proto_encode (modified) failed after $MAX_RETRIES attempts"
+        return 1
+      fi
+    fi
+
+    set -x
+    configtxlator compute_update --channel_id "${CHANNEL}" --original original_config.pb --updated modified_config.pb --output config_update.pb 2>&1
+    COMPUTE_RESULT=$?
+    { set +x; } 2>/dev/null
+
+    if [ $COMPUTE_RESULT -ne 0 ]; then
+      RETRY_COUNT=$((RETRY_COUNT + 1))
+      if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+        errorln "configtxlator compute_update failed (attempt $RETRY_COUNT/$MAX_RETRIES), retrying..."
+        sleep 2
+        continue
+      else
+        errorln "configtxlator compute_update failed after $MAX_RETRIES attempts"
+        return 1
+      fi
+    fi
+
+    set -x
+    configtxlator proto_decode --input config_update.pb --type common.ConfigUpdate --output config_update.json 2>&1
+    DECODE_RESULT=$?
+    { set +x; } 2>/dev/null
+
+    if [ $DECODE_RESULT -ne 0 ]; then
+      RETRY_COUNT=$((RETRY_COUNT + 1))
+      if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+        errorln "configtxlator proto_decode failed (attempt $RETRY_COUNT/$MAX_RETRIES), retrying..."
+        sleep 2
+        continue
+      else
+        errorln "configtxlator proto_decode failed after $MAX_RETRIES attempts"
+        return 1
+      fi
+    fi
+
+    set -x
+    jq --arg channel "$CHANNEL" '{payload: {header: {channel_header: {channel_id: $channel, type: 2}}, data: {config_update: .}}}' config_update.json > config_update_in_envelope.json
+    configtxlator proto_encode --input config_update_in_envelope.json --type common.Envelope --output "${OUTPUT}" 2>&1
+    FINAL_ENCODE_RESULT=$?
+    { set +x; } 2>/dev/null
+
+    if [ $FINAL_ENCODE_RESULT -ne 0 ]; then
+      RETRY_COUNT=$((RETRY_COUNT + 1))
+      if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+        errorln "configtxlator proto_encode (envelope) failed (attempt $RETRY_COUNT/$MAX_RETRIES), retrying..."
+        sleep 2
+        continue
+      else
+        errorln "configtxlator proto_encode (envelope) failed after $MAX_RETRIES attempts"
+        return 1
+      fi
+    fi
+
+    # All operations succeeded
+    return 0
+  done
+
+  return 1
 }
 
 # updateAnchorPeer <org> <channel_id>
@@ -106,9 +192,17 @@ updateAnchorPeer() {
 
   infoln "Generating anchor peer update transaction for Org${ORG} on channel $CHANNEL"
 
+  # Check if AnchorPeers already exists
+  if jq -e '.channel_group.groups.Application.groups.'${orgmsp}'.values.AnchorPeers' ${orgmsp}config.json >/dev/null 2>&1; then
+    infoln "AnchorPeers already set for ${orgmsp}, skipping update"
+    successln "Anchor peer already configured for org '$orgmsp' on channel '$CHANNEL'"
+    return 0
+  fi
+
   set -x
-  # Modify the configuration to append the anchor peer
-  jq '.channel_group.groups.Application.groups.'${orgmsp}'.values += {"AnchorPeers":{"mod_policy": "Admins","value":{"anchor_peers": [{"host": "'$host'","port": '$port'}]},"version": "0"}}' ${orgmsp}config.json > ${orgmsp}modified_config.json
+  # Modify the configuration to add the anchor peer
+  # Note: version should be 0 for new anchor peers (not incremented)
+  jq '.channel_group.groups.Application.groups.'${orgmsp}'.values += {"AnchorPeers":{"mod_policy": "Admins","value":{"anchor_peers": [{"host": "'$host'","port": '$port'}]},"version": 0}}' ${orgmsp}config.json > ${orgmsp}modified_config.json
   { set +x; } 2>/dev/null
 
   # Compute a config update, based on the differences between

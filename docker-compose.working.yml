@@ -1,0 +1,47 @@
+version: '3.8'
+
+networks:
+  coffee-network:
+    name: coffee-network
+
+services:
+  # APIs
+  commercial-bank-api:
+    build: ./apis/commercial-bank
+    ports: ["3001:3001"]
+    networks: [coffee-network]
+    
+  national-bank-api:
+    build: ./apis/national-bank
+    ports: ["3002:3002"]
+    networks: [coffee-network]
+    
+  ecta-api:
+    build: ./apis/ecta
+    ports: ["3003:3003"]
+    networks: [coffee-network]
+    
+  ecx-api:
+    build: ./apis/ecx
+    ports: ["3004:3004"]
+    networks: [coffee-network]
+    
+  shipping-line-api:
+    build: ./apis/shipping-line
+    ports: ["3005:3005"]
+    networks: [coffee-network]
+    
+  custom-authorities-api:
+    build: ./apis/custom-authorities
+    ports: ["3006:3006"]
+    networks: [coffee-network]
+
+  # Database
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: coffee_export
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+    ports: ["5432:5432"]
+    networks: [coffee-network]

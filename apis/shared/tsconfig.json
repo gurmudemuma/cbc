@@ -1,0 +1,24 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "noPropertyAccessFromIndexSignature": false,
+    "types": [
+      "node"
+    ]
+  },
+  "include": [
+    "**/*.ts",
+    "types/**/*.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts",
+    "test-setup.ts",
+    "__tests__/**"
+  ]
+}
