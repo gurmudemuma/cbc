@@ -70,7 +70,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service: [commercialbank, national-bank, ecta, shipping-line]
+        service: [commercialbank, national-bank, ncat, shipping-line]
 
     steps:
       - name: Checkout code
@@ -170,7 +170,7 @@ jobs:
 
       - name: Run npm audit (APIs)
         run: |
-          for service in commercialbank national-bank ecta shipping-line; do
+          for service in commercialbank national-bank ncat shipping-line; do
             echo "Auditing api/$service"
             cd api/$service
             npm audit --audit-level=moderate || true
@@ -203,7 +203,7 @@ jobs:
 
       - name: Build and push API images
         run: |
-          for service in commercialbank national-bank ecta shipping-line; do
+          for service in commercialbank national-bank ncat shipping-line; do
             docker build -t ${{ secrets.DOCKER_USERNAME }}/cbc-api-$service:latest \
               -t ${{ secrets.DOCKER_USERNAME }}/cbc-api-$service:${{ github.sha }} \
               -f api/$service/Dockerfile \

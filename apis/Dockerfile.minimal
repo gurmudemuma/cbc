@@ -1,7 +1,0 @@
-FROM node:18-alpine
-WORKDIR /app
-COPY shared/package*.json ./shared/
-RUN cd shared && npm ci --only=production --silent
-COPY shared ./shared
-EXPOSE 3000
-CMD ["npm", "start"]

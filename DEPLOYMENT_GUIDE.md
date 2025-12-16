@@ -1,356 +1,1166 @@
-# Coffee Export Consortium - Complete Deployment Guide
+# 🚀 Deployment Guide
 
-## ✅ System Status: PRODUCTION READY
+Complete guide for deploying the Coffee Export Consortium Blockchain to development, staging, and production environments.
 
-### 🎯 What's Working
-
-#### 1. **Blockchain Network** ✅
-- 6 Peer Organizations (Commercial Bank, National Bank, ECTA, ECX, Shipping Line, Custom Authorities)
-- 1 Orderer (Raft consensus)
-- 7 CouchDB instances (state database)
-- Coffee-export chaincode deployed and operational
-- Channel: coffee-export-channel
-
-#### 2. **API Services** ✅
-- All 6 microservices running with Node.js
-- Unified Dockerfile using workspace dependencies
-- Container IPs used (Docker userland-proxy disabled)
-- Ports: 3001-3006
-- Registration endpoint working: `/api/auth/register`
-- Login endpoint working: `/api/auth/login`
-
-#### 3. **Frontend** ✅
-- Modern React 18 application
-- Material-UI v5 design system
-- Purple to orange-yellow gradient theme
-- Responsive design (mobile-first)
-- Container IP: Accessible via direct IP
-- Build optimized for production
-
-#### 4. **User Management** ✅
-- Automated user registration via script
-- 5 test users created for each organization
-- Credentials stored and documented
-
-#### 5. **Infrastructure** ✅
-- PostgreSQL database
-- IPFS for document storage
-- Docker Compose orchestration
-- Automated startup script
+> **Version 2.0** - Updated with new workflow: National Bank creates exports, Banking approval stage added, Dashboard visualization with actor tracking
 
 ---
 
-## 📋 Quick Start
+## Table of Contents
 
-### Prerequisites
-- Docker 20.0+
-- Docker Compose 2.0+
-- 16GB RAM minimum
-- Linux OS (tested on Ubuntu)
+1. [Quick Start](#quick-start)
+2. [What's New in v2.0](#whats-new-in-v20)
+3. [Prerequisites](#prerequisites)
+4. [Local Development](#local-development)
+5. [Docker Build](#docker-build)
+6. [Kubernetes Deployment](#kubernetes-deployment)
+7. [Production Deployment](#production-deployment)
+8. [Security Configuration](#security-configuration)
+9. [Monitoring & Logging](#monitoring--logging)
+10. [Backup & Recovery](#backup--recovery)
+11. [CI/CD Pipeline](#cicd-pipeline)
+12. [Troubleshooting](#troubleshooting)
 
-### Start the System
+---
+
+## Quick Start
+
+For rapid deployment with all v2.0 updates:
+
 ```bash
 cd /home/gu-da/cbc
-./scripts/start.sh
+./start-system.sh --clean
 ```
 
-**Startup Time:** ~5-10 minutes for full initialization
+This handles:
+- Chaincode v2.0 deployment (National Bank workflow)
+- Frontend dependencies (recharts for dashboard)
+- All services startup
+- Test user creation
+
+**See detailed steps below for manual deployment or production.**
 
 ---
 
-## 🔑 Access Information
+## What's New in v2.0
 
-### Frontend
-**URL:** Check output from start.sh for container IP
-Example: `http://172.18.0.19/`
+### Chaincode Changes
+- **National Bank creates export requests** (not commercialbank)
+- **New Banking Approval stage** for commercialbank financial validation
+- **Updated status constants**:
+  - `BANKING_PENDING`
+  - `BANKING_APPROVED`
+  - `BANKING_REJECTED`
+- **Sequential workflow**: Portal → National Bank → FX → Banking → Quality → Customs → Shipping
 
-### Test Credentials
-| Organization | Username | Password |
-|-------------|----------|----------|
-| Commercial Bank | export_user | Export123!@# |
-| National Bank | bank_user | Bank123!@# |
-| ECTA | ecta_user | Ecta123!@# |
-| Shipping Line | ship_user | Ship123!@# |
-| Custom Authorities | customs_user | Customs123!@# |
+### Frontend Updates
+- **Dashboard workflow chart** - visualize export requests through all blockchain stages
+- **Actor tracking** - hover chart to see who approved each stage
+- **Updated navigation** - all sidebar items independently clickable
+- **New dependency**: recharts for data visualization
 
-### API Endpoints (Container IPs)
-Check start.sh output for current IPs:
-- Commercial Bank API: `http://<IP>:3001`
-- National Bank API: `http://<IP>:3002`
-- ECTA API: `http://<IP>:3003`
-- ECX API: `http://<IP>:3004`
-- Shipping Line API: `http://<IP>:3005`
-- Custom Authorities API: `http://<IP>:3006`
+### Deployment Changes
+- Chaincode version updated to v2.0 (sequence 2)
+- Frontend npm install required for recharts
+- Updated test user credentials
 
 ---
 
-## 🔧 Key Configuration Changes
+## Prerequisites
 
-### 1. Docker Daemon
-**File:** `/etc/docker/daemon.json`
-- Removed broken registry mirrors
-- `userland-proxy: false` (requires container IP access)
-- `iptables: false`
+### Required Software
+- **Docker** 20.10+ and Docker Compose
+- **Kubernetes** 1.21+ (for production)
+- **kubectl** CLI
+- **Helm** 3.0+ (optional)
+- **Node.js** 16+
+- **Go** 1.19+
+- **Git**
 
-### 2. API Dockerfiles
-**Location:** `/home/gu-da/cbc/apis/`
-- **Unified Dockerfile:** `Dockerfile.unified`
-- Uses workspace dependencies from parent
-- All APIs share node_modules
-- Build context: `./apis`
+### Cloud Provider Setup (Production)
+Choose one:
+- **AWS**: EKS cluster
+- **Google Cloud**: GKE cluster
+- **Azure**: AKS cluster
+- **DigitalOcean**: DOKS cluster
 
-**Example:**
+### Domain and SSL (Production)
+- Domain name (e.g., coffeeexport.com)
+- SSL certificate (Let's Encrypt recommended)
+
+---
+
+## Local Development
+
+### 1. Install Dependencies
+
+```bash
+# Install API dependencies
+cd api
+npm install
+cd commercialbank && npm install && cd ..
+cd national-bank && npm install && cd ..
+cd ncat && npm install && cd ..
+cd shipping-line && npm install && cd ..
+cd ..
+
+# Install frontend dependencies
+cd frontend && npm install && cd ..
+```
+
+### 2. Configure Environment
+
+```bash
+# Copy environment templates
+cp .env.example .env
+cp api/commercialbank/.env.example api/commercialbank/.env
+cp api/national-bank/.env.example api/national-bank/.env
+cp api/ncat/.env.example api/ncat/.env
+cp api/shipping-line/.env.example api/shipping-line/.env
+cp frontend/.env.example frontend/.env
+```
+
+### 3. Start Fabric Network
+
+```bash
+cd network
+./network.sh up createChannel -c coffeechannel
+
+# Deploy v2.0 chaincode with new workflow
+./network.sh deployCC -ccn coffee-export -ccp ../chaincode/coffee-export/ -ccl golang -ccv 2.0 -ccs 2
+./network.sh deployCC -ccn user-management -ccp ../chaincode/user-management/ -ccl golang
+```
+
+### 4. Start Services
+
+```bash
+# Option A: Use automated script (recommended)
+./scripts/dev-apis.sh
+
+# Option B: Start individually
+cd api/commercialbank && npm run dev &
+cd api/national-bank && npm run dev &
+cd api/ncat && npm run dev &
+cd api/shipping-line && npm run dev &
+```
+
+### 5. Start Frontend
+
+```bash
+cd frontend
+npm run dev
+```
+
+Access at: http://localhost:5173
+
+### 6. Verify v2.0 Features
+
+```bash
+# Check chaincode version
+docker exec peer0.commercialbank.coffee-export.com \
+  peer lifecycle chaincode querycommitted -C coffeechannel
+
+# Should show coffee-export version 2.0, sequence 2
+```
+
+**Test workflow:**
+1. Login as National Bank user
+2. Create export request (blockchain record created)
+3. Approve FX
+4. Login as commercialbank user
+5. Approve banking/financial validation
+6. Continue through quality → customs → shipping
+7. Check Dashboard to see workflow chart with actor info
+
+---
+
+## Docker Build
+
+### 1. Build API Images
+
+```bash
+# Build all API images
+for service in commercialbank national-bank ncat shipping-line; do
+  docker build -t your-registry/cbc-api-$service:latest \
+    -f api/$service/Dockerfile \
+    api/$service
+done
+```
+
+### 2. Build Frontend Image
+
+```bash
+docker build -t your-registry/cbc-frontend:latest \
+  -f frontend/Dockerfile \
+  frontend
+```
+
+### 3. Production Dockerfile
+
 ```dockerfile
-FROM node:20-alpine
+# Multi-stage build for production
+FROM node:18-alpine AS builder
+
 WORKDIR /app
+
+# Copy package files
 COPY package*.json ./
-COPY node_modules ./node_modules/
-COPY shared ./shared/
-ARG SERVICE_NAME
-ENV SERVICE_NAME=${SERVICE_NAME}
-COPY ${SERVICE_NAME} ./${SERVICE_NAME}/
-CMD sh -c "node ${SERVICE_NAME}/src/index.js"
+COPY tsconfig.json ./
+
+# Install dependencies
+RUN npm ci --only=production && \
+    npm cache clean --force
+
+# Copy source code
+COPY src ./src
+
+# Build TypeScript
+RUN npm run build
+
+# Production image
+FROM node:18-alpine
+
+# Install dumb-init for proper signal handling
+RUN apk add --no-cache dumb-init
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
+WORKDIR /app
+
+# Copy built application
+COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
+COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
+COPY --chown=nodejs:nodejs package*.json ./
+
+# Switch to non-root user
+USER nodejs
+
+# Expose port
+EXPOSE 3001
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3001/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+
+# Use dumb-init to handle signals properly
+ENTRYPOINT ["dumb-init", "--"]
+
+# Start application
+CMD ["node", "dist/index.js"]
 ```
 
-### 3. Frontend Configuration
-**File:** `/home/gu-da/cbc/frontend/.env.local`
-- Contains actual container IPs for all APIs
-- Updated on each deployment
-- Uses `REACT_APP_` prefix for environment variables
+### 4. Push to Registry
 
-### 4. User Registration
-**Script:** `/home/gu-da/cbc/scripts/register-working-users.sh`
-- Automatically called by start.sh
-- Uses container IP for API access
-- Creates 5 test users
-- Exits gracefully if APIs not ready
-
-### 5. Start Script
-**File:** `/home/gu-da/cbc/scripts/start.sh`
-- 6 phases: Database, Network, Chaincode, APIs, Frontend, Users
-- Displays container IPs in final summary
-- Includes user credentials
-- Error handling and cleanup
-
----
-
-## 📁 Updated Files Summary
-
-### Scripts
-- ✅ `/home/gu-da/cbc/scripts/start.sh` - Main startup script
-- ✅ `/home/gu-da/cbc/scripts/register-working-users.sh` - User registration
-
-### APIs
-- ✅ `/home/gu-da/cbc/apis/Dockerfile.unified` - Unified API Dockerfile
-- ✅ `/home/gu-da/cbc/apis/commercial-bank/src/index.js` - Added register endpoint
-- ✅ `/home/gu-da/cbc/apis/commercial-bank/Dockerfile` - Updated to use unified
-- ✅ `/home/gu-da/cbc/apis/national-bank/Dockerfile` - Updated to use unified
-- ✅ `/home/gu-da/cbc/apis/ecta/Dockerfile` - Updated to use unified
-- ✅ `/home/gu-da/cbc/apis/ecx/Dockerfile` - Updated to use unified
-- ✅ `/home/gu-da/cbc/apis/shipping-line/Dockerfile` - Updated to use unified
-- ✅ `/home/gu-da/cbc/apis/custom-authorities/Dockerfile` - Updated to use unified
-
-### Frontend
-- ✅ `/home/gu-da/cbc/frontend/src/pages/Login.tsx` - Modern design
-- ✅ `/home/gu-da/cbc/frontend/src/services/api.js` - Added apiClient export
-- ✅ `/home/gu-da/cbc/frontend/src/config/api.config.ts` - REACT_APP_ prefix
-- ✅ `/home/gu-da/cbc/frontend/.env.local` - Container IPs
-- ✅ `/home/gu-da/cbc/frontend/IMPROVEMENTS.md` - Documentation
-
-### Docker Compose
-- ✅ `/home/gu-da/cbc/docker-compose.yml` - Updated API build contexts
-
-### Documentation
-- ✅ `/home/gu-da/cbc/DEPLOYMENT_GUIDE.md` - This file
-- ✅ `/home/gu-da/cbc/SYSTEM_ARCHITECTURE.md` - System overview
-- ✅ `/home/gu-da/cbc/README.md` - Project readme
-
----
-
-## 🚀 Deployment Steps
-
-### 1. Initial Setup
 ```bash
-cd /home/gu-da/cbc
+# Login to Docker registry
+docker login
 
-# Install API dependencies (one-time)
-cd apis && npm install --legacy-peer-deps
-cd ..
+# Push images
+for service in commercialbank national-bank ncat shipping-line; do
+  docker push your-registry/cbc-api-$service:latest
+done
 
-# Build frontend (one-time)
-cd frontend && npm install && npm run build
-cd ..
-```
-
-### 2. Start System
-```bash
-./scripts/start.sh
-```
-
-### 3. Access Frontend
-- Note the frontend IP from start.sh output
-- Open in browser: `http://<FRONTEND_IP>/`
-- Login with test credentials
-
-### 4. Verify APIs
-```bash
-# Get API IPs
-docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' commercialbank-api
-
-# Test endpoint
-curl http://<API_IP>:3001/health
+docker push your-registry/cbc-frontend:latest
 ```
 
 ---
 
-## 🔍 Troubleshooting
+## Kubernetes Deployment
 
-### APIs Not Responding
+### 1. Create Namespace
+
 ```bash
-# Check container status
-docker ps | grep api
-
-# Check logs
-docker logs commercialbank-api
-
-# Restart specific API
-docker-compose restart commercialbank-api
+kubectl apply -f k8s/namespace.yaml
 ```
 
-### Frontend Not Loading
+### 2. Create Secrets
+
 ```bash
-# Check frontend container
-docker ps | grep frontend
+# Generate secrets
+kubectl create secret generic cbc-secrets \
+  --from-literal=JWT_SECRET=$(openssl rand -base64 64) \
+  --from-literal=ENCRYPTION_KEY=$(openssl rand -base64 64) \
+  -n coffee-export
 
-# Get frontend IP
-docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' frontend
-
-# Restart frontend
-docker restart frontend
+# Or apply from file
+kubectl apply -f k8s/secrets.yaml
 ```
 
-### User Registration Failed
-```bash
-# Run manually
-./scripts/register-working-users.sh
+### 3. Create ConfigMaps
 
-# Check API is accessible
-curl -X POST http://<API_IP>:3001/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"username":"test","password":"Test123!@#","email":"test@test.com"}'
+```bash
+kubectl apply -f k8s/configmap.yaml
 ```
 
-### Rebuild Everything
+### 4. Deploy Services
+
 ```bash
-# Stop all containers
+# Deploy API services
+kubectl apply -f k8s/api-deployment.yaml
+
+# Deploy frontend
+kubectl apply -f k8s/frontend-deployment.yaml
+
+# Deploy ingress
+kubectl apply -f k8s/ingress.yaml
+```
+
+### 5. Verify Deployment
+
+```bash
+# Check pods
+kubectl get pods -n coffee-export
+
+# Check services
+kubectl get svc -n coffee-export
+
+# Check ingress
+kubectl get ingress -n coffee-export
+
+# View logs
+kubectl logs -f deployment/commercialbank-api -n coffee-export
+```
+
+### 6. Horizontal Pod Autoscaling
+
+```yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: commercialbank-api-hpa
+  namespace: coffee-export
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: commercialbank-api
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+```
+
+---
+
+## Production Deployment
+
+### Pre-Deployment Checklist
+
+#### Security Requirements
+- [ ] All critical security fixes implemented
+- [ ] JWT secrets generated and stored securely
+- [ ] Encryption keys generated and stored securely
+- [ ] TLS certificates obtained
+- [ ] Firewall rules configured
+- [ ] Security audit completed
+- [ ] Penetration testing performed
+- [ ] Vulnerability scanning completed
+
+#### Infrastructure Requirements
+- [ ] Production servers provisioned
+- [ ] Load balancers configured
+- [ ] Database backups configured
+- [ ] Monitoring systems set up
+- [ ] Log aggregation configured
+- [ ] Disaster recovery plan documented
+- [ ] Backup and restore tested
+
+#### Application Requirements
+- [ ] All dependencies updated
+- [ ] Environment variables configured
+- [ ] Database migrations tested
+- [ ] Integration tests passing
+- [ ] Performance tests completed
+- [ ] Documentation updated
+
+### 1. Secret Management
+
+#### Using AWS Secrets Manager
+
+```bash
+# Generate secrets
+JWT_SECRET=$(openssl rand -base64 64)
+ENCRYPTION_KEY=$(openssl rand -base64 64)
+
+# Store in AWS Secrets Manager
+aws secretsmanager create-secret \
+  --name cbc/commercialbank/jwt-secret \
+  --secret-string "$JWT_SECRET"
+
+aws secretsmanager create-secret \
+  --name cbc/commercialbank/encryption-key \
+  --secret-string "$ENCRYPTION_KEY"
+```
+
+#### Secrets Service Implementation
+
+```typescript
+// api/shared/secrets.service.ts
+import { SecretsManagerClient, GetSecretValueCommand } from "@aws-sdk/client-secrets-manager";
+
+export class SecretsService {
+  private static client = new SecretsManagerClient({
+    region: process.env.AWS_REGION || "us-east-1",
+  });
+
+  private static cache: Map<string, { value: string; expiry: number }> = new Map();
+  private static readonly CACHE_TTL = 300000; // 5 minutes
+
+  public static async getSecret(secretName: string): Promise<string> {
+    // Check cache
+    const cached = this.cache.get(secretName);
+    if (cached && cached.expiry > Date.now()) {
+      return cached.value;
+    }
+
+    try {
+      const command = new GetSecretValueCommand({
+        SecretId: secretName,
+      });
+
+      const response = await this.client.send(command);
+      const secret = response.SecretString || "";
+
+      // Cache the secret
+      this.cache.set(secretName, {
+        value: secret,
+        expiry: Date.now() + this.CACHE_TTL,
+      });
+
+      return secret;
+    } catch (error) {
+      console.error(`Failed to retrieve secret ${secretName}:`, error);
+      throw new Error(`Secret retrieval failed: ${secretName}`);
+    }
+  }
+
+  public static async getJWTSecret(serviceName: string): Promise<string> {
+    return await this.getSecret(`cbc/${serviceName}/jwt-secret`);
+  }
+}
+```
+
+### 2. TLS/HTTPS Configuration
+
+#### Obtain SSL Certificates
+
+```bash
+# Using Let's Encrypt
+sudo certbot certonly --standalone \
+  -d api-exporter.coffeeexport.com \
+  -d api-nationalbank.coffeeexport.com \
+  -d api-ncat.coffeeexport.com \
+  -d api-shipping.coffeeexport.com
+```
+
+#### Configure HTTPS in Express
+
+```typescript
+import https from 'https';
+import fs from 'fs';
+
+const app: Application = express();
+
+// HTTPS configuration
+let server;
+if (process.env.NODE_ENV === 'production') {
+  const httpsOptions = {
+    key: fs.readFileSync(process.env.SSL_KEY_PATH || '/etc/letsencrypt/live/domain/privkey.pem'),
+    cert: fs.readFileSync(process.env.SSL_CERT_PATH || '/etc/letsencrypt/live/domain/fullchain.pem'),
+    minVersion: 'TLSv1.2',
+    ciphers: [
+      'ECDHE-ECDSA-AES128-GCM-SHA256',
+      'ECDHE-RSA-AES128-GCM-SHA256',
+      'ECDHE-ECDSA-AES256-GCM-SHA384',
+      'ECDHE-RSA-AES256-GCM-SHA384',
+    ].join(':'),
+  };
+
+  server = https.createServer(httpsOptions, app);
+} else {
+  server = createServer(app);
+}
+```
+
+#### Install Cert-Manager (Kubernetes)
+
+```bash
+# Install cert-manager
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.11.0/cert-manager.yaml
+
+# Create ClusterIssuer
+kubectl apply -f - <<EOF
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: admin@coffeeexport.com
+    privateKeySecretRef:
+      name: letsencrypt-prod
+    solvers:
+    - http01:
+        ingress:
+          class: nginx
+EOF
+```
+
+### 3. Load Balancing
+
+#### Nginx Configuration
+
+```nginx
+# /etc/nginx/sites-available/cbc-api
+
+upstream commercialbank_api {
+    least_conn;
+    server commercialbank-api-1:3001 max_fails=3 fail_timeout=30s;
+    server commercialbank-api-2:3001 max_fails=3 fail_timeout=30s;
+    server commercialbank-api-3:3001 max_fails=3 fail_timeout=30s;
+}
+
+# Rate limiting
+limit_req_zone $binary_remote_addr zone=api_limit:10m rate=10r/s;
+limit_req_zone $binary_remote_addr zone=auth_limit:10m rate=5r/m;
+
+server {
+    listen 443 ssl http2;
+    server_name api.coffeeexport.com;
+
+    ssl_certificate /etc/letsencrypt/live/api.coffeeexport.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/api.coffeeexport.com/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers on;
+
+    # Security headers
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+
+    # commercialbank API
+    location /commercialbank/ {
+        limit_req zone=api_limit burst=20 nodelay;
+        
+        proxy_pass http://commercialbank_api/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+        
+        # Timeouts
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+
+    # Auth endpoints with stricter rate limiting
+    location ~ ^/[^/]+/api/auth/(login|register) {
+        limit_req zone=auth_limit burst=3 nodelay;
+        proxy_pass http://commercialbank_api;
+    }
+
+    # Health check endpoint (no rate limiting)
+    location ~ ^/[^/]+/health {
+        access_log off;
+        proxy_pass http://commercialbank_api;
+    }
+}
+
+# Redirect HTTP to HTTPS
+server {
+    listen 80;
+    server_name api.coffeeexport.com;
+    return 301 https://$server_name$request_uri;
+}
+```
+
+### 4. Production Docker Compose
+
+```yaml
+# docker-compose.prod.yml
+version: '3.8'
+
+services:
+  commercialbank-api:
+    image: cbc/commercialbank-api:${VERSION}
+    deploy:
+      replicas: 3
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - AWS_REGION=${AWS_REGION}
+    secrets:
+      - jwt_secret
+      - encryption_key
+    networks:
+      - cbc-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+secrets:
+  jwt_secret:
+    external: true
+  encryption_key:
+    external: true
+
+networks:
+  cbc-network:
+    driver: overlay
+    encrypted: true
+```
+
+---
+
+## Security Configuration
+
+### 1. Network Policies (Kubernetes)
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: api-network-policy
+  namespace: coffee-export
+spec:
+  podSelector:
+    matchLabels:
+      tier: backend
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          tier: frontend
+    ports:
+    - protocol: TCP
+      port: 3001
+```
+
+### 2. Pod Security Policies
+
+```bash
+kubectl apply -f k8s/pod-security-policy.yaml
+```
+
+### 3. Regular Security Scans
+
+```bash
+# Scan images for vulnerabilities
+trivy image your-registry/cbc-api-commercialbank:latest
+
+# Scan Kubernetes manifests
+kubesec scan k8s/api-deployment.yaml
+```
+
+---
+
+## Monitoring & Logging
+
+### 1. Deploy Prometheus
+
+```bash
+kubectl apply -f monitoring/prometheus-config.yaml
+```
+
+### 2. Deploy Grafana
+
+```bash
+kubectl apply -f monitoring/grafana-config.yaml
+```
+
+### 3. Add Prometheus Metrics to APIs
+
+```typescript
+import promClient from 'prom-client';
+
+// Create a Registry
+const register = new promClient.Registry();
+
+// Add default metrics
+promClient.collectDefaultMetrics({ register });
+
+// Custom metrics
+const httpRequestDuration = new promClient.Histogram({
+  name: 'http_request_duration_seconds',
+  help: 'Duration of HTTP requests in seconds',
+  labelNames: ['method', 'route', 'status_code'],
+  registers: [register],
+});
+
+const blockchainTransactions = new promClient.Counter({
+  name: 'blockchain_transactions_total',
+  help: 'Total number of blockchain transactions',
+  labelNames: ['type', 'status'],
+  registers: [register],
+});
+
+// Metrics endpoint
+app.get('/metrics', async (req, res) => {
+  res.set('Content-Type', register.contentType);
+  res.end(await register.metrics());
+});
+```
+
+### 4. Structured Logging
+
+```typescript
+import winston from 'winston';
+
+const logger = winston.createLogger({
+  level: process.env.LOG_LEVEL || 'info',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.errors({ stack: true }),
+    winston.format.json()
+  ),
+  defaultMeta: {
+    service: process.env.SERVICE_NAME || 'cbc-api',
+    environment: process.env.NODE_ENV,
+  },
+  transports: [
+    new winston.transports.Console(),
+    new winston.transports.File({
+      filename: 'logs/error.log',
+      level: 'error',
+      maxsize: 10485760, // 10MB
+      maxFiles: 5,
+    }),
+    new winston.transports.File({
+      filename: 'logs/combined.log',
+      maxsize: 10485760,
+      maxFiles: 10,
+    }),
+  ],
+});
+
+export default logger;
+```
+
+### 5. Access Monitoring
+
+```bash
+# Port forward Prometheus
+kubectl port-forward svc/prometheus 9090:9090 -n coffee-export
+
+# Port forward Grafana
+kubectl port-forward svc/grafana 3000:3000 -n coffee-export
+
+# Access Grafana at http://localhost:3000
+# Default credentials: admin / admin (change immediately)
+```
+
+---
+
+## Backup & Recovery
+
+### 1. Automated Backup Script
+
+```bash
+#!/bin/bash
+# backup.sh
+
+set -e
+
+BACKUP_DIR="/backups/cbc"
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+BACKUP_PATH="$BACKUP_DIR/$TIMESTAMP"
+
+mkdir -p "$BACKUP_PATH"
+
+echo "Starting backup at $TIMESTAMP"
+
+# Backup Fabric ledger data
+echo "Backing up Fabric ledger..."
+docker exec peer0.commercialbank.coffee-export.com \
+  tar czf - /var/hyperledger/production > "$BACKUP_PATH/peer-commercialbank.tar.gz"
+
+docker exec peer0.nationalbank.coffee-export.com \
+  tar czf - /var/hyperledger/production > "$BACKUP_PATH/peer-nationalbank.tar.gz"
+
+docker exec peer0.ncat.coffee-export.com \
+  tar czf - /var/hyperledger/production > "$BACKUP_PATH/peer-ncat.tar.gz"
+
+docker exec peer0.shippingline.coffee-export.com \
+  tar czf - /var/hyperledger/production > "$BACKUP_PATH/peer-shippingline.tar.gz"
+
+# Backup certificates
+echo "Backing up certificates..."
+tar czf "$BACKUP_PATH/certificates.tar.gz" \
+  network/organizations/peerOrganizations \
+  network/organizations/ordererOrganizations
+
+# Backup configuration
+echo "Backing up configuration..."
+tar czf "$BACKUP_PATH/config.tar.gz" \
+  network/configtx \
+  network/docker
+
+# Create backup manifest
+cat > "$BACKUP_PATH/manifest.json" <<EOF
+{
+  "timestamp": "$TIMESTAMP",
+  "version": "$(git rev-parse HEAD)",
+  "components": [
+    "fabric-ledger",
+    "certificates",
+    "configuration"
+  ]
+}
+EOF
+
+# Compress entire backup
+echo "Compressing backup..."
+tar czf "$BACKUP_DIR/cbc-backup-$TIMESTAMP.tar.gz" -C "$BACKUP_DIR" "$TIMESTAMP"
+rm -rf "$BACKUP_PATH"
+
+# Upload to S3
+if [ -n "$AWS_S3_BUCKET" ]; then
+  echo "Uploading to S3..."
+  aws s3 cp "$BACKUP_DIR/cbc-backup-$TIMESTAMP.tar.gz" \
+    "s3://$AWS_S3_BUCKET/backups/"
+fi
+
+# Cleanup old backups (keep last 30 days)
+find "$BACKUP_DIR" -name "cbc-backup-*.tar.gz" -mtime +30 -delete
+
+echo "Backup completed successfully"
+```
+
+### 2. Restore Script
+
+```bash
+#!/bin/bash
+# restore.sh
+
+set -e
+
+if [ -z "$1" ]; then
+  echo "Usage: $0 <backup-file>"
+  exit 1
+fi
+
+BACKUP_FILE="$1"
+RESTORE_DIR="/tmp/cbc-restore"
+
+echo "Restoring from $BACKUP_FILE"
+
+# Extract backup
+mkdir -p "$RESTORE_DIR"
+tar xzf "$BACKUP_FILE" -C "$RESTORE_DIR"
+
+# Stop services
+echo "Stopping services..."
 docker-compose down
 
-# Remove old images
-docker rmi $(docker images | grep cbc | awk '{print $3}')
+# Restore certificates
+echo "Restoring certificates..."
+tar xzf "$RESTORE_DIR/certificates.tar.gz" -C network/
 
-# Rebuild
-cd apis && npm install --legacy-peer-deps
-cd ../frontend && npm run build
-cd ..
+# Start services
+echo "Starting services..."
+docker-compose up -d
 
-# Restart
-./scripts/start.sh
+# Cleanup
+rm -rf "$RESTORE_DIR"
+
+echo "Restore completed successfully"
+```
+
+### 3. Schedule Automated Backups
+
+```yaml
+# Kubernetes CronJob
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: backup-job
+  namespace: coffee-export
+spec:
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: backup
+            image: your-backup-image
+            command: ["/backup.sh"]
+          restartPolicy: OnFailure
 ```
 
 ---
 
-## 📊 System Architecture
+## CI/CD Pipeline
 
+### GitHub Actions Workflow
+
+```yaml
+# .github/workflows/deploy-production.yml
+name: Deploy to Production
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Run security scan
+        run: |
+          npm audit --production
+          npm run lint
+          
+      - name: Run SAST
+        uses: github/codeql-action/analyze@v2
+
+  build-and-test:
+    needs: security-scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Run tests
+        run: npm test
+        
+      - name: Build Docker images
+        run: |
+          docker build -t cbc/commercialbank-api:${{ github.ref_name }} \
+            -f api/commercialbank/Dockerfile .
+
+  deploy:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Deploy to production
+        run: |
+          kubectl set image deployment/commercialbank-api \
+            commercialbank-api=cbc/commercialbank-api:${{ github.ref_name }} \
+            -n coffee-export
+          
+      - name: Run smoke tests
+        run: |
+          curl -f https://api.coffeeexport.com/health
+          
+      - name: Notify team
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: 'Production deployment completed'
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     Frontend (React)                         │
-│                  http://172.18.0.19/                        │
-└─────────────────────────────────────────────────────────────┘
-                            │
-                            ↓
-┌─────────────────────────────────────────────────────────────┐
-│                    API Layer (Node.js)                       │
-│  ┌──────────┬──────────┬──────────┬──────────┬──────────┐  │
-│  │ Comm Bank│ Nat Bank │   ECTA   │   ECX    │ Shipping │  │
-│  │  :3001   │  :3002   │  :3003   │  :3004   │  :3005   │  │
-│  └──────────┴──────────┴──────────┴──────────┴──────────┘  │
-│  │ Custom Auth :3006 │                                      │
-│  └───────────────────┘                                      │
-└─────────────────────────────────────────────────────────────┘
-                            │
-                            ↓
-┌─────────────────────────────────────────────────────────────┐
-│              Hyperledger Fabric Network                      │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │  Orderer (Raft) + 6 Peers + 7 CouchDB Instances     │  │
-│  │  Channel: coffee-export-channel                       │  │
-│  │  Chaincode: coffee-export                            │  │
-│  └──────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────┘
-                            │
-                            ↓
-┌─────────────────────────────────────────────────────────────┐
-│                  Storage & Services                          │
-│  ┌──────────┬──────────┬──────────────────────────────┐    │
-│  │PostgreSQL│   IPFS   │  Docker Network              │    │
-│  │  :5435   │ :5001    │  coffee-export-network       │    │
-│  └──────────┴──────────┴──────────────────────────────┘    │
-└─────────────────────────────────────────────────────────────┘
+
+---
+
+## Troubleshooting
+
+### Pod Not Starting
+
+```bash
+# Check pod status
+kubectl describe pod <pod-name> -n coffee-export
+
+# Check logs
+kubectl logs <pod-name> -n coffee-export
+
+# Check events
+kubectl get events -n coffee-export --sort-by='.lastTimestamp'
+```
+
+### Service Not Accessible
+
+```bash
+# Check service endpoints
+kubectl get endpoints -n coffee-export
+
+# Test service connectivity
+kubectl run test-pod --image=busybox -it --rm -- \
+  wget -O- http://commercialbank-api:3001/health
+```
+
+### High Memory Usage
+
+```bash
+# Check resource usage
+kubectl top pods -n coffee-export
+
+# Increase memory limits
+kubectl set resources deployment/commercialbank-api \
+  --limits=memory=1Gi -n coffee-export
+```
+
+### Rollback Procedure
+
+```bash
+#!/bin/bash
+# rollback.sh
+
+PREVIOUS_VERSION="$1"
+
+if [ -z "$PREVIOUS_VERSION" ]; then
+  echo "Usage: $0 <previous-version>"
+  exit 1
+fi
+
+echo "Rolling back to version $PREVIOUS_VERSION"
+
+# Update image tags
+kubectl set image deployment/commercialbank-api \
+  commercialbank-api=cbc/commercialbank-api:$PREVIOUS_VERSION \
+  -n coffee-export
+
+# Wait for rollout
+kubectl rollout status deployment/commercialbank-api -n coffee-export
+
+# Run smoke tests
+./smoke-test.sh
+
+echo "Rollback completed"
 ```
 
 ---
 
-## ✅ Production Checklist
+## Post-Deployment Verification
 
-- [x] All 6 peers running
-- [x] All 7 CouchDB instances operational
-- [x] Chaincode deployed successfully
-- [x] All 6 APIs responding
-- [x] Frontend accessible
-- [x] User registration working
-- [x] Login functionality working
-- [x] Container IPs documented
-- [x] Test credentials available
-- [x] Documentation complete
+### Smoke Test Script
 
----
+```bash
+#!/bin/bash
+# smoke-test.sh
 
-## 📝 Notes
+API_BASE_URL="https://api.coffeeexport.com"
 
-1. **Container IPs Change**: After restart, container IPs may change. Run start.sh to get updated IPs.
+echo "Running smoke tests..."
 
-2. **Port Forwarding Disabled**: Due to Docker configuration, use container IPs directly instead of localhost.
+# Test health endpoints
+for service in commercialbank national-bank ncat shipping-line; do
+  echo "Testing $service health..."
+  response=$(curl -s -o /dev/null -w "%{http_code}" "$API_BASE_URL/$service/health")
+  if [ "$response" != "200" ]; then
+    echo "❌ $service health check failed"
+    exit 1
+  fi
+  echo "✅ $service health check passed"
+done
 
-3. **Workspace Dependencies**: All APIs share node_modules from parent directory for efficiency.
-
-4. **Test Users**: Pre-created for demo purposes. In production, implement proper user management.
-
-5. **Security**: Current setup uses demo tokens. Implement proper JWT with secrets in production.
-
----
-
-## 🎓 Next Steps
-
-1. **Production Hardening**
-   - Implement proper JWT secrets
-   - Add rate limiting
-   - Enable HTTPS/TLS
-   - Set up monitoring
-
-2. **Feature Enhancements**
-   - Real blockchain integration
-   - Document upload to IPFS
-   - Email notifications
-   - Advanced analytics
-
-3. **DevOps**
-   - CI/CD pipeline
-   - Automated testing
-   - Kubernetes deployment
-   - Backup strategy
+echo "All smoke tests passed ✅"
+```
 
 ---
 
-**System Version:** 1.0.0  
-**Last Updated:** 2025-12-16  
-**Status:** Production Ready ✅
+## Maintenance Schedule
+
+### Daily
+- Monitor system health
+- Review error logs
+- Check backup completion
+
+### Weekly
+- Review security alerts
+- Update dependencies
+- Performance analysis
+
+### Monthly
+- Security audit
+- Capacity planning
+- Disaster recovery drill
+
+### Quarterly
+- Penetration testing
+- Compliance review
+- Secret rotation
+
+---
+
+## Deployment Checklist
+
+### Pre-Deployment
+- [ ] All security fixes applied
+- [ ] Secrets configured
+- [ ] TLS certificates installed
+- [ ] Monitoring configured
+- [ ] Backups tested
+- [ ] Load balancers configured
+- [ ] Team trained
+- [ ] Documentation updated
+- [ ] Rollback plan tested
+
+### Post-Deployment
+- [ ] All pods running
+- [ ] Services accessible
+- [ ] Ingress configured
+- [ ] SSL certificates valid
+- [ ] Monitoring active
+- [ ] Alerts configured
+- [ ] Backups scheduled
+- [ ] Security scans passed
+- [ ] Load testing completed
+- [ ] Smoke tests passed
+
+---
+
+**For more information:**
+- [QUICK_START.md](./QUICK_START.md) - Local development setup
+- [CORRECTED_WORKFLOW.md](./CORRECTED_WORKFLOW.md) - v2.0 workflow details
+- [DASHBOARD_WORKFLOW_CHART.md](./DASHBOARD_WORKFLOW_CHART.md) - Dashboard features
+- [SECURITY.md](./SECURITY.md) - Security best practices
+- [INTER_SERVICE_COMMUNICATION.md](./INTER_SERVICE_COMMUNICATION.md) - Service integration
+- [PROJECT_STATUS.md](./PROJECT_STATUS.md) - Current system status
+
+**Version:** 2.0  
+**Last Updated:** 2025-01-21  
+**Status:** ✅ Ready for Deployment

@@ -1,9 +1,0 @@
-FROM node:20-alpine
-WORKDIR /app
-COPY package*.json ./
-COPY node_modules ./node_modules/
-COPY shared ./shared/
-ARG SERVICE_NAME
-ENV SERVICE_NAME=${SERVICE_NAME}
-COPY ${SERVICE_NAME} ./${SERVICE_NAME}/
-CMD sh -c "node ${SERVICE_NAME}/src/index.js"

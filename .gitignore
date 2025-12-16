@@ -16,6 +16,8 @@ api/shared/*.d.ts.map
 .env
 .env.local
 .env.*.local
+.env.example
+.gitignore
 
 # Logs
 logs/
@@ -30,6 +32,13 @@ network/organizations/ordererOrganizations/
 network/channel-artifacts/
 *.block
 *.tx
+
+# Ignore Fabric CA private keys (some are named `priv_sk` without an extension)
+organizations/**/ca/*_sk
+organizations/**/ca/priv_sk
+# Ignore other Fabric private keys (peer MSP keystore, etc.)
+organizations/**/*_sk
+organizations/**/priv_sk
 
 # Wallets
 api/*/wallet/
@@ -68,6 +77,7 @@ Thumbs.db
 *.key
 *.crt
 !**/ca-cert.pem
+*.priv_sk
 
 # Backup files and directories
 *.bak
@@ -102,9 +112,4 @@ update_in_envelope.json
 # Secrets directory
 secrets/
 .env.production
-**/priv_sk
-**/*_sk
-**/keystore/*
-**/priv_sk
-**/*_sk
-**/keystore/*
+
