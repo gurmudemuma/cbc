@@ -1,15 +1,17 @@
 import { Request, Response, NextFunction } from "express";
-import { FabricSDKGateway } from "../fabric/sdk-gateway";
-import { logger } from "../config/logger";
+import { pool } from "../../../shared/database/pool";
+import { createLogger } from "../../../shared/logger";
+import { ErrorCode, AppError } from "../../../shared/error-codes";
 import { ectaPreRegistrationService } from "../../../shared/services/ecta-preregistration.service";
 import { EctaPreRegistrationRepository } from "../../../shared/database/repositories/ecta-preregistration.repository";
-import pool from "../../../shared/database/db.config";
+
+const logger = createLogger('ExporterPortalExportController');
 
 /**
  * Export Controller for Exporter Portal
  *
  * Exporters can:
- * - Create export requests (submit to blockchain via SDK)
+ * - Create export requests (submit to database)
  * - View their own exports
  * - Track export status
  * - Upload documents
@@ -20,46 +22,34 @@ import pool from "../../../shared/database/db.config";
  * - Access banking operations
  */
 export class ExportController {
-  private fabricGateway: FabricSDKGateway;
-
-  constructor() {
-    this.fabricGateway = FabricSDKGateway.getInstance();
-  }
-
   /**
    * Create new export request
-   * Submits transaction to blockchain via SDK
+   * Submits to database
    */
   public createExport = async (
     req: Request,
     res: Response,
     _next: NextFunction,
   ): Promise<void> => {
+    const client = await pool.connect();
     try {
       const exportData = req.body;
       const userId = (req as any).user?.id;
 
       if (!userId) {
-        res.status(401).json({
-          success: false,
-          message: "User not authenticated",
-        });
-        return;
+        throw new AppError(ErrorCode.UNAUTHORIZED, 'User not authenticated', 401);
       }
 
       // CRITICAL: Validate exporter qualification BEFORE allowing export creation
-      // Based on real-world ECTA requirements and Directive 1106/2025
-
-      // Map userId -> exporterId using the preregistration repository
       const repository = new EctaPreRegistrationRepository(pool);
       const profile = await repository.getExporterProfileByUserId(userId);
       if (!profile) {
         logger.warn(`Exporter profile not found for user ${userId}`);
-        res.status(403).json({
-          success: false,
-          message: "Exporter profile not found. Please register first.",
-        });
-        return;
+        throw new AppError(
+          ErrorCode.NOT_FOUND,
+          'Exporter profile not found. Please register first.',
+          403
+        );
       }
       const exporterId = profile.exporterId;
 
@@ -68,7 +58,7 @@ export class ExportController {
 
       if (!qualificationCheck.allowed) {
         logger.warn(
-          `❌ Export creation blocked for ${exporterId}: ${qualificationCheck.reason}`,
+          `Export creation blocked for ${exporterId}: ${qualificationCheck.reason}`,
         );
 
         res.status(403).json({
@@ -120,63 +110,66 @@ export class ExportController {
         !exportData.coffeeType ||
         !exportData.quantity
       ) {
-        res.status(400).json({
-          success: false,
-          message: "Missing required fields: exportId, coffeeType, quantity",
-        });
-        return;
+        throw new AppError(
+          ErrorCode.MISSING_REQUIRED_FIELD,
+          'Missing required fields: exportId, coffeeType, quantity',
+          400
+        );
       }
 
-      const contract = this.fabricGateway.getExportContract();
+      await client.query('BEGIN');
 
-      // Submit transaction to blockchain with all pre-existing documents
-      const result = await contract.submitTransaction(
-        "CreateExportRequest",
-        exportData.exportId,
-        exportData.exporterName || "",
-        exportData.exporterTIN || "",
-        exportData.exportLicenseNumber,
-        exportData.coffeeType,
-        exportData.quantity.toString(),
-        exportData.destinationCountry || "",
-        exportData.estimatedValue?.toString() || "0",
-        userId,
-        JSON.stringify({
-          ...exportData.metadata,
-          // Pre-existing regulatory documents
-          competenceCertificateNumber: exportData.competenceCertificateNumber,
-          ecxLotNumber: exportData.ecxLotNumber,
-          warehouseReceiptNumber: exportData.warehouseReceiptNumber,
-          qualityCertificateNumber: exportData.qualityCertificateNumber,
-          qualityGrade: exportData.qualityGrade,
-          salesContractNumber: exportData.salesContractNumber,
-          exportPermitNumber: exportData.exportPermitNumber,
-          originCertificateNumber: exportData.originCertificateNumber,
-        }),
+      const result = await client.query(
+        `INSERT INTO exports (id, exporter_name, exporter_tin, export_license_number, coffee_type, 
+         quantity, destination_country, estimated_value, ecx_lot_number, warehouse_receipt_number,
+         quality_certificate_number, sales_contract_number, export_permit_number, 
+         origin_certificate_number, created_by, status, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW(), NOW())
+         RETURNING *`,
+        [
+          exportData.exportId,
+          exportData.exporterName || '',
+          exportData.exporterTIN || '',
+          exportData.exportLicenseNumber,
+          exportData.coffeeType,
+          exportData.quantity,
+          exportData.destinationCountry || '',
+          exportData.estimatedValue || 0,
+          exportData.ecxLotNumber,
+          exportData.warehouseReceiptNumber,
+          exportData.qualityCertificateNumber,
+          exportData.salesContractNumber,
+          exportData.exportPermitNumber,
+          exportData.originCertificateNumber,
+          userId,
+          'DRAFT'
+        ]
       );
 
-      const exportRecord = JSON.parse(result.toString());
+      await client.query(
+        `INSERT INTO export_status_history (export_id, old_status, new_status, changed_by, changed_at, notes)
+         VALUES ($1, $2, $3, $4, NOW(), $5)`,
+        [exportData.exportId, 'NONE', 'DRAFT', userId, 'Export created by exporter']
+      );
+
+      await client.query('COMMIT');
 
       logger.info(
-        `✅ Export created via SDK: ${exportData.exportId} (Exporter: ${exporterId})`,
+        `Export created: ${exportData.exportId} (Exporter: ${exporterId})`,
       );
 
       res.status(201).json({
         success: true,
         message:
           "Export request created successfully. All ECTA pre-qualifications verified.",
-        data: exportRecord,
+        data: result.rows[0],
       });
-    } catch (error: unknown) {
-      logger.error("❌ Error creating export:", error);
-      const message =
-        error instanceof Error ? error.message : "Failed to create export";
-
-      res.status(500).json({
-        success: false,
-        message,
-        error: message,
-      });
+    } catch (error: any) {
+      await client.query('ROLLBACK');
+      logger.error('Error creating export:', { error: error.message });
+      this.handleError(error, res);
+    } finally {
+      client.release();
     }
   };
 
@@ -192,36 +185,21 @@ export class ExportController {
       const userId = (req as any).user?.id;
 
       if (!userId) {
-        res.status(401).json({
-          success: false,
-          message: "User not authenticated",
-        });
-        return;
+        throw new AppError(ErrorCode.UNAUTHORIZED, 'User not authenticated', 401);
       }
 
-      const contract = this.fabricGateway.getExportContract();
-
-      // Query exports for this user
-      const result = await contract.evaluateTransaction(
-        "GetExportsByExporter",
-        userId,
+      const result = await pool.query(
+        'SELECT * FROM exports WHERE created_by = $1 ORDER BY created_at DESC',
+        [userId]
       );
-      const exports = JSON.parse(result.toString());
 
       res.status(200).json({
         success: true,
-        data: exports,
+        data: result.rows,
       });
-    } catch (error: unknown) {
-      logger.error("❌ Error fetching exports:", error);
-      const message =
-        error instanceof Error ? error.message : "Failed to fetch exports";
-
-      res.status(500).json({
-        success: false,
-        message,
-        error: message,
-      });
+    } catch (error: any) {
+      logger.error('Error fetching exports:', { error: error.message });
+      this.handleError(error, res);
     }
   };
 
@@ -237,36 +215,33 @@ export class ExportController {
       const { id } = req.params;
       const userId = (req as any).user?.id;
 
-      const contract = this.fabricGateway.getExportContract();
+      const result = await pool.query(
+        'SELECT * FROM exports WHERE id = $1',
+        [id]
+      );
 
-      // Query export
-      const result = await contract.evaluateTransaction("GetExport", id!);
-      const exportRecord = JSON.parse(result.toString());
+      if (result.rows.length === 0) {
+        throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
+      }
+
+      const exportRecord = result.rows[0];
 
       // Verify ownership
-      if (exportRecord.createdBy !== userId) {
-        res.status(403).json({
-          success: false,
-          message: "Access denied. You can only view your own exports.",
-        });
-        return;
+      if (exportRecord.created_by !== userId) {
+        throw new AppError(
+          ErrorCode.UNAUTHORIZED,
+          'Access denied. You can only view your own exports.',
+          403
+        );
       }
 
       res.status(200).json({
         success: true,
         data: exportRecord,
       });
-    } catch (error: unknown) {
-      logger.error("❌ Error fetching export:", error);
-      const message =
-        error instanceof Error ? error.message : "Failed to fetch export";
-      const statusCode = message.includes("does not exist") ? 404 : 500;
-
-      res.status(statusCode).json({
-        success: false,
-        message,
-        error: message,
-      });
+    } catch (error: any) {
+      logger.error('Error fetching export:', { error: error.message });
+      this.handleError(error, res);
     }
   };
 
@@ -282,41 +257,34 @@ export class ExportController {
       const { id } = req.params;
       const userId = (req as any).user?.id;
 
-      const contract = this.fabricGateway.getExportContract();
+      const exportResult = await pool.query(
+        'SELECT * FROM exports WHERE id = $1',
+        [id]
+      );
 
-      // First verify ownership
-      const exportResult = await contract.evaluateTransaction("GetExport", id!);
-      const exportRecord = JSON.parse(exportResult.toString());
+      if (exportResult.rows.length === 0) {
+        throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
+      }
 
-      if (exportRecord.createdBy !== userId) {
-        res.status(403).json({
-          success: false,
-          message: "Access denied",
-        });
-        return;
+      const exportRecord = exportResult.rows[0];
+
+      if (exportRecord.created_by !== userId) {
+        throw new AppError(ErrorCode.UNAUTHORIZED, 'Access denied', 403);
       }
 
       // Get history
-      const historyResult = await contract.evaluateTransaction(
-        "GetExportHistory",
-        id!,
+      const historyResult = await pool.query(
+        'SELECT * FROM export_status_history WHERE export_id = $1 ORDER BY changed_at DESC',
+        [id]
       );
-      const history = JSON.parse(historyResult.toString());
 
       res.status(200).json({
         success: true,
-        data: history,
+        data: historyResult.rows,
       });
-    } catch (error: unknown) {
-      logger.error("❌ Error fetching export history:", error);
-      const message =
-        error instanceof Error ? error.message : "Failed to fetch history";
-
-      res.status(500).json({
-        success: false,
-        message,
-        error: message,
-      });
+    } catch (error: any) {
+      logger.error('Error fetching export history:', { error: error.message });
+      this.handleError(error, res);
     }
   };
 
@@ -329,53 +297,67 @@ export class ExportController {
     res: Response,
     _next: NextFunction,
   ): Promise<void> => {
+    const client = await pool.connect();
     try {
       const { id } = req.params;
       const userId = (req as any).user?.id;
 
-      const contract = this.fabricGateway.getExportContract();
+      const exportResult = await client.query(
+        'SELECT * FROM exports WHERE id = $1',
+        [id]
+      );
 
-      // Verify ownership
-      const exportResult = await contract.evaluateTransaction("GetExport", id!);
-      const exportRecord = JSON.parse(exportResult.toString());
+      if (exportResult.rows.length === 0) {
+        throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
+      }
 
-      if (exportRecord.createdBy !== userId) {
-        res.status(403).json({
-          success: false,
-          message: "Access denied. You can only submit your own exports.",
-        });
-        return;
+      const exportRecord = exportResult.rows[0];
+
+      if (exportRecord.created_by !== userId) {
+        throw new AppError(
+          ErrorCode.UNAUTHORIZED,
+          'Access denied. You can only submit your own exports.',
+          403
+        );
       }
 
       // Verify status
-      if (exportRecord.status !== "DRAFT") {
-        res.status(400).json({
-          success: false,
-          message: `Cannot submit to ECX. Current status: ${exportRecord.status}. Expected: DRAFT`,
-        });
-        return;
+      if (exportRecord.status !== 'DRAFT') {
+        throw new AppError(
+          ErrorCode.INVALID_STATUS_TRANSITION,
+          `Cannot submit to ECX. Current status: ${exportRecord.status}. Expected: DRAFT`,
+          400
+        );
       }
 
-      // Submit to blockchain
-      await contract.submitTransaction("SubmitToECX", id!);
+      await client.query('BEGIN');
 
-      logger.info(`✅ Export ${id} submitted to ECX by ${userId}`);
+      await client.query(
+        'UPDATE exports SET status = $1, updated_at = NOW() WHERE id = $2',
+        ['ECX_PENDING', id]
+      );
+
+      await client.query(
+        `INSERT INTO export_status_history (export_id, old_status, new_status, changed_by, changed_at, notes)
+         VALUES ($1, $2, $3, $4, NOW(), $5)`,
+        [id, 'DRAFT', 'ECX_PENDING', userId, 'Submitted to ECX for lot verification']
+      );
+
+      await client.query('COMMIT');
+
+      logger.info(`Export ${id} submitted to ECX by ${userId}`);
 
       res.status(200).json({
         success: true,
         message: "Export submitted to ECX for lot verification",
         data: { exportId: id, newStatus: "ECX_PENDING" },
       });
-    } catch (error: unknown) {
-      logger.error("❌ Error submitting to ECX:", error);
-      const message =
-        error instanceof Error ? error.message : "Failed to submit to ECX";
-
-      res.status(500).json({
-        success: false,
-        message,
-        error: message,
-      });
+    } catch (error: any) {
+      await client.query('ROLLBACK');
+      logger.error('Error submitting to ECX:', { error: error.message });
+      this.handleError(error, res);
+    } finally {
+      client.release();
     }
   };
 
@@ -388,53 +370,63 @@ export class ExportController {
     res: Response,
     _next: NextFunction,
   ): Promise<void> => {
+    const client = await pool.connect();
     try {
       const { id } = req.params;
       const userId = (req as any).user?.id;
 
-      const contract = this.fabricGateway.getExportContract();
+      const exportResult = await client.query(
+        'SELECT * FROM exports WHERE id = $1',
+        [id]
+      );
 
-      // Verify ownership
-      const exportResult = await contract.evaluateTransaction("GetExport", id!);
-      const exportRecord = JSON.parse(exportResult.toString());
+      if (exportResult.rows.length === 0) {
+        throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
+      }
 
-      if (exportRecord.createdBy !== userId) {
-        res.status(403).json({
-          success: false,
-          message: "Access denied",
-        });
-        return;
+      const exportRecord = exportResult.rows[0];
+
+      if (exportRecord.created_by !== userId) {
+        throw new AppError(ErrorCode.UNAUTHORIZED, 'Access denied', 403);
       }
 
       // Verify status
-      if (exportRecord.status !== "ECX_VERIFIED") {
-        res.status(400).json({
-          success: false,
-          message: `Cannot submit to ECTA. Current status: ${exportRecord.status}. Expected: ECX_VERIFIED`,
-        });
-        return;
+      if (exportRecord.status !== 'ECX_VERIFIED') {
+        throw new AppError(
+          ErrorCode.INVALID_STATUS_TRANSITION,
+          `Cannot submit to ECTA. Current status: ${exportRecord.status}. Expected: ECX_VERIFIED`,
+          400
+        );
       }
 
-      // Submit to blockchain
-      await contract.submitTransaction("SubmitToECTA", id!);
+      await client.query('BEGIN');
 
-      logger.info(`✅ Export ${id} submitted to ECTA by ${userId}`);
+      await client.query(
+        'UPDATE exports SET status = $1, updated_at = NOW() WHERE id = $2',
+        ['ECTA_LICENSE_PENDING', id]
+      );
+
+      await client.query(
+        `INSERT INTO export_status_history (export_id, old_status, new_status, changed_by, changed_at, notes)
+         VALUES ($1, $2, $3, $4, NOW(), $5)`,
+        [id, 'ECX_VERIFIED', 'ECTA_LICENSE_PENDING', userId, 'Submitted to ECTA for license approval']
+      );
+
+      await client.query('COMMIT');
+
+      logger.info(`Export ${id} submitted to ECTA by ${userId}`);
 
       res.status(200).json({
         success: true,
         message: "Export submitted to ECTA for license approval",
         data: { exportId: id, newStatus: "ECTA_LICENSE_PENDING" },
       });
-    } catch (error: unknown) {
-      logger.error("❌ Error submitting to ECTA:", error);
-      const message =
-        error instanceof Error ? error.message : "Failed to submit to ECTA";
-
-      res.status(500).json({
-        success: false,
-        message,
-        error: message,
-      });
+    } catch (error: any) {
+      await client.query('ROLLBACK');
+      logger.error('Error submitting to ECTA:', { error: error.message });
+      this.handleError(error, res);
+    } finally {
+      client.release();
     }
   };
 
@@ -447,37 +439,51 @@ export class ExportController {
     res: Response,
     _next: NextFunction,
   ): Promise<void> => {
+    const client = await pool.connect();
     try {
       const { id } = req.params;
       const userId = (req as any).user?.id;
 
-      const contract = this.fabricGateway.getExportContract();
+      const exportResult = await client.query(
+        'SELECT * FROM exports WHERE id = $1',
+        [id]
+      );
 
-      // Verify ownership
-      const exportResult = await contract.evaluateTransaction("GetExport", id!);
-      const exportRecord = JSON.parse(exportResult.toString());
+      if (exportResult.rows.length === 0) {
+        throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
+      }
 
-      if (exportRecord.createdBy !== userId) {
-        res.status(403).json({
-          success: false,
-          message: "Access denied",
-        });
-        return;
+      const exportRecord = exportResult.rows[0];
+
+      if (exportRecord.created_by !== userId) {
+        throw new AppError(ErrorCode.UNAUTHORIZED, 'Access denied', 403);
       }
 
       // Verify status
-      if (exportRecord.status !== "ECTA_CONTRACT_APPROVED") {
-        res.status(400).json({
-          success: false,
-          message: `Cannot submit to Bank. Current status: ${exportRecord.status}. Expected: ECTA_CONTRACT_APPROVED`,
-        });
-        return;
+      if (exportRecord.status !== 'ECTA_CONTRACT_APPROVED') {
+        throw new AppError(
+          ErrorCode.INVALID_STATUS_TRANSITION,
+          `Cannot submit to Bank. Current status: ${exportRecord.status}. Expected: ECTA_CONTRACT_APPROVED`,
+          400
+        );
       }
 
-      // Submit to blockchain
-      await contract.submitTransaction("SubmitToBank", id!);
+      await client.query('BEGIN');
 
-      logger.info(`✅ Export ${id} submitted to Commercial Bank by ${userId}`);
+      await client.query(
+        'UPDATE exports SET status = $1, updated_at = NOW() WHERE id = $2',
+        ['BANK_DOCUMENT_PENDING', id]
+      );
+
+      await client.query(
+        `INSERT INTO export_status_history (export_id, old_status, new_status, changed_by, changed_at, notes)
+         VALUES ($1, $2, $3, $4, NOW(), $5)`,
+        [id, 'ECTA_CONTRACT_APPROVED', 'BANK_DOCUMENT_PENDING', userId, 'Submitted to Commercial Bank for document verification']
+      );
+
+      await client.query('COMMIT');
+
+      logger.info(`Export ${id} submitted to Commercial Bank by ${userId}`);
 
       res.status(200).json({
         success: true,
@@ -485,16 +491,12 @@ export class ExportController {
           "Export submitted to Commercial Bank for document verification",
         data: { exportId: id, newStatus: "BANK_DOCUMENT_PENDING" },
       });
-    } catch (error: unknown) {
-      logger.error("❌ Error submitting to Bank:", error);
-      const message =
-        error instanceof Error ? error.message : "Failed to submit to Bank";
-
-      res.status(500).json({
-        success: false,
-        message,
-        error: message,
-      });
+    } catch (error: any) {
+      await client.query('ROLLBACK');
+      logger.error('Error submitting to Bank:', { error: error.message });
+      this.handleError(error, res);
+    } finally {
+      client.release();
     }
   };
 
@@ -510,34 +512,35 @@ export class ExportController {
       const { id } = req.params;
       const userId = (req as any).user?.id;
 
-      const contract = this.fabricGateway.getExportContract();
+      const exportResult = await pool.query(
+        'SELECT * FROM exports WHERE id = $1',
+        [id]
+      );
 
-      // Verify ownership
-      const exportResult = await contract.evaluateTransaction("GetExport", id!);
-      const exportRecord = JSON.parse(exportResult.toString());
-
-      if (exportRecord.createdBy !== userId) {
-        res.status(403).json({
-          success: false,
-          message: "Access denied",
-        });
-        return;
+      if (exportResult.rows.length === 0) {
+        throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
       }
 
-      // Import document tracking service
-      const {
-        getDocumentChecklist,
-        getStageRequirements,
-        getDocumentCompletionPercentage,
-      } = await import("../../../shared/documentTracking.service");
+      const exportRecord = exportResult.rows[0];
 
-      const checklist = getDocumentChecklist(exportRecord);
-      const stageRequirements = getStageRequirements(
-        exportRecord,
-        exportRecord.status,
-      );
-      const completionPercentage =
-        getDocumentCompletionPercentage(exportRecord);
+      if (exportRecord.created_by !== userId) {
+        throw new AppError(ErrorCode.UNAUTHORIZED, 'Access denied', 403);
+      }
+
+      // Build document checklist
+      const checklist = {
+        exportLicense: !!exportRecord.export_license_number,
+        competenceCertificate: !!exportRecord.competence_certificate_number,
+        ecxLot: !!exportRecord.ecx_lot_number,
+        warehouseReceipt: !!exportRecord.warehouse_receipt_number,
+        qualityCertificate: !!exportRecord.quality_certificate_number,
+        salesContract: !!exportRecord.sales_contract_number,
+        exportPermit: !!exportRecord.export_permit_number,
+        originCertificate: !!exportRecord.origin_certificate_number,
+      };
+
+      const completedCount = Object.values(checklist).filter(Boolean).length;
+      const completionPercentage = (completedCount / Object.keys(checklist).length) * 100;
 
       res.status(200).json({
         success: true,
@@ -545,22 +548,29 @@ export class ExportController {
           exportId: id,
           status: exportRecord.status,
           checklist,
-          stageRequirements,
-          completionPercentage,
+          completionPercentage: Math.round(completionPercentage),
         },
       });
-    } catch (error: unknown) {
-      logger.error("❌ Error fetching document status:", error);
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Failed to fetch document status";
-
-      res.status(500).json({
-        success: false,
-        message,
-        error: message,
-      });
+    } catch (error: any) {
+      logger.error('Error fetching document status:', { error: error.message });
+      this.handleError(error, res);
     }
   };
+
+  private handleError(error: any, res: Response): void {
+    if (error instanceof AppError) {
+      res.status(error.httpStatus).json({
+        success: false,
+        error: { code: error.code, message: error.message },
+      });
+      return;
+    }
+
+    logger.error('Unexpected error', { error: error.message });
+
+    res.status(500).json({
+      success: false,
+      error: { code: ErrorCode.INTERNAL_SERVER_ERROR, message: 'An unexpected error occurred' },
+    });
+  }
 }

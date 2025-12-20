@@ -1,9 +1,6 @@
 # Multi-stage build for production
 FROM node:18-alpine AS builder
 
-# Install dumb-init early (then copy to final image without network)
-RUN apk add --no-cache dumb-init
-
 # Configure npm for better reliability with increased timeouts
 RUN npm config set fetch-retry-mintimeout 20000 && \
     npm config set fetch-retry-maxtimeout 300000 && \
@@ -17,11 +14,14 @@ WORKDIR /app
 
 # Copy workspace package files (for dependencies)
 COPY package*.json ./
-COPY tsconfig.base.json ./
+COPY api/tsconfig.base.json ./
 
 # Copy service-specific files
-COPY shipping-line/package*.json ./shipping-line/
-COPY shipping-line/tsconfig.json ./shipping-line/
+COPY api/shipping-line/package*.json ./api/shipping-line/
+COPY api/shipping-line/tsconfig.json ./api/shipping-line/
+
+# Remove any existing package-lock.json in subdirectory to avoid conflicts
+RUN rm -f ./api/shipping-line/package-lock.json
 
 # Install all workspace dependencies
 RUN npm install --legacy-peer-deps --prefer-offline --no-audit || \
@@ -29,13 +29,13 @@ RUN npm install --legacy-peer-deps --prefer-offline --no-audit || \
 RUN npm cache clean --force
 
 # Copy shared utilities
-COPY shared ./shared
+COPY api/shared ./api/shared
 
 # Copy service source code
-COPY shipping-line/src ./shipping-line/src
+COPY api/shipping-line/src ./api/shipping-line/src
 
 # Build TypeScript (use npx to find tsc from workspace root)
-WORKDIR /app/shipping-line
+WORKDIR /app/api/shipping-line
 RUN npx tsc && \
     if [ ! -d "dist" ]; then \
       echo "ERROR: dist directory was not created by build"; \
@@ -46,9 +46,6 @@ RUN npx tsc && \
 
 # Production stage
 FROM node:18-alpine
-
-# Copy dumb-init from builder to avoid apk in no-network stages
-COPY --from=builder /usr/bin/dumb-init /usr/bin/dumb-init
 
 # Create app user
 RUN addgroup -g 1001 -S nodejs && \
@@ -65,10 +62,10 @@ RUN npm install --omit=dev --legacy-peer-deps && \
     npm cache clean --force
 
 # Copy built application from builder
-COPY --from=builder --chown=nodejs:nodejs /app/shipping-line/dist ./shipping-line/dist
+COPY --from=builder --chown=nodejs:nodejs /app/api/shipping-line/dist ./api/shipping-line/dist
 
 # Copy shared utilities (needed at runtime)
-COPY --from=builder --chown=nodejs:nodejs /app/shared ./shared
+COPY --from=builder --chown=nodejs:nodejs /app/api/shared ./api/shared
 
 # Copy wallet directory structure (will be populated at runtime)
 RUN mkdir -p wallet logs && chown -R nodejs:nodejs wallet logs
@@ -83,8 +80,5 @@ EXPOSE 3004
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3004/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
-# Use dumb-init to handle signals properly
-ENTRYPOINT ["dumb-init", "--"]
-
 # Start application
-CMD ["node", "shipping-line/dist/shipping-line/src/index.js"]
+CMD ["node", "api/shipping-line/dist/src/index.js"]

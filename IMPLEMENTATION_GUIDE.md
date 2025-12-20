@@ -1,801 +1,718 @@
-# Export Management System - Implementation Guide
+# Implementation Guide - Codebase Improvements
 
 ## Overview
 
-This guide provides step-by-step instructions for implementing the recommended enhancements to the Coffee Export Management System.
+This guide provides step-by-step instructions for implementing the codebase improvements identified in the comprehensive review.
 
 ---
 
-## Table of Contents
+## Phase 1: Immediate Fixes (Already Applied)
 
-1. [Testing Implementation](#1-testing-implementation)
-2. [Monitoring & Alerting](#2-monitoring--alerting)
-3. [Audit Logging](#3-audit-logging)
-4. [Notification System](#4-notification-system)
-5. [Caching & Performance](#5-caching--performance)
-6. [Search & Pagination](#6-search--pagination)
-7. [API Documentation](#7-api-documentation)
-8. [Integration Steps](#8-integration-steps)
+### ✅ 1. Docker Compose Configuration
+**Status**: COMPLETE
 
----
+**Changes Made**:
+- Removed obsolete `version: '3.8'` from `docker-compose.postgres.yml`
+- Removed obsolete `version: '3.8'` from `docker-compose.apis.yml`
 
-## 1. Testing Implementation
-
-### Unit Tests
-
-**Location:** `api/shared/__tests__/exportService.test.ts`
-
-**Run tests:**
+**Verification**:
 ```bash
-cd api
-npm test
+# Verify no warnings
+docker-compose -f docker-compose.postgres.yml config > /dev/null
+docker-compose -f docker-compose.apis.yml config > /dev/null
 ```
 
-**Coverage report:**
-```bash
-npm run test:coverage
-```
+### ✅ 2. Type Definitions
+**Status**: COMPLETE
 
-**What's tested:**
-- ✅ Export creation with valid/invalid data
-- ✅ Export retrieval by ID
-- ✅ Status filtering
-- ✅ FX approval/rejection
-- ✅ Quality certification
-- ✅ Payment confirmation
-- ✅ Error handling
+**File Created**: `api/shared/types/index.ts`
 
-### Integration Tests
+**Contains**:
+- Express request/response types
+- WebSocket types
+- Export/Document types
+- User/Organization types
+- Authentication types
+- Validation types
+- Error types
+- And 50+ more type definitions
 
-**Location:** `api/commercialbank/__tests__/export.integration.test.ts`
-
-**What's tested:**
-- ✅ Full API endpoint flows
-- ✅ Request validation
-- ✅ Error responses
-- ✅ Authentication
-
-### E2E Tests (Recommended)
-
-**Setup with Playwright:**
-```bash
-npm install -D @playwright/test
-npx playwright install
-```
-
-**Example E2E test structure:**
+**Usage**:
 ```typescript
-// tests/e2e/export-workflow.spec.ts
-test('complete export workflow', async ({ page }) => {
-  // Login
-  await page.goto('/login');
-  await page.fill('[name="username"]', 'testuser');
-  await page.fill('[name="password"]', 'password');
-  await page.click('button[type="submit"]');
-  
-  // Create export
-  await page.click('text=Create Export');
-  await page.fill('[name="exporterName"]', 'Test Company');
-  // ... fill other fields
-  await page.click('text=Submit');
-  
-  // Verify creation
-  await expect(page.locator('.success-message')).toBeVisible();
-});
-```
+import { AuthenticatedRequest, ApiResponse, ExportRequest } from '@shared/types';
 
----
-
-## 2. Monitoring & Alerting
-
-### Setup
-
-**Service:** `api/shared/monitoring.service.ts`
-
-**Features:**
-- ✅ API response time tracking
-- ✅ Blockchain transaction monitoring
-- ✅ SLA compliance checking
-- ✅ System health monitoring
-- ✅ Alert generation
-
-### Integration
-
-**Add to your controller:**
-```typescript
-import { monitoringService } from '../shared/monitoring.service';
-
-// Track API response time
-const startTime = Date.now();
-// ... your code
-monitoringService.trackAPIResponseTime(endpoint, Date.now() - startTime);
-
-// Track blockchain transaction
-monitoringService.trackBlockchainTransaction('createExport', duration, success);
-
-// Check SLA compliance
-monitoringService.checkSLACompliance(
-  exportId,
-  'fxApproval',
-  startTime,
-  endTime
-);
-```
-
-### Configure SLA Thresholds
-
-**Edit:** `api/shared/monitoring.service.ts`
-
-```typescript
-private slaConfig: SLAConfig = {
-  fxApproval: 24,        // hours
-  bankingApproval: 48,
-  qualityApproval: 72,
-  customsClearance: 48,
-  totalProcessing: 240,
+export const getExports = async (
+  req: AuthenticatedRequest,
+  res: Response<ApiResponse<ExportRequest[]>>
+): Promise<void> => {
+  // Implementation
 };
 ```
 
-### View Metrics
+### ✅ 3. Documentation
+**Status**: COMPLETE
 
+**Files Created**:
+1. `CODEBASE_REVIEW_AND_FIXES.md` - Detailed findings
+2. `BEST_PRACTICES_GUIDE.md` - Development guidelines
+3. `DEVELOPER_QUICK_REFERENCE.md` - Quick reference
+4. `REVIEW_SUMMARY.md` - Executive summary
+5. `IMPLEMENTATION_GUIDE.md` - This file
+
+---
+
+## Phase 2: Logging Migration (Priority 1)
+
+### Step 1: Update All Services to Use Logger
+
+**Files to Update**:
+- `api/shared/email.service.ts`
+- `api/shared/services/renewal-reminder.service.ts`
+- `api/shared/websocket.service.ts`
+- All error middleware files
+- All controller files
+
+**Pattern**:
 ```typescript
-// Get metrics summary
-const summary = monitoringService.getMetricsSummary(
-  MetricType.API_RESPONSE_TIME,
-  startDate,
-  endDate
-);
+// Before
+console.log('Email service is ready');
+console.error('Error:', error);
 
-// Get recent alerts
-const alerts = monitoringService.getRecentAlerts(100);
+// After
+import { createLogger } from '@shared/logger';
+const logger = createLogger('EmailService');
+
+logger.info('Email service is ready');
+logger.error('Error occurred', { error: error.message });
 ```
 
-### Alert Integration
+**Implementation Steps**:
+1. Add logger import to each file
+2. Create logger instance with service name
+3. Replace all `console.log` with `logger.info`
+4. Replace all `console.error` with `logger.error`
+5. Replace all `console.warn` with `logger.warn`
+6. Add context to all log calls
 
-**Add to production (in `monitoring.service.ts`):**
+**Verification**:
+```bash
+# Search for remaining console usage
+grep -r "console\." api/ --include="*.ts" | grep -v "node_modules"
+
+# Should return 0 results
+```
+
+---
+
+## Phase 3: TypeScript Type Safety (Priority 1)
+
+### Step 1: Update Middleware Files
+
+**File**: `api/shared/middleware/auth.middleware.ts`
 
 ```typescript
-// Email alerts
-import nodemailer from 'nodemailer';
+// Before
+export const authMiddleware = (req: any, res: any, next: any) => {
+  // Implementation
+};
 
-private async sendEmailAlert(alert: Alert) {
-  const transporter = nodemailer.createTransport({...});
-  await transporter.sendMail({
-    to: process.env.ALERT_EMAIL,
-    subject: `[${alert.level}] ${alert.title}`,
-    text: alert.message,
-  });
+// After
+import { AuthenticatedRequest, ExpressMiddleware } from '@shared/types';
+
+export const authMiddleware: ExpressMiddleware = (req, res, next) => {
+  // Implementation
+};
+```
+
+### Step 2: Update Controller Files
+
+**Pattern**:
+```typescript
+// Before
+export const createExport = async (req: any, res: any) => {
+  // Implementation
+};
+
+// After
+import { AuthenticatedRequest, ApiResponse, ExportRequest } from '@shared/types';
+
+export const createExport = async (
+  req: AuthenticatedRequest,
+  res: Response<ApiResponse<ExportRequest>>
+): Promise<void> => {
+  // Implementation
+};
+```
+
+### Step 3: Update Service Files
+
+**Pattern**:
+```typescript
+// Before
+public async sendExportCreatedNotification(email: string, exportData: any): Promise<boolean> {
+  // Implementation
 }
 
-// Slack alerts
-import axios from 'axios';
+// After
+import { ExportRequest } from '@shared/types';
 
-private async sendSlackAlert(alert: Alert) {
-  await axios.post(process.env.SLACK_WEBHOOK_URL, {
-    text: `*${alert.title}*\n${alert.message}`,
-    color: alert.level === 'critical' ? 'danger' : 'warning',
-  });
+public async sendExportCreatedNotification(
+  email: string,
+  exportData: ExportRequest
+): Promise<boolean> {
+  // Implementation
 }
 ```
 
----
-
-## 3. Audit Logging
-
-### Setup
-
-**Service:** `api/shared/audit.service.ts`
-
-**Features:**
-- ✅ All state changes logged
-- ✅ User action tracking
-- ✅ Security event logging
-- ✅ 90-day retention for audit logs
-- ✅ 365-day retention for security logs
-
-### Integration
-
-**Add to controllers:**
-```typescript
-import { auditService, AuditAction } from '../shared/audit.service';
-
-// Log export creation
-auditService.logExportCreation(
-  userId,
-  exportId,
-  exportData,
-  { ipAddress: req.ip, userAgent: req.get('user-agent') }
-);
-
-// Log status change
-auditService.logStatusChange(
-  userId,
-  exportId,
-  oldStatus,
-  newStatus,
-  AuditAction.FX_APPROVED,
-  { ipAddress: req.ip, reason: 'Approved by officer' }
-);
-
-// Log authentication
-auditService.logAuthentication(
-  userId,
-  username,
-  success,
-  { ipAddress: req.ip, errorMessage: error?.message }
-);
-```
-
-### Query Audit Logs
-
-```typescript
-// Query logs for compliance
-const logs = await auditService.queryLogs({
-  startDate: new Date('2024-01-01'),
-  endDate: new Date('2024-12-31'),
-  userId: 'user123',
-  action: AuditAction.FX_APPROVED,
-});
-
-// Generate compliance report
-const report = await auditService.generateComplianceReport(
-  new Date('2024-01-01'),
-  new Date('2024-12-31')
-);
-```
-
-### Log Storage
-
-**Logs are stored in:**
-- `logs/audit/audit-YYYY-MM-DD.log` - All audit events
-- `logs/audit/security-YYYY-MM-DD.log` - Security events only
-
-**For production, integrate with:**
-- ELK Stack (Elasticsearch, Logstash, Kibana)
-- Splunk
-- AWS CloudWatch
-- Azure Monitor
-
----
-
-## 4. Notification System
-
-### Setup
-
-**Service:** `api/shared/notification.service.ts`
-
-**Channels:**
-- ✅ Email
-- ✅ SMS (Twilio integration ready)
-- ✅ WebSocket (real-time)
-- ✅ In-app notifications
-
-### Email Configuration
-
-**Add to `.env`:**
-```env
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_SECURE=false
-SMTP_USER=your-email@gmail.com
-SMTP_PASS=your-app-password
-SMTP_FROM=noreply@coffeeexport.com
-FRONTEND_URL=http://localhost:5173
-```
-
-### WebSocket Setup
-
-**In your server:**
-```typescript
-import { Server } from 'socket.io';
-import { notificationService } from './shared/notification.service';
-
-const io = new Server(server, {
-  cors: { origin: process.env.FRONTEND_URL }
-});
-
-// Set Socket.IO instance
-notificationService.setSocketIO(io);
-
-// Handle connections
-io.on('connection', (socket) => {
-  socket.on('authenticate', (userId) => {
-    socket.join(`user:${userId}`);
-  });
-});
-```
-
-### Send Notifications
-
-```typescript
-// Status change notification
-await notificationService.notifyStatusChange(
-  exportId,
-  oldStatus,
-  newStatus,
-  recipientId,
-  recipientEmail
-);
-
-// FX decision notification
-await notificationService.notifyFXDecision(
-  exportId,
-  approved,
-  recipientId,
-  recipientEmail,
-  reason
-);
-
-// Action required notification
-await notificationService.notifyActionRequired(
-  exportId,
-  'Please upload quality certificate',
-  recipientId,
-  recipientEmail
-);
-
-// SLA warning
-await notificationService.notifySLAWarning(
-  exportId,
-  'FX Approval',
-  4, // hours remaining
-  recipientId,
-  recipientEmail
-);
-```
-
-### Frontend Integration
-
-**React example:**
-```typescript
-import { io } from 'socket.io-client';
-
-const socket = io('http://localhost:3001');
-
-// Authenticate
-socket.emit('authenticate', userId);
-
-// Listen for notifications
-socket.on('notification', (notification) => {
-  // Show toast/alert
-  toast.info(notification.message);
-  
-  // Update notification center
-  setNotifications(prev => [notification, ...prev]);
-});
-```
-
----
-
-## 5. Caching & Performance
-
-### Redis Setup
-
-**Install Redis:**
+**Verification**:
 ```bash
-# Ubuntu/Debian
-sudo apt-get install redis-server
+# Check for remaining 'any' types
+grep -r ": any" api/ --include="*.ts" | grep -v "node_modules" | wc -l
 
-# macOS
-brew install redis
-
-# Start Redis
-redis-server
-```
-
-**Configure in `.env`:**
-```env
-REDIS_URL=redis://localhost:6379
-REDIS_PASSWORD=
-```
-
-### Initialize Cache
-
-**In your app startup:**
-```typescript
-import { CacheService } from './shared/cache.service';
-
-const cacheService = CacheService.getInstance();
-await cacheService.connect();
-```
-
-### Use Caching
-
-**Service already exists:** `api/shared/cache.service.ts`
-
-**Example usage:**
-```typescript
-import { CacheService, CacheKeys, CacheTTL } from './shared/cache.service';
-
-const cache = CacheService.getInstance();
-
-// Get or set pattern
-const exports = await cache.getOrSet(
-  CacheKeys.allExports(),
-  async () => {
-    // Fetch from blockchain
-    return await exportService.getAllExports();
-  },
-  CacheTTL.MEDIUM // 5 minutes
-);
-
-// Invalidate cache on updates
-await cache.delete(CacheKeys.export(exportId));
-await cache.deletePattern('exports:*');
-```
-
-### Cache Strategy
-
-**What to cache:**
-- ✅ Export lists (5 min TTL)
-- ✅ Individual exports (5 min TTL)
-- ✅ Search results (5 min TTL)
-- ✅ User profiles (15 min TTL)
-- ✅ Statistics (15 min TTL)
-
-**When to invalidate:**
-- ❌ On any export creation/update
-- ❌ On status changes
-- ❌ On document uploads
-
----
-
-## 6. Search & Pagination
-
-### Setup
-
-**Service:** `api/shared/search.service.ts`
-
-**Features:**
-- ✅ Full-text search
-- ✅ Multiple filters (status, date, value, country)
-- ✅ Sorting
-- ✅ Pagination
-- ✅ Faceted search
-- ✅ CSV export
-
-### Use Search Service
-
-```typescript
-import { searchService, SearchCriteria } from './shared/search.service';
-
-// Build criteria from query params
-const criteria = searchService.buildCriteriaFromParams(req.query);
-
-// Search exports
-const result = searchService.searchExports(allExports, criteria);
-
-// Response includes:
-// - result.data: paginated exports
-// - result.pagination: page info
-// - result.filters: applied filters
-// - result.executionTime: search duration
-
-// Get facets for filter UI
-const facets = searchService.getFacets(allExports);
-// Returns: { statuses, countries, qualityGrades, valueRanges }
-```
-
-### API Endpoint Example
-
-```typescript
-GET /api/exports?page=1&limit=20&status=FX_PENDING&search=coffee&minValue=10000
-```
-
-### Frontend Integration
-
-**React example:**
-```typescript
-const [exports, setExports] = useState([]);
-const [pagination, setPagination] = useState({});
-const [filters, setFilters] = useState({
-  page: 1,
-  limit: 20,
-  status: '',
-  search: '',
-});
-
-const fetchExports = async () => {
-  const params = new URLSearchParams(filters);
-  const response = await fetch(`/api/exports?${params}`);
-  const data = await response.json();
-  
-  setExports(data.data);
-  setPagination(data.pagination);
-};
-
-// Pagination controls
-<Pagination
-  page={pagination.page}
-  totalPages={pagination.totalPages}
-  onPageChange={(page) => setFilters({...filters, page})}
-/>
+# Should be significantly reduced
 ```
 
 ---
 
-## 7. API Documentation
+## Phase 4: Authentication Enforcement (Priority 1)
 
-### Setup Swagger
+### Step 1: Enable Authentication on Protected Routes
 
-**Install dependencies:**
+**Files to Update**:
+- `api/ecx/src/routes/lot-verification.routes.ts`
+- `api/ecta/src/routes/license.routes.ts`
+- `api/ecta/src/routes/contract.routes.ts`
+
+**Pattern**:
+```typescript
+// Before
+// TODO: Add authentication middleware when available
+// import { authMiddleware } from '../middleware/auth.middleware';
+// router.use(authMiddleware);
+
+// After
+import { authMiddleware } from '../middleware/auth.middleware';
+router.use(authMiddleware);
+```
+
+**Verification**:
 ```bash
-npm install swagger-ui-express swagger-jsdoc
-```
+# Check all routes have auth
+grep -r "router.use(authMiddleware)" api/ --include="*.ts"
 
-**Configuration:** `api/shared/swagger.config.ts` (already created)
-
-### Integrate with Express
-
-**Add to your server:**
-```typescript
-import swaggerUi from 'swagger-ui-express';
-import swaggerJsdoc from 'swagger-jsdoc';
-import { swaggerOptions } from './shared/swagger.config';
-
-const specs = swaggerJsdoc(swaggerOptions);
-
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
-```
-
-### Access Documentation
-
-**Open in browser:**
-```
-http://localhost:3001/api-docs
-```
-
-### Add JSDoc Comments
-
-**Example:**
-```typescript
-/**
- * @swagger
- * /api/exports:
- *   get:
- *     summary: Get all exports
- *     tags: [Exports]
- *     parameters:
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *         description: Page number
- *     responses:
- *       200:
- *         description: Success
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/PaginatedResponse'
- */
-public getAllExports = async (req, res) => {
-  // ...
-};
+# Should show all route files
 ```
 
 ---
 
-## 8. Integration Steps
+## Phase 5: Error Handling Standardization (Priority 1)
 
-### Step 1: Update Package Scripts
+### Step 1: Update All Controllers
 
-**Edit `api/package.json`:**
-```json
-{
-  "scripts": {
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
-    "test:integration": "jest --testPathPattern=integration",
-    "test:unit": "jest --testPathPattern=__tests__"
+**Pattern**:
+```typescript
+// Before
+} catch (error: any) {
+  logger.error('Failed to get exports', { error: error.message });
+  res.status(500).json({ success: false, error: 'Internal server error' });
+}
+
+// After
+} catch (error) {
+  if (error instanceof AppError) {
+    res.status(error.statusCode).json({
+      success: false,
+      error: error.message,
+      code: error.code,
+    });
+  } else {
+    logger.error('Unexpected error', { error: error instanceof Error ? error.message : String(error) });
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+    });
   }
 }
 ```
 
-### Step 2: Add Middleware
+**Verification**:
+```bash
+# Check error handling consistency
+grep -r "catch (error" api/ --include="*.ts" | wc -l
 
-**Create `api/shared/middleware/index.ts`:**
-```typescript
-export { monitoringMiddleware, errorMonitoringMiddleware } from './monitoring.middleware';
+# All should follow the pattern above
 ```
 
-**Update your Express app:**
-```typescript
-import { monitoringMiddleware, errorMonitoringMiddleware } from './shared/middleware';
+---
 
-// Add monitoring middleware
-app.use(monitoringMiddleware);
+## Phase 6: TODO Items Implementation (Priority 2)
 
-// ... your routes
-
-// Add error monitoring (must be last)
-app.use(errorMonitoringMiddleware);
-```
-
-### Step 3: Update Controllers
-
-**Replace existing controllers with enhanced versions:**
-
-```typescript
-// Before
-import { ExportController } from './controllers/export.controller';
-
-// After
-import { EnhancedExportController } from '../shared/controllers/enhanced-export.controller';
-
-const controller = new EnhancedExportController();
-```
-
-### Step 4: Initialize Services
-
-**Add to app startup:**
-```typescript
-import { CacheService } from './shared/cache.service';
-import { monitoringService } from './shared/monitoring.service';
-import { notificationService } from './shared/notification.service';
-
-// Initialize cache
-const cache = CacheService.getInstance();
-await cache.connect();
-
-// Set Socket.IO for notifications
-notificationService.setSocketIO(io);
-
-// Start monitoring
-monitoringService.recordSystemHealth('blockchain', true);
-```
-
-### Step 5: Environment Variables
-
-**Add to `.env`:**
-```env
-# Redis
-REDIS_URL=redis://localhost:6379
-REDIS_PASSWORD=
-
-# Email
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_SECURE=false
-SMTP_USER=your-email@gmail.com
-SMTP_PASS=your-app-password
-SMTP_FROM=noreply@coffeeexport.com
-
-# Frontend
-FRONTEND_URL=http://localhost:5173
-
-# Monitoring
-ALERT_EMAIL=alerts@coffeeexport.com
-SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
-```
-
-### Step 6: Run Tests
+### Step 1: Identify All TODO Items
 
 ```bash
-cd api
-npm test
-npm run test:coverage
+grep -r "TODO" api/ --include="*.ts" | head -20
 ```
 
-**Expected output:**
-```
-PASS  shared/__tests__/exportService.test.ts
-  ✓ should create export with valid data
-  ✓ should retrieve export by ID
-  ✓ should filter exports by status
-  ...
+### Step 2: Create Implementation Tasks
 
-Test Suites: 1 passed, 1 total
-Tests:       15 passed, 15 total
-Coverage:    75% statements, 70% branches
+**Example TODOs**:
+1. "TODO: Implement proper role-based access control"
+   - Create RBAC middleware
+   - Add permission checks to routes
+   - Document permission matrix
+
+2. "TODO: In production, query ECX database"
+   - Implement ECX database connection
+   - Create query functions
+   - Add caching layer
+
+3. "TODO: Add authentication middleware when available"
+   - ✅ Already fixed in Phase 4
+
+### Step 3: Track in Issue System
+
+Create GitHub issues for each TODO with:
+- Description
+- Priority
+- Estimated effort
+- Acceptance criteria
+
+---
+
+## Phase 7: Testing Implementation (Priority 2)
+
+### Step 1: Set Up Test Infrastructure
+
+```bash
+# Already configured, just run tests
+npm run test
+```
+
+### Step 2: Create Unit Tests
+
+**Pattern**:
+```typescript
+describe('ExportController', () => {
+  describe('createExport', () => {
+    it('should create export with valid data', async () => {
+      const req = {
+        user: { id: 'user1', organizationId: 'org1' },
+        body: { coffeeType: 'Arabica', quantity: 100 },
+      } as AuthenticatedRequest;
+      
+      const res = {
+        json: jest.fn(),
+        status: jest.fn().mockReturnThis(),
+      } as unknown as Response;
+      
+      await createExport(req, res);
+      
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ success: true })
+      );
+    });
+  });
+});
+```
+
+### Step 3: Create Integration Tests
+
+```typescript
+describe('Export API', () => {
+  it('should create and retrieve export', async () => {
+    const response = await request(app)
+      .post('/api/exports')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        coffeeType: 'Arabica',
+        quantity: 100,
+        destination: 'USA',
+      });
+    
+    expect(response.status).toBe(201);
+    expect(response.body.success).toBe(true);
+    
+    const exportId = response.body.data.id;
+    
+    const getResponse = await request(app)
+      .get(`/api/exports/${exportId}`)
+      .set('Authorization', `Bearer ${token}`);
+    
+    expect(getResponse.status).toBe(200);
+    expect(getResponse.body.data.id).toBe(exportId);
+  });
+});
 ```
 
 ---
 
-## Deployment Checklist
+## Phase 8: Documentation (Priority 2)
 
-### Pre-Production
+### Step 1: API Documentation
 
-- [ ] All tests passing (>70% coverage)
-- [ ] Redis configured and running
-- [ ] Email SMTP configured
-- [ ] Environment variables set
-- [ ] Swagger documentation accessible
-- [ ] Monitoring alerts configured
-- [ ] Audit logs directory created
-- [ ] WebSocket connections tested
+Create Swagger/OpenAPI documentation:
 
-### Production
+```typescript
+/**
+ * @swagger
+ * /api/exports:
+ *   post:
+ *     summary: Create a new export
+ *     tags: [Exports]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CreateExportRequest'
+ *     responses:
+ *       201:
+ *         description: Export created successfully
+ *       400:
+ *         description: Invalid input
+ *       401:
+ *         description: Unauthorized
+ */
+```
 
-- [ ] Use production Redis instance
-- [ ] Configure log rotation
-- [ ] Set up ELK/Splunk for log aggregation
-- [ ] Configure PagerDuty/Slack alerts
-- [ ] Enable HTTPS for all endpoints
-- [ ] Set appropriate cache TTLs
-- [ ] Configure backup for audit logs
-- [ ] Monitor system health dashboard
+### Step 2: Code Documentation
+
+Add JSDoc comments to all public functions:
+
+```typescript
+/**
+ * Create a new export request
+ * 
+ * @param {AuthenticatedRequest} req - Express request with authenticated user
+ * @param {Response} res - Express response
+ * @returns {Promise<void>}
+ * @throws {AppError} If validation fails or database error occurs
+ * 
+ * @example
+ * POST /api/exports
+ * {
+ *   "coffeeType": "Arabica",
+ *   "quantity": 100,
+ *   "destination": "USA"
+ * }
+ */
+export const createExport = async (
+  req: AuthenticatedRequest,
+  res: Response<ApiResponse<ExportRequest>>
+): Promise<void> => {
+  // Implementation
+};
+```
 
 ---
 
-## Monitoring Dashboard
+## Phase 9: Monitoring & Observability (Priority 3)
 
-### Recommended Metrics to Track
+### Step 1: Set Up Structured Logging
 
-1. **Performance**
-   - API response time (p50, p95, p99)
-   - Blockchain query time
-   - Cache hit rate
+Already implemented with Winston logger.
 
-2. **Business**
-   - Exports created per day
-   - Approval rate by stage
-   - Average processing time
-   - SLA violations
+### Step 2: Add Metrics Collection
 
-3. **System Health**
-   - Blockchain connection status
-   - Redis connection status
-   - Error rate
-   - Alert count
+```typescript
+import { MetricsService } from '@shared/metrics.service';
 
-### Tools
+const metrics = new MetricsService();
 
-- **Grafana** - Visualization
-- **Prometheus** - Metrics collection
-- **ELK Stack** - Log aggregation
-- **PagerDuty** - Incident management
+export const createExport = async (req: AuthenticatedRequest, res: Response) => {
+  const startTime = Date.now();
+  
+  try {
+    const export = await exportService.create(req.body);
+    
+    metrics.recordCounter('exports_created', 1, {
+      organization: req.user?.organizationId,
+    });
+    
+    metrics.recordHistogram('export_creation_duration', Date.now() - startTime, {
+      organization: req.user?.organizationId,
+    });
+    
+    res.json({ success: true, data: export });
+  } catch (error) {
+    metrics.recordCounter('exports_creation_failed', 1, {
+      organization: req.user?.organizationId,
+    });
+    
+    throw error;
+  }
+};
+```
+
+### Step 3: Add Health Checks
+
+```typescript
+app.get('/health', (req, res) => {
+  const health = {
+    status: 'UP',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    checks: {
+      database: await checkDatabase(),
+      redis: await checkRedis(),
+      ipfs: await checkIPFS(),
+    },
+  };
+  
+  res.json(health);
+});
+```
+
+---
+
+## Phase 10: Security Hardening (Priority 3)
+
+### Step 1: Enable HTTPS
+
+```typescript
+import https from 'https';
+import fs from 'fs';
+
+const options = {
+  key: fs.readFileSync('path/to/key.pem'),
+  cert: fs.readFileSync('path/to/cert.pem'),
+};
+
+https.createServer(options, app).listen(3001);
+```
+
+### Step 2: Implement API Key Management
+
+```typescript
+export const apiKeyMiddleware: ExpressMiddleware = (req, res, next) => {
+  const apiKey = req.headers['x-api-key'];
+  
+  if (!apiKey || !isValidApiKey(apiKey as string)) {
+    return res.status(401).json({
+      success: false,
+      error: 'Invalid API key',
+    });
+  }
+  
+  next();
+};
+```
+
+### Step 3: Add Request Signing
+
+```typescript
+import crypto from 'crypto';
+
+export const signRequest = (data: any, secret: string): string => {
+  return crypto
+    .createHmac('sha256', secret)
+    .update(JSON.stringify(data))
+    .digest('hex');
+};
+
+export const verifySignature = (data: any, signature: string, secret: string): boolean => {
+  const expectedSignature = signRequest(data, secret);
+  return crypto.timingSafeEqual(
+    Buffer.from(signature),
+    Buffer.from(expectedSignature)
+  );
+};
+```
+
+---
+
+## Implementation Timeline
+
+### Week 1: Foundation
+- [ ] Review all changes
+- [ ] Deploy Docker Compose fixes
+- [ ] Deploy type definitions
+- [ ] Deploy documentation
+
+### Week 2: Logging
+- [ ] Update all services to use logger
+- [ ] Remove all console.log calls
+- [ ] Test logging in all services
+- [ ] Verify log output
+
+### Week 3: Type Safety
+- [ ] Update middleware files
+- [ ] Update controller files
+- [ ] Update service files
+- [ ] Run TypeScript compiler
+
+### Week 4: Security
+- [ ] Enable authentication on all routes
+- [ ] Standardize error handling
+- [ ] Add input validation
+- [ ] Security audit
+
+### Week 5-6: Testing
+- [ ] Create unit tests
+- [ ] Create integration tests
+- [ ] Achieve 50% coverage
+- [ ] Fix failing tests
+
+### Week 7-8: Documentation
+- [ ] Create API documentation
+- [ ] Add code comments
+- [ ] Create runbooks
+- [ ] Update README
+
+---
+
+## Rollback Plan
+
+If issues occur during implementation:
+
+### 1. Git Rollback
+```bash
+git revert <commit-hash>
+git push origin main
+```
+
+### 2. Docker Rollback
+```bash
+docker-compose down
+docker-compose up -d
+```
+
+### 3. Database Rollback
+```bash
+# Restore from backup
+pg_restore -d coffee_export_db backup.sql
+```
+
+---
+
+## Verification Checklist
+
+### After Each Phase
+
+- [ ] All tests pass
+- [ ] No TypeScript errors
+- [ ] No linting errors
+- [ ] Code formatted correctly
+- [ ] Documentation updated
+- [ ] No console.log calls
+- [ ] All types properly defined
+- [ ] Authentication working
+- [ ] Error handling consistent
+- [ ] Logging working
+
+### Before Production Deployment
+
+- [ ] All phases complete
+- [ ] 80%+ test coverage
+- [ ] Security audit passed
+- [ ] Performance benchmarks met
+- [ ] Documentation complete
+- [ ] Team trained
+- [ ] Monitoring configured
+- [ ] Backup verified
+- [ ] Rollback plan tested
+- [ ] Stakeholders approved
 
 ---
 
 ## Support & Troubleshooting
 
-### Common Issues
+### Issue: TypeScript Compilation Error
 
-**1. Redis connection failed**
 ```bash
-# Check if Redis is running
-redis-cli ping
-# Should return: PONG
-
-# Start Redis if not running
-redis-server
+# Clear cache and rebuild
+npm run clean
+npm run build
 ```
 
-**2. Tests failing**
-```bash
-# Clear Jest cache
-npm test -- --clearCache
+### Issue: Tests Failing
 
-# Run with verbose output
+```bash
+# Run tests with verbose output
 npm test -- --verbose
+
+# Run specific test file
+npm test -- export.controller.test.ts
 ```
 
-**3. Email not sending**
-- Check SMTP credentials
-- Verify firewall allows SMTP port
-- Test with nodemailer test account
+### Issue: Docker Build Failing
 
-**4. High cache memory usage**
-- Reduce TTL values
-- Implement cache size limits
-- Monitor with `redis-cli info memory`
+```bash
+# Rebuild without cache
+docker-compose build --no-cache
+
+# Check logs
+docker logs <container-name>
+```
+
+### Issue: Database Connection Error
+
+```bash
+# Check PostgreSQL is running
+docker ps | grep postgres
+
+# Check logs
+docker logs postgres
+
+# Restart
+docker restart postgres
+```
+
+---
+
+## Success Criteria
+
+✅ **Phase Complete When**:
+1. All code changes implemented
+2. All tests passing
+3. No TypeScript errors
+4. No linting errors
+5. Documentation updated
+6. Team trained
+7. Stakeholders approved
 
 ---
 
 ## Next Steps
 
-1. ✅ Run all tests
-2. ✅ Configure Redis
-3. ✅ Set up email notifications
-4. ✅ Enable monitoring
-5. ✅ Deploy to staging
-6. ✅ Load testing
-7. ✅ Production deployment
+1. **Immediate** (This Week)
+   - Review this guide
+   - Start Phase 1 verification
+   - Plan Phase 2 implementation
+
+2. **Short-term** (Next 2 Weeks)
+   - Complete Phases 2-5
+   - Achieve 50% test coverage
+   - Deploy to staging
+
+3. **Medium-term** (Next Month)
+   - Complete Phases 6-8
+   - Achieve 80% test coverage
+   - Deploy to production
+
+4. **Long-term** (Next Quarter)
+   - Complete Phases 9-10
+   - Implement monitoring
+   - Conduct security audit
 
 ---
 
-**Version:** 1.0  
-**Last Updated:** October 25, 2025  
-**Status:** Ready for Implementation
+**Implementation Guide Version**: 1.0
+**Last Updated**: 2024
+**Status**: READY FOR IMPLEMENTATION
+
+---
+
+## Questions?
+
+Refer to:
+1. BEST_PRACTICES_GUIDE.md - Development guidelines
+2. DEVELOPER_QUICK_REFERENCE.md - Quick reference
+3. CODEBASE_REVIEW_AND_FIXES.md - Detailed findings
+4. Code comments and type definitions
+
+---
+
+**END OF IMPLEMENTATION GUIDE**

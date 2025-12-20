@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { Box, Grid, Typography, Card, CardContent, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button, Chip, Dialog, DialogContent, DialogTitle, IconButton } from '@mui/material';
 import { FileCheck, Eye, XCircle } from 'lucide-react';
+import { CommonPageProps } from '../types';
 import { useExports } from '../hooks/useExports';
 import ECTALicenseForm from '../components/forms/ECTALicenseForm';
 import apiClient from '../services/api';
 
-const ECTALicenseApproval = ({ user }) => {
+interface ECTALicenseApprovalProps extends CommonPageProps {}
+
+const ECTALicenseApproval = ({ user, org }: ECTALicenseApprovalProps): JSX.Element => {
   const { exports: allExports, refreshExports } = useExports();
   const exports = allExports.filter((e) => e.status === 'ECTA_LICENSE_PENDING' || e.status === 'ECTA_LICENSE_APPROVED' || e.status === 'ECTA_LICENSE_REJECTED');
   const [selectedExport, setSelectedExport] = useState(null);

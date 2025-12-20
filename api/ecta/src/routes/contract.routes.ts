@@ -1,9 +1,12 @@
 import { Router } from 'express';
 import { ContractController } from '../controllers/contract.controller';
-// TODO: Add authentication middleware when available
+import { authMiddleware } from '../middleware/auth.middleware';
 
 const router = Router();
 const controller = new ContractController();
+
+// Enable authentication for all routes
+router.use(authMiddleware);
 
 // ===== ECTA CONTRACT APPROVAL TASKS =====
 // This is STEP 3 of ECTA's 3-step approval process

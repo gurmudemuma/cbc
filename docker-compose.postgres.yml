@@ -1,0 +1,85 @@
+volumes:
+  postgres-data:
+  ipfs-data:
+  redis-data:
+
+networks:
+  coffee-export:
+    name: coffee-export-network
+    external: true
+
+services:
+  # ===========================
+  # PostgreSQL Database (Required)
+  # ===========================
+  postgres:
+    container_name: postgres
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=coffee_export_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - "5432:5432"
+    networks:
+      - coffee-export
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./api/shared/database/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./api/shared/database/migrations/001_create_ecta_preregistration_tables.sql:/docker-entrypoint-initdb.d/001_create_ecta_preregistration_tables.sql
+      - ./api/shared/database/migrations/002_create_documents_table.sql:/docker-entrypoint-initdb.d/002_create_documents_table.sql
+      - ./api/shared/database/migrations/003_create_audit_log_table.sql:/docker-entrypoint-initdb.d/003_create_audit_log_table.sql
+      - ./api/shared/database/migrations/004_create_exports_table.sql:/docker-entrypoint-initdb.d/004_create_exports_table.sql
+      - ./api/shared/database/migrations/005_create_users_table.sql:/docker-entrypoint-initdb.d/005_create_users_table.sql
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ===========================
+  # IPFS Node (Optional - for document storage)
+  # ===========================
+  ipfs:
+    container_name: ipfs
+    image: ipfs/kubo:latest
+    ports:
+      - "4001:4001"
+      - "4001:4001/udp"
+      - "127.0.0.1:5001:5001"
+      - "127.0.0.1:8080:8080"
+    networks:
+      - coffee-export
+    volumes:
+      - ipfs-data:/data/ipfs
+    environment:
+      - IPFS_PROFILE=server
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "ipfs", "id"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ===========================
+  # Redis Cache (Required for caching and sessions)
+  # ===========================
+  redis:
+    container_name: redis
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - coffee-export
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s

@@ -159,7 +159,7 @@ const DocumentChecklist = ({ exportId, onUpdate }) => {
 
         {/* Document List */}
         <List>
-          {Object.entries(documents).map(([docKey, status], index) => {
+          {Object.entries(documents).map(([docKey, status]: [string, any], index: number) => {
             const docStatus = getDocumentStatus(status);
             
             return (
@@ -179,7 +179,7 @@ const DocumentChecklist = ({ exportId, onUpdate }) => {
                       <Typography variant="body2" fontWeight="medium">
                         {formatDocumentName(docKey)}
                       </Typography>
-                      {status.required && (
+                      {status?.required && (
                         <Chip 
                           label="Required" 
                           size="small" 
@@ -195,13 +195,13 @@ const DocumentChecklist = ({ exportId, onUpdate }) => {
                       <Chip 
                         label={docStatus.label} 
                         size="small" 
-                        color={docStatus.color}
+                        color={docStatus.color as any}
                         sx={{ mr: 1 }}
                       />
                       <Typography variant="caption" color="text.secondary">
                         {docStatus.detail}
                       </Typography>
-                      {status.cid && (
+                      {status?.cid && (
                         <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
                           CID: {status.cid.substring(0, 20)}...
                         </Typography>

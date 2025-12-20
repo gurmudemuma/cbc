@@ -1,10 +1,5 @@
 import * as dotenv from 'dotenv';
 import * as path from 'path';
-import { fileURLToPath } from 'url';
-
-// Get directory name in ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // Load environment variables
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
@@ -25,15 +20,18 @@ export const config = {
   RATE_LIMIT_MAX_REQUESTS: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10),
   AUTH_RATE_LIMIT_MAX: parseInt(process.env.AUTH_RATE_LIMIT_MAX || '5', 10),
 
-  // Fabric SDK
-  ORGANIZATION_ID: process.env.ORGANIZATION_ID || 'exporter-portal',
-  ORGANIZATION_NAME: process.env.ORGANIZATION_NAME || 'ExporterPortal',
-  TARGET_PEER_MSP: process.env.TARGET_PEER_MSP || 'CommercialBankMSP',
+  // Fabric SDK (Uses Commercial Bank Identity)
+  ORGANIZATION_ID: process.env.ORGANIZATION_ID || 'commercialbank',
+  ORGANIZATION_NAME: process.env.ORGANIZATION_NAME || 'CommercialBank',
+  MSP_ID: process.env.MSP_ID || 'CommercialBankMSP',
+  PEER_ENDPOINT: process.env.PEER_ENDPOINT || 'peer0.commercialbank.coffee-export.com:7051',
   CHANNEL_NAME: process.env.CHANNEL_NAME || 'coffeechannel',
   CHAINCODE_NAME_EXPORT: process.env.CHAINCODE_NAME_EXPORT || 'coffee-export',
   CHAINCODE_NAME_USER: process.env.CHAINCODE_NAME_USER || 'user-management',
   CONNECTION_PROFILE_PATH: process.env.CONNECTION_PROFILE_PATH || path.resolve(__dirname, '../../../../network/organizations/peerOrganizations/commercialbank.coffee-export.com/connection-commercialbank.json'),
   WALLET_PATH: process.env.WALLET_PATH || './wallet',
+  FABRIC_USER_ID: process.env.FABRIC_USER_ID || 'admin',
+  FABRIC_USER_TYPE: process.env.FABRIC_USER_TYPE || 'admin',
 
   // File Upload
   MAX_FILE_SIZE_MB: parseInt(process.env.MAX_FILE_SIZE_MB || '10', 10),

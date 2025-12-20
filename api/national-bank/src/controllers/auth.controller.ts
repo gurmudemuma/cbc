@@ -1,11 +1,12 @@
 import { Request, Response, NextFunction } from "express";
 import jwt, { JwtPayload } from "jsonwebtoken";
-import { FabricGateway } from "../fabric/gateway";
+import bcrypt from "bcryptjs";
+import { pool } from "../../../shared/database/pool";
 import { SecurityConfig } from "../../../shared/security.config";
-import {
-  BlockchainUserService,
-  createUserService,
-} from "../../../shared/userService";
+import { createLogger } from "../../../shared/logger";
+import { ErrorCode, AppError } from "../../../shared/error-codes";
+
+const logger = createLogger('NationalBankAuthController');
 
 interface AuthJWTPayload extends JwtPayload {
   id: string;
@@ -14,24 +15,22 @@ interface AuthJWTPayload extends JwtPayload {
   role: string;
 }
 
+interface RequestWithUser extends Request {
+  user?: AuthJWTPayload;
+}
+
 export class AuthController {
   private JWT_SECRET: string;
   private JWT_EXPIRES_IN: string;
   private JWT_EXPIRES_IN_SECONDS: number;
-  private fabricGateway: FabricGateway;
 
   constructor() {
-    // Use centralized security config - no hardcoded fallback
     this.JWT_SECRET = SecurityConfig.getJWTSecret();
     this.JWT_EXPIRES_IN = SecurityConfig.getJWTExpiresIn();
     this.JWT_EXPIRES_IN_SECONDS = this.parseExpiresIn(this.JWT_EXPIRES_IN);
-    this.fabricGateway = FabricGateway.getInstance();
   }
 
-  private parseExpiresIn(expiresIn: string | undefined): number {
-    if (!expiresIn) {
-      return 86400; // Default to 24 hours
-    }
+  private parseExpiresIn(expiresIn: string): number {
     const match = expiresIn.match(/^(\d+)([smhd])$/);
     if (!match || !match[1]) {
       throw new Error("Invalid expiresIn format");
@@ -39,54 +38,54 @@ export class AuthController {
     const value = parseInt(match[1], 10);
     const unit = match[2];
     switch (unit) {
-      case "s":
-        return value;
-      case "m":
-        return value * 60;
-      case "h":
-        return value * 3600;
-      case "d":
-        return value * 86400;
-      default:
-        throw new Error("Invalid unit");
+      case "s": return value;
+      case "m": return value * 60;
+      case "h": return value * 3600;
+      case "d": return value * 86400;
+      default: throw new Error("Invalid unit");
     }
   }
 
-  private async getUserService(): Promise<BlockchainUserService> {
-    const userContract = await this.fabricGateway.getUserContract();
-    return createUserService(userContract);
-  }
-
-  public register = async (
-    req: Request,
-    res: Response,
-    _next: NextFunction,
-  ): Promise<void> => {
+  public register = async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
+    const client = await pool.connect();
     try {
       const { username, password, email, organizationId, role } = req.body;
 
-      const userService = await this.getUserService();
+      if (!username || !password || !email) {
+        throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Username, password, and email are required', 400);
+      }
 
-      // Register user on blockchain
-      const newUser = await userService.registerUser({
-        username,
-        password,
-        email,
-        organizationId: organizationId || "NATIONAL-BANK-001",
-        role: role || "banker",
-      });
+      const existingUser = await client.query(
+        'SELECT id FROM users WHERE username = $1 OR email = $2',
+        [username, email]
+      );
 
-      // Generate token
+      if (existingUser.rows.length > 0) {
+        throw new AppError(ErrorCode.INVALID_STATUS_TRANSITION, 'User already exists', 400);
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      const result = await client.query(
+        `INSERT INTO users (username, email, password_hash, organization_id, role, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+         RETURNING id, username, email, organization_id, role`,
+        [username, email, hashedPassword, organizationId || 'NATIONAL_BANK', role || 'user']
+      );
+
+      const newUser = result.rows[0];
       const token = jwt.sign(
         {
           id: newUser.id,
           username: newUser.username,
-          organizationId: newUser.organizationId,
+          organizationId: newUser.organization_id,
           role: newUser.role,
         },
         this.JWT_SECRET,
         { expiresIn: this.JWT_EXPIRES_IN_SECONDS },
       );
+
+      logger.info('User registered', { userId: newUser.id });
 
       res.status(201).json({
         success: true,
@@ -96,62 +95,56 @@ export class AuthController {
             id: newUser.id,
             username: newUser.username,
             email: newUser.email,
-            organizationId: newUser.organizationId,
+            organizationId: newUser.organization_id,
             role: newUser.role,
           },
           token,
         },
       });
-    } catch (error: unknown) {
-      console.error("Error registering user:", error);
-      let message = "Failed to register user";
-      let statusCode = 500;
-      if (error instanceof Error) {
-        message = error.message;
-        if (error.message.includes("already exists")) {
-          statusCode = 400;
-        }
-      }
-      res.status(statusCode).json({
-        success: false,
-        message,
-        error: message,
-      });
+    } catch (error: any) {
+      logger.error('Registration failed', { error: error.message });
+      this.handleError(error, res);
+    } finally {
+      client.release();
     }
   };
 
-  public login = async (
-    req: Request,
-    res: Response,
-    _next: NextFunction,
-  ): Promise<void> => {
+  public login = async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
     try {
       const { username, password } = req.body;
 
-      const userService = await this.getUserService();
-
-      // Authenticate user via blockchain
-      const user = await userService.authenticateUser({ username, password });
-
-      if (!user) {
-        res.status(401).json({
-          success: false,
-          message: "Invalid credentials",
-        });
-        return;
+      if (!username || !password) {
+        throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Username and password are required', 400);
       }
 
-      // Generate token
+      const result = await pool.query(
+        'SELECT id, username, email, password_hash, organization_id, role FROM users WHERE username = $1',
+        [username]
+      );
+
+      if (result.rows.length === 0) {
+        throw new AppError(ErrorCode.UNAUTHORIZED, 'Invalid credentials', 401);
+      }
+
+      const user = result.rows[0];
+      const passwordMatch = await bcrypt.compare(password, user.password_hash);
+
+      if (!passwordMatch) {
+        throw new AppError(ErrorCode.UNAUTHORIZED, 'Invalid credentials', 401);
+      }
+
       const token = jwt.sign(
         {
           id: user.id,
           username: user.username,
-          organizationId: user.organizationId,
+          organizationId: user.organization_id,
           role: user.role,
         },
         this.JWT_SECRET,
         { expiresIn: this.JWT_EXPIRES_IN_SECONDS },
       );
+
+      logger.info('User logged in', { userId: user.id });
 
       res.status(200).json({
         success: true,
@@ -161,50 +154,28 @@ export class AuthController {
             id: user.id,
             username: user.username,
             email: user.email,
-            organizationId: user.organizationId,
+            organizationId: user.organization_id,
             role: user.role,
           },
           token,
         },
       });
-    } catch (error: unknown) {
-      console.error("Error logging in:", error);
-      let statusCode = 500;
-      let message = "Failed to login";
-      if (error instanceof Error) {
-        message = error.message;
-        if (error.message.includes("deactivated")) {
-          statusCode = 403;
-        }
-      }
-      res.status(statusCode).json({
-        success: false,
-        message,
-        error: message,
-      });
+    } catch (error: any) {
+      logger.error('Login failed', { error: error.message });
+      this.handleError(error, res);
     }
   };
 
-  public refreshToken = async (
-    req: Request,
-    res: Response,
-    _next: NextFunction,
-  ): Promise<void> => {
+  public refreshToken = async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
     try {
       const { token } = req.body;
 
       if (!token) {
-        res.status(400).json({
-          success: false,
-          message: "Token is required",
-        });
-        return;
+        throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Token is required', 400);
       }
 
-      // Verify old token
       const decoded = jwt.verify(token, this.JWT_SECRET) as AuthJWTPayload;
 
-      // Generate new token
       const newToken = jwt.sign(
         {
           id: decoded.id,
@@ -216,24 +187,39 @@ export class AuthController {
         { expiresIn: this.JWT_EXPIRES_IN_SECONDS },
       );
 
+      logger.info('Token refreshed', { userId: decoded.id });
+
       res.status(200).json({
         success: true,
         message: "Token refreshed successfully",
-        data: {
-          token: newToken,
-        },
+        data: { token: newToken },
       });
-    } catch (error: unknown) {
-      console.error("Error refreshing token:", error);
-      let message = "Invalid or expired token";
-      if (error instanceof Error) {
-        message = error.message;
-      }
-      res.status(401).json({
-        success: false,
-        message,
-        error: message,
-      });
+    } catch (error: any) {
+      logger.error('Token refresh failed', { error: error.message });
+      this.handleError(error, res);
     }
   };
+
+  private handleError(error: any, res: Response): void {
+    if (error instanceof AppError) {
+      res.status(error.httpStatus).json({
+        success: false,
+        error: { code: error.code, message: error.message },
+      });
+      return;
+    }
+
+    if (error.name === 'JsonWebTokenError') {
+      res.status(401).json({
+        success: false,
+        error: { code: ErrorCode.UNAUTHORIZED, message: 'Invalid token' },
+      });
+      return;
+    }
+
+    res.status(500).json({
+      success: false,
+      error: { code: ErrorCode.INTERNAL_SERVER_ERROR, message: 'An unexpected error occurred' },
+    });
+  }
 }

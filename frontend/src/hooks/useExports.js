@@ -32,7 +32,7 @@ export const useExports = (autoFetch = true) => {
     setError(null);
 
     try {
-      const response = await apiClient.get('/api/exports');
+      const response = await apiClient.get('/exports');
       setExports(response.data.data || []);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to fetch exports');
@@ -84,7 +84,7 @@ export const useExport = (exportId) => {
     setError(null);
 
     try {
-      const response = await apiClient.get(`/api/exports/${exportId}`);
+      const response = await apiClient.get(`/exports/${exportId}`);
       setExportData(response.data.data);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to fetch export');
@@ -120,7 +120,7 @@ export const useCreateExport = () => {
     setSuccess(false);
 
     try {
-      const response = await apiClient.post('/api/exports', data);
+      const response = await apiClient.post('/exports', data);
       setSuccess(true);
       return response.data.data;
     } catch (err) {
@@ -152,7 +152,7 @@ export const useExportActions = () => {
     setError(null);
 
     try {
-      await apiClient.post(`/api/exports/${exportId}/approve-quality`, data);
+      await apiClient.post(`/exports/${exportId}/approve-quality`, data);
       return true;
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to approve quality');
@@ -167,7 +167,7 @@ export const useExportActions = () => {
     setError(null);
 
     try {
-      await apiClient.post(`/api/exports/${exportId}/reject-quality`, { reason });
+      await apiClient.post(`/exports/${exportId}/reject-quality`, { reason });
       return true;
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to reject quality');
@@ -182,7 +182,7 @@ export const useExportActions = () => {
     setError(null);
 
     try {
-      await apiClient.post(`/api/exports/${exportId}/approve-fx`, data);
+      await apiClient.post(`/exports/${exportId}/approve-fx`, data);
       return true;
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to approve FX');

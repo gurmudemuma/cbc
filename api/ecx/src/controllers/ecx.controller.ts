@@ -1,15 +1,14 @@
 /**
  * ECX Controller
- * Handles HTTP requests for ECX operations
+ * Handles HTTP requests for ECX operations with PostgreSQL backend
  */
 
 import { Request, Response } from 'express';
-import { ecxService } from '../services/ecx.service';
-import { logger } from '../utils/logger';
-import {
-  ECXVerificationRequest,
-  CreateExportRequestPayload
-} from '../models/ecx.model';
+import { pool } from '../../../shared/database/pool';
+import { createLogger } from '../../../shared/logger';
+import { ErrorCode, AppError } from '../../../shared/error-codes';
+
+const logger = createLogger('ECXController');
 
 export class ECXController {
   /**
@@ -21,35 +20,30 @@ export class ECXController {
       const { lotNumber, warehouseReceiptNumber } = req.body;
 
       if (!lotNumber || !warehouseReceiptNumber) {
-        res.status(400).json({
-          success: false,
-          message: 'Lot number and warehouse receipt number are required'
-        });
-        return;
+        throw new AppError(
+          ErrorCode.MISSING_REQUIRED_FIELD,
+          'Lot number and warehouse receipt number are required',
+          400
+        );
       }
 
-      const lot = await ecxService.verifyLotNumber(lotNumber, warehouseReceiptNumber);
+      const result = await pool.query(
+        'SELECT * FROM ecx_lots WHERE lot_number = $1 AND warehouse_receipt_number = $2',
+        [lotNumber, warehouseReceiptNumber]
+      );
 
-      if (!lot) {
-        res.status(404).json({
-          success: false,
-          message: 'Lot not found or invalid'
-        });
-        return;
+      if (result.rows.length === 0) {
+        throw new AppError(ErrorCode.NOT_FOUND, 'Lot not found or invalid', 404);
       }
 
       res.status(200).json({
         success: true,
         message: 'Lot verified successfully',
-        data: lot
+        data: result.rows[0]
       });
     } catch (error) {
-      logger.error('Error in verifyLot:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to verify lot',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
+      logger.error('Error in verifyLot:', { error: error instanceof Error ? error.message : 'Unknown error' });
+      this.handleError(error, res);
     }
   }
 
@@ -62,125 +56,173 @@ export class ECXController {
       const { receiptNumber } = req.body;
 
       if (!receiptNumber) {
-        res.status(400).json({
-          success: false,
-          message: 'Receipt number is required'
-        });
-        return;
+        throw new AppError(
+          ErrorCode.MISSING_REQUIRED_FIELD,
+          'Receipt number is required',
+          400
+        );
       }
 
-      const receipt = await ecxService.verifyWarehouseReceipt(receiptNumber);
+      const result = await pool.query(
+        'SELECT * FROM warehouse_receipts WHERE receipt_number = $1',
+        [receiptNumber]
+      );
 
-      if (!receipt) {
-        res.status(404).json({
-          success: false,
-          message: 'Receipt not found or invalid'
-        });
-        return;
+      if (result.rows.length === 0) {
+        throw new AppError(ErrorCode.NOT_FOUND, 'Receipt not found or invalid', 404);
       }
 
       res.status(200).json({
         success: true,
         message: 'Receipt verified successfully',
-        data: receipt
+        data: result.rows[0]
       });
     } catch (error) {
-      logger.error('Error in verifyReceipt:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to verify receipt',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
+      logger.error('Error in verifyReceipt:', { error: error instanceof Error ? error.message : 'Unknown error' });
+      this.handleError(error, res);
     }
   }
 
   /**
-   * Process ECX verification and create blockchain record
+   * Process ECX verification and create database record
    * POST /api/ecx/verify-and-create
    */
   async verifyAndCreateExport(req: Request, res: Response): Promise<void> {
+    const client = await pool.connect();
     try {
-      const verificationRequest: ECXVerificationRequest = {
-        exportId: req.body.exportId,
-        lotNumber: req.body.lotNumber,
-        warehouseReceiptNumber: req.body.warehouseReceiptNumber,
-        exporterName: req.body.exporterName,
-        exporterTIN: req.body.exporterTIN,
-        requestedQuantity: req.body.requestedQuantity
-      };
+      const {
+        exportId,
+        lotNumber,
+        warehouseReceiptNumber,
+        exporterName,
+        exporterTIN,
+        requestedQuantity
+      } = req.body;
 
       // Validate required fields
-      if (!verificationRequest.exportId || !verificationRequest.lotNumber || 
-          !verificationRequest.warehouseReceiptNumber || !verificationRequest.exporterName) {
-        res.status(400).json({
-          success: false,
-          message: 'Missing required fields'
-        });
-        return;
+      if (!exportId || !lotNumber || !warehouseReceiptNumber || !exporterName) {
+        throw new AppError(
+          ErrorCode.MISSING_REQUIRED_FIELD,
+          'Missing required fields',
+          400
+        );
       }
 
-      const result = await ecxService.processVerificationRequest(verificationRequest);
+      await client.query('BEGIN');
 
-      if (!result.verified) {
-        res.status(400).json(result);
-        return;
+      // Verify lot exists
+      const lotResult = await client.query(
+        'SELECT * FROM ecx_lots WHERE lot_number = $1 AND warehouse_receipt_number = $2',
+        [lotNumber, warehouseReceiptNumber]
+      );
+
+      if (lotResult.rows.length === 0) {
+        throw new AppError(ErrorCode.NOT_FOUND, 'ECX lot not found', 404);
       }
 
-      res.status(200).json(result);
-    } catch (error) {
-      logger.error('Error in verifyAndCreateExport:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to verify and create export',
-        error: error instanceof Error ? error.message : 'Unknown error'
+      const lot = lotResult.rows[0];
+
+      // Verify ownership
+      if (lot.owner_tin !== exporterTIN) {
+        throw new AppError(
+          ErrorCode.UNAUTHORIZED,
+          'Exporter is not the owner of this lot',
+          403
+        );
+      }
+
+      // Verify quantity
+      if (requestedQuantity > lot.quantity) {
+        throw new AppError(
+          ErrorCode.INVALID_INPUT,
+          `Requested quantity exceeds available quantity`,
+          400
+        );
+      }
+
+      // Create export record
+      const exportResult = await client.query(
+        `INSERT INTO exports (id, exporter_name, exporter_tin, ecx_lot_number, warehouse_receipt_number, 
+         quantity, status, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+         RETURNING *`,
+        [exportId, exporterName, exporterTIN, lotNumber, warehouseReceiptNumber, requestedQuantity, 'ECX_VERIFIED']
+      );
+
+      await client.query('COMMIT');
+
+      res.status(200).json({
+        success: true,
+        verified: true,
+        message: 'Export verified and created successfully',
+        data: exportResult.rows[0]
       });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      logger.error('Error in verifyAndCreateExport:', { error: error instanceof Error ? error.message : 'Unknown error' });
+      this.handleError(error, res);
+    } finally {
+      client.release();
     }
   }
 
   /**
-   * Create export request on blockchain
+   * Create export request in database
    * POST /api/ecx/create-export
    */
   async createExport(req: Request, res: Response): Promise<void> {
+    const client = await pool.connect();
     try {
-      const payload: CreateExportRequestPayload = {
-        exportId: req.body.exportId,
-        commercialbankId: req.body.commercialbankId,
-        exporterName: req.body.exporterName,
-        exporterTIN: req.body.exporterTIN,
-        exportLicenseNumber: req.body.exportLicenseNumber,
-        coffeeType: req.body.coffeeType,
-        quantity: req.body.quantity,
-        destinationCountry: req.body.destinationCountry,
-        estimatedValue: req.body.estimatedValue,
-        ecxLotNumber: req.body.ecxLotNumber,
-        warehouseLocation: req.body.warehouseLocation,
-        warehouseReceiptNumber: req.body.warehouseReceiptNumber
-      };
+      const {
+        exportId,
+        commercialBankId,
+        exporterName,
+        exporterTIN,
+        exportLicenseNumber,
+        coffeeType,
+        quantity,
+        destinationCountry,
+        estimatedValue,
+        ecxLotNumber,
+        warehouseLocation,
+        warehouseReceiptNumber
+      } = req.body;
 
       // Validate required fields
-      if (!payload.exportId || !payload.exporterName || !payload.ecxLotNumber) {
-        res.status(400).json({
-          success: false,
-          message: 'Missing required fields'
-        });
-        return;
+      if (!exportId || !exporterName || !ecxLotNumber) {
+        throw new AppError(
+          ErrorCode.MISSING_REQUIRED_FIELD,
+          'Missing required fields',
+          400
+        );
       }
 
-      const record = await ecxService.createExportRequest(payload);
+      await client.query('BEGIN');
+
+      const result = await client.query(
+        `INSERT INTO exports (id, commercial_bank_id, exporter_name, exporter_tin, export_license_number,
+         coffee_type, quantity, destination_country, estimated_value, ecx_lot_number, warehouse_location,
+         warehouse_receipt_number, status, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW())
+         RETURNING *`,
+        [exportId, commercialBankId, exporterName, exporterTIN, exportLicenseNumber, coffeeType,
+         quantity, destinationCountry, estimatedValue, ecxLotNumber, warehouseLocation,
+         warehouseReceiptNumber, 'ECX_CREATED']
+      );
+
+      await client.query('COMMIT');
 
       res.status(201).json({
         success: true,
         message: 'Export request created successfully',
-        data: record
+        data: result.rows[0]
       });
     } catch (error) {
-      logger.error('Error in createExport:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to create export request',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
+      await client.query('ROLLBACK');
+      logger.error('Error in createExport:', { error: error instanceof Error ? error.message : 'Unknown error' });
+      this.handleError(error, res);
+    } finally {
+      client.release();
     }
   }
 
@@ -193,26 +235,29 @@ export class ECXController {
       const { exportId } = req.params;
 
       if (!exportId) {
-        res.status(400).json({
-          success: false,
-          message: 'Export ID is required'
-        });
-        return;
+        throw new AppError(
+          ErrorCode.MISSING_REQUIRED_FIELD,
+          'Export ID is required',
+          400
+        );
       }
 
-      const exportData = await ecxService.getExportRequest(exportId);
+      const result = await pool.query(
+        'SELECT * FROM exports WHERE id = $1',
+        [exportId]
+      );
+
+      if (result.rows.length === 0) {
+        throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
+      }
 
       res.status(200).json({
         success: true,
-        data: exportData
+        data: result.rows[0]
       });
     } catch (error) {
-      logger.error('Error in getExport:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to get export request',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
+      logger.error('Error in getExport:', { error: error instanceof Error ? error.message : 'Unknown error' });
+      this.handleError(error, res);
     }
   }
 
@@ -225,27 +270,26 @@ export class ECXController {
       const { status } = req.params;
 
       if (!status) {
-        res.status(400).json({
-          success: false,
-          message: 'Status is required'
-        });
-        return;
+        throw new AppError(
+          ErrorCode.MISSING_REQUIRED_FIELD,
+          'Status is required',
+          400
+        );
       }
 
-      const exports = await ecxService.getExportsByStatus(status);
+      const result = await pool.query(
+        'SELECT * FROM exports WHERE status = $1 ORDER BY created_at DESC',
+        [status]
+      );
 
       res.status(200).json({
         success: true,
-        count: exports.length,
-        data: exports
+        count: result.rows.length,
+        data: result.rows
       });
     } catch (error) {
-      logger.error('Error in getExportsByStatus:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to get exports',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
+      logger.error('Error in getExportsByStatus:', { error: error instanceof Error ? error.message : 'Unknown error' });
+      this.handleError(error, res);
     }
   }
 
@@ -254,31 +298,53 @@ export class ECXController {
    * POST /api/ecx/reject
    */
   async rejectVerification(req: Request, res: Response): Promise<void> {
+    const client = await pool.connect();
     try {
       const { exportId, reason } = req.body;
 
       if (!exportId || !reason) {
-        res.status(400).json({
-          success: false,
-          message: 'Export ID and reason are required'
-        });
-        return;
+        throw new AppError(
+          ErrorCode.MISSING_REQUIRED_FIELD,
+          'Export ID and reason are required',
+          400
+        );
       }
 
-      const txId = await ecxService.rejectVerification(exportId, reason);
+      await client.query('BEGIN');
+
+      const result = await client.query(
+        'SELECT * FROM exports WHERE id = $1',
+        [exportId]
+      );
+
+      if (result.rows.length === 0) {
+        throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
+      }
+
+      await client.query(
+        'UPDATE exports SET status = $1, updated_at = NOW() WHERE id = $2',
+        ['ECX_REJECTED', exportId]
+      );
+
+      await client.query(
+        `INSERT INTO export_status_history (export_id, old_status, new_status, changed_at, notes)
+         VALUES ($1, $2, $3, NOW(), $4)`,
+        [exportId, result.rows[0].status, 'ECX_REJECTED', reason]
+      );
+
+      await client.query('COMMIT');
 
       res.status(200).json({
         success: true,
         message: 'Verification rejected successfully',
-        txId
+        exportId
       });
     } catch (error) {
-      logger.error('Error in rejectVerification:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to reject verification',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
+      await client.query('ROLLBACK');
+      logger.error('Error in rejectVerification:', { error: error instanceof Error ? error.message : 'Unknown error' });
+      this.handleError(error, res);
+    } finally {
+      client.release();
     }
   }
 
@@ -292,6 +358,21 @@ export class ECXController {
       service: 'ECX API',
       status: 'healthy',
       timestamp: new Date().toISOString()
+    });
+  }
+
+  private handleError(error: any, res: Response): void {
+    if (error instanceof AppError) {
+      res.status(error.httpStatus).json({
+        success: false,
+        error: { code: error.code, message: error.message },
+      });
+      return;
+    }
+
+    res.status(500).json({
+      success: false,
+      error: { code: ErrorCode.INTERNAL_SERVER_ERROR, message: 'An unexpected error occurred' },
     });
   }
 }

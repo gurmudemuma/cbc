@@ -25,7 +25,17 @@ import RejectionDialog from '../RejectionDialog';
  * ECTA Quality Certification Form
  * Used by ECTA to certify coffee quality
  */
-const ECTAQualityForm = ({ exportData, onApprove, onReject, loading = false }) => {
+
+import { CommonPageProps, ECTAQualityFormData } from '../../types';
+
+interface ECTAQualityFormProps extends CommonPageProps {
+  exportData: any;
+  onApprove: (data: ECTAQualityFormData) => void;
+  onReject: (data: any) => void;
+  loading?: boolean;
+}
+
+const ECTAQualityForm = ({ exportData, onApprove, onReject, loading = false }: ECTAQualityFormProps): JSX.Element => {
   const [formData, setFormData] = useState({
     qualityGrade: '',
     qualityCertNumber: `QC-${Date.now()}`,
@@ -35,8 +45,8 @@ const ECTAQualityForm = ({ exportData, onApprove, onReject, loading = false }) =
     inspectionNotes: '',
   });
   const [showRejectDialog, setShowRejectDialog] = useState(false);
-  const [errors, setErrors] = useState({});
-  const [uploadedDocs, setUploadedDocs] = useState([]);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [uploadedDocs, setUploadedDocs] = useState<File[]>([]);
 
   const qualityGrades = [
     { value: 'Grade 1', label: 'Grade 1 (Specialty - 90+ points)', minScore: 90 },
@@ -46,23 +56,23 @@ const ECTAQualityForm = ({ exportData, onApprove, onReject, loading = false }) =
     { value: 'Grade 5', label: 'Grade 5 (Below Standard - <75 points)', minScore: 0 },
   ];
 
-  const handleChange = (field) => (event) => {
+  const handleChange = (field: string) => (event: any) => {
     setFormData({
       ...formData,
       [field]: event.target.value,
     });
     if (errors[field]) {
-      setErrors({ ...errors, [field]: null });
+      setErrors({ ...errors, [field]: '' });
     }
   };
 
-  const handleFileUpload = (event) => {
-    const files = Array.from(event.target.files);
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
     setUploadedDocs([...uploadedDocs, ...files]);
   };
 
   const validate = () => {
-    const newErrors = {};
+    const newErrors: Record<string, string> = {};
     
     if (!formData.qualityGrade) {
       newErrors.qualityGrade = 'Quality grade is required';
@@ -100,7 +110,7 @@ const ECTAQualityForm = ({ exportData, onApprove, onReject, loading = false }) =
       cupScore: parseFloat(formData.cupScore),
       inspectionNotes: formData.inspectionNotes.trim(),
       documents: uploadedDocs,
-    });
+    } as ECTAQualityFormData);
   };
 
   const handleReject = (rejectionData) => {

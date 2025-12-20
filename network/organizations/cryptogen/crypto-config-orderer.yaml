@@ -1,6 +1,0 @@
-OrdererOrgs:
-  - Name: Orderer
-    Domain: coffee-export.com
-    EnableNodeOUs: true
-    Specs:
-      - Hostname: orderer

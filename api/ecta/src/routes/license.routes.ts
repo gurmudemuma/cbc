@@ -1,9 +1,12 @@
 import { Router } from 'express';
 import { LicenseController } from '../controllers/license.controller';
-// TODO: Add authentication middleware when available
+import { authMiddleware } from '../middleware/auth.middleware';
 
 const router = Router();
 const controller = new LicenseController();
+
+// Enable authentication for all routes
+router.use(authMiddleware);
 
 // ===== ECTA LICENSE APPROVAL TASKS =====
 // This is STEP 1 of ECTA's 3-step approval process

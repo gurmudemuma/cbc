@@ -15,9 +15,11 @@ module.exports = {
   },
   collectCoverageFrom: [
     'shared/**/*.ts',
-    'commercialbank/src/**/*.ts',
+    'commercial-bank/src/**/*.ts',
     'national-bank/src/**/*.ts',
-    'ncat/src/**/*.ts',
+    'ecta/src/**/*.ts',
+    'ecx/src/**/*.ts',
+    'exporter-portal/src/**/*.ts',
     'custom-authorities/src/**/*.ts',
     'shipping-line/src/**/*.ts',
     '!**/*.d.ts',

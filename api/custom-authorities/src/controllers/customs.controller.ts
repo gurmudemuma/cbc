@@ -1,11 +1,10 @@
 import { Request, Response, NextFunction } from "express";
 import { JwtPayload } from "jsonwebtoken";
-import { FabricGateway } from "../fabric/gateway";
-import { createExportService } from "../../../shared/exportService";
-import { CacheService, CacheKeys, CacheTTL } from "../../../shared/cache.service";
-import { auditService, AuditAction } from "../../../shared/audit.service";
-import { ResilientBlockchainService } from "../../../shared/resilience.service";
+import { getPool } from "../../../shared/database/pool";
+import { createLogger } from "../../../shared/logger";
 import { ErrorCode, AppError } from "../../../shared/error-codes";
+
+const logger = createLogger('CustomsController');
 
 interface AuthJWTPayload extends JwtPayload {
   id: string;
@@ -19,44 +18,20 @@ interface RequestWithUser extends Request {
 }
 
 export class CustomsController {
-  private fabricGateway: FabricGateway;
-  private cacheService: CacheService;
-  private resilienceService: ResilientBlockchainService;
-
-  constructor() {
-    this.fabricGateway = FabricGateway.getInstance();
-    this.cacheService = CacheService.getInstance();
-    this.resilienceService = new ResilientBlockchainService('custom-authorities');
-  }
-
   public getAllExports = async (
-    req: RequestWithUser,
+    _req: RequestWithUser,
     res: Response,
     _next: NextFunction,
   ): Promise<void> => {
     try {
-      const user = req.user!;
-      const cacheKey = `exports:${user.organizationId}:all`;
-
-      // Try cache first
-      const cached = await this.cacheService.get(cacheKey);
-      if (cached) {
-        res.json({ success: true, data: cached, cached: true });
-        return;
+      const pool = getPool();
+      if (!pool) {
+        throw new AppError(ErrorCode.INTERNAL_SERVER_ERROR, 'Database connection failed', 500);
       }
-
-      // Fetch with resilience
-      const exports = await this.resilienceService.executeQuery(async () => {
-        const contract = this.fabricGateway.getExportContract();
-        const exportService = createExportService(contract);
-        return await exportService.getAllExports();
-      }, 'getAllExports');
-
-      // Cache the result
-      await this.cacheService.set(cacheKey, exports, CacheTTL.MEDIUM);
-
-      res.json({ success: true, data: exports });
+      const result = await pool.query('SELECT * FROM exports ORDER BY created_at DESC');
+      res.json({ success: true, data: result.rows });
     } catch (error: any) {
+      logger.error('Failed to fetch exports', { error: error.message });
       this.handleError(error, res);
     }
   };
@@ -72,26 +47,23 @@ export class CustomsController {
         throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Export ID is required', 400);
       }
 
-      // Try cache first
-      const cacheKey = CacheKeys.export(exportId);
-      const cached = await this.cacheService.get(cacheKey);
-      if (cached) {
-        res.json({ success: true, data: cached, cached: true });
-        return;
+      const pool = getPool();
+      if (!pool) {
+        throw new AppError(ErrorCode.INTERNAL_SERVER_ERROR, 'Database connection failed', 500);
       }
 
-      // Fetch with resilience
-      const exportData = await this.resilienceService.executeQuery(async () => {
-        const contract = this.fabricGateway.getExportContract();
-        const exportService = createExportService(contract);
-        return await exportService.getExport(exportId);
-      }, `getExport:${exportId}`);
+      const result = await pool.query(
+        'SELECT * FROM exports WHERE id = $1',
+        [exportId]
+      );
 
-      // Cache the result
-      await this.cacheService.set(cacheKey, exportData, CacheTTL.SHORT);
+      if (result.rows.length === 0) {
+        throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
+      }
 
-      res.json({ success: true, data: exportData });
+      res.json({ success: true, data: result.rows[0] });
     } catch (error: any) {
+      logger.error('Failed to fetch export', { error: error.message });
       this.handleError(error, res);
     }
   };
@@ -101,37 +73,54 @@ export class CustomsController {
     res: Response,
     _next: NextFunction,
   ): Promise<void> => {
+    const client = await getPool().connect();
     try {
-      const { exportId, declarationNumber, clearedBy, documentCIDs } = req.body;
+      const { exportId, declarationNumber } = req.body;
       const user = req.user!;
 
-      // Submit with resilience
-      await this.resilienceService.executeTransaction(async () => {
-        const contract = this.fabricGateway.getExportContract();
-        const exportService = createExportService(contract);
-        return await exportService.clearExportCustoms(exportId, {
-          declarationNumber,
-          clearedBy: clearedBy || user.username,
-          documentCIDs,
-        });
-      }, `clearCustoms:${exportId}`);
+      if (!exportId || !declarationNumber) {
+        throw new AppError(
+          ErrorCode.MISSING_REQUIRED_FIELD,
+          'Export ID and declaration number are required',
+          400
+        );
+      }
 
-      // Audit log
-      auditService.logStatusChange(
-        user.id,
-        exportId,
-        'CUSTOMS_PENDING',  // UPDATED: New status name
-        'CUSTOMS_CLEARED',  // UPDATED: New status name
-        AuditAction.CUSTOMS_CLEARED,
-        {
-          ipAddress: req.ip,
-          userAgent: req.get('user-agent'),
-        }
+      await client.query('BEGIN');
+
+      const exportResult = await client.query(
+        'SELECT * FROM exports WHERE id = $1',
+        [exportId]
       );
 
-      // Invalidate cache
-      await this.cacheService.delete(CacheKeys.export(exportId));
-      await this.cacheService.deletePattern('exports:*');
+      if (exportResult.rows.length === 0) {
+        throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
+      }
+
+      const exportData = exportResult.rows[0];
+
+      if (exportData.status !== 'CUSTOMS_PENDING') {
+        throw new AppError(
+          ErrorCode.INVALID_STATUS_TRANSITION,
+          `Export must be pending customs clearance. Current status: ${exportData.status}`,
+          400
+        );
+      }
+
+      await client.query(
+        'UPDATE exports SET status = $1, customs_declaration_number = $2, updated_at = NOW() WHERE id = $3',
+        ['CUSTOMS_CLEARED', declarationNumber, exportId]
+      );
+
+      await client.query(
+        `INSERT INTO export_status_history (export_id, old_status, new_status, changed_by, changed_at, notes)
+         VALUES ($1, $2, $3, $4, NOW(), $5)`,
+        [exportId, 'CUSTOMS_PENDING', 'CUSTOMS_CLEARED', user.id, `Customs cleared with declaration: ${declarationNumber}`]
+      );
+
+      await client.query('COMMIT');
+
+      logger.info('Customs clearance issued', { exportId, declarationNumber, userId: user.id });
 
       res.json({
         success: true,
@@ -139,7 +128,11 @@ export class CustomsController {
         data: { exportId, declarationNumber },
       });
     } catch (error: any) {
+      await client.query('ROLLBACK');
+      logger.error('Customs clearance failed', { error: error.message });
       this.handleError(error, res);
+    } finally {
+      client.release();
     }
   };
 
@@ -148,34 +141,54 @@ export class CustomsController {
     res: Response,
     _next: NextFunction,
   ): Promise<void> => {
+    const client = await getPool().connect();
     try {
-      const { exportId, reason, rejectedBy } = req.body;
+      const { exportId, reason } = req.body;
       const user = req.user!;
 
-      // Submit with resilience
-      await this.resilienceService.executeTransaction(async () => {
-        const contract = this.fabricGateway.getExportContract();
-        const exportService = createExportService(contract);
-        return await exportService.rejectExportCustoms(exportId, reason, rejectedBy || user.username);
-      }, `rejectCustoms:${exportId}`);
+      if (!exportId || !reason) {
+        throw new AppError(
+          ErrorCode.MISSING_REQUIRED_FIELD,
+          'Export ID and reason are required',
+          400
+        );
+      }
 
-      // Audit log
-      auditService.logStatusChange(
-        user.id,
-        exportId,
-        'CUSTOMS_PENDING',  // UPDATED: New status name
-        'CUSTOMS_REJECTED',  // UPDATED: New status name
-        AuditAction.CUSTOMS_REJECTED,
-        {
-          ipAddress: req.ip,
-          userAgent: req.get('user-agent'),
-          reason,
-        }
+      await client.query('BEGIN');
+
+      const exportResult = await client.query(
+        'SELECT * FROM exports WHERE id = $1',
+        [exportId]
       );
 
-      // Invalidate cache
-      await this.cacheService.delete(CacheKeys.export(exportId));
-      await this.cacheService.deletePattern('exports:*');
+      if (exportResult.rows.length === 0) {
+        throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
+      }
+
+      const exportData = exportResult.rows[0];
+
+      if (exportData.status !== 'CUSTOMS_PENDING') {
+        throw new AppError(
+          ErrorCode.INVALID_STATUS_TRANSITION,
+          `Export must be pending customs clearance. Current status: ${exportData.status}`,
+          400
+        );
+      }
+
+      await client.query(
+        'UPDATE exports SET status = $1, updated_at = NOW() WHERE id = $2',
+        ['CUSTOMS_REJECTED', exportId]
+      );
+
+      await client.query(
+        `INSERT INTO export_status_history (export_id, old_status, new_status, changed_by, changed_at, notes)
+         VALUES ($1, $2, $3, $4, NOW(), $5)`,
+        [exportId, 'CUSTOMS_PENDING', 'CUSTOMS_REJECTED', user.id, reason]
+      );
+
+      await client.query('COMMIT');
+
+      logger.info('Customs rejection recorded', { exportId, reason, userId: user.id });
 
       res.json({
         success: true,
@@ -183,7 +196,11 @@ export class CustomsController {
         data: { exportId, reason },
       });
     } catch (error: any) {
+      await client.query('ROLLBACK');
+      logger.error('Customs rejection failed', { error: error.message });
       this.handleError(error, res);
+    } finally {
+      client.release();
     }
   };
 
@@ -196,22 +213,18 @@ export class CustomsController {
     _next: NextFunction,
   ): Promise<void> => {
     try {
-      const cacheKey = 'exports:customs:export:pending';
-      const cached = await this.cacheService.get<any[]>(cacheKey);
-      if (cached) {
-        res.json({ success: true, data: cached, count: cached.length, cached: true });
-        return;
+      const pool = getPool();
+      if (!pool) {
+        throw new AppError(ErrorCode.INTERNAL_SERVER_ERROR, 'Database connection failed', 500);
       }
+      const result = await pool.query(
+        'SELECT * FROM exports WHERE status = $1 ORDER BY created_at DESC',
+        ['CUSTOMS_PENDING']
+      );
 
-      const exports = await this.resilienceService.executeQuery(async () => {
-        const contract = this.fabricGateway.getExportContract();
-        const exportService = createExportService(contract);
-        return await exportService.getExportsByStatus('CUSTOMS_PENDING');  // FIXED: Updated status constant
-      }, 'getPendingExportCustoms');
-
-      await this.cacheService.set(cacheKey, exports, CacheTTL.SHORT);
-      res.json({ success: true, data: exports, count: exports.length });
+      res.json({ success: true, data: result.rows, count: result.rows.length });
     } catch (error: any) {
+      logger.error('Failed to fetch pending customs', { error: error.message });
       this.handleError(error, res);
     }
   };
@@ -226,21 +239,18 @@ export class CustomsController {
         error: {
           code: error.code,
           message: error.message,
-          retryable: error.retryable,
         },
       });
       return;
     }
 
-    // Log unexpected errors
-    console.error('Unexpected error:', error);
+    logger.error('Unexpected error', { error: error.message });
 
     res.status(500).json({
       success: false,
       error: {
         code: ErrorCode.INTERNAL_SERVER_ERROR,
         message: 'An unexpected error occurred',
-        retryable: false,
       },
     });
   }

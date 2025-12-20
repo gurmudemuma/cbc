@@ -26,24 +26,30 @@ import {
 
 const DEFAULT_COMMERCIAL_BANK_ORG = 'COMMERCIAL-BANK-001';
 
-const UserManagement = ({ user }) => {
+interface UserManagementProps {
+  user: any;
+  org: string | null;
+}
+
+const UserManagement = ({ user, org }: UserManagementProps): JSX.Element => {
   const [users, setUsers] = useState([]);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ username: '', email: '', password: '' });
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    setApiBaseUrl(API_ENDPOINTS.nbRegulatory);
+    setApiBaseUrl(API_ENDPOINTS.nationalBank);
     fetchUsers();
   }, []);
 
   const fetchUsers = async () => {
     try {
-      const res = await apiClient.get(`/api/portal/users`, {
+      const res = await apiClient.get(`/api/users`, {
         params: { organizationId: DEFAULT_COMMERCIAL_BANK_ORG },
       });
       setUsers(res.data.data || []);
     } catch (e) {
+      console.error('Failed to fetch users:', e);
       setUsers([]);
     }
   };
@@ -51,30 +57,36 @@ const UserManagement = ({ user }) => {
   const createUser = async () => {
     try {
       setLoading(true);
-      await apiClient.post('/api/portal/users', {
+      const response = await apiClient.post('/api/users', {
         username: form.username,
         email: form.email,
         password: form.password,
         organizationId: DEFAULT_COMMERCIAL_BANK_ORG,
         role: 'exporter',
       });
-      setOpen(false);
-      setForm({ username: '', email: '', password: '' });
-      fetchUsers();
-    } catch (e) {
-      alert('Failed to create user');
+      if (response.data.success) {
+        setOpen(false);
+        setForm({ username: '', email: '', password: '' });
+        fetchUsers();
+      }
+    } catch (e: any) {
+      const errorMsg = e.response?.data?.message || 'Failed to create user';
+      alert(errorMsg);
     } finally {
       setLoading(false);
     }
   };
 
-  const toggleActive = async (id, isActive) => {
+  const toggleActive = async (id: string, isActive: boolean) => {
     try {
       const path = isActive ? 'deactivate' : 'activate';
-      await apiClient.patch(`/api/portal/users/${id}/${path}`);
-      fetchUsers();
-    } catch (e) {
-      alert('Failed to update user');
+      const response = await apiClient.patch(`/api/users/${id}/${path}`);
+      if (response.data.success) {
+        fetchUsers();
+      }
+    } catch (e: any) {
+      const errorMsg = e.response?.data?.message || 'Failed to update user';
+      alert(errorMsg);
     }
   };
 

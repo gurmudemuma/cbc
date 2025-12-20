@@ -81,7 +81,7 @@ const QualificationStatusCard = ({ user }) => {
     return (completed / requirements.length) * 100;
   };
 
-  if (!user?.role === 'exporter') {
+  if (user?.role !== 'exporter') {
     return null; // Don't show for non-exporters
   }
 

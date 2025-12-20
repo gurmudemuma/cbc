@@ -8,8 +8,7 @@ import { createServer } from "http";
 import customsRoutes from "./routes/customs.routes";
 import authRoutes from "./routes/auth.routes";
 import exportRoutes from "./routes/export.routes";
-import { errorHandler } from "./middleware/error.middleware";
-import { FabricGateway } from "./fabric/gateway";
+import { errorHandler } from "../../shared/middleware/error.middleware";
 import { initializeWebSocket } from "../../shared/websocket.service";
 import { envValidator } from "../../shared/env.validator";
 import { createLogger, httpLogger } from "../../shared/logger";
@@ -24,6 +23,7 @@ import { monitoringMiddleware, errorMonitoringMiddleware } from "../../shared/mi
 import swaggerUi from "swagger-ui-express";
 import swaggerJsdoc from "swagger-jsdoc";
 import { swaggerOptions } from "../../shared/swagger.config";
+import { getPool } from "../../shared/database/pool";
 
 // Initialize logger
 const logger = createLogger('CustomAuthoritiesAPI');
@@ -67,7 +67,6 @@ app.use(express.urlencoded({ extended: true, limit: maxSize }));
 const { authLimiter, apiLimiter } = createRateLimiters();
 
 // Initialize services
-const fabricGateway = FabricGateway.getInstance();
 const cacheService = CacheService.getInstance();
 
 // Initialize Swagger documentation
@@ -83,30 +82,46 @@ app.use("/api", apiLimiter, exportRoutes);
 
 // Health check with detailed status
 app.get("/health", async (_req: Request, res: Response) => {
-  const fabricStatus = fabricGateway.isConnected()
-    ? "connected"
-    : "disconnected";
+  try {
+    // Test database connection
+    const pool = getPool();
+    const result = await pool.query('SELECT NOW()');
+    const dbStatus = result.rows.length > 0 ? "connected" : "disconnected";
 
-  res.json({
-    status: "ok",
-    service: "Custom Authorities API",
-    version: "1.0.0",
-    environment: config.NODE_ENV,
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    fabric: fabricStatus,
-    memory: {
-      used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
-      total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
-      unit: "MB",
-    },
-  });
+    res.json({
+      status: "ok",
+      service: "Custom Authorities API",
+      version: "1.0.0",
+      environment: config.NODE_ENV,
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      database: dbStatus,
+      memory: {
+        used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+        total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
+        unit: "MB",
+      },
+    });
+  } catch (error) {
+    logger.error('Health check failed', { error });
+    res.status(503).json({
+      status: "error",
+      service: "Custom Authorities API",
+      database: "disconnected",
+    });
+  }
 });
 
 app.get("/ready", async (_req: Request, res: Response) => {
-  const isReady = fabricGateway.isConnected();
-  if (isReady) res.status(200).json({ status: "ready" });
-  else res.status(503).json({ status: "not ready" });
+  try {
+    const pool = getPool();
+    const result = await pool.query('SELECT NOW()');
+    const isReady = result.rows.length > 0;
+    if (isReady) res.status(200).json({ status: "ready" });
+    else res.status(503).json({ status: "not ready" });
+  } catch (error) {
+    res.status(503).json({ status: "not ready" });
+  }
 });
 
 app.get("/live", (_req: Request, res: Response) => {
@@ -123,16 +138,27 @@ app.use(errorHandler);
 const httpServer = createServer(app);
 const websocketService = initializeWebSocket(httpServer);
 
-// WebSocket service is already initialized and available globally
-
 // Start server
 httpServer.listen(PORT, async () => {
   logger.info('Custom Authorities API server starting', {
     port: PORT,
     environment: config.NODE_ENV,
-    organization: config.ORGANIZATION_NAME,
     websocket: config.WEBSOCKET_ENABLED ? 'Enabled' : 'Disabled'
   });
+
+  try {
+    logger.info('Testing PostgreSQL database connection');
+    const pool = getPool();
+    const result = await pool.query('SELECT NOW()');
+    logger.info('Connected to PostgreSQL database', {
+      timestamp: result.rows[0].now
+    });
+    monitoringService.recordSystemHealth('database', true);
+  } catch (error) {
+    logger.error('Failed to connect to PostgreSQL database', { error });
+    logger.warn('⚠️  Database connection failed - API will start in degraded mode');
+    monitoringService.recordSystemHealth('database', false);
+  }
 
   try {
     // Connect to Redis cache
@@ -143,22 +169,6 @@ httpServer.listen(PORT, async () => {
   } catch (error) {
     logger.warn('Redis connection failed - caching disabled', { error });
     logger.warn('⚠️  Caching will be disabled');
-  }
-
-  try {
-    logger.info('Connecting to Hyperledger Fabric network');
-    await fabricGateway.connect();
-    logger.info('Connected to Hyperledger Fabric network', {
-      channel: config.CHANNEL_NAME,
-      chaincode: config.CHAINCODE_NAME_EXPORT
-    });
-    monitoringService.recordSystemHealth('blockchain', true);
-  } catch (error) {
-    logger.error('Failed to connect to Fabric network', { error });
-    logger.warn('⚠️  Fabric network connection failed - API will start in degraded mode');
-    logger.warn('⚠️  Blockchain operations will not be available');
-    monitoringService.recordSystemHealth('blockchain', false);
-    // Don't exit - allow API to start for health checks and debugging
   }
 
   logger.info('Server is ready to accept requests');
@@ -184,9 +194,10 @@ const gracefulShutdown = async (signal: string) => {
       await cacheService.disconnect();
       logger.info('Redis cache disconnected');
 
-      // Disconnect from Fabric
-      await fabricGateway.disconnect();
-      logger.info('Fabric gateway disconnected');
+      // Close database pool
+      const pool = getPool();
+      await pool.end();
+      logger.info('Database pool closed');
 
       process.exit(0);
     } catch (error) {

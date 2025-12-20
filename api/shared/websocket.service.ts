@@ -194,7 +194,7 @@ export class WebSocketService {
       data,
       timestamp: new Date().toISOString()
     });
-    console.log(`Emitted update for export: ${exportId}`);
+    logger.debug('Emitted update for export', { exportId });
   }
 
   // Emit new export creation to organization
@@ -203,7 +203,7 @@ export class WebSocketService {
       data,
       timestamp: new Date().toISOString()
     });
-    console.log(`Emitted new export to organization: ${organization}`);
+    logger.debug('Emitted new export to organization', { organization });
   }
 
   // Emit FX approval notification
@@ -213,7 +213,7 @@ export class WebSocketService {
       data,
       timestamp: new Date().toISOString()
     });
-    console.log(`Emitted FX approval for export: ${exportId}`);
+    logger.debug('Emitted FX approval for export', { exportId });
   }
 
   // Emit FX rejection notification
@@ -223,7 +223,7 @@ export class WebSocketService {
       data,
       timestamp: new Date().toISOString()
     });
-    console.log(`Emitted FX rejection for export: ${exportId}`);
+    logger.debug('Emitted FX rejection for export', { exportId });
   }
 
   // Emit quality certification notification
@@ -233,7 +233,7 @@ export class WebSocketService {
       data,
       timestamp: new Date().toISOString()
     });
-    console.log(`Emitted quality certification for export: ${exportId}`);
+    logger.debug('Emitted quality certification for export', { exportId });
   }
 
   // Emit quality rejection notification
@@ -243,7 +243,7 @@ export class WebSocketService {
       data,
       timestamp: new Date().toISOString()
     });
-    console.log(`Emitted quality rejection for export: ${exportId}`);
+    logger.debug('Emitted quality rejection for export', { exportId });
   }
 
   // Emit shipment scheduled notification
@@ -253,7 +253,7 @@ export class WebSocketService {
       data,
       timestamp: new Date().toISOString()
     });
-    console.log(`Emitted shipment scheduled for export: ${exportId}`);
+    logger.debug('Emitted shipment scheduled for export', { exportId });
   }
 
   // Emit shipment confirmed notification
@@ -263,7 +263,7 @@ export class WebSocketService {
       data,
       timestamp: new Date().toISOString()
     });
-    console.log(`Emitted shipment confirmed for export: ${exportId}`);
+    logger.debug('Emitted shipment confirmed for export', { exportId });
   }
 
   // Emit export completed notification
@@ -273,7 +273,7 @@ export class WebSocketService {
       data,
       timestamp: new Date().toISOString()
     });
-    console.log(`Emitted export completed: ${exportId}`);
+    logger.debug('Emitted export completed', { exportId });
   }
 
   // Emit export cancelled notification
@@ -283,7 +283,7 @@ export class WebSocketService {
       data,
       timestamp: new Date().toISOString()
     });
-    console.log(`Emitted export cancelled: ${exportId}`);
+    logger.debug('Emitted export cancelled', { exportId });
   }
 
   public emitDocumentUploaded(exportId: string, docType: string, version: number, cid: string): void {
@@ -294,7 +294,7 @@ export class WebSocketService {
       cid,
       timestamp: new Date().toISOString()
     });
-    console.log(`Emitted document uploaded for export: ${exportId}`);
+    logger.debug('Emitted document uploaded for export', { exportId, docType, version });
   }
 
   public emitDocumentDeleted(exportId: string, docType: string, version: number): void {
@@ -304,7 +304,7 @@ export class WebSocketService {
       version,
       timestamp: new Date().toISOString()
     });
-    console.log(`Emitted document deleted for export: ${exportId}`);
+    logger.debug('Emitted document deleted for export', { exportId, docType, version });
   }
 
   // Send notification to specific user
@@ -315,7 +315,7 @@ export class WebSocketService {
         ...notification,
         timestamp: new Date().toISOString()
       });
-      console.log(`Sent notification to user: ${userId}`);
+      logger.debug('Sent notification to user', { userId });
     }
   }
 
@@ -325,7 +325,7 @@ export class WebSocketService {
       data,
       timestamp: new Date().toISOString()
     });
-    console.log(`Broadcasted event: ${event}`);
+    logger.debug('Broadcasted event', { event });
   }
 
   // Get connected clients count
@@ -342,7 +342,7 @@ export class WebSocketService {
   public close(): void {
     this.io.close();
     this.connectedClients.clear();
-    console.log('WebSocket service closed');
+    logger.info('WebSocket service closed');
   }
 }
 
@@ -352,7 +352,7 @@ let websocketService: WebSocketService | null = null;
 export const initializeWebSocket = (httpServer: HTTPServer): WebSocketService => {
   if (!websocketService) {
     websocketService = new WebSocketService(httpServer);
-    console.log('WebSocket service initialized');
+    logger.info('WebSocket service initialized');
   }
   return websocketService;
 };

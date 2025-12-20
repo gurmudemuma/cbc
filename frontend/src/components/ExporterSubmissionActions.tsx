@@ -53,7 +53,6 @@ const ExporterSubmissionActions = ({ exportData, onSuccess, onError }) => {
           label: 'Submit to ECX for Lot Verification',
           description: 'Submit your export request to Ethiopian Commodity Exchange for lot number verification and warehouse receipt validation.',
           icon: <Send size={20} />,
-          color: 'primary',
         };
 
       case 'ECX_VERIFIED':
@@ -62,7 +61,6 @@ const ExporterSubmissionActions = ({ exportData, onSuccess, onError }) => {
           label: 'Submit to ECTA for License Approval',
           description: 'Submit to Ethiopian Coffee & Tea Authority for export license validation and regulatory approval.',
           icon: <Send size={20} />,
-          color: 'primary',
         };
 
       case 'ECTA_CONTRACT_APPROVED':
@@ -71,7 +69,6 @@ const ExporterSubmissionActions = ({ exportData, onSuccess, onError }) => {
           label: 'Submit to Commercial Bank',
           description: 'Submit to your Commercial Bank for document verification and FX application processing.',
           icon: <Send size={20} />,
-          color: 'primary',
         };
 
       default:
@@ -89,7 +86,7 @@ const ExporterSubmissionActions = ({ exportData, onSuccess, onError }) => {
     <Stack spacing={2}>
       {message && (
         <Alert 
-          severity={message.type}
+          severity={message.type as 'success' | 'error' | 'warning' | 'info'}
           icon={message.type === 'success' ? <CheckCircle /> : <AlertCircle />}
         >
           <AlertTitle>
@@ -111,7 +108,7 @@ const ExporterSubmissionActions = ({ exportData, onSuccess, onError }) => {
 
       <Button
         variant="contained"
-        color={action.color}
+        color="primary"
         size="large"
         startIcon={loading ? <CircularProgress size={20} color="inherit" /> : action.icon}
         onClick={() => handleSubmit(action.endpoint, `Successfully submitted to ${action.label.split(' ')[2]}`)}

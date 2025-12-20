@@ -13,6 +13,22 @@ const apiClient = axios.create({
   },
 });
 
+// Store the original baseURL setter
+const originalSetBaseURL = (baseUrl) => {
+  // Ensure the base URL includes /api if it's a full URL
+  if (baseUrl && baseUrl.includes('http')) {
+    // If it's a full URL like http://localhost:3007, append /api
+    if (!baseUrl.endsWith('/api')) {
+      apiClient.defaults.baseURL = `${baseUrl}/api`;
+    } else {
+      apiClient.defaults.baseURL = baseUrl;
+    }
+  } else {
+    // If it's a relative path, use as-is
+    apiClient.defaults.baseURL = baseUrl || '/api';
+  }
+};
+
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -67,7 +83,7 @@ apiClient.interceptors.response.use(
 );
 
 export const setApiBaseUrl = (baseUrl) => {
-  apiClient.defaults.baseURL = baseUrl;
+  originalSetBaseURL(baseUrl);
 };
 
 export default apiClient;

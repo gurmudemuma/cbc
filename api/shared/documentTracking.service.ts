@@ -3,7 +3,7 @@
  * Tracks document upload status and completeness for export requests
  */
 
-import { ExportRequest } from './exportService';
+import { ExportRequest } from './services/export.service';
 
 export interface DocumentStatus {
   required: boolean;

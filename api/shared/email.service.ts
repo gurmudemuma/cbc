@@ -1,4 +1,7 @@
 import nodemailer, { Transporter } from 'nodemailer';
+import { createLogger } from './logger';
+
+const logger = createLogger('EmailService');
 
 interface EmailConfig {
   host: string;
@@ -44,9 +47,9 @@ export class EmailService {
   private async verifyConnection(): Promise<void> {
     try {
       await this.transporter.verify();
-      console.log('Email service is ready to send messages');
+      logger.info('Email service is ready to send messages');
     } catch (error) {
-      console.error('Email service connection error:', error);
+      logger.error('Email service connection error', { error: error instanceof Error ? error.message : String(error) });
     }
   }
 
@@ -60,10 +63,10 @@ export class EmailService {
         text: options.text || this.stripHtml(options.html)
       });
 
-      console.log('Email sent successfully:', info.messageId);
+      logger.info('Email sent successfully', { messageId: info.messageId, to: options.to, subject: options.subject });
       return true;
     } catch (error) {
-      console.error('Error sending email:', error);
+      logger.error('Error sending email', { error: error instanceof Error ? error.message : String(error), to: options.to, subject: options.subject });
       return false;
     }
   }

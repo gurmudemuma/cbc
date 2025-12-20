@@ -39,8 +39,11 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { CommonPageProps } from '../types';
 
-const MonetaryPolicy = ({ user, org }) => {
+interface MonetaryPolicyProps extends CommonPageProps {}
+
+const MonetaryPolicy = ({ user, org }: MonetaryPolicyProps): JSX.Element => {
   const [activeTab, setActiveTab] = useState(0);
   const [policies, setPolicies] = useState([]);
   const [controls, setControls] = useState([]);

@@ -1,7 +1,11 @@
+
 import { Request, Response, NextFunction } from 'express';
 import { JwtPayload } from 'jsonwebtoken';
-import { FabricGateway } from '../fabric/gateway';
-import { createExportService } from '../../../shared/exportService';
+import { getPool } from '../../../shared/database/pool';
+import { createLogger } from '../../../shared/logger';
+import { ErrorCode, AppError } from '../../../shared/error-codes';
+
+const logger = createLogger('ECTAContractController');
 
 interface AuthJWTPayload extends JwtPayload {
   id: string;
@@ -14,337 +18,256 @@ interface RequestWithUser extends Request {
   user?: AuthJWTPayload;
 }
 
-/**
- * Contract Controller for ECTA
- * 
- * ECTA (Ethiopian Coffee & Tea Authority) is responsible for:
- * - Reviewing export contracts
- * - Verifying contract terms
- * - Checking buyer information
- * - Verifying origin certificates
- * - Approving or rejecting export contracts
- * 
- * This is the THIRD of three ECTA approval steps:
- * 1. License Approval (license.controller.ts)
- * 2. Quality Certification (quality.controller.ts)
- * 3. Contract Approval (this controller)
- */
 export class ContractController {
-  private fabricGateway: FabricGateway;
-
-  constructor() {
-    this.fabricGateway = FabricGateway.getInstance();
-  }
-
-  /**
-   * Get all exports (ECTA can view all)
-   */
   public getAllExports = async (_req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
     try {
-      const contract = this.fabricGateway.getExportContract();
-      const exportService = createExportService(contract);
-      const exports = await exportService.getAllExports();
-      res.json({ success: true, data: exports, count: exports.length });
+      const result = await getPool().query('SELECT * FROM exports ORDER BY created_at DESC');
+      res.json({ success: true, data: result.rows, count: result.rows.length });
     } catch (error: any) {
-      res.status(500).json({ 
-        success: false, 
-        message: 'Failed to fetch exports', 
-        error: error.message 
-      });
+      logger.error('Failed to fetch exports', { error: error.message });
+      this.handleError(error, res);
     }
   };
 
-  /**
-   * Get exports pending contract approval
-   * Status: ECTA_QUALITY_APPROVED (after quality certification)
-   */
   public getPendingContracts = async (_req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
     try {
-      const contract = this.fabricGateway.getExportContract();
-      const exportService = createExportService(contract);
-      const exports = await exportService.getExportsByStatus('ECTA_QUALITY_APPROVED');
-      res.json({ 
-        success: true, 
-        data: exports, 
-        count: exports.length,
-        message: 'Exports pending ECTA contract approval'
-      });
+      const result = await getPool().query(
+        'SELECT * FROM exports WHERE status = $1 ORDER BY created_at DESC',
+        ['QUALITY_CERTIFIED']
+      );
+      res.json({ success: true, data: result.rows, count: result.rows.length });
     } catch (error: any) {
-      res.status(500).json({ 
-        success: false, 
-        message: 'Failed to fetch pending contracts', 
-        error: error.message 
-      });
+      logger.error('Failed to fetch pending contracts', { error: error.message });
+      this.handleError(error, res);
     }
   };
 
-  /**
-   * Review export contract
-   * Check contract terms, buyer info, and payment terms
-   */
   public reviewContract = async (req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
+    const client = await getPool().connect();
     try {
       const { exportId } = req.params;
-      const user = req.user!;
-      
+      const user = req.user;
+      const { notes } = req.body;
+
       if (!exportId) {
-        res.status(400).json({ success: false, message: 'Export ID is required' });
-        return;
+        throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Export ID is required', 400);
       }
 
-      const { 
-        contractNumber,
-        buyerName,
-        buyerCountry,
-        contractValue,
-        paymentTerms,
-        reviewedBy,
-        notes 
-      } = req.body;
+      await client.query('BEGIN');
 
-      // Validate required fields
-      if (!contractNumber || !buyerName) {
-        res.status(400).json({ 
-          success: false, 
-          message: 'Contract number and buyer name are required' 
-        });
-        return;
+      const exportResult = await client.query('SELECT * FROM exports WHERE id = $1', [exportId]);
+      if (exportResult.rows.length === 0) {
+        throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
       }
 
-      // Submit contract review to blockchain
-      const contract = this.fabricGateway.getExportContract();
-      await contract.submitTransaction(
-        'ReviewContract',
-        exportId,
-        contractNumber,
-        buyerName,
-        buyerCountry || '',
-        contractValue?.toString() || '0',
-        paymentTerms || '',
-        reviewedBy || user.username,
-        notes || ''
+      await client.query(
+        `INSERT INTO export_status_history(export_id, old_status, new_status, changed_by, changed_at, notes)
+VALUES($1, $2, $3, $4, NOW(), $5)`,
+        [exportId, 'QUALITY_CERTIFIED', 'CONTRACT_REVIEW', user?.id, notes || 'Contract under review']
       );
 
-      res.json({ 
-        success: true, 
-        message: 'Contract review recorded. Awaiting approval decision.',
-        exportId,
-        contractNumber
+      await client.query('COMMIT');
+
+      logger.info('Contract reviewed', { exportId, userId: user?.id });
+
+      res.json({
+        success: true,
+        message: 'Contract review recorded',
+        exportId
       });
     } catch (error: any) {
-      res.status(500).json({ 
-        success: false, 
-        message: 'Failed to review contract', 
-        error: error.message 
-      });
+      await client.query('ROLLBACK');
+      logger.error('Failed to review contract', { error: error.message });
+      this.handleError(error, res);
+    } finally {
+      client.release();
     }
   };
 
-  /**
-   * Verify origin certificate
-   * Confirm coffee origin and authenticity
-   */
   public verifyOrigin = async (req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
+    const client = await getPool().connect();
     try {
       const { exportId } = req.params;
-      const user = req.user!;
-      
+      const user = req.user;
+      const { originCertificateNumber } = req.body;
+
       if (!exportId) {
-        res.status(400).json({ success: false, message: 'Export ID is required' });
-        return;
+        throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Export ID is required', 400);
       }
 
-      const { 
-        originCertificateNumber,
-        originRegion,
-        verifiedBy,
-        notes 
-      } = req.body;
-
-      // Validate required fields
-      if (!originCertificateNumber || !originRegion) {
-        res.status(400).json({ 
-          success: false, 
-          message: 'Origin certificate number and region are required' 
-        });
-        return;
+      if (!originCertificateNumber) {
+        throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Origin certificate number is required', 400);
       }
 
-      // Submit origin verification to blockchain
-      const contract = this.fabricGateway.getExportContract();
-      await contract.submitTransaction(
-        'VerifyOrigin',
-        exportId,
-        originCertificateNumber,
-        originRegion,
-        verifiedBy || user.username,
-        notes || ''
+      await client.query('BEGIN');
+
+      const exportResult = await client.query('SELECT * FROM exports WHERE id = $1', [exportId]);
+      if (exportResult.rows.length === 0) {
+        throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
+      }
+
+      await client.query(
+        'UPDATE exports SET origin_certificate_number = $1, updated_at = NOW() WHERE id = $2',
+        [originCertificateNumber, exportId]
       );
 
-      res.json({ 
-        success: true, 
-        message: 'Origin certificate verified successfully',
+      await client.query('COMMIT');
+
+      logger.info('Origin verified', { exportId, originCertificateNumber, userId: user?.id });
+
+      res.json({
+        success: true,
+        message: 'Origin verified',
         exportId,
-        originCertificateNumber,
-        originRegion
+        originCertificateNumber
       });
     } catch (error: any) {
-      res.status(500).json({ 
-        success: false, 
-        message: 'Failed to verify origin', 
-        error: error.message 
-      });
+      await client.query('ROLLBACK');
+      logger.error('Failed to verify origin', { error: error.message });
+      this.handleError(error, res);
+    } finally {
+      client.release();
     }
   };
 
-  /**
-   * Approve contract
-   * Status: ECTA_QUALITY_APPROVED → ECTA_CONTRACT_APPROVED
-   */
   public approveContract = async (req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
+    const client = await getPool().connect();
     try {
       const { exportId } = req.params;
-      const user = req.user!;
-      
+      const user = req.user;
+      const { notes } = req.body;
+
       if (!exportId) {
-        res.status(400).json({ success: false, message: 'Export ID is required' });
-        return;
+        throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Export ID is required', 400);
       }
 
-      const { 
-        contractNumber,
-        originCertificateNumber,
-        approvedBy, 
-        notes 
-      } = req.body;
+      await client.query('BEGIN');
 
-      if (!contractNumber || !originCertificateNumber) {
-        res.status(400).json({ 
-          success: false, 
-          message: 'Contract number and origin certificate number are required for approval' 
-        });
-        return;
+      const exportResult = await client.query('SELECT * FROM exports WHERE id = $1', [exportId]);
+      if (exportResult.rows.length === 0) {
+        throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
       }
 
-      // Submit contract approval to blockchain
-      const contract = this.fabricGateway.getExportContract();
-      await contract.submitTransaction(
-        'ApproveContract',
-        exportId,
-        contractNumber,
-        originCertificateNumber,
-        approvedBy || user.username,
-        notes || ''
+      await client.query(
+        'UPDATE exports SET status = $1, contract_approved_by = $2, updated_at = NOW() WHERE id = $3',
+        ['ECTA_CONTRACT_APPROVED', user?.id, exportId]
       );
 
-      res.json({ 
-        success: true, 
-        message: 'Contract approved. Export can proceed to Commercial Bank for document verification.',
+      await client.query(
+        `INSERT INTO export_status_history(export_id, old_status, new_status, changed_by, changed_at, notes)
+VALUES($1, $2, $3, $4, NOW(), $5)`,
+        [exportId, 'QUALITY_CERTIFIED', 'ECTA_CONTRACT_APPROVED', user?.id, notes || 'Contract approved']
+      );
+
+      await client.query('COMMIT');
+
+      logger.info('Contract approved', { exportId, userId: user?.id });
+
+      res.json({
+        success: true,
+        message: 'Contract approved',
         exportId,
-        contractNumber,
-        newStatus: 'ECTA_CONTRACT_APPROVED'
+        status: 'ECTA_CONTRACT_APPROVED'
       });
     } catch (error: any) {
-      res.status(500).json({ 
-        success: false, 
-        message: 'Failed to approve contract', 
-        error: error.message 
-      });
+      await client.query('ROLLBACK');
+      logger.error('Failed to approve contract', { error: error.message });
+      this.handleError(error, res);
+    } finally {
+      client.release();
     }
   };
 
-  /**
-   * Reject contract
-   * Status: ECTA_QUALITY_APPROVED → CONTRACT_REJECTED
-   */
   public rejectContract = async (req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
+    const client = await getPool().connect();
     try {
       const { exportId } = req.params;
-      const user = req.user!;
-      
-      if (!exportId) {
-        res.status(400).json({ success: false, message: 'Export ID is required' });
-        return;
-      }
+      const user = req.user;
+      const { reason } = req.body;
 
-      const { reason, rejectedBy } = req.body;
+      if (!exportId) {
+        throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Export ID is required', 400);
+      }
 
       if (!reason) {
-        res.status(400).json({ 
-          success: false, 
-          message: 'Rejection reason is required' 
-        });
-        return;
+        throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Rejection reason is required', 400);
       }
 
-      // Submit contract rejection to blockchain
-      const contract = this.fabricGateway.getExportContract();
-      await contract.submitTransaction(
-        'RejectContract',
-        exportId,
-        reason,
-        rejectedBy || user.username
+      await client.query('BEGIN');
+
+      const exportResult = await client.query('SELECT * FROM exports WHERE id = $1', [exportId]);
+      if (exportResult.rows.length === 0) {
+        throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
+      }
+
+      await client.query(
+        'UPDATE exports SET status = $1, updated_at = NOW() WHERE id = $2',
+        ['CONTRACT_REJECTED', exportId]
       );
 
-      res.json({ 
-        success: true, 
+      await client.query(
+        `INSERT INTO export_status_history(export_id, old_status, new_status, changed_by, changed_at, notes)
+VALUES($1, $2, $3, $4, NOW(), $5)`,
+        [exportId, 'QUALITY_CERTIFIED', 'CONTRACT_REJECTED', user?.id, reason]
+      );
+
+      await client.query('COMMIT');
+
+      logger.info('Contract rejected', { exportId, reason, userId: user?.id });
+
+      res.json({
+        success: true,
         message: 'Contract rejected',
         exportId,
-        newStatus: 'CONTRACT_REJECTED',
         reason
       });
     } catch (error: any) {
-      res.status(500).json({ 
-        success: false, 
-        message: 'Failed to reject contract', 
-        error: error.message 
-      });
+      await client.query('ROLLBACK');
+      logger.error('Failed to reject contract', { error: error.message });
+      this.handleError(error, res);
+    } finally {
+      client.release();
     }
   };
 
-  /**
-   * Get approved contracts (for reporting)
-   */
   public getApprovedContracts = async (_req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
     try {
-      const contract = this.fabricGateway.getExportContract();
-      const exportService = createExportService(contract);
-      const exports = await exportService.getExportsByStatus('ECTA_CONTRACT_APPROVED');
-      res.json({ 
-        success: true, 
-        data: exports, 
-        count: exports.length,
-        message: 'Exports with approved contracts'
-      });
+      const result = await getPool().query(
+        'SELECT * FROM exports WHERE status = $1 ORDER BY created_at DESC',
+        ['ECTA_CONTRACT_APPROVED']
+      );
+      res.json({ success: true, data: result.rows, count: result.rows.length });
     } catch (error: any) {
-      res.status(500).json({ 
-        success: false, 
-        message: 'Failed to fetch approved contracts', 
-        error: error.message 
-      });
+      logger.error('Failed to fetch approved contracts', { error: error.message });
+      this.handleError(error, res);
     }
   };
 
-  /**
-   * Get rejected contracts (for reporting)
-   */
   public getRejectedContracts = async (_req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
     try {
-      const contract = this.fabricGateway.getExportContract();
-      const exportService = createExportService(contract);
-      const exports = await exportService.getExportsByStatus('CONTRACT_REJECTED');
-      res.json({ 
-        success: true, 
-        data: exports, 
-        count: exports.length,
-        message: 'Rejected export contracts'
-      });
+      const result = await getPool().query(
+        'SELECT * FROM exports WHERE status = $1 ORDER BY created_at DESC',
+        ['CONTRACT_REJECTED']
+      );
+      res.json({ success: true, data: result.rows, count: result.rows.length });
     } catch (error: any) {
-      res.status(500).json({ 
-        success: false, 
-        message: 'Failed to fetch rejected contracts', 
-        error: error.message 
-      });
+      logger.error('Failed to fetch rejected contracts', { error: error.message });
+      this.handleError(error, res);
     }
   };
+
+  private handleError(error: any, res: Response): void {
+    if (error instanceof AppError) {
+      res.status(error.httpStatus).json({
+        success: false,
+        error: { code: error.code, message: error.message },
+      });
+      return;
+    }
+
+    res.status(500).json({
+      success: false,
+      error: { code: ErrorCode.INTERNAL_SERVER_ERROR, message: 'An unexpected error occurred' },
+    });
+  }
 }

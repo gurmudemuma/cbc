@@ -19,7 +19,10 @@ export enum ErrorCode {
   UNAUTHORIZED = 'ERR_3000',
   INSUFFICIENT_PERMISSIONS = 'ERR_3001',
   
-  // Blockchain Errors (4000-4999)
+  // Resource Errors (4000-4999)
+  NOT_FOUND = 'ERR_4001',
+  
+  // Blockchain Errors (5000-5999)
   BLOCKCHAIN_UNAVAILABLE = 'ERR_4000',
   TRANSACTION_FAILED = 'ERR_4002',
   MVCC_CONFLICT = 'ERR_4005',

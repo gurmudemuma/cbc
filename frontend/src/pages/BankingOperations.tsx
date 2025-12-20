@@ -37,9 +37,12 @@ import {
   Upload,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { CommonPageProps } from '../types';
 import bankingService from '../services/bankingService';
 
-const BankingOperations = ({ user, org }) => {
+interface BankingOperationsProps extends CommonPageProps {}
+
+const BankingOperations = ({ user, org }: BankingOperationsProps): JSX.Element => {
   const [activeTab, setActiveTab] = useState(0);
   const [documents, setDocuments] = useState([]);
   const [financing, setFinancing] = useState([]);

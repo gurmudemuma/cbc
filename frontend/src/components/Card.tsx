@@ -1,12 +1,30 @@
 import { styled } from '@mui/material/styles';
-import { Card as MuiCard, CardHeader, CardContent, CardActions, Typography, Box, IconButton } from '@mui/material';
+import { Card as MuiCard, CardProps as MuiCardProps, CardHeader, CardContent, CardActions, Typography, Box, IconButton } from '@mui/material';
 import { forwardRef } from 'react';
+
+interface CardProps extends Omit<MuiCardProps, 'variant'> {
+  children?: React.ReactNode;
+  title?: string;
+  subtitle?: string;
+  icon?: React.ReactNode;
+  actions?: React.ReactNode;
+  customVariant?: 'elevation' | 'outlined' | 'elevated' | 'highlight';
+  compact?: boolean;
+  interactive?: boolean;
+  onClick?: () => void;
+}
+
+interface StyledCardProps {
+  interactive?: boolean;
+  compact?: boolean;
+  customVariant?: string;
+}
 
 // Styled MUI Card with custom variants
 const StyledCard = styled(MuiCard, {
-  shouldForwardProp: (prop) => 
-    !['interactive', 'variant', 'compact'].includes(prop),
-})(({ theme, variant, interactive, compact }) => ({
+  shouldForwardProp: (prop) =>
+    !['interactive', 'compact', 'customVariant'].includes(prop as string),
+})<StyledCardProps>(({ theme, customVariant, interactive, compact }) => ({
   background: theme.palette.background.paper,
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: theme.shape.borderRadius * 1.5,
@@ -28,17 +46,12 @@ const StyledCard = styled(MuiCard, {
   },
 
   // Variants
-  ...(variant === 'elevated' && {
-    boxShadow: theme.shadows[5],
-    '&:hover': {
-      transform: 'translateY(-4px)',
-      boxShadow: theme.shadows[6],
-    },
+  ...(customVariant === 'elevation' && {
+    boxShadow: theme.shadows[2],
   }),
 
-  ...(variant === 'highlight' && {
-    borderColor: theme.palette.primary.main,
-    boxShadow: theme.shadows[4],
+  ...(customVariant === 'outlined' && {
+    boxShadow: 'none',
   }),
 
   // Interactive
@@ -95,13 +108,13 @@ const HeaderContent = styled(Box)(({ theme }) => ({
 }));
 
 // Main Card component
-const Card = forwardRef(({
+const Card = forwardRef<HTMLDivElement, CardProps>(({
   children,
   title,
   subtitle,
   icon,
   actions,
-  variant = 'default',
+  customVariant = 'elevation',
   compact = false,
   interactive = false,
   onClick,
@@ -112,7 +125,7 @@ const Card = forwardRef(({
   return (
     <StyledCard
       ref={ref}
-      variant={variant}
+      customVariant={customVariant}
       interactive={interactive}
       compact={compact}
       onClick={interactive ? onClick : undefined}

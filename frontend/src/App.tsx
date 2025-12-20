@@ -11,10 +11,28 @@ import { motion, AnimatePresence } from 'framer-motion';
 // Contexts
 import { NotificationProvider } from './contexts/NotificationContext';
 
-// Create a theme context
-export const ThemeContext = createContext({});
+// Priority 2 Hooks
+import { useDashboardCustomization } from './hooks/useDashboardCustomization';
+import { useAccessibilitySettings } from './components/AccessibilityEnhancements';
+import { useKeyboardShortcuts, COMMON_SHORTCUTS } from './hooks/useKeyboardShortcuts';
 
-export const useAppTheme = () => {
+// Priority 2 Components
+import DashboardCustomizer from './components/DashboardCustomizer';
+import KeyboardShortcutsHelp from './components/KeyboardShortcutsHelp';
+import { AccessibilitySettingsDialog, SkipToMainContent } from './components/AccessibilityEnhancements';
+
+// Type definitions
+interface ThemeContextType {
+  mode: 'light' | 'dark';
+  org: string | null;
+  toggleColorMode: () => void;
+  setOrganization: (org: string) => void;
+}
+
+// Create a theme context
+export const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+
+export const useAppTheme = (): ThemeContextType => {
   const context = useContext(ThemeContext);
   if (!context) {
     throw new Error('useAppTheme must be used within a ThemeProvider');
@@ -39,14 +57,18 @@ import ExportDetails from './pages/ExportDetails';
 import CustomsClearance from './pages/CustomsClearance';
 import ExporterPreRegistration from './pages/ExporterPreRegistration';
 import ECTAPreRegistrationManagement from './pages/ECTAPreRegistrationManagement';
+import BankDocumentVerification from './pages/BankDocumentVerification';
+import ECTAContractApproval from './pages/ECTAContractApproval';
+import ECTALicenseApproval from './pages/ECTALicenseApproval';
+import ECXVerification from './pages/ECXVerification';
 
-// New Exporter Portal Pages
+// Exporter Portal Pages
 import ExporterProfile from './pages/ExporterProfile';
 import ApplicationTracking from './pages/ApplicationTracking';
 import ExportDashboard from './pages/ExportDashboard';
 import HelpSupport from './pages/HelpSupport';
 
-// New Consortium Member Pages
+// Consortium Member Pages
 import BankingOperations from './pages/BankingOperations';
 import LotManagement from './pages/LotManagement';
 import MonetaryPolicy from './pages/MonetaryPolicy';
@@ -67,7 +89,7 @@ const queryClient = new QueryClient({
   },
 });
 
-const getOrgClass = (org) => {
+const getOrgClass = (org: string | null): string => {
   const orgLower = (org || '').toLowerCase();
   
   // Map organization IDs to CSS class names
@@ -81,12 +103,16 @@ const getOrgClass = (org) => {
   return 'nb-regulatory';
 };
 
+interface AppThemeProviderProps {
+  children: React.ReactNode;
+}
+
 // Theme provider component to wrap the app
-const AppThemeProvider = ({ children }) => {
-  const [org, setOrg] = useState(null);
-  const [mode, setMode] = useState(() => {
+const AppThemeProvider: React.FC<AppThemeProviderProps> = ({ children }) => {
+  const [org, setOrg] = useState<string | null>(null);
+  const [mode, setMode] = useState<'light' | 'dark'>(() => {
     // Initialize from localStorage or default to 'light'
-    return localStorage.getItem('themeMode') || 'light';
+    return (localStorage.getItem('themeMode') as 'light' | 'dark') || 'light';
   });
 
   // Create theme with organization and mode
@@ -96,16 +122,16 @@ const AppThemeProvider = ({ children }) => {
   }, [org, mode]);
   
   // Toggle between light and dark mode
-  const toggleColorMode = useCallback(() => {
-    setMode((prevMode) => {
-      const newMode = prevMode === 'light' ? 'dark' : 'light';
+  const toggleColorMode = useCallback((): void => {
+    setMode((prevMode: 'light' | 'dark') => {
+      const newMode: 'light' | 'dark' = prevMode === 'light' ? 'dark' : 'light';
       localStorage.setItem('themeMode', newMode);
       return newMode;
     });
   }, []);
 
   // Set organization and update theme
-  const setOrganization = useCallback((newOrg) => {
+  const setOrganization = useCallback((newOrg: string): void => {
     setOrg(newOrg);
   }, []);
 
@@ -127,12 +153,35 @@ const AppThemeProvider = ({ children }) => {
 };
 
 // Main App component
-function App() {
+function App(): JSX.Element {
   const { mode, org, toggleColorMode, setOrganization } = useAppTheme();
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  // Priority 2 State
+  const { settings, updateSettings } = useAccessibilitySettings();
+  const { layouts, activeLayout, ...dashboardMethods } = useDashboardCustomization(user?.id);
+  const [showCustomizer, setShowCustomizer] = useState(false);
+  const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
+  const [showAccessibility, setShowAccessibility] = useState(false);
 
   const orgClass = useMemo(() => getOrgClass(org), [org]);
+
+  // Setup keyboard shortcuts
+  useKeyboardShortcuts([
+    {
+      ...COMMON_SHORTCUTS.CUSTOMIZE_DASHBOARD,
+      callback: () => setShowCustomizer(true),
+    },
+    {
+      ...COMMON_SHORTCUTS.HELP,
+      callback: () => setShowShortcutsHelp(true),
+    },
+    {
+      ...COMMON_SHORTCUTS.TOGGLE_THEME,
+      callback: () => toggleColorMode(),
+    },
+  ]);
 
   useEffect(() => {
     // Check for stored auth token
@@ -158,7 +207,7 @@ function App() {
     };
   }, [orgClass, mode]);
 
-  const getRoleBasedRoute = useCallback((orgId) => {
+  const getRoleBasedRoute = useCallback((orgId: string | null) => {
     const orgLower = orgId?.toLowerCase();
     
     // Exporter Portal - External exporters (SDK-based)
@@ -206,7 +255,7 @@ function App() {
     return '/dashboard';
   }, []);
 
-  const handleLogin = useCallback((userData, token, selectedOrg) => {
+  const handleLogin = useCallback((userData: any, token: string, selectedOrg: string) => {
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(userData));
     localStorage.setItem('org', selectedOrg);
@@ -256,13 +305,25 @@ function App() {
             path: 'payment-repatriation',
             element: <ExportManagement user={user} org={org} />,
           },
-          { path: 'banking', element: <ExportManagement user={user} org={org} /> },
+          { path: 'banking', element: <BankingOperations user={user} org={org} /> },
+          { path: 'banking/documents', element: <BankDocumentVerification user={user} org={org} /> },
+          { path: 'banking/financing', element: <BankingOperations user={user} org={org} /> },
+          { path: 'banking/compliance', element: <BankingOperations user={user} org={org} /> },
+          { path: 'banking/reports', element: <BankingOperations user={user} org={org} /> },
+          
+          // Shipment Routes
           { path: 'shipments', element: <ShipmentTracking user={user} org={org} /> },
           { path: 'arrivals', element: <ShipmentTracking user={user} org={org} /> },
+          
+          // User Management
           { path: 'users', element: <UserManagement user={user} org={org} /> },
+          
+          // Customs Routes
           { path: 'customs', element: <CustomsClearance user={user} org={org} /> },
           { path: 'customs/export', element: <CustomsClearance user={user} org={org} /> },
           { path: 'customs/import', element: <CustomsClearance user={user} org={org} /> },
+          
+          // Pre-registration Routes
           { path: 'pre-registration', element: <ExporterPreRegistration user={user} org={org} /> },
           { path: 'ecta/pre-registration', element: <ECTAPreRegistrationManagement user={user} org={org} /> },
           
@@ -274,15 +335,6 @@ function App() {
           { path: 'exports/new', element: <ExportDashboard user={user} org={org} /> },
           { path: 'exports/status', element: <ExportDashboard user={user} org={org} /> },
           { path: 'support', element: <HelpSupport user={user} org={org} /> },
-          
-          // Pre-registration sub-routes (now handled by URL parameters)
-          // All pre-registration navigation goes to the same form with ?step=N parameter
-          
-          // Banking Operations Routes
-          { path: 'banking/documents', element: <BankingOperations user={user} org={org} /> },
-          { path: 'banking/financing', element: <BankingOperations user={user} org={org} /> },
-          { path: 'banking/compliance', element: <BankingOperations user={user} org={org} /> },
-          { path: 'banking/reports', element: <BankingOperations user={user} org={org} /> },
           
           // FX Management Routes
           { path: 'fx', element: <FXRates user={user} org={org} /> },
@@ -304,17 +356,17 @@ function App() {
           { path: 'preregistration/approved', element: <ECTAPreRegistrationManagement user={user} org={org} /> },
           { path: 'preregistration/rejected', element: <ECTAPreRegistrationManagement user={user} org={org} /> },
           
-          { path: 'licenses', element: <Dashboard user={user} org={org} /> },
-          { path: 'licenses/applications', element: <Dashboard user={user} org={org} /> },
-          { path: 'licenses/active', element: <Dashboard user={user} org={org} /> },
-          { path: 'licenses/expired', element: <Dashboard user={user} org={org} /> },
-          { path: 'licenses/renewals', element: <Dashboard user={user} org={org} /> },
+          { path: 'licenses', element: <ECTALicenseApproval user={user} org={org} /> },
+          { path: 'licenses/applications', element: <ECTALicenseApproval user={user} org={org} /> },
+          { path: 'licenses/active', element: <ECTALicenseApproval user={user} org={org} /> },
+          { path: 'licenses/expired', element: <ECTALicenseApproval user={user} org={org} /> },
+          { path: 'licenses/renewals', element: <ECTALicenseApproval user={user} org={org} /> },
           
-          { path: 'contracts', element: <Dashboard user={user} org={org} /> },
-          { path: 'contracts/pending', element: <Dashboard user={user} org={org} /> },
-          { path: 'contracts/approved', element: <Dashboard user={user} org={org} /> },
-          { path: 'contracts/templates', element: <Dashboard user={user} org={org} /> },
-          { path: 'contracts/history', element: <Dashboard user={user} org={org} /> },
+          { path: 'contracts', element: <ECTAContractApproval user={user} org={org} /> },
+          { path: 'contracts/pending', element: <ECTAContractApproval user={user} org={org} /> },
+          { path: 'contracts/approved', element: <ECTAContractApproval user={user} org={org} /> },
+          { path: 'contracts/templates', element: <ECTAContractApproval user={user} org={org} /> },
+          { path: 'contracts/history', element: <ECTAContractApproval user={user} org={org} /> },
           
           { path: 'regulatory', element: <Dashboard user={user} org={org} /> },
           { path: 'regulatory/compliance', element: <Dashboard user={user} org={org} /> },
@@ -322,6 +374,7 @@ function App() {
           { path: 'regulatory/updates', element: <Dashboard user={user} org={org} /> },
           
           // ECX Routes
+          { path: 'lot-verification', element: <ECXVerification user={user} org={org} /> },
           { path: 'lots', element: <LotManagement user={user} org={org} /> },
           { path: 'lots/pending', element: <LotManagement user={user} org={org} /> },
           { path: 'lots/verified', element: <LotManagement user={user} org={org} /> },
@@ -392,7 +445,6 @@ function App() {
     ],
     {
       future: {
-        v7_startTransition: true,
         v7_relativeSplatPath: true,
       },
     }
@@ -438,6 +490,31 @@ function App() {
           preventDuplicate
         >
           <NotificationProvider>
+            <SkipToMainContent />
+            
+            {/* Priority 2 Dialogs */}
+            <DashboardCustomizer
+              open={showCustomizer}
+              onClose={() => setShowCustomizer(false)}
+              layout={activeLayout}
+              onUpdateLayout={dashboardMethods.updateLayout}
+              onAddWidget={dashboardMethods.addWidget}
+              onRemoveWidget={dashboardMethods.removeWidget}
+              onToggleVisibility={dashboardMethods.toggleWidgetVisibility}
+            />
+            
+            <KeyboardShortcutsHelp
+              open={showShortcutsHelp}
+              onClose={() => setShowShortcutsHelp(false)}
+            />
+            
+            <AccessibilitySettingsDialog
+              open={showAccessibility}
+              onClose={() => setShowAccessibility(false)}
+              settings={settings}
+              onSettingsChange={updateSettings}
+            />
+            
             <CssBaseline />
             <div className={`app ${orgClass} ${mode}-mode`}>
               <ErrorBoundary>

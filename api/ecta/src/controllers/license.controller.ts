@@ -1,7 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import { JwtPayload } from 'jsonwebtoken';
-import { FabricGateway } from '../fabric/gateway';
-import { createExportService } from '../../../shared/exportService';
+import { pool } from '../../../shared/database/pool';
+import { createLogger } from '../../../shared/logger';
+import { ErrorCode, AppError } from '../../../shared/error-codes';
+
+const logger = createLogger('ECTALicenseController');
 
 interface AuthJWTPayload extends JwtPayload {
   id: string;
@@ -22,34 +25,18 @@ interface RequestWithUser extends Request {
  * - Verifying exporter credentials
  * - Issuing export licenses
  * - Approving or rejecting license applications
- * 
- * This is the FIRST of three ECTA approval steps:
- * 1. License Approval (this controller)
- * 2. Quality Certification (quality.controller.ts)
- * 3. Contract Approval (contract.controller.ts)
  */
 export class LicenseController {
-  private fabricGateway: FabricGateway;
-
-  constructor() {
-    this.fabricGateway = FabricGateway.getInstance();
-  }
-
   /**
    * Get all exports (ECTA can view all)
    */
   public getAllExports = async (_req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
     try {
-      const contract = this.fabricGateway.getExportContract();
-      const exportService = createExportService(contract);
-      const exports = await exportService.getAllExports();
-      res.json({ success: true, data: exports, count: exports.length });
+      const result = await pool.query('SELECT * FROM exports ORDER BY created_at DESC');
+      res.json({ success: true, data: result.rows, count: result.rows.length });
     } catch (error: any) {
-      res.status(500).json({ 
-        success: false, 
-        message: 'Failed to fetch exports', 
-        error: error.message 
-      });
+      logger.error('Failed to fetch exports', { error: error.message });
+      this.handleError(error, res);
     }
   };
 
@@ -59,66 +46,64 @@ export class LicenseController {
    */
   public getPendingLicenses = async (_req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
     try {
-      const contract = this.fabricGateway.getExportContract();
-      const exportService = createExportService(contract);
-      const exports = await exportService.getExportsByStatus('ECX_VERIFIED');
+      const result = await pool.query(
+        'SELECT * FROM exports WHERE status = $1 ORDER BY created_at DESC',
+        ['ECX_VERIFIED']
+      );
       res.json({ 
         success: true, 
-        data: exports, 
-        count: exports.length,
+        data: result.rows, 
+        count: result.rows.length,
         message: 'Exports pending ECTA license approval'
       });
     } catch (error: any) {
-      res.status(500).json({ 
-        success: false, 
-        message: 'Failed to fetch pending licenses', 
-        error: error.message 
-      });
+      logger.error('Failed to fetch pending licenses', { error: error.message });
+      this.handleError(error, res);
     }
   };
 
   /**
    * Review license application
-   * Check exporter credentials and license validity
    */
   public reviewLicense = async (req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
+    const client = await pool.connect();
     try {
       const { exportId } = req.params;
       const user = req.user!;
       
       if (!exportId) {
-        res.status(400).json({ success: false, message: 'Export ID is required' });
-        return;
+        throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Export ID is required', 400);
       }
 
-      const { 
-        exporterLicenseNumber,
-        licenseExpiryDate,
-        exporterTIN,
-        reviewedBy,
-        notes 
-      } = req.body;
+      const { exporterLicenseNumber, licenseExpiryDate, notes } = req.body;
 
-      // Validate required fields
       if (!exporterLicenseNumber) {
-        res.status(400).json({ 
-          success: false, 
-          message: 'Exporter license number is required' 
-        });
-        return;
+        throw new AppError(
+          ErrorCode.MISSING_REQUIRED_FIELD,
+          'Exporter license number is required',
+          400
+        );
       }
 
-      // Submit license review to blockchain
-      const contract = this.fabricGateway.getExportContract();
-      await contract.submitTransaction(
-        'ReviewLicense',
-        exportId,
-        exporterLicenseNumber,
-        licenseExpiryDate || '',
-        exporterTIN || '',
-        reviewedBy || user.username,
-        notes || ''
+      await client.query('BEGIN');
+
+      const exportResult = await client.query(
+        'SELECT * FROM exports WHERE id = $1',
+        [exportId]
       );
+
+      if (exportResult.rows.length === 0) {
+        throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
+      }
+
+      await client.query(
+        `UPDATE exports SET export_license_number = $1, license_expiry_date = $2, updated_at = NOW() WHERE id = $3`,
+        [exporterLicenseNumber, licenseExpiryDate || null, exportId]
+      );
+
+      await client.query('COMMIT');
+
+      logger.info('License reviewed', { exportId, exporterLicenseNumber, userId: user.id });
 
       res.json({ 
         success: true, 
@@ -127,54 +112,56 @@ export class LicenseController {
         exporterLicenseNumber
       });
     } catch (error: any) {
-      res.status(500).json({ 
-        success: false, 
-        message: 'Failed to review license', 
-        error: error.message 
-      });
+      await client.query('ROLLBACK');
+      logger.error('Failed to review license', { error: error.message });
+      this.handleError(error, res);
+    } finally {
+      client.release();
     }
   };
 
   /**
    * Issue export license
-   * Generate license number and record in blockchain
    */
   public issueLicense = async (req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
+    const client = await pool.connect();
     try {
       const { exportId } = req.params;
       const user = req.user!;
       
       if (!exportId) {
-        res.status(400).json({ success: false, message: 'Export ID is required' });
-        return;
+        throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Export ID is required', 400);
       }
 
-      const { 
-        licenseNumber,
-        issuedBy,
-        validUntil,
-        notes 
-      } = req.body;
+      const { licenseNumber, validUntil, notes } = req.body;
 
-      // Validate required fields
       if (!licenseNumber || !validUntil) {
-        res.status(400).json({ 
-          success: false, 
-          message: 'License number and validity date are required' 
-        });
-        return;
+        throw new AppError(
+          ErrorCode.MISSING_REQUIRED_FIELD,
+          'License number and validity date are required',
+          400
+        );
       }
 
-      // Submit license issuance to blockchain
-      const contract = this.fabricGateway.getExportContract();
-      await contract.submitTransaction(
-        'IssueLicense',
-        exportId,
-        licenseNumber,
-        issuedBy || user.username,
-        validUntil,
-        notes || ''
+      await client.query('BEGIN');
+
+      const exportResult = await client.query(
+        'SELECT * FROM exports WHERE id = $1',
+        [exportId]
       );
+
+      if (exportResult.rows.length === 0) {
+        throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
+      }
+
+      await client.query(
+        `UPDATE exports SET export_license_number = $1, license_expiry_date = $2, updated_at = NOW() WHERE id = $3`,
+        [licenseNumber, validUntil, exportId]
+      );
+
+      await client.query('COMMIT');
+
+      logger.info('License issued', { exportId, licenseNumber, userId: user.id });
 
       res.json({ 
         success: true, 
@@ -184,51 +171,62 @@ export class LicenseController {
         validUntil
       });
     } catch (error: any) {
-      res.status(500).json({ 
-        success: false, 
-        message: 'Failed to issue license', 
-        error: error.message 
-      });
+      await client.query('ROLLBACK');
+      logger.error('Failed to issue license', { error: error.message });
+      this.handleError(error, res);
+    } finally {
+      client.release();
     }
   };
 
   /**
    * Approve license
-   * Status: ECX_VERIFIED → ECTA_LICENSE_APPROVED
    */
   public approveLicense = async (req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
+    const client = await pool.connect();
     try {
       const { exportId } = req.params;
       const user = req.user!;
       
       if (!exportId) {
-        res.status(400).json({ success: false, message: 'Export ID is required' });
-        return;
+        throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Export ID is required', 400);
       }
 
-      const { 
-        licenseNumber,
-        approvedBy, 
-        notes 
-      } = req.body;
+      const { licenseNumber, notes } = req.body;
 
       if (!licenseNumber) {
-        res.status(400).json({ 
-          success: false, 
-          message: 'License number is required for approval' 
-        });
-        return;
+        throw new AppError(
+          ErrorCode.MISSING_REQUIRED_FIELD,
+          'License number is required for approval',
+          400
+        );
       }
 
-      // Submit license approval to blockchain
-      const contract = this.fabricGateway.getExportContract();
-      await contract.submitTransaction(
-        'ApproveLicense',
-        exportId,
-        licenseNumber,
-        approvedBy || user.username,
-        notes || ''
+      await client.query('BEGIN');
+
+      const exportResult = await client.query(
+        'SELECT * FROM exports WHERE id = $1',
+        [exportId]
       );
+
+      if (exportResult.rows.length === 0) {
+        throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
+      }
+
+      await client.query(
+        'UPDATE exports SET status = $1, export_license_number = $2, updated_at = NOW() WHERE id = $3',
+        ['ECTA_LICENSE_APPROVED', licenseNumber, exportId]
+      );
+
+      await client.query(
+        `INSERT INTO export_status_history (export_id, old_status, new_status, changed_by, changed_at, notes)
+         VALUES ($1, $2, $3, $4, NOW(), $5)`,
+        [exportId, 'ECX_VERIFIED', 'ECTA_LICENSE_APPROVED', user.id, notes || 'License approved']
+      );
+
+      await client.query('COMMIT');
+
+      logger.info('License approved', { exportId, licenseNumber, userId: user.id });
 
       res.json({ 
         success: true, 
@@ -238,46 +236,62 @@ export class LicenseController {
         newStatus: 'ECTA_LICENSE_APPROVED'
       });
     } catch (error: any) {
-      res.status(500).json({ 
-        success: false, 
-        message: 'Failed to approve license', 
-        error: error.message 
-      });
+      await client.query('ROLLBACK');
+      logger.error('Failed to approve license', { error: error.message });
+      this.handleError(error, res);
+    } finally {
+      client.release();
     }
   };
 
   /**
    * Reject license
-   * Status: ECX_VERIFIED → LICENSE_REJECTED
    */
   public rejectLicense = async (req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
+    const client = await pool.connect();
     try {
       const { exportId } = req.params;
       const user = req.user!;
       
       if (!exportId) {
-        res.status(400).json({ success: false, message: 'Export ID is required' });
-        return;
+        throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Export ID is required', 400);
       }
 
-      const { reason, rejectedBy } = req.body;
+      const { reason } = req.body;
 
       if (!reason) {
-        res.status(400).json({ 
-          success: false, 
-          message: 'Rejection reason is required' 
-        });
-        return;
+        throw new AppError(
+          ErrorCode.MISSING_REQUIRED_FIELD,
+          'Rejection reason is required',
+          400
+        );
       }
 
-      // Submit license rejection to blockchain
-      const contract = this.fabricGateway.getExportContract();
-      await contract.submitTransaction(
-        'RejectLicense',
-        exportId,
-        reason,
-        rejectedBy || user.username
+      await client.query('BEGIN');
+
+      const exportResult = await client.query(
+        'SELECT * FROM exports WHERE id = $1',
+        [exportId]
       );
+
+      if (exportResult.rows.length === 0) {
+        throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
+      }
+
+      await client.query(
+        'UPDATE exports SET status = $1, updated_at = NOW() WHERE id = $2',
+        ['LICENSE_REJECTED', exportId]
+      );
+
+      await client.query(
+        `INSERT INTO export_status_history (export_id, old_status, new_status, changed_by, changed_at, notes)
+         VALUES ($1, $2, $3, $4, NOW(), $5)`,
+        [exportId, 'ECX_VERIFIED', 'LICENSE_REJECTED', user.id, reason]
+      );
+
+      await client.query('COMMIT');
+
+      logger.info('License rejected', { exportId, reason, userId: user.id });
 
       res.json({ 
         success: true, 
@@ -287,57 +301,68 @@ export class LicenseController {
         reason
       });
     } catch (error: any) {
-      res.status(500).json({ 
-        success: false, 
-        message: 'Failed to reject license', 
-        error: error.message 
-      });
+      await client.query('ROLLBACK');
+      logger.error('Failed to reject license', { error: error.message });
+      this.handleError(error, res);
+    } finally {
+      client.release();
     }
   };
 
   /**
-   * Get approved licenses (for reporting)
+   * Get approved licenses
    */
   public getApprovedLicenses = async (_req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
     try {
-      const contract = this.fabricGateway.getExportContract();
-      const exportService = createExportService(contract);
-      const exports = await exportService.getExportsByStatus('ECTA_LICENSE_APPROVED');
+      const result = await pool.query(
+        'SELECT * FROM exports WHERE status = $1 ORDER BY created_at DESC',
+        ['ECTA_LICENSE_APPROVED']
+      );
       res.json({ 
         success: true, 
-        data: exports, 
-        count: exports.length,
+        data: result.rows, 
+        count: result.rows.length,
         message: 'Exports with approved licenses'
       });
     } catch (error: any) {
-      res.status(500).json({ 
-        success: false, 
-        message: 'Failed to fetch approved licenses', 
-        error: error.message 
-      });
+      logger.error('Failed to fetch approved licenses', { error: error.message });
+      this.handleError(error, res);
     }
   };
 
   /**
-   * Get rejected licenses (for reporting)
+   * Get rejected licenses
    */
   public getRejectedLicenses = async (_req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
     try {
-      const contract = this.fabricGateway.getExportContract();
-      const exportService = createExportService(contract);
-      const exports = await exportService.getExportsByStatus('LICENSE_REJECTED');
+      const result = await pool.query(
+        'SELECT * FROM exports WHERE status = $1 ORDER BY created_at DESC',
+        ['LICENSE_REJECTED']
+      );
       res.json({ 
         success: true, 
-        data: exports, 
-        count: exports.length,
+        data: result.rows, 
+        count: result.rows.length,
         message: 'Rejected license applications'
       });
     } catch (error: any) {
-      res.status(500).json({ 
-        success: false, 
-        message: 'Failed to fetch rejected licenses', 
-        error: error.message 
-      });
+      logger.error('Failed to fetch rejected licenses', { error: error.message });
+      this.handleError(error, res);
     }
   };
+
+  private handleError(error: any, res: Response): void {
+    if (error instanceof AppError) {
+      res.status(error.httpStatus).json({
+        success: false,
+        error: { code: error.code, message: error.message },
+      });
+      return;
+    }
+
+    res.status(500).json({
+      success: false,
+      error: { code: ErrorCode.INTERNAL_SERVER_ERROR, message: 'An unexpected error occurred' },
+    });
+  }
 }

@@ -126,7 +126,7 @@ const RejectionDialog = ({
     onClose();
   };
 
-  const categories = rejectionCategories[stageName] || rejectionCategories.OTHER || ['Other'];
+  const categories = rejectionCategories[stageName] || ['Other'];
 
   return (
     <Dialog 

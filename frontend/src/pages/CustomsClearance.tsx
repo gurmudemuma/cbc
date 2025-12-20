@@ -30,7 +30,12 @@ import {
   IconButton,
 } from '@mui/material';
 
-const CustomsClearance = ({ user }) => {
+interface CustomsClearanceProps {
+  user: any;
+  org: string | null;
+}
+
+const CustomsClearance = ({ user, org }: CustomsClearanceProps): JSX.Element => {
   const { exports: allExports, loading: exportsLoading, error: exportsError, refreshExports } = useExports();
   const exports = allExports.filter((e) => e.status === 'CUSTOMS_PENDING' || e.status === 'CUSTOMS_CLEARED' || e.status === 'CUSTOMS_REJECTED');
   const [filteredExports, setFilteredExports] = useState([]);

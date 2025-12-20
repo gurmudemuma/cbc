@@ -1,9 +1,6 @@
 # Multi-stage build for production
 FROM node:18-alpine AS builder
 
-# Install dumb-init early (then copy to final image without network)
-RUN apk add --no-cache dumb-init
-
 # Configure npm for better reliability with increased timeouts
 RUN npm config set fetch-retry-mintimeout 20000 && \
     npm config set fetch-retry-maxtimeout 300000 && \
@@ -17,14 +14,14 @@ WORKDIR /app
 
 # Copy workspace package files (for dependencies)
 COPY package*.json ./
-COPY tsconfig.base.json ./
+COPY api/tsconfig.base.json ./
 
 # Copy service-specific files
-COPY ncat/package*.json ./ncat/
-COPY ncat/tsconfig.json ./ncat/
+COPY api/ecta/package*.json ./api/ecta/
+COPY api/ecta/tsconfig.json ./api/ecta/
 
 # Remove any existing package-lock.json in subdirectory to avoid conflicts
-RUN rm -f ./ncat/package-lock.json
+RUN rm -f ./api/ecta/package-lock.json
 
 # Install all workspace dependencies
 RUN npm install --legacy-peer-deps --prefer-offline --no-audit || \
@@ -32,26 +29,23 @@ RUN npm install --legacy-peer-deps --prefer-offline --no-audit || \
 RUN npm cache clean --force
 
 # Copy shared utilities
-COPY shared ./shared
+COPY api/shared ./api/shared
 
 # Copy service source code
-COPY ncat/src ./ncat/src
+COPY api/ecta/src ./api/ecta/src
 
 # Build TypeScript (use npx to find tsc from workspace root)
-WORKDIR /app/ncat
+WORKDIR /app/api/ecta
 RUN npx tsc && \
     if [ ! -d "dist" ]; then \
       echo "ERROR: dist directory was not created by build"; \
-      echo "Contents of /app/ncat:"; \
+      echo "Contents of /app/ecta:"; \
       ls -la; \
       exit 1; \
     fi
 
 # Production stage
 FROM node:18-alpine
-
-# Copy dumb-init from builder to avoid apk in no-network stages
-COPY --from=builder /usr/bin/dumb-init /usr/bin/dumb-init
 
 # Create app user
 RUN addgroup -g 1001 -S nodejs && \
@@ -68,10 +62,10 @@ RUN npm install --omit=dev --legacy-peer-deps && \
     npm cache clean --force
 
 # Copy built application from builder
-COPY --from=builder --chown=nodejs:nodejs /app/ncat/dist ./ncat/dist
+COPY --from=builder --chown=nodejs:nodejs /app/api/ecta/dist ./api/ecta/dist
 
 # Copy shared utilities (needed at runtime)
-COPY --from=builder --chown=nodejs:nodejs /app/shared ./shared
+COPY --from=builder --chown=nodejs:nodejs /app/api/shared ./api/shared
 
 # Copy wallet directory structure (will be populated at runtime)
 RUN mkdir -p wallet logs && chown -R nodejs:nodejs wallet logs
@@ -86,8 +80,5 @@ EXPOSE 3003
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3003/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
-# Use dumb-init to handle signals properly
-ENTRYPOINT ["dumb-init", "--"]
-
 # Start application
-CMD ["node", "ncat/dist/ncat/src/index.js"]
+CMD ["node", "api/ecta/dist/src/index.js"]

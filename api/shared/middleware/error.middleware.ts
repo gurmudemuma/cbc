@@ -2,6 +2,9 @@
  * Error handling middleware for Express applications
  */
 import { Request, Response, NextFunction } from 'express';
+import { createLogger } from '../logger';
+
+const logger = createLogger('ErrorMiddleware');
 
 /**
  * Custom error class with status code
@@ -9,11 +12,13 @@ import { Request, Response, NextFunction } from 'express';
 export class AppError extends Error {
   statusCode: number;
   isOperational: boolean;
+  errors?: Record<string, any>;
 
-  constructor(message: string, statusCode: number = 500) {
+  constructor(message: string, statusCode: number = 500, errors?: Record<string, any>) {
     super(message);
     this.statusCode = statusCode;
     this.isOperational = true;
+    this.errors = errors;
 
     Error.captureStackTrace(this, this.constructor);
   }
@@ -23,16 +28,17 @@ export class AppError extends Error {
  * Global error handler middleware
  */
 export const errorHandler = (
-  err: any,
+  err: Error,
   req: Request,
   res: Response,
   _next: NextFunction
 ): void => {
-  let statusCode = err.statusCode || 500;
+  const appError = err as AppError;
+  let statusCode = appError.statusCode || 500;
   let message = err.message || 'Internal Server Error';
 
   // Log error for debugging
-  console.error('[ERROR]', {
+  logger.error('Request error occurred', {
     timestamp: new Date().toISOString(),
     method: req.method,
     path: req.path,
@@ -54,13 +60,13 @@ export const errorHandler = (
   } else if (err.name === 'NotFoundError') {
     statusCode = 404;
     message = 'Resource Not Found';
-  } else if (err.code === 'ECONNREFUSED') {
+  } else if ((err as any).code === 'ECONNREFUSED') {
     statusCode = 503;
     message = 'Service Unavailable';
   }
 
   // Don't expose internal error details in production
-  const response: any = {
+  const response: Record<string, any> = {
     success: false,
     message,
   };
@@ -70,7 +76,7 @@ export const errorHandler = (
     response.error = {
       message: err.message,
       stack: err.stack,
-      ...(err.errors && { details: err.errors }),
+      ...(appError.errors && { details: appError.errors }),
     };
   }
 
@@ -92,7 +98,9 @@ export const notFoundHandler = (
 /**
  * Async handler wrapper to catch errors in async route handlers
  */
-export const asyncHandler = (fn: Function) => {
+export const asyncHandler = (
+  fn: (req: Request, res: Response, next: NextFunction) => Promise<void>
+) => {
   return (req: Request, res: Response, next: NextFunction) => {
     Promise.resolve(fn(req, res, next)).catch(next);
   };

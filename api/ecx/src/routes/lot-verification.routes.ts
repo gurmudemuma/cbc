@@ -1,24 +1,17 @@
 import { Router } from 'express';
 import { LotVerificationController } from '../controllers/lot-verification.controller';
-// TODO: Add authentication middleware
-// import { authMiddleware } from '../middleware/auth.middleware';
+import { authMiddleware } from '../../shared/middleware/auth.middleware';
 
 const router = Router();
 const controller = new LotVerificationController();
 
-// TODO: Enable authentication when middleware is created
-// router.use(authMiddleware);
+// Enable authentication for all routes
+router.use(authMiddleware);
 
 // ===== ECX LOT VERIFICATION TASKS =====
 
-// Get all exports
-router.get('/', controller.getAllExports);
-
-// Get single export
-router.get('/:exportId', controller.getExport);
-
-// Get exports pending ECX verification
-router.get('/pending/verification', controller.getPendingVerification);
+// Get exports pending ECX verification (specific routes first)
+router.get('/pending/verification', controller.getPendingVerifications);
 
 // Get verified lots
 router.get('/status/verified', controller.getVerifiedLots);
@@ -34,5 +27,11 @@ router.post('/:exportId/approve', controller.approveLot);
 
 // Reject lot verification (PENDING → ECX_REJECTED)
 router.post('/:exportId/reject', controller.rejectLot);
+
+// Get single export (generic routes last)
+router.get('/:exportId', controller.getExportById);
+
+// Get all exports
+router.get('/', controller.getAllExports);
 
 export default router;

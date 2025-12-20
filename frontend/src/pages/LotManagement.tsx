@@ -36,9 +36,12 @@ import {
   Scale,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { CommonPageProps } from '../types';
 import lotService from '../services/lotService';
 
-const LotManagement = ({ user, org }) => {
+interface LotManagementProps extends CommonPageProps {}
+
+const LotManagement = ({ user, org }: LotManagementProps): JSX.Element => {
   const [lots, setLots] = useState([]);
   const [selectedLot, setSelectedLot] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);

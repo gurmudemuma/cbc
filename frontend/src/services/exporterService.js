@@ -14,7 +14,7 @@ const exporterService = {
    * Get exporter profile
    */
   getProfile: async () => {
-    const response = await apiClient.get('/api/exporter/profile');
+    const response = await apiClient.get('/exporter/profile');
     return response.data;
   },
 
@@ -22,7 +22,7 @@ const exporterService = {
    * Update exporter profile
    */
   updateProfile: async (profileData) => {
-    const response = await apiClient.put('/api/exporter/profile', profileData);
+    const response = await apiClient.put('/exporter/profile', profileData);
     return response.data;
   },
 
@@ -30,7 +30,7 @@ const exporterService = {
    * Get profile verification status
    */
   getVerificationStatus: async () => {
-    const response = await apiClient.get('/api/exporter/profile/verification');
+    const response = await apiClient.get('/exporter/profile/verification');
     return response.data;
   },
 
@@ -43,7 +43,7 @@ const exporterService = {
    */
   getApplications: async (filter = null) => {
     const params = filter ? { status: filter } : {};
-    const response = await apiClient.get('/api/exporter/applications', { params });
+    const response = await apiClient.get('/exporter/applications', { params });
     return response.data;
   },
 
@@ -51,7 +51,7 @@ const exporterService = {
    * Get application details
    */
   getApplicationDetails: async (applicationId) => {
-    const response = await apiClient.get(`/api/exporter/applications/${applicationId}`);
+    const response = await apiClient.get(`/exporter/applications/${applicationId}`);
     return response.data;
   },
 
@@ -59,7 +59,7 @@ const exporterService = {
    * Submit application
    */
   submitApplication: async (applicationType, applicationData) => {
-    const response = await apiClient.post(`/api/exporter/applications/${applicationType}`, applicationData);
+    const response = await apiClient.post(`/exporter/applications/${applicationType}`, applicationData);
     return response.data;
   },
 
@@ -72,7 +72,7 @@ const exporterService = {
    */
   getExportRequests: async (filter = null) => {
     const params = filter ? { status: filter } : {};
-    const response = await apiClient.get('/api/exporter/exports', { params });
+    const response = await apiClient.get('/exports', { params });
     return response.data;
   },
 
@@ -80,7 +80,7 @@ const exporterService = {
    * Create new export request
    */
   createExportRequest: async (exportData) => {
-    const response = await apiClient.post('/api/exporter/exports', exportData);
+    const response = await apiClient.post('/exports', exportData);
     return response.data;
   },
 
@@ -88,7 +88,7 @@ const exporterService = {
    * Update export request
    */
   updateExportRequest: async (exportId, exportData) => {
-    const response = await apiClient.put(`/api/exporter/exports/${exportId}`, exportData);
+    const response = await apiClient.put(`/exports/${exportId}`, exportData);
     return response.data;
   },
 
@@ -96,7 +96,7 @@ const exporterService = {
    * Get export request details
    */
   getExportRequestDetails: async (exportId) => {
-    const response = await apiClient.get(`/api/exporter/exports/${exportId}`);
+    const response = await apiClient.get(`/exports/${exportId}`);
     return response.data;
   },
 
@@ -104,7 +104,7 @@ const exporterService = {
    * Get export statistics
    */
   getExportStatistics: async () => {
-    const response = await apiClient.get('/api/exporter/exports/statistics');
+    const response = await apiClient.get('/exports/statistics');
     return response.data;
   },
 
@@ -116,7 +116,7 @@ const exporterService = {
    * Submit support ticket
    */
   submitSupportTicket: async (ticketData) => {
-    const response = await apiClient.post('/api/exporter/support/tickets', ticketData);
+    const response = await apiClient.post('/exporter/support/tickets', ticketData);
     return response.data;
   },
 
@@ -124,7 +124,7 @@ const exporterService = {
    * Get support tickets
    */
   getSupportTickets: async () => {
-    const response = await apiClient.get('/api/exporter/support/tickets');
+    const response = await apiClient.get('/exporter/support/tickets');
     return response.data;
   },
 
@@ -132,7 +132,7 @@ const exporterService = {
    * Get FAQ
    */
   getFAQ: async () => {
-    const response = await apiClient.get('/api/exporter/support/faq');
+    const response = await apiClient.get('/exporter/support/faq');
     return response.data;
   },
 
@@ -140,7 +140,7 @@ const exporterService = {
    * Download resource
    */
   downloadResource: async (resourceId) => {
-    const response = await apiClient.get(`/api/exporter/support/resources/${resourceId}/download`, {
+    const response = await apiClient.get(`/exporter/support/resources/${resourceId}/download`, {
       responseType: 'blob'
     });
     return response.data;

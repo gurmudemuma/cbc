@@ -1,22 +1,35 @@
-import { createContext, useContext, useState, useCallback, useRef } from 'react';
+import { createContext, useContext, useState, useCallback, useRef, ReactNode } from 'react';
 import { Snackbar, Alert, Slide } from '@mui/material';
 
-const NotificationContext = createContext({});
+interface Notification {
+  id?: number;
+  message: string;
+  severity: 'success' | 'error' | 'warning' | 'info';
+  autoHideDuration?: number;
+}
 
-export const NotificationProvider = ({ children }) => {
-  const [notifications, setNotifications] = useState([]);
-  const queueRef = useRef([]);
+interface NotificationContextType {
+  showNotification: (message: string, severity?: 'success' | 'error' | 'warning' | 'info', options?: Record<string, any>) => void;
+}
+
+const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
+
+export const NotificationProvider = ({ children }: { children: ReactNode }) => {
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const queueRef = useRef<Notification[]>([]);
   const processing = useRef(false);
 
   const processQueue = useCallback(() => {
     if (queueRef.current.length > 0 && !processing.current) {
       const notification = queueRef.current.shift();
-      setNotifications(prev => [...prev, { ...notification, id: Date.now() }]);
-      processing.current = true;
+      if (notification) {
+        setNotifications(prev => [...prev, { ...notification, id: Date.now() }]);
+        processing.current = true;
+      }
     }
   }, []);
 
-  const showNotification = useCallback((message, severity = 'info', options = {}) => {
+  const showNotification = useCallback((message: string, severity: 'success' | 'error' | 'warning' | 'info' = 'info', options: Record<string, any> = {}) => {
     const { autoHideDuration = 6000, ...otherOptions } = options;
     
     const notification = {
@@ -52,7 +65,6 @@ export const NotificationProvider = ({ children }) => {
           onClose={() => handleClose(notification.id)}
           anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
           TransitionComponent={Slide}
-          TransitionProps={{ direction: 'left' }}
           sx={{
             '& .MuiPaper-root': {
               minWidth: '300px',

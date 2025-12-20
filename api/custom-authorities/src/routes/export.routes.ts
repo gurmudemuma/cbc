@@ -9,7 +9,7 @@ const exportController = new ExportController();
 router.get('/exports', authMiddleware, exportController.getAllExports);
 
 // Get single export
-router.get('/exports/:exportId', authMiddleware, exportController.getExport);
+router.get('/exports/:exportId', authMiddleware, exportController.getExportById);
 
 // Get pending export customs clearances
 router.get('/exports/pending/export-customs', authMiddleware, exportController.getPendingExportCustoms);

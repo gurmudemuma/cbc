@@ -4,7 +4,9 @@
  */
 
 import { getIPFSService } from '../ipfs.service';
-import pool from '../database/db.config';
+import { getPool } from '../database/pool';
+
+const pool = getPool();
 
 export interface DocumentUploadResult {
   ipfsHash: string;

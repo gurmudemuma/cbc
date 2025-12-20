@@ -9,16 +9,16 @@ const exportController = new ExportController();
 router.get('/exports', authMiddleware, exportController.getAllExports);
 
 // Get single export
-router.get('/exports/:exportId', authMiddleware, exportController.getExport);
+router.get('/exports/:exportId', authMiddleware, exportController.getExportById);
 
 // Get exports ready for shipment
-router.get('/exports/ready-for-shipment', authMiddleware, exportController.getReadyForShipment);
+router.get('/exports/ready-for-shipment', authMiddleware, exportController.getReadyExports);
 
 // Schedule shipment
 router.post('/exports/:exportId/shipment/schedule', authMiddleware, exportController.scheduleShipment);
 
-// Mark as shipped
-router.post('/exports/:exportId/shipment/shipped', authMiddleware, exportController.markAsShipped);
+// Confirm shipment
+router.post('/exports/:exportId/shipment/confirm', authMiddleware, exportController.confirmShipment);
 
 // Mark as arrived
 router.post('/exports/:exportId/shipment/arrived', authMiddleware, exportController.markAsArrived);

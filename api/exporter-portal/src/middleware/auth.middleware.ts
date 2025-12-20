@@ -31,11 +31,12 @@ export const authenticateToken = (
   try {
     const decoded = jwt.verify(token, config.JWT_SECRET) as JWTPayload;
     
-    // Verify user is an exporter
-    if (decoded.role !== 'exporter') {
+    // Verify user is an exporter or admin
+    const allowedRoles = ['exporter', 'admin'];
+    if (!allowedRoles.includes(decoded.role)) {
       res.status(403).json({
         success: false,
-        message: 'Access denied. Exporters only.',
+        message: 'Access denied. Only exporters and admins can access this portal.',
       });
       return;
     }

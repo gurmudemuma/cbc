@@ -20,7 +20,17 @@ import RejectionDialog from '../RejectionDialog';
  * ECX Lot Verification Approval Form
  * Used by ECX to verify lot numbers and warehouse receipts
  */
-const ECXApprovalForm = ({ exportData, onApprove, onReject, loading = false }) => {
+
+import { CommonPageProps, ECXApprovalFormData } from '../../types';
+
+interface ECXApprovalFormProps extends CommonPageProps {
+  exportData: any;
+  onApprove: (data: ECXApprovalFormData) => void;
+  onReject: (data: any) => void;
+  loading?: boolean;
+}
+
+const ECXApprovalForm = ({ exportData, onApprove, onReject, loading = false }: ECXApprovalFormProps): JSX.Element => {
   const [formData, setFormData] = useState({
     lotNumber: exportData.ecxLotNumber || '',
     warehouseReceiptNumber: exportData.warehouseReceiptNumber || '',
@@ -28,21 +38,21 @@ const ECXApprovalForm = ({ exportData, onApprove, onReject, loading = false }) =
     notes: '',
   });
   const [showRejectDialog, setShowRejectDialog] = useState(false);
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const handleChange = (field) => (event) => {
+  const handleChange = (field: string) => (event: any) => {
     setFormData({
       ...formData,
       [field]: event.target.value,
     });
     // Clear error for this field
     if (errors[field]) {
-      setErrors({ ...errors, [field]: null });
+      setErrors({ ...errors, [field]: '' });
     }
   };
 
   const validate = () => {
-    const newErrors = {};
+    const newErrors: Record<string, string> = {};
     
     if (!formData.lotNumber || formData.lotNumber.trim().length < 3) {
       newErrors.lotNumber = 'Valid ECX lot number is required';
@@ -64,11 +74,11 @@ const ECXApprovalForm = ({ exportData, onApprove, onReject, loading = false }) =
     }
 
     onApprove({
-      lotNumber: formData.ecxLotNumber.trim(),
+      lotNumber: formData.lotNumber.trim(),
       warehouseReceiptNumber: formData.warehouseReceiptNumber.trim(),
       warehouseLocation: formData.warehouseLocation.trim(),
-      notes: formData.verificationNotes.trim(),
-    });
+      notes: formData.notes.trim(),
+    } as ECXApprovalFormData);
   };
 
   const handleReject = (rejectionData) => {

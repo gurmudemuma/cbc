@@ -30,7 +30,12 @@ import {
 } from '@mui/material';
 import Divider from '@mui/material/Divider';
 
-const ShipmentTracking = ({ user }) => {
+interface ShipmentTrackingProps {
+  user: any;
+  org: string | null;
+}
+
+const ShipmentTracking = ({ user, org }: ShipmentTrackingProps): JSX.Element => {
   const { exports: allExports, loading: exportsLoading, error: exportsError, refreshExports } = useExports();
   const exports = allExports.filter((e) => e.status === 'CUSTOMS_CLEARED' || e.status === 'SHIPMENT_PENDING' || e.status === 'SHIPMENT_SCHEDULED' || e.status === 'SHIPPED' || e.status === 'SHIPMENT_REJECTED');
   const [filteredExports, setFilteredExports] = useState([]);
@@ -75,6 +80,16 @@ const ShipmentTracking = ({ user }) => {
     }
 
     setFilteredExports(filtered);
+  };
+
+  const handleSchedule = (exportData) => {
+    // Open schedule dialog or navigate to schedule page
+    console.log('Schedule shipment for:', exportData);
+  };
+
+  const handleConfirm = (exportData) => {
+    // Open confirm dialog or navigate to confirm page
+    console.log('Confirm shipment for:', exportData);
   };
 
   const handleApprove = async (data) => {

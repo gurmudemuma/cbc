@@ -4,8 +4,12 @@
 
 import { Router } from 'express';
 import { ecxController } from '../controllers/ecx.controller';
+import { authMiddleware } from '../../shared/middleware/auth.middleware';
 
 const router = Router();
+
+// Enable authentication for all routes
+router.use(authMiddleware);
 
 /**
  * @swagger

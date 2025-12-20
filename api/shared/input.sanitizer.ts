@@ -325,3 +325,17 @@ export class InputSanitizer {
     return { field, order: order as 'asc' | 'desc' };
   }
 }
+
+// Export validator middleware for Express
+export const inputValidator = {
+  sanitizeBody: (req: any, res: any, next: any) => {
+    try {
+      if (req.body && typeof req.body === 'object') {
+        req.body = InputSanitizer.sanitizeObject(req.body);
+      }
+      next();
+    } catch (error) {
+      res.status(400).json({ error: 'Invalid input' });
+    }
+  },
+};

@@ -19,13 +19,13 @@ const getEnvVar = (key, fallback) => {
 
 // API Endpoints - Use environment variables with localhost fallbacks
 export const API_ENDPOINTS = {
-  exporterPortal: getEnvVar('VITE_API_EXPORTER_PORTAL', 'http://localhost:3007'),  // Exporter Portal API
+  exporterPortal: getEnvVar('VITE_API_EXPORTER_PORTAL', 'http://localhost:3004'),  // Exporter Portal API
   commercialBank: getEnvVar('VITE_API_COMMERCIAL_BANK', 'http://localhost:3001'),
-  nationalBank: getEnvVar('VITE_API_NATIONAL_BANK', 'http://localhost:3002'),
+  nationalBank: getEnvVar('VITE_API_NATIONAL_BANK', 'http://localhost:3005'),
   ecta: getEnvVar('VITE_API_ECTA', 'http://localhost:3003'),
-  customAuthorities: getEnvVar('VITE_API_CUSTOM_AUTHORITIES', 'http://localhost:3005'),
+  customAuthorities: getEnvVar('VITE_API_CUSTOM_AUTHORITIES', 'http://localhost:3002'),
   ecx: getEnvVar('VITE_API_ECX', 'http://localhost:3006'),
-  shippingLine: getEnvVar('VITE_API_SHIPPING_LINE', 'http://localhost:3004'),
+  shippingLine: getEnvVar('VITE_API_SHIPPING_LINE', 'http://localhost:3007'),
 };
 
 // Organization Configuration - UPDATED with corrected workflow
@@ -36,7 +36,7 @@ export const ORGANIZATIONS = [
     label: 'Exporter Portal',
     fullName: 'Coffee Exporter Portal',
     apiUrl: API_ENDPOINTS.exporterPortal,
-    port: 3007,
+    port: 3004,
     mspId: null,  // External entity - no MSP
     description: 'External exporters - Submit export requests via SDK',
     order: 0,  // External entity
@@ -84,7 +84,7 @@ export const ORGANIZATIONS = [
     label: 'NBE',
     fullName: 'National Bank of Ethiopia',
     apiUrl: API_ENDPOINTS.nationalBank,
-    port: 3002,
+    port: 3005,
     mspId: 'NationalBankMSP',
     description: 'NBE - Foreign exchange approval only',
     order: 4,  // Fourth in workflow
@@ -95,7 +95,7 @@ export const ORGANIZATIONS = [
     label: 'Customs',
     fullName: 'Ethiopian Customs Commission',
     apiUrl: API_ENDPOINTS.customAuthorities,
-    port: 3005,
+    port: 3002,
     mspId: 'CustomAuthoritiesMSP',
     description: 'Customs - Export clearance and compliance',
     order: 5,  // Fifth in workflow
@@ -106,7 +106,7 @@ export const ORGANIZATIONS = [
     label: 'Shipping Line',
     fullName: 'Shipping Line',
     apiUrl: API_ENDPOINTS.shippingLine,
-    port: 3004,
+    port: 3007,
     mspId: 'ShippingLineMSP',
     description: 'Shipping Line - Manages shipments and logistics',
     order: 6,  // Sixth in workflow

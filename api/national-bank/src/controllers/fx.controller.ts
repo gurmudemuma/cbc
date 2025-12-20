@@ -1,240 +1,61 @@
-/**
- * FX Controller for National Bank
- * Handles Foreign Exchange approval/rejection with best practices
- */
+import { Request, Response, NextFunction } from "express";
+import { pool } from "../../../shared/database/pool";
+import { createLogger } from "../../../shared/logger";
+import { ErrorCode, AppError } from "../../../shared/error-codes";
 
-import { Request, Response, NextFunction } from 'express';
-import { JwtPayload } from 'jsonwebtoken';
-import { FabricGateway } from '../fabric/gateway';
-import { createExportService } from '../../../shared/exportService';
-import { CacheService, CacheKeys, CacheTTL } from '../../../shared/cache.service';
-import { auditService, AuditAction } from '../../../shared/audit.service';
-import { ResilientBlockchainService } from '../../../shared/resilience.service';
-import { ErrorCode, AppError } from '../../../shared/error-codes';
-
-interface AuthJWTPayload extends JwtPayload {
-  id: string;
-  username: string;
-  organizationId: string;
-  role: string;
-}
+const logger = createLogger('FXController');
 
 interface RequestWithUser extends Request {
-  user?: AuthJWTPayload;
+  user?: any;
 }
 
 export class FXController {
-  private fabricGateway: FabricGateway;
-  private cacheService: CacheService;
-  private resilienceService: ResilientBlockchainService;
-
-  constructor() {
-    this.fabricGateway = FabricGateway.getInstance();
-    this.cacheService = CacheService.getInstance();
-    this.resilienceService = new ResilientBlockchainService('national-bank');
-  }
-
   /**
-   * Get all exports (with caching)
+   * Get all exports
    */
   public getAllExports = async (req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
     try {
-      const user = req.user!;
-      const cacheKey = `exports:${user.organizationId}:all`;
-
-      // Try cache first
-      const cached = await this.cacheService.get(cacheKey);
-      if (cached) {
-        res.json({ success: true, data: cached, cached: true });
-        return;
-      }
-
-      // Fetch with resilience
-      const exports = await this.resilienceService.executeQuery(async () => {
-        const contract = this.fabricGateway.getExportContract();
-        const exportService = createExportService(contract);
-        return await exportService.getAllExports();
-      }, 'getAllExports');
-
-      // Cache the result
-      await this.cacheService.set(cacheKey, exports, CacheTTL.MEDIUM);
-
-      res.json({ success: true, data: exports });
+      const result = await pool.query('SELECT * FROM exports ORDER BY created_at DESC');
+      res.json({ success: true, data: result.rows });
     } catch (error: any) {
-      this.handleError(error, res);
+      logger.error('Failed to fetch exports', { error: error.message });
+      res.status(500).json({ success: false, message: 'Failed to fetch exports' });
     }
   };
 
   /**
-   * Get single export by ID
+   * Get single export
    */
   public getExport = async (req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
     try {
       const { exportId } = req.params;
-      if (!exportId) {
-        throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Export ID is required', 400);
-      }
-
-      // Try cache first
-      const cacheKey = CacheKeys.export(exportId);
-      const cached = await this.cacheService.get(cacheKey);
-      if (cached) {
-        res.json({ success: true, data: cached, cached: true });
+      const result = await pool.query('SELECT * FROM exports WHERE id = $1', [exportId]);
+      
+      if (result.rows.length === 0) {
+        res.status(404).json({ success: false, message: 'Export not found' });
         return;
       }
-
-      // Fetch with resilience
-      const exportData = await this.resilienceService.executeQuery(async () => {
-        const contract = this.fabricGateway.getExportContract();
-        const exportService = createExportService(contract);
-        return await exportService.getExport(exportId);
-      }, `getExport:${exportId}`);
-
-      // Cache the result
-      await this.cacheService.set(cacheKey, exportData, CacheTTL.SHORT);
-
-      res.json({ success: true, data: exportData });
-    } catch (error: any) {
-      this.handleError(error, res);
-    }
-  };
-
-  /**
-   * Get exports pending FX approval
-   */
-  public getPendingFXApprovals = async (_req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
-    try {
-      // Try cache first
-      const cacheKey = 'exports:fx:pending';
-      const cached = await this.cacheService.get(cacheKey);
-      if (cached) {
-        const count = Array.isArray(cached) ? cached.length : 0;
-        res.json({ success: true, data: cached, count, cached: true });
-        return;
-      }
-
-      // Fetch with resilience
-      const exports = await this.resilienceService.executeQuery(async () => {
-        const contract = this.fabricGateway.getExportContract();
-        const exportService = createExportService(contract);
-        return await exportService.getExportsByStatus('FX_PENDING');
-      }, 'getPendingFX');
-
-      // Cache for short time (1 minute)
-      await this.cacheService.set(cacheKey, exports, CacheTTL.SHORT);
-
-      res.json({ success: true, data: exports, count: exports.length });
-    } catch (error: any) {
-      this.handleError(error, res);
-    }
-  };
-
-  /**
-   * Approve FX for an export
-   */
-  public approveFX = async (req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
-    try {
-      const { exportId } = req.params;
-      const user = req.user!;
       
-      if (!exportId) {
-        throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Export ID is required', 400);
-      }
-
-      const { fxApprovalID, approvedBy, documentCIDs } = req.body;
-
-      // Submit with resilience
-      await this.resilienceService.executeTransaction(async () => {
-        const contract = this.fabricGateway.getExportContract();
-        const exportService = createExportService(contract);
-        return await exportService.approveFX(exportId, {
-          fxApprovalID,
-          documentCIDs,
-        });
-      }, `approveFX:${exportId}`);
-
-      // Audit log
-      auditService.logFXApproval(
-        user.id,
-        user.username,
-        user.organizationId,
-        exportId,
-        true,
-        undefined,
-        {
-          ipAddress: req.ip,
-          userAgent: req.get('user-agent'),
-        }
-      );
-
-      // Invalidate cache
-      await this.cacheService.delete(CacheKeys.export(exportId));
-      await this.cacheService.deletePattern('exports:*');
-
-      res.json({
-        success: true,
-        message: 'FX approved successfully',
-        data: { exportId, fxApprovalID },
-      });
+      res.json({ success: true, data: result.rows[0] });
     } catch (error: any) {
-      this.handleError(error, res);
+      logger.error('Failed to fetch export', { error: error.message });
+      res.status(500).json({ success: false, message: 'Failed to fetch export' });
     }
   };
 
   /**
-   * Reject FX for an export
+   * Get pending FX approvals
    */
-  public rejectFX = async (req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
+  public getPendingFXApprovals = async (req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
     try {
-      const { exportId } = req.params;
-      const user = req.user!;
-      
-      if (!exportId) {
-        throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Export ID is required', 400);
-      }
-
-      const { reason, rejectedBy } = req.body;
-
-      if (!reason || reason.trim().length < 10) {
-        throw new AppError(
-          ErrorCode.INVALID_INPUT,
-          'Rejection reason must be at least 10 characters',
-          400
-        );
-      }
-
-      // Submit with resilience
-      await this.resilienceService.executeTransaction(async () => {
-        const contract = this.fabricGateway.getExportContract();
-        const exportService = createExportService(contract);
-        return await exportService.rejectFX(exportId, reason);
-      }, `rejectFX:${exportId}`);
-
-      // Audit log
-      auditService.logFXApproval(
-        user.id,
-        user.username,
-        user.organizationId,
-        exportId,
-        false,
-        reason,
-        {
-          ipAddress: req.ip,
-          userAgent: req.get('user-agent'),
-        }
+      const result = await pool.query(
+        'SELECT * FROM exports WHERE status = $1 ORDER BY created_at DESC',
+        ['QUALITY_CERTIFIED']
       );
-
-      // Invalidate cache
-      await this.cacheService.delete(CacheKeys.export(exportId));
-      await this.cacheService.deletePattern('exports:*');
-
-      res.json({
-        success: true,
-        message: 'FX rejected',
-        data: { exportId, reason },
-      });
+      res.json({ success: true, data: result.rows, count: result.rows.length });
     } catch (error: any) {
-      this.handleError(error, res);
+      logger.error('Failed to fetch pending FX approvals', { error: error.message });
+      res.status(500).json({ success: false, message: 'Failed to fetch pending FX approvals' });
     }
   };
 
@@ -244,62 +65,170 @@ export class FXController {
   public getExportsByStatus = async (req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
     try {
       const { status } = req.params;
-      
-      if (!status) {
-        throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Status is required', 400);
-      }
-
-      // Try cache first
-      const cacheKey = CacheKeys.exportsByStatus(status);
-      const cached = await this.cacheService.get(cacheKey);
-      if (cached) {
-        const count = Array.isArray(cached) ? cached.length : 0;
-        res.json({ success: true, data: cached, count, cached: true });
-        return;
-      }
-
-      // Fetch with resilience
-      const exports = await this.resilienceService.executeQuery(async () => {
-        const contract = this.fabricGateway.getExportContract();
-        const exportService = createExportService(contract);
-        return await exportService.getExportsByStatus(status as any);
-      }, `getExportsByStatus:${status}`);
-
-      // Cache the result
-      await this.cacheService.set(cacheKey, exports, CacheTTL.MEDIUM);
-
-      res.json({ success: true, data: exports, count: exports.length });
+      const result = await pool.query(
+        'SELECT * FROM exports WHERE status = $1 ORDER BY created_at DESC',
+        [status]
+      );
+      res.json({ success: true, data: result.rows, count: result.rows.length });
     } catch (error: any) {
-      this.handleError(error, res);
+      logger.error('Failed to fetch exports by status', { error: error.message });
+      res.status(500).json({ success: false, message: 'Failed to fetch exports by status' });
     }
   };
 
-  /**
-   * Centralized error handling
-   */
+  public approveFX = async (req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
+    const client = await pool.connect();
+    try {
+      const { exportId } = req.params;
+      const user = req.user;
+      const { approvalNotes } = req.body;
+
+      if (!exportId) {
+        throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Export ID is required', 400);
+      }
+
+      await client.query('BEGIN');
+
+      const exportResult = await client.query(
+        'SELECT * FROM exports WHERE id = $1',
+        [exportId]
+      );
+
+      if (exportResult.rows.length === 0) {
+        throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
+      }
+
+      const exportData = exportResult.rows[0];
+
+      if (exportData.status !== 'QUALITY_CERTIFIED') {
+        throw new AppError(
+          ErrorCode.INVALID_STATUS_TRANSITION,
+          `Export must be quality certified. Current status: ${exportData.status}`,
+          400
+        );
+      }
+
+      await client.query(
+        'UPDATE exports SET status = $1, updated_at = NOW() WHERE id = $2',
+        ['FX_APPROVED', exportId]
+      );
+
+      await client.query(
+        `INSERT INTO export_status_history (export_id, old_status, new_status, changed_by, changed_at, notes)
+         VALUES ($1, $2, $3, $4, NOW(), $5)`,
+        [exportId, 'QUALITY_CERTIFIED', 'FX_APPROVED', user.id, approvalNotes || 'FX approved']
+      );
+
+      await client.query(
+        `INSERT INTO export_approvals (export_id, organization, approval_type, status, approved_by, approved_at, notes)
+         VALUES ($1, $2, $3, $4, $5, NOW(), $6)`,
+        [exportId, 'NATIONAL_BANK', 'FX_APPROVAL', 'APPROVED', user.id, approvalNotes]
+      );
+
+      await client.query('COMMIT');
+
+      logger.info('FX approved', { exportId, userId: user.id });
+
+      res.json({
+        success: true,
+        message: 'FX approved successfully',
+        exportId,
+        status: 'FX_APPROVED'
+      });
+    } catch (error: any) {
+      await client.query('ROLLBACK');
+      logger.error('FX approval failed', { error: error.message });
+      this.handleError(error, res);
+    } finally {
+      client.release();
+    }
+  };
+
+  public rejectFX = async (req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
+    const client = await pool.connect();
+    try {
+      const { exportId } = req.params;
+      const user = req.user;
+      const { rejectionReason, notes } = req.body;
+
+      if (!exportId) {
+        throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Export ID is required', 400);
+      }
+
+      if (!rejectionReason) {
+        throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Rejection reason is required', 400);
+      }
+
+      await client.query('BEGIN');
+
+      const exportResult = await client.query(
+        'SELECT * FROM exports WHERE id = $1',
+        [exportId]
+      );
+
+      if (exportResult.rows.length === 0) {
+        throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
+      }
+
+      const exportData = exportResult.rows[0];
+
+      if (exportData.status !== 'QUALITY_CERTIFIED') {
+        throw new AppError(
+          ErrorCode.INVALID_STATUS_TRANSITION,
+          `Export must be quality certified. Current status: ${exportData.status}`,
+          400
+        );
+      }
+
+      await client.query(
+        'UPDATE exports SET status = $1, updated_at = NOW() WHERE id = $2',
+        ['FX_REJECTED', exportId]
+      );
+
+      await client.query(
+        `INSERT INTO export_status_history (export_id, old_status, new_status, changed_by, changed_at, notes)
+         VALUES ($1, $2, $3, $4, NOW(), $5)`,
+        [exportId, 'QUALITY_CERTIFIED', 'FX_REJECTED', user.id, notes || rejectionReason]
+      );
+
+      await client.query(
+        `INSERT INTO export_approvals (export_id, organization, approval_type, status, approved_by, approved_at, notes)
+         VALUES ($1, $2, $3, $4, $5, NOW(), $6)`,
+        [exportId, 'NATIONAL_BANK', 'FX_APPROVAL', 'REJECTED', user.id, `${rejectionReason}: ${notes || ''}`]
+      );
+
+      await client.query('COMMIT');
+
+      logger.info('FX rejected', { exportId, userId: user.id, reason: rejectionReason });
+
+      res.json({
+        success: true,
+        message: 'FX rejected successfully',
+        exportId,
+        status: 'FX_REJECTED',
+        reason: rejectionReason
+      });
+    } catch (error: any) {
+      await client.query('ROLLBACK');
+      logger.error('FX rejection failed', { error: error.message });
+      this.handleError(error, res);
+    } finally {
+      client.release();
+    }
+  };
+
   private handleError(error: any, res: Response): void {
     if (error instanceof AppError) {
       res.status(error.httpStatus).json({
         success: false,
-        error: {
-          code: error.code,
-          message: error.message,
-          retryable: error.retryable,
-        },
+        error: { code: error.code, message: error.message },
       });
       return;
     }
 
-    // Log unexpected errors
-    console.error('Unexpected error:', error);
-
     res.status(500).json({
       success: false,
-      error: {
-        code: ErrorCode.INTERNAL_SERVER_ERROR,
-        message: 'An unexpected error occurred',
-        retryable: false,
-      },
+      error: { code: ErrorCode.INTERNAL_SERVER_ERROR, message: 'An unexpected error occurred' },
     });
   }
 }

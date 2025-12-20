@@ -1,60 +1,32 @@
 {
-  "name": "coffee-export-consortium-blockchain",
+  "name": "coffee-export-blockchain",
   "version": "1.0.0",
-  "description": "Consortium blockchain for managing coffee exports using Hyperledger Fabric",
-  "scripts": {
-    "install:all": "npm run install:exporter-portal && npm run install:national-bank && npm run install:ecta && npm run install:ecx && npm run install:shipping-line && npm run install:custom-authorities && npm run install:frontend",
-    "install:exporter-portal": "cd api/exporter-portal && npm install",
-    "install:national-bank": "cd api/national-bank && npm install",
-    "install:ecta": "cd api/ecta && npm install",
-    "install:ecx": "cd api/ecx && npm install",
-    "install:shipping-line": "cd api/shipping-line && npm install",
-    "install:custom-authorities": "cd api/custom-authorities && npm install",
-    "install:frontend": "cd frontend && npm install",
-    "build:all": "npm run build:exporter-portal && npm run build:national-bank && npm run build:ecta && npm run build:ecx && npm run build:shipping-line && npm run build:custom-authorities && npm run build:frontend",
-    "build:exporter-portal": "cd api/exporter-portal && npm run build",
-    "build:national-bank": "cd api/national-bank && npm run build",
-    "build:ecta": "cd api/ecta && npm run build",
-    "build:ecx": "cd api/ecx && npm run build",
-    "build:shipping-line": "cd api/shipping-line && npm run build",
-    "build:custom-authorities": "cd api/custom-authorities && npm run build",
-    "build:frontend": "cd frontend && npm run build",
-    "dev:frontend": "cd frontend && npm run dev",
-    "network:up": "cd network && ./network.sh up",
-    "network:down": "cd network && ./network.sh down",
-    "network:restart": "cd network && ./network.sh restart",
-    "channel:create": "cd network && ./network.sh createChannel",
-    "chaincode:deploy": "cd network && ./network.sh deployCC",
-    "setup": "npm run install:all && npm run network:up && npm run channel:create && npm run chaincode:deploy",
-    "start": "./start-system.sh",
-    "clean": "npm run network:down && rm -rf api/*/node_modules api/*/dist api/*/wallet frontend/node_modules frontend/dist"
-  },
-  "keywords": [
-    "hyperledger",
-    "fabric",
-    "blockchain",
-    "coffee",
-    "export",
-    "consortium"
+  "description": "Coffee Export Blockchain System",
+  "private": true,
+  "workspaces": [
+    "api/commercial-bank",
+    "api/custom-authorities",
+    "api/ecta",
+    "api/ecx",
+    "api/exporter-portal",
+    "api/national-bank",
+    "api/shipping-line",
+    "api/shared"
   ],
-  "author": "",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/yourusername/coffee-export-blockchain"
+  "scripts": {
+    "install-all": "npm install --legacy-peer-deps",
+    "build": "npm run build --workspaces",
+    "start": "npm start --workspaces",
+    "dev": "npm run dev --workspaces",
+    "test": "npm test --workspaces",
+    "lint": "npm run lint --workspaces",
+    "lint:fix": "npm run lint:fix --workspaces",
+    "format": "npm run format --workspaces",
+    "format:check": "npm run format:check --workspaces",
+    "type-check": "npm run type-check --workspaces",
+    "clean": "npm run clean --workspaces && rm -rf node_modules"
   },
-  "dependencies": {
-    "@date-io/date-fns": "^3.2.1",
-    "@emotion/react": "^11.14.0",
-    "@emotion/styled": "^11.14.1",
-    "@mui/icons-material": "^7.3.5",
-    "@mui/x-date-pickers": "^8.17.0",
-    "@tanstack/react-query": "^5.90.7",
-    "@tanstack/react-query-devtools": "^5.90.2",
-    "axios": "^1.12.2",
-    "date-fns": "^4.1.0",
-    "framer-motion": "^12.23.24",
-    "isomorphic-dompurify": "^2.28.0",
-    "notistack": "^3.0.2"
+  "devDependencies": {
+    "typescript": "^5.0.0"
   }
 }

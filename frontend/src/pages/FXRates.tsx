@@ -30,7 +30,12 @@ import {
   Divider,
 } from '@mui/material';
 
-const FXRates = ({ user }) => {
+interface FXRatesProps {
+  user: any;
+  org: string | null;
+}
+
+const FXRates = ({ user, org }: FXRatesProps): JSX.Element => {
   const { exports: allExports, loading: exportsLoading, error: exportsError, refreshExports } = useExports();
   const exports = allExports.filter((e) => e.status === 'FX_APPLICATION_PENDING' || e.status === 'FX_PENDING' || e.status === 'FX_APPROVED' || e.status === 'FX_REJECTED');
   const [filteredExports, setFilteredExports] = useState([]);

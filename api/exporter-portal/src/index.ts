@@ -1,32 +1,38 @@
 /**
  * Exporter Portal API - Main Entry Point
  *
- * EXTERNAL ENTITY - Uses Fabric SDK (No Peer Node)
+ * PostgreSQL-Only Version
  *
  * This API serves coffee exporters who are external to the consortium.
- * They use the Fabric SDK to submit transactions to the blockchain network
- * through the Commercial Bank's peer as a gateway.
+ * They use REST API to submit export requests and manage their exports.
  *
  * Key Characteristics:
- * - SDK-based client (no peer node running)
- * - Submit-only access for creating export requests
+ * - REST API client
+ * - Submit and manage export requests
  * - Read-only queries for own exports
- * - Connects via Commercial Bank's peer
- * - Follows Hyperledger Fabric best practices for external entities
+ * - PostgreSQL database backend
+ * - Follows REST API best practices
  */
+
+import dotenv from "dotenv";
+// Load environment variables FIRST before any other imports
+dotenv.config();
 
 import express, { Request, Response } from "express";
 import cors from "cors";
 import helmet from "helmet";
-import morgan from "morgan";
 import rateLimit from "express-rate-limit";
-import { config } from "./config";
-import { logger } from "./config/logger";
-import { FabricSDKGateway } from "./fabric/sdk-gateway";
+import { config } from "./config/index";
+import { createLogger, httpLogger } from "../../shared/logger";
 import authRoutes from "./routes/auth.routes";
 import exportRoutes from "./routes/export.routes";
 import exporterRoutes from "./routes/exporter.routes";
+import { getPool } from "../../shared/database/pool";
+import { errorHandler } from "../../shared/middleware/error.middleware";
+import { monitoringMiddleware, errorMonitoringMiddleware } from "../../shared/middleware/monitoring.middleware";
+import { monitoringService } from "../../shared/monitoring.service";
 
+const logger = createLogger('ExporterPortalAPI');
 const app = express();
 
 // Security middleware
@@ -40,11 +46,10 @@ app.use(
 );
 
 // Logging
-app.use(
-  morgan("combined", {
-    stream: { write: (message) => logger.info(message.trim()) },
-  }),
-);
+app.use(httpLogger('ExporterPortalAPI'));
+
+// Monitoring middleware
+app.use(monitoringMiddleware);
 
 // Rate limiting
 const authLimiter = rateLimit({
@@ -59,67 +64,74 @@ const apiLimiter = rateLimit({
   message: "Too many requests, please try again later",
 });
 
-// Initialize Fabric SDK Gateway
-const fabricGateway = FabricSDKGateway.getInstance();
-
 // Routes
 app.use("/api/auth/login", authLimiter);
 app.use("/api/auth/register", authLimiter);
 app.use("/api/auth", authRoutes);
-// Preregistration compatibility mount removed — exporter routes now fully replace preregistration
 app.use("/api/exporter", apiLimiter, exporterRoutes);
 app.use("/api/exports", apiLimiter, exportRoutes);
 
 // Health check
 app.get("/health", async (_req: Request, res: Response) => {
-  const sdkStatus = fabricGateway.isGatewayConnected()
-    ? "connected"
-    : "disconnected";
+  try {
+    const pool = getPool();
+    const result = await pool.query('SELECT NOW()');
+    const dbStatus = result.rows.length > 0 ? "connected" : "disconnected";
 
-  res.json({
-    status: "ok",
-    service: "Exporter Portal API (SDK Client)",
-    version: "1.0.0",
-    environment: config.NODE_ENV,
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    sdk: sdkStatus,
-    mode: "External Entity - No Peer Node",
-    memory: {
-      used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
-      total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
-      unit: "MB",
-    },
-  });
+    res.json({
+      status: "ok",
+      service: "Exporter Portal API",
+      version: "1.0.0",
+      environment: config.NODE_ENV,
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      database: dbStatus,
+      memory: {
+        used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+        total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
+        unit: "MB",
+      },
+    });
+  } catch (error) {
+    logger.error('Health check failed', { error });
+    res.status(503).json({
+      status: "error",
+      service: "Exporter Portal API",
+      database: "disconnected",
+    });
+  }
 });
 
 app.get("/ready", async (_req: Request, res: Response) => {
-  const isReady = fabricGateway.isGatewayConnected();
-  if (isReady) res.status(200).json({ status: "ready" });
-  else res.status(503).json({ status: "not ready" });
+  try {
+    const pool = getPool();
+    const result = await pool.query('SELECT NOW()');
+    const isReady = result.rows.length > 0;
+    if (isReady) res.status(200).json({ status: "ready" });
+    else res.status(503).json({ status: "not ready" });
+  } catch (error) {
+    res.status(503).json({ status: "not ready" });
+  }
 });
 
 app.get("/live", (_req: Request, res: Response) => {
   res.status(200).json({ status: "alive" });
 });
 
+// Error monitoring middleware (before error handler)
+app.use(errorMonitoringMiddleware);
+
 // Error handling
-app.use((err: any, _req: Request, res: Response, _next: any) => {
-  logger.error("Unhandled error:", err);
-  res.status(err.status || 500).json({
-    success: false,
-    message: err.message || "Internal server error",
-    error: config.NODE_ENV === "development" ? err.stack : undefined,
-  });
-});
+app.use(errorHandler);
 
 // Graceful shutdown
 const gracefulShutdown = async (signal: string) => {
   logger.info(`\n${signal} received. Starting graceful shutdown...`);
 
   try {
-    await fabricGateway.shutdown();
-    logger.info("✅ Fabric SDK Gateway disconnected");
+    const pool = getPool();
+    await pool.end();
+    logger.info("✅ Database pool closed");
 
     process.exit(0);
   } catch (error) {
@@ -134,14 +146,16 @@ process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 // Start server
 const startServer = async () => {
   try {
-    logger.info(
-      "🚀 Starting Exporter Portal API (SDK-based External Client)...",
-    );
-    logger.info(`📍 Mode: External Entity - No Peer Node`);
-    logger.info(`🔗 Gateway: Commercial Bank Peer`);
+    logger.info("🚀 Starting Exporter Portal API...");
 
-    // Initialize Fabric SDK Gateway
-    await fabricGateway.initialize();
+    // Test database connection
+    logger.info('Testing PostgreSQL database connection');
+    const pool = getPool();
+    const result = await pool.query('SELECT NOW()');
+    logger.info('Connected to PostgreSQL database', {
+      timestamp: result.rows[0].now
+    });
+    monitoringService.recordSystemHealth('database', true);
 
     // Start Express server
     app.listen(config.PORT, () => {
@@ -152,6 +166,7 @@ const startServer = async () => {
     });
   } catch (error) {
     logger.error("❌ Failed to start server:", error);
+    monitoringService.recordSystemHealth('database', false);
     process.exit(1);
   }
 };

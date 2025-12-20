@@ -34,9 +34,12 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { CommonPageProps } from '../types';
 import exporterService from '../services/exporterService';
 
-const ApplicationTracking = ({ user, org }) => {
+interface ApplicationTrackingProps extends CommonPageProps {}
+
+const ApplicationTracking = ({ user, org }: ApplicationTrackingProps): JSX.Element => {
   const [applications, setApplications] = useState([]);
   const [selectedApplication, setSelectedApplication] = useState(null);
   const [detailsOpen, setDetailsOpen] = useState(false);

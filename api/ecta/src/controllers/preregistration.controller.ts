@@ -8,6 +8,10 @@ import {
   ExportLicense,
 } from '../../../shared/models/ecta-preregistration.model';
 import { ectaPreRegistrationService } from '../../../shared/services/ecta-preregistration.service';
+import { pool } from '../../../shared/database/pool';
+import { createLogger } from '../../../shared/logger';
+
+const logger = createLogger('PreRegistrationController');
 
 interface AuthJWTPayload extends JwtPayload {
   id: string;
@@ -35,15 +39,14 @@ export class PreRegistrationController {
     _next: NextFunction
   ): Promise<void> => {
     try {
-      // TODO: Implement database query
-      const exporters: ExporterProfile[] = [];
-      
+      const result = await pool.query('SELECT * FROM exporter_profiles ORDER BY created_at DESC');
       res.json({
         success: true,
-        data: exporters,
-        count: exporters.length,
+        data: result.rows,
+        count: result.rows.length,
       });
     } catch (error: any) {
+      logger.error('Failed to fetch exporters', { error: error.message });
       res.status(500).json({
         success: false,
         message: 'Failed to fetch exporters',
@@ -61,16 +64,18 @@ export class PreRegistrationController {
     _next: NextFunction
   ): Promise<void> => {
     try {
-      // TODO: Implement database query for status='PENDING_APPROVAL'
-      const pending: ExporterProfile[] = [];
-      
+      const result = await pool.query(
+        'SELECT * FROM exporter_profiles WHERE status = $1 ORDER BY created_at DESC',
+        ['PENDING_APPROVAL']
+      );
       res.json({
         success: true,
-        data: pending,
-        count: pending.length,
+        data: result.rows,
+        count: result.rows.length,
         message: 'Exporter applications pending ECTA approval',
       });
     } catch (error: any) {
+      logger.error('Failed to fetch pending applications', { error: error.message });
       res.status(500).json({
         success: false,
         message: 'Failed to fetch pending applications',

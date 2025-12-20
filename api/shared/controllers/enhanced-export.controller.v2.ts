@@ -11,22 +11,14 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { JwtPayload } from 'jsonwebtoken';
-import { FabricGateway } from '../../commercial-bank/src/fabric/gateway';
-import { createExportService, ExportRequest } from '../exportService';
+import { Pool } from 'pg';
+
 import { CacheService, CacheKeys, CacheTTL } from '../cache.service';
 import { auditService, AuditAction } from '../audit.service';
-import { ResilientBlockchainService } from '../resilience.service';
-// Validation schemas - imported but may not be used in all deployments
-// import { 
-//   CreateExportSchema, 
-//   ApproveQualitySchema,
-//   ApproveFXSchema,
-//   RejectSchema,
-//   PaginationSchema,
-//   ExportFilterSchema,
-//   validateRequest 
-// } from '../validation.schemas';
 import { ErrorCode, AppError } from '../error-codes';
+import { createLogger } from '../logger';
+
+const logger = createLogger('EnhancedExportController');
 
 interface AuthJWTPayload extends JwtPayload {
   id: string;
@@ -37,6 +29,17 @@ interface AuthJWTPayload extends JwtPayload {
 
 interface RequestWithUser extends Request {
   user?: AuthJWTPayload;
+}
+
+interface ExportRequest {
+  id?: string;
+  exporter_id: string;
+  coffee_type: string;
+  quantity: number;
+  destination_country: string;
+  status?: string;
+  created_at?: string;
+  [key: string]: any;
 }
 
 /**
@@ -71,12 +74,12 @@ class HATEOASLinkGenerator {
     if (role === 'exporter' && status === 'QUALITY_CERTIFIED') {
       links.submitForFX = { href: `${baseUrl}/submit-fx`, method: 'POST' };
     }
-    
+
     if (role === 'bank' && status === 'BANKING_PENDING') {
       links.approve = { href: `${baseUrl}/approve-banking`, method: 'POST' };
       links.reject = { href: `${baseUrl}/reject-banking`, method: 'POST' };
     }
-    
+
     if (role === 'admin' && status === 'FX_PENDING') {
       links.approveFX = { href: `${baseUrl}/approve-fx`, method: 'POST' };
       links.rejectFX = { href: `${baseUrl}/reject-fx`, method: 'POST' };
@@ -90,14 +93,14 @@ class HATEOASLinkGenerator {
  * Enhanced Export Controller
  */
 export class EnhancedExportController {
-  private fabricGateway: FabricGateway;
-  private cacheService: CacheService;
-  private resilienceService: ResilientBlockchainService;
 
-  constructor() {
-    this.fabricGateway = FabricGateway.getInstance();
+  private cacheService: CacheService;
+  private pool: Pool;
+
+  constructor(pool: Pool) {
+    this.pool = pool;
+
     this.cacheService = CacheService.getInstance();
-    this.resilienceService = new ResilientBlockchainService('export-service');
   }
 
   /**
@@ -110,7 +113,7 @@ export class EnhancedExportController {
   ): Promise<void> => {
     try {
       const user = req.user!;
-      
+
       // Parse and validate query parameters
       const { page = 1, limit = 10, sortBy, sortOrder = 'desc' } = req.query;
       const filters = req.query as any;
@@ -125,12 +128,9 @@ export class EnhancedExportController {
         return;
       }
 
-      // Fetch from blockchain with resilience
-      const exports = await this.resilienceService.executeQuery(async () => {
-        const contract = this.fabricGateway.getExportContract();
-        const exportService = createExportService(contract);
-        return await exportService.getAllExports();
-      }, 'getAllExports');
+      // Fetch from database
+      const result = await this.pool.query('SELECT * FROM exports ORDER BY created_at DESC');
+      const exports = result.rows;
 
       // Apply filters
       let filtered = this.applyFilters(exports, filters);
@@ -164,6 +164,7 @@ export class EnhancedExportController {
 
       res.json(response);
     } catch (error: any) {
+      logger.error('Failed to get all exports', { error: error.message });
       this.handleError(error, res);
     }
   };
@@ -191,14 +192,14 @@ export class EnhancedExportController {
       // Try cache first
       const cacheKey = CacheKeys.export(exportId);
       const cached = await this.cacheService.get<ExportRequest>(cacheKey);
-      
+
       if (cached) {
         const response = {
           success: true,
           data: cached,
           _links: HATEOASLinkGenerator.generateExportLinks(
             exportId,
-            cached.status,
+            cached.status || 'PENDING',
             user.role
           ),
         };
@@ -206,12 +207,14 @@ export class EnhancedExportController {
         return;
       }
 
-      // Fetch from blockchain with resilience
-      const exportData = await this.resilienceService.executeQuery(async () => {
-        const contract = this.fabricGateway.getExportContract();
-        const exportService = createExportService(contract);
-        return await exportService.getExport(exportId);
-      }, `getExport:${exportId}`);
+      // Fetch from database
+      const result = await this.pool.query('SELECT * FROM exports WHERE id = $1', [exportId]);
+
+      if (result.rows.length === 0) {
+        throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
+      }
+
+      const exportData = result.rows[0];
 
       // Cache the result
       await this.cacheService.set(cacheKey, exportData, CacheTTL.SHORT);
@@ -228,6 +231,7 @@ export class EnhancedExportController {
 
       res.json(response);
     } catch (error: any) {
+      logger.error('Failed to get export', { error: error.message });
       this.handleError(error, res);
     }
   };
@@ -240,23 +244,25 @@ export class EnhancedExportController {
     res: Response,
     _next: NextFunction
   ): Promise<void> => {
+    const client = await this.pool.connect();
     try {
       const user = req.user!;
-      const validatedData = req.body; // Already validated by middleware
+      const validatedData = req.body;
 
       // Generate export ID
       const exportId = `EXP-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-      // Submit transaction with resilience
-      await this.resilienceService.executeTransaction(async () => {
-        const contract = this.fabricGateway.getExportContract();
-        const exportService = createExportService(contract);
-        return await exportService.createExport(
-          exportId,
-          user.organizationId,
-          validatedData
-        );
-      }, `createExport:${exportId}`);
+      await client.query('BEGIN');
+
+      // Insert export
+      const result = await client.query(
+        `INSERT INTO exports (id, exporter_name, coffee_type, quantity, destination_country, status, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+         RETURNING *`,
+        [exportId, validatedData.exporter_name, validatedData.coffee_type, validatedData.quantity, validatedData.destination_country, 'PENDING']
+      );
+
+      await client.query('COMMIT');
 
       // Audit log
       auditService.logExportCreation(
@@ -272,17 +278,23 @@ export class EnhancedExportController {
       // Invalidate cache
       await this.cacheService.deletePattern('exports:*');
 
+      logger.info('Export created', { exportId, userId: user.id });
+
       res.status(201).json({
         success: true,
         message: 'Export created successfully',
-        data: { exportId },
+        data: result.rows[0],
         _links: {
           self: { href: `/api/v1/exports/${exportId}` },
           list: { href: '/api/v1/exports' },
         },
       });
     } catch (error: any) {
+      await client.query('ROLLBACK');
+      logger.error('Failed to create export', { error: error.message });
       this.handleError(error, res);
+    } finally {
+      client.release();
     }
   };
 
@@ -294,20 +306,29 @@ export class EnhancedExportController {
     res: Response,
     _next: NextFunction
   ): Promise<void> => {
+    const client = await this.pool.connect();
     try {
       const { exportId } = req.params;
       const user = req.user!;
       const validatedData = req.body;
 
       if (!exportId) {
-        throw new Error('Export ID is required');
+        throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Export ID is required', 400);
       }
 
-      await this.resilienceService.executeTransaction(async () => {
-        const contract = this.fabricGateway.getExportContract();
-        const exportService = createExportService(contract);
-        return await exportService.approveQuality(exportId, validatedData);
-      }, `approveQuality:${exportId}`);
+      await client.query('BEGIN');
+
+      const exportResult = await client.query('SELECT * FROM exports WHERE id = $1', [exportId]);
+      if (exportResult.rows.length === 0) {
+        throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
+      }
+
+      await client.query(
+        'UPDATE exports SET status = $1, quality_grade = $2, updated_at = NOW() WHERE id = $3',
+        ['QUALITY_CERTIFIED', validatedData.quality_grade, exportId]
+      );
+
+      await client.query('COMMIT');
 
       // Audit log
       auditService.logStatusChange(
@@ -326,6 +347,8 @@ export class EnhancedExportController {
       await this.cacheService.delete(CacheKeys.export(exportId));
       await this.cacheService.deletePattern('exports:*');
 
+      logger.info('Quality approved', { exportId, userId: user.id });
+
       res.json({
         success: true,
         message: 'Quality approved successfully',
@@ -334,7 +357,11 @@ export class EnhancedExportController {
         },
       });
     } catch (error: any) {
+      await client.query('ROLLBACK');
+      logger.error('Failed to approve quality', { error: error.message });
       this.handleError(error, res);
+    } finally {
+      client.release();
     }
   };
 
@@ -348,20 +375,20 @@ export class EnhancedExportController {
       filtered = filtered.filter((exp) => exp.status === filters.status);
     }
 
-    if (filters.commercialbankId) {
-      filtered = filtered.filter((exp) => exp.commercialbankId === filters.commercialbankId);
+    if (filters.commercial_bank_id) {
+      filtered = filtered.filter((exp) => exp.commercial_bank_id === filters.commercial_bank_id);
     }
 
-    if (filters.destinationCountry) {
-      filtered = filtered.filter((exp) => exp.destinationCountry === filters.destinationCountry);
+    if (filters.destination_country) {
+      filtered = filtered.filter((exp) => exp.destination_country === filters.destination_country);
     }
 
     if (filters.startDate) {
-      filtered = filtered.filter((exp) => exp.createdAt >= filters.startDate);
+      filtered = filtered.filter((exp) => exp.created_at && exp.created_at >= filters.startDate);
     }
 
     if (filters.endDate) {
-      filtered = filtered.filter((exp) => exp.createdAt <= filters.endDate);
+      filtered = filtered.filter((exp) => exp.created_at && exp.created_at <= filters.endDate);
     }
 
     return filtered;
@@ -417,21 +444,18 @@ export class EnhancedExportController {
         error: {
           code: error.code,
           message: error.message,
-          retryable: error.retryable,
         },
       });
       return;
     }
 
-    // Log unexpected errors
-    console.error('Unexpected error:', error);
+    logger.error('Unexpected error', { error: error.message });
 
     res.status(500).json({
       success: false,
       error: {
         code: ErrorCode.INTERNAL_SERVER_ERROR,
         message: 'An unexpected error occurred',
-        retryable: false,
       },
     });
   }

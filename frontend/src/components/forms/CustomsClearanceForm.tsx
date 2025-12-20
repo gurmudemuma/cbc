@@ -4,9 +4,17 @@ import {
   Alert, CircularProgress, Box, Typography, Divider, Chip,
 } from '@mui/material';
 import { CheckCircle, XCircle, ShieldCheck, Upload } from 'lucide-react';
+import { CommonPageProps, CustomsClearanceFormData } from '../../types';
 import RejectionDialog from '../RejectionDialog';
 
-const CustomsClearanceForm = ({ exportData, onApprove, onReject, loading = false }) => {
+interface CustomsClearanceFormProps extends CommonPageProps {
+  exportData: any;
+  onApprove: (data: CustomsClearanceFormData) => void;
+  onReject: (data: any) => void;
+  loading?: boolean;
+}
+
+const CustomsClearanceForm = ({ exportData, onApprove, onReject, loading = false }: CustomsClearanceFormProps): JSX.Element => {
   const [formData, setFormData] = useState({
     declarationNumber: `CUST-${Date.now()}`,
     inspectionNotes: '',
@@ -14,11 +22,11 @@ const CustomsClearanceForm = ({ exportData, onApprove, onReject, loading = false
     taxPaid: '',
   });
   const [showRejectDialog, setShowRejectDialog] = useState(false);
-  const [uploadedDocs, setUploadedDocs] = useState([]);
-  const [errors, setErrors] = useState({});
+  const [uploadedDocs, setUploadedDocs] = useState<File[]>([]);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const validate = () => {
-    const newErrors = {};
+    const newErrors: Record<string, string> = {};
     if (!formData.declarationNumber?.trim()) newErrors.declarationNumber = 'Declaration number required';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -32,7 +40,7 @@ const CustomsClearanceForm = ({ exportData, onApprove, onReject, loading = false
       dutyPaid: formData.dutyPaid,
       taxPaid: formData.taxPaid,
       documents: uploadedDocs,
-    });
+    } as CustomsClearanceFormData);
   };
 
   return (

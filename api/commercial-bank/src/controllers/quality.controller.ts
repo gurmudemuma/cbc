@@ -1,7 +1,10 @@
 import { Request, Response, NextFunction } from "express";
 import { JwtPayload } from "jsonwebtoken";
-import { FabricGateway } from "../fabric/gateway";
-import { v4 as uuidv4 } from "uuid";
+import { pool } from "../../../shared/database/pool";
+import { createLogger } from "../../../shared/logger";
+import { ErrorCode, AppError } from "../../../shared/error-codes";
+
+const logger = createLogger('CommercialBankQualityController');
 
 interface AuthJWTPayload extends JwtPayload {
   id: string;
@@ -15,38 +18,25 @@ interface RequestWithUser extends Request {
 }
 
 export class QualityController {
-  private fabricGateway: FabricGateway;
-
-  constructor() {
-    this.fabricGateway = FabricGateway.getInstance();
-  }
-
   public getPendingExports = async (
     _req: Request,
     res: Response,
     _next: NextFunction,
   ): Promise<void> => {
     try {
-      const contract = this.fabricGateway.getExportContract();
-      const result = await contract.evaluateTransaction(
-        "GetExportsByStatus",
-        "FX_APPROVED",
+      const result = await pool.query(
+        'SELECT * FROM exports WHERE status = $1 ORDER BY created_at DESC',
+        ['FX_APPROVED']
       );
-      const exports = JSON.parse(result.toString());
 
       res.status(200).json({
         success: true,
-        data: exports,
-        count: exports.length,
+        data: result.rows,
+        count: result.rows.length,
       });
-    } catch (error: unknown) {
-      console.error("Error getting pending exports:", error);
-      const message = error instanceof Error ? error.message : "Unknown error";
-      res.status(500).json({
-        success: false,
-        message: "Failed to retrieve pending exports",
-        error: message,
-      });
+    } catch (error: any) {
+      logger.error('Failed to get pending exports', { error: error.message });
+      this.handleError(error, res);
     }
   };
 
@@ -56,23 +46,16 @@ export class QualityController {
     _next: NextFunction,
   ): Promise<void> => {
     try {
-      const contract = this.fabricGateway.getExportContract();
-      const result = await contract.evaluateTransaction("GetAllExports");
-      const exports = JSON.parse(result.toString());
+      const result = await pool.query('SELECT * FROM exports ORDER BY created_at DESC');
 
       res.status(200).json({
         success: true,
-        data: exports,
-        count: exports.length,
+        data: result.rows,
+        count: result.rows.length,
       });
-    } catch (error: unknown) {
-      console.error("Error getting all exports:", error);
-      const message = error instanceof Error ? error.message : "Unknown error";
-      res.status(500).json({
-        success: false,
-        message: "Failed to retrieve exports",
-        error: message,
-      });
+    } catch (error: any) {
+      logger.error('Failed to get all exports', { error: error.message });
+      this.handleError(error, res);
     }
   };
 
@@ -84,32 +67,25 @@ export class QualityController {
     try {
       const { exportId } = req.params;
       if (!exportId) {
-        res
-          .status(400)
-          .json({ success: false, message: "Export ID is required" });
-        return;
+        throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Export ID is required', 400);
       }
-      const contract = this.fabricGateway.getExportContract();
 
-      const result = await contract.evaluateTransaction(
-        "GetExportRequest",
-        exportId,
+      const result = await pool.query(
+        'SELECT * FROM exports WHERE id = $1',
+        [exportId]
       );
-      const exportData = JSON.parse(result.toString());
+
+      if (result.rows.length === 0) {
+        throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
+      }
 
       res.status(200).json({
         success: true,
-        data: exportData,
+        data: result.rows[0],
       });
-    } catch (error: unknown) {
-      console.error("Error getting export by ID:", error);
-      const message =
-        error instanceof Error ? error.message : "Export not found";
-      res.status(404).json({
-        success: false,
-        message: "Export not found",
-        error: message,
-      });
+    } catch (error: any) {
+      logger.error('Failed to get export by ID', { error: error.message });
+      this.handleError(error, res);
     }
   };
 
@@ -118,40 +94,55 @@ export class QualityController {
     res: Response,
     _next: NextFunction,
   ): Promise<void> => {
+    const client = await pool.connect();
     try {
       const { exportId, qualityGrade } = req.body;
-      const qualityCertId = `QC-${uuidv4()}`;
-      const certifiedBy = req.user?.username || "NCAT Inspector";
+      const certifiedBy = req.user?.username || 'NCAT Inspector';
 
-      const contract = this.fabricGateway.getExportContract();
+      if (!exportId || !qualityGrade) {
+        throw new AppError(
+          ErrorCode.MISSING_REQUIRED_FIELD,
+          'Export ID and quality grade are required',
+          400
+        );
+      }
 
-      await contract.submitTransaction(
-        "IssueQualityCertificate",
-        exportId,
-        qualityCertId,
-        qualityGrade,
-        certifiedBy,
+      await client.query('BEGIN');
+
+      const exportResult = await client.query(
+        'SELECT * FROM exports WHERE id = $1',
+        [exportId]
       );
+
+      if (exportResult.rows.length === 0) {
+        throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
+      }
+
+      await client.query(
+        'UPDATE exports SET quality_grade = $1, updated_at = NOW() WHERE id = $2',
+        [qualityGrade, exportId]
+      );
+
+      await client.query('COMMIT');
+
+      logger.info('Quality certificate issued', { exportId, qualityGrade, certifiedBy });
 
       res.status(200).json({
         success: true,
-        message: "Quality certificate issued successfully",
+        message: 'Quality certificate issued successfully',
         data: {
           exportId,
-          qualityCertId,
           qualityGrade,
           certifiedBy,
-          status: "QUALITY_CERTIFIED",
+          status: 'QUALITY_CERTIFIED',
         },
       });
-    } catch (error: unknown) {
-      console.error("Error issuing quality certificate:", error);
-      const message = error instanceof Error ? error.message : "Unknown error";
-      res.status(500).json({
-        success: false,
-        message: "Failed to issue quality certificate",
-        error: message,
-      });
+    } catch (error: any) {
+      await client.query('ROLLBACK');
+      logger.error('Failed to issue quality certificate', { error: error.message });
+      this.handleError(error, res);
+    } finally {
+      client.release();
     }
   };
 
@@ -160,37 +151,70 @@ export class QualityController {
     res: Response,
     _next: NextFunction,
   ): Promise<void> => {
+    const client = await pool.connect();
     try {
       const { exportId, rejectionReason } = req.body;
-      const rejectedBy = req.user?.username || "NCAT Inspector";
+      const rejectedBy = req.user?.username || 'NCAT Inspector';
 
-      const contract = this.fabricGateway.getExportContract();
+      if (!exportId || !rejectionReason) {
+        throw new AppError(
+          ErrorCode.MISSING_REQUIRED_FIELD,
+          'Export ID and rejection reason are required',
+          400
+        );
+      }
 
-      await contract.submitTransaction(
-        "RejectQuality",
-        exportId,
-        rejectionReason,
-        rejectedBy,
+      await client.query('BEGIN');
+
+      const exportResult = await client.query(
+        'SELECT * FROM exports WHERE id = $1',
+        [exportId]
       );
+
+      if (exportResult.rows.length === 0) {
+        throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
+      }
+
+      await client.query(
+        'UPDATE exports SET status = $1, updated_at = NOW() WHERE id = $2',
+        ['QUALITY_REJECTED', exportId]
+      );
+
+      await client.query('COMMIT');
+
+      logger.info('Quality rejected', { exportId, rejectionReason, rejectedBy });
 
       res.status(200).json({
         success: true,
-        message: "Quality rejected successfully",
+        message: 'Quality rejected successfully',
         data: {
           exportId,
           rejectionReason,
           rejectedBy,
-          status: "QUALITY_REJECTED",
+          status: 'QUALITY_REJECTED',
         },
       });
-    } catch (error: unknown) {
-      console.error("Error rejecting quality:", error);
-      const message = error instanceof Error ? error.message : "Unknown error";
-      res.status(500).json({
-        success: false,
-        message: "Failed to reject quality",
-        error: message,
-      });
+    } catch (error: any) {
+      await client.query('ROLLBACK');
+      logger.error('Failed to reject quality', { error: error.message });
+      this.handleError(error, res);
+    } finally {
+      client.release();
     }
   };
+
+  private handleError(error: any, res: Response): void {
+    if (error instanceof AppError) {
+      res.status(error.httpStatus).json({
+        success: false,
+        error: { code: error.code, message: error.message },
+      });
+      return;
+    }
+
+    res.status(500).json({
+      success: false,
+      error: { code: ErrorCode.INTERNAL_SERVER_ERROR, message: 'An unexpected error occurred' },
+    });
+  }
 }

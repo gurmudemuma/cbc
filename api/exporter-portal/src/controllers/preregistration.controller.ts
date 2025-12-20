@@ -6,8 +6,10 @@ import {
 import { ectaPreRegistrationService } from '../../../shared/services/ecta-preregistration.service';
 import { EctaPreRegistrationRepository } from '../../../shared/database/repositories/ecta-preregistration.repository';
 import { AuthenticatedRequest } from '../../../shared/middleware/auth.middleware';
-import pool from '../../../shared/database/db.config';
+import { getPool } from '../../../shared/database/pool';
 import { config } from '../config';
+
+const pool = getPool();
 
 
 /**

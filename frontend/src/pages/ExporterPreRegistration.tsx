@@ -47,7 +47,12 @@ const steps = [
   'Export License',
 ];
 
-const ExporterPreRegistration = () => {
+interface ExporterPreRegistrationProps {
+  user: any;
+  org: string | null;
+}
+
+const ExporterPreRegistration = ({ user, org }: ExporterPreRegistrationProps): JSX.Element => {
   const [searchParams] = useSearchParams();
   const stepParam = searchParams.get('step');
   const initialStep = stepParam ? parseInt(stepParam, 10) : 0;
@@ -753,6 +758,7 @@ const ExporterPreRegistration = () => {
                   onChange={(e) => setCompetenceData({ ...competenceData, applicationReason: e.target.value })}
                   placeholder="Explain why you are applying for a competence certificate"
                   required
+                  helperText="Required field"
                 />
               </Grid>
               <Grid item xs={12} md={6}>
@@ -1112,13 +1118,13 @@ const ExporterPreRegistration = () => {
         </Stepper>
 
         {error && (
-          <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+          <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)} variant="filled">
             {error}
           </Alert>
         )}
 
         {success && (
-          <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccess(null)}>
+          <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccess(null)} variant="filled">
             {success}
           </Alert>
         )}

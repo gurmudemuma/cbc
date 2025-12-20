@@ -26,9 +26,12 @@ import {
   X,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { CommonPageProps } from '../types';
 import exporterService from '../services/exporterService';
 
-const ExporterProfile = ({ user, org }) => {
+interface ExporterProfileProps extends CommonPageProps {}
+
+const ExporterProfile = ({ user, org }: ExporterProfileProps): JSX.Element => {
   const [activeTab, setActiveTab] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);

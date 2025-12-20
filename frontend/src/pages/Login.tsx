@@ -1,7 +1,5 @@
 import { useState } from 'react';
 import { Coffee, LogIn, Lock, Globe, Zap, Users, Link2, Network, Shield, Database } from 'lucide-react';
-import apiClient, { setApiBaseUrl } from '../services/api';
-import { ORGANIZATIONS, getApiUrl } from '../config/api.config';
 import {
   Box,
   FormControl,
@@ -16,6 +14,8 @@ import {
   Chip,
 } from '@mui/material';
 import Grid from '@mui/material/Unstable_Grid2';
+import apiClient, { setApiBaseUrl } from '../services/api';
+import { ORGANIZATIONS, getApiUrl } from '../config/api.config';
 import {
   LoginPageContainer,
   LoginPaper,
@@ -26,16 +26,42 @@ import {
   StyledButton,
 } from './Login.styles';
 
-const Login = ({ onLogin }) => {
-  const [formData, setFormData] = useState({
+// Type definitions
+interface User {
+  id: string;
+  username: string;
+  email?: string;
+  organization?: string;
+  role?: string;
+}
+
+interface LoginResponse {
+  data: {
+    user: User;
+    token: string;
+  };
+}
+
+interface LoginProps {
+  onLogin: (user: User, token: string, organization: string) => void;
+}
+
+interface FormData {
+  username: string;
+  password: string;
+  organization: string;
+}
+
+const Login: React.FC<LoginProps> = ({ onLogin }) => {
+  const [formData, setFormData] = useState<FormData>({
     username: '',
     password: '',
-    organization: 'commercial-bank',  // Default to commercial bank (main API)
+    organization: 'commercial-bank',
   });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string>('');
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
     setLoading(true);
@@ -64,10 +90,11 @@ const Login = ({ onLogin }) => {
     }
   };
 
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | any) => {
+    const { name, value } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: value,
     });
   };
 

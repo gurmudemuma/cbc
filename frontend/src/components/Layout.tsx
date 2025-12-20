@@ -1,6 +1,10 @@
 import { Outlet, useLocation, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getOrganization } from '../config/api.config';
+import NotificationCenter from './NotificationCenter';
+import { AccessibilityButton } from './AccessibilityEnhancements';
+import { useAccessibilitySettings } from './AccessibilityEnhancements';
+import { AccessibilitySettingsDialog } from './AccessibilityEnhancements';
 import {
   Coffee,
   Package,
@@ -57,8 +61,8 @@ import {
   Stack,
 } from '@mui/material';
 
-const drawerWidth = 220;
-const collapsedWidth = 65;
+const drawerWidth = 260;
+const collapsedWidth = 80;
 
 // Styled components
 const StyledAppBar = styled(AppBar)(({ theme }) => ({
@@ -76,7 +80,7 @@ const StyledAppBar = styled(AppBar)(({ theme }) => ({
 
 const StyledDrawer = styled(Drawer, {
   shouldForwardProp: (prop) => prop !== 'collapsed',
-})(({ theme, collapsed }) => ({
+})<{ collapsed?: boolean }>(({ theme, collapsed }) => ({
   width: collapsed ? collapsedWidth : drawerWidth,
   flexShrink: 0,
   whiteSpace: 'nowrap',
@@ -105,7 +109,7 @@ const StyledDrawer = styled(Drawer, {
 
 const StyledListItemButton = styled(ListItemButton, {
   shouldForwardProp: (prop) => prop !== 'active' && prop !== 'collapsed',
-})(({ theme, active, collapsed }) => ({
+})<{ active?: boolean; collapsed?: boolean }>(({ theme, active, collapsed }) => ({
   borderRadius: theme.shape.borderRadius,
   margin: theme.spacing(0.5, 1.5),
   padding: theme.spacing(1.25, 2),
@@ -185,7 +189,7 @@ const DrawerHeader = styled('div')(({ theme }) => ({
 
 const Main = styled('main', {
   shouldForwardProp: (prop) => prop !== 'open' && prop !== 'collapsed',
-})(({ theme, open, collapsed }) => ({
+})<{ open?: boolean; collapsed?: boolean }>(({ theme, open, collapsed }) => ({
   flexGrow: 1,
   paddingTop: '64px',
   paddingLeft: 0,
@@ -218,6 +222,10 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  
+  // Priority 2 State
+  const { settings, updateSettings } = useAccessibilitySettings();
+  const [showAccessibility, setShowAccessibility] = useState(false);
   
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -292,9 +300,9 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
           icon: FileText,
           children: [
             { name: 'Pending Applications', path: '/applications', icon: FileText, filter: 'PENDING', badge: badgeCounts.PENDING },
-            { name: 'Under Review', path: '/applications', icon: FileCheck, filter: 'UNDER_REVIEW', badge: badgeCounts.UNDER_REVIEW },
-            { name: 'Approved', path: '/applications', icon: CheckCircle, filter: 'APPROVED', badge: badgeCounts.APPROVED },
-            { name: 'Rejected', path: '/applications', icon: X, filter: 'REJECTED', badge: badgeCounts.REJECTED },
+            { name: 'Under Review', path: '/applications', icon: FileCheck, filter: 'FX_PENDING', badge: badgeCounts.FX_PENDING },
+            { name: 'Approved', path: '/applications', icon: CheckCircle, filter: 'FX_APPROVED', badge: badgeCounts.FX_APPROVED },
+            { name: 'Rejected', path: '/applications', icon: X, filter: 'FX_REJECTED', badge: badgeCounts.FX_REJECTED },
           ]
         },
         { 
@@ -322,7 +330,7 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
             path: '/banking', 
             icon: DollarSign,
             children: [
-              { name: 'Document Verification', path: '/banking/documents', icon: FileCheck, filter: 'PENDING_VERIFICATION', badge: badgeCounts.PENDING_VERIFICATION },
+              { name: 'Document Verification', path: '/banking/documents', icon: FileCheck, filter: 'BANKING_PENDING', badge: badgeCounts.BANKING_PENDING },
               { name: 'Export Financing', path: '/banking/financing', icon: DollarSign },
               { name: 'Compliance Review', path: '/banking/compliance', icon: ShieldCheck },
               { name: 'Banking Reports', path: '/banking/reports', icon: FileText },
@@ -334,9 +342,9 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
             icon: Package,
             children: [
               { name: 'All Export Requests', path: '/exports', icon: Package, filter: 'ALL' },
-              { name: 'Pending Bank Approval', path: '/exports', icon: FileCheck, filter: 'BANK_PENDING', badge: badgeCounts.BANK_PENDING },
-              { name: 'Bank Approved', path: '/exports', icon: CheckCircle, filter: 'BANK_APPROVED', badge: badgeCounts.BANK_APPROVED },
-              { name: 'Rejected', path: '/exports', icon: X, filter: 'BANK_REJECTED', badge: badgeCounts.BANK_REJECTED },
+              { name: 'Pending Bank Approval', path: '/exports', icon: FileCheck, filter: 'BANKING_PENDING', badge: badgeCounts.BANKING_PENDING },
+              { name: 'Bank Approved', path: '/exports', icon: CheckCircle, filter: 'BANKING_APPROVED', badge: badgeCounts.BANKING_APPROVED },
+              { name: 'Rejected', path: '/exports', icon: X, filter: 'BANKING_REJECTED', badge: badgeCounts.BANKING_REJECTED },
             ]
           },
           { 
@@ -354,7 +362,7 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
             path: '/gateway', 
             icon: Users,
             children: [
-              { name: 'Exporter Portal Requests', path: '/gateway/exporter-requests', icon: FileText, badge: badgeCounts.EXTERNAL_REQUESTS },
+              { name: 'Exporter Portal Requests', path: '/gateway/exporter-requests', icon: FileText, badge: badgeCounts.PENDING },
               { name: 'API Gateway Logs', path: '/gateway/logs', icon: FileText },
             ]
           },
@@ -369,9 +377,9 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
             path: '/exports', 
             icon: Package,
             children: [
-              { name: 'Draft Requests', path: '/exports', icon: Package, filter: 'DRAFT', badge: badgeCounts.DRAFT },
+              { name: 'Draft Requests', path: '/exports', icon: Package, filter: 'PENDING', badge: badgeCounts.PENDING },
               { name: 'Submitted', path: '/exports', icon: Package, filter: 'PENDING', badge: badgeCounts.PENDING },
-              { name: 'In Progress', path: '/exports', icon: Package, filter: 'IN_PROGRESS', badge: badgeCounts.IN_PROGRESS },
+              { name: 'In Progress', path: '/exports', icon: Package, filter: 'FX_APPROVED', badge: badgeCounts.FX_APPROVED },
               { name: 'Completed', path: '/exports', icon: CheckCircle, filter: 'COMPLETED', badge: badgeCounts.COMPLETED },
             ]
           },
@@ -458,9 +466,9 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
           path: '/lots', 
           icon: Package,
           children: [
-            { name: 'Pending Verification', path: '/lots/pending', icon: Package, filter: 'LOT_PENDING', badge: badgeCounts.LOT_PENDING },
-            { name: 'Verified Lots', path: '/lots/verified', icon: CheckCircle, filter: 'LOT_VERIFIED', badge: badgeCounts.LOT_VERIFIED },
-            { name: 'Rejected Lots', path: '/lots/rejected', icon: X, filter: 'LOT_REJECTED', badge: badgeCounts.LOT_REJECTED },
+            { name: 'Pending Verification', path: '/lots/pending', icon: Package, filter: 'PENDING' },
+            { name: 'Verified Lots', path: '/lots/verified', icon: CheckCircle, filter: 'QUALITY_APPROVED' },
+            { name: 'Rejected Lots', path: '/lots/rejected', icon: X, filter: 'QUALITY_REJECTED' },
             { name: 'Lot Grading', path: '/lots/grading', icon: Award },
           ]
         },
@@ -491,9 +499,9 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
           path: '/exports', 
           icon: Package,
           children: [
-            { name: 'Pending ECX Verification', path: '/exports/pending', icon: Package, filter: 'ECX_PENDING', badge: badgeCounts.ECX_PENDING },
-            { name: 'ECX Verified', path: '/exports/verified', icon: CheckCircle, filter: 'ECX_VERIFIED', badge: badgeCounts.ECX_VERIFIED },
-            { name: 'ECX Rejected', path: '/exports/rejected', icon: X, filter: 'ECX_REJECTED', badge: badgeCounts.ECX_REJECTED },
+            { name: 'Pending ECX Verification', path: '/exports/pending', icon: Package, filter: 'PENDING', badge: badgeCounts.PENDING },
+            { name: 'ECX Verified', path: '/exports/verified', icon: CheckCircle, filter: 'FX_APPROVED' },
+            { name: 'ECX Rejected', path: '/exports/rejected', icon: X, filter: 'FX_REJECTED' },
           ]
         },
       ];
@@ -507,10 +515,10 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
           path: '/preregistration', 
           icon: UserCheck,
           children: [
-            { name: 'Pending Applications', path: '/preregistration/pending', icon: FileText, filter: 'PREREG_PENDING', badge: badgeCounts.PREREG_PENDING },
-            { name: 'Under Review', path: '/preregistration/review', icon: FileCheck, filter: 'PREREG_REVIEW', badge: badgeCounts.PREREG_REVIEW },
-            { name: 'Approved Applications', path: '/preregistration/approved', icon: CheckCircle, filter: 'PREREG_APPROVED', badge: badgeCounts.PREREG_APPROVED },
-            { name: 'Rejected Applications', path: '/preregistration/rejected', icon: X, filter: 'PREREG_REJECTED', badge: badgeCounts.PREREG_REJECTED },
+            { name: 'Pending Applications', path: '/preregistration/pending', icon: FileText, filter: 'PENDING' },
+            { name: 'Under Review', path: '/preregistration/review', icon: FileCheck, filter: 'FX_PENDING' },
+            { name: 'Approved Applications', path: '/preregistration/approved', icon: CheckCircle, filter: 'FX_APPROVED' },
+            { name: 'Rejected Applications', path: '/preregistration/rejected', icon: X, filter: 'FX_REJECTED' },
           ]
         },
         { 
@@ -518,9 +526,9 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
           path: '/licenses', 
           icon: Award,
           children: [
-            { name: 'License Applications', path: '/licenses/applications', icon: FileText, filter: 'LICENSE_PENDING', badge: badgeCounts.LICENSE_PENDING },
-            { name: 'Active Licenses', path: '/licenses/active', icon: Award, filter: 'LICENSE_ACTIVE', badge: badgeCounts.LICENSE_ACTIVE },
-            { name: 'Expired Licenses', path: '/licenses/expired', icon: X, filter: 'LICENSE_EXPIRED', badge: badgeCounts.LICENSE_EXPIRED },
+            { name: 'License Applications', path: '/licenses/applications', icon: FileText, filter: 'PENDING' },
+            { name: 'Active Licenses', path: '/licenses/active', icon: Award, filter: 'FX_APPROVED' },
+            { name: 'Expired Licenses', path: '/licenses/expired', icon: X, filter: 'COMPLETED' },
             { name: 'License Renewals', path: '/licenses/renewals', icon: FileCheck },
           ]
         },
@@ -540,8 +548,8 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
           path: '/contracts', 
           icon: FileText,
           children: [
-            { name: 'Pending Contracts', path: '/contracts/pending', icon: FileText, filter: 'CONTRACT_PENDING', badge: badgeCounts.CONTRACT_PENDING },
-            { name: 'Approved Contracts', path: '/contracts/approved', icon: CheckCircle, filter: 'CONTRACT_APPROVED', badge: badgeCounts.CONTRACT_APPROVED },
+            { name: 'Pending Contracts', path: '/contracts/pending', icon: FileText, filter: 'PENDING' },
+            { name: 'Approved Contracts', path: '/contracts/approved', icon: CheckCircle, filter: 'FX_APPROVED' },
             { name: 'Contract Templates', path: '/contracts/templates', icon: FileText },
             { name: 'Contract History', path: '/contracts/history', icon: FileText },
           ]
@@ -567,10 +575,10 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
           path: '/customs', 
           icon: ShieldCheck,
           children: [
-            { name: 'Pending Clearance', path: '/customs/pending', icon: ShieldCheck, filter: 'CUSTOMS_PENDING', badge: badgeCounts.CUSTOMS_PENDING },
-            { name: 'Under Inspection', path: '/customs/inspection', icon: FileCheck, filter: 'CUSTOMS_INSPECTION', badge: badgeCounts.CUSTOMS_INSPECTION },
-            { name: 'Cleared Exports', path: '/customs/cleared', icon: CheckCircle, filter: 'CUSTOMS_CLEARED', badge: badgeCounts.CUSTOMS_CLEARED },
-            { name: 'Rejected/Held', path: '/customs/rejected', icon: X, filter: 'CUSTOMS_REJECTED', badge: badgeCounts.CUSTOMS_REJECTED },
+            { name: 'Pending Clearance', path: '/customs/pending', icon: ShieldCheck, filter: 'EXPORT_CUSTOMS_PENDING', badge: badgeCounts.EXPORT_CUSTOMS_PENDING },
+            { name: 'Under Inspection', path: '/customs/inspection', icon: FileCheck, filter: 'EXPORT_CUSTOMS_PENDING' },
+            { name: 'Cleared Exports', path: '/customs/cleared', icon: CheckCircle, filter: 'EXPORT_CUSTOMS_CLEARED', badge: badgeCounts.EXPORT_CUSTOMS_CLEARED },
+            { name: 'Rejected/Held', path: '/customs/rejected', icon: X, filter: 'EXPORT_CUSTOMS_REJECTED', badge: badgeCounts.EXPORT_CUSTOMS_REJECTED },
           ]
         },
         { 
@@ -618,8 +626,8 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
           children: [
             { name: 'Pending Shipments', path: '/shipments/pending', icon: Ship, filter: 'SHIPMENT_PENDING', badge: badgeCounts.SHIPMENT_PENDING },
             { name: 'Scheduled Shipments', path: '/shipments/scheduled', icon: Ship, filter: 'SHIPMENT_SCHEDULED', badge: badgeCounts.SHIPMENT_SCHEDULED },
-            { name: 'In Transit', path: '/shipments/transit', icon: Ship, filter: 'SHIPMENT_TRANSIT', badge: badgeCounts.SHIPMENT_TRANSIT },
-            { name: 'Delivered', path: '/shipments/delivered', icon: CheckCircle, filter: 'SHIPMENT_DELIVERED', badge: badgeCounts.SHIPMENT_DELIVERED },
+            { name: 'In Transit', path: '/shipments/transit', icon: Ship, filter: 'SHIPPED' },
+            { name: 'Delivered', path: '/shipments/delivered', icon: CheckCircle, filter: 'COMPLETED' },
           ]
         },
         { 
@@ -877,6 +885,11 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <NotificationCenter />
+            <AccessibilityButton
+              settings={settings}
+              onOpenSettings={() => setShowAccessibility(true)}
+            />
             {!isMobile && (
               <Chip
                 avatar={

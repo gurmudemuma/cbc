@@ -17,6 +17,10 @@ api/shared/*.d.ts.map
 .env.local
 .env.*.local
 
+# Keep template files (they are safe to commit)
+!.env.template
+!.env.*.template
+
 # Logs
 logs/
 *.log
@@ -72,11 +76,21 @@ Thumbs.db
 # Backup files and directories
 *.bak
 *.backup
-*.backup/
+*.backup.*
+.env.backup*
 api.backup*/
 bin.backup*/
 *-backup/
 *backup*/
+
+# Error logs and build artifacts
+*.txt
+!README.txt
+!CONTRIBUTING.txt
+!QUICK_START.txt
+build_errors.txt
+api_build_all.txt
+AUDIT_SUMMARY.txt
 
 # Empty placeholder files (often created by scripts)
 Chaincode

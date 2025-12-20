@@ -32,8 +32,11 @@ import {
   CheckCircle,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { CommonPageProps } from '../types';
 
-const HelpSupport = ({ user, org }) => {
+interface HelpSupportProps extends CommonPageProps {}
+
+const HelpSupport = ({ user, org }: HelpSupportProps): JSX.Element => {
   const [supportForm, setSupportForm] = useState({
     subject: '',
     category: '',

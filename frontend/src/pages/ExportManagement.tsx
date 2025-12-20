@@ -66,11 +66,17 @@ import {
 } from '../utils/workflowManager';
 import ExportDetailDialog from '../components/ExportDetailDialog';
 
-const ExportManagement = ({ user }) => {
+interface ExportManagementProps {
+  user: any;
+  org: string | null;
+}
+
+const ExportManagement = ({ user, org }: ExportManagementProps): JSX.Element => {
   const navigate = useNavigate();
   const { exports, loading: exportsLoading, error: exportsError, refreshExports } = useExports();
   const [filteredExports, setFilteredExports] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [activeView, setActiveView] = useState(() => {
@@ -100,14 +106,14 @@ const ExportManagement = ({ user }) => {
       const savedFilter = localStorage.getItem('exportMgmt_statusFilter');
       if (savedView) setActiveView(savedView);
       if (savedFilter) setStatusFilter(savedFilter);
-    } catch {}
+    } catch { }
   }, []);
 
   useEffect(() => {
     try {
       localStorage.setItem('exportMgmt_activeView', activeView);
       localStorage.setItem('exportMgmt_statusFilter', statusFilter);
-    } catch {}
+    } catch { }
   }, [activeView, statusFilter]);
 
   // Rejection and Resubmission state
@@ -115,12 +121,14 @@ const ExportManagement = ({ user }) => {
     open: false,
     exportId: null,
     exportData: null,
+    stage: '',
   });
   const [rejectionReason, setRejectionReason] = useState('');
   const [resubmitDialog, setResubmitDialog] = useState({
     open: false,
     exportId: null,
     exportData: null,
+    stage: '',
   });
   const [workflowHistory, setWorkflowHistory] = useState([]);
 
@@ -130,7 +138,7 @@ const ExportManagement = ({ user }) => {
   // Determine user role and permissions - Use BOTH organizationId AND role
   const orgId = user?.organizationId?.toLowerCase();
   const userRole = user?.role?.toLowerCase();
-  
+
   // Check organization type (no longer includes legacy commercialbank IDs)
   const isCommercialBank = orgId === 'commercial-bank' || orgId === 'commercialbank';
   const isNationalBank = orgId === 'national-bank' || orgId === 'nationalbank';
@@ -149,11 +157,11 @@ const ExportManagement = ({ user }) => {
   // Determine display role
   const displayRole = canCreateExports ? 'exporter'
     : canVerifyDocuments ? 'banker'
-    : canApproveFX ? 'governor'
-    : canCertifyQuality ? 'inspector'
-    : canManageShipment ? 'shipper'
-    : canClearCustoms ? 'customs'
-    : 'viewer';
+      : canApproveFX ? 'governor'
+        : canCertifyQuality ? 'inspector'
+          : canManageShipment ? 'shipper'
+            : canClearCustoms ? 'customs'
+              : 'viewer';
   const [activeStep, setActiveStep] = useState(0);
   const [uploadedDocuments, setUploadedDocuments] = useState({
     commercialInvoice: null,
@@ -222,7 +230,7 @@ const ExportManagement = ({ user }) => {
 
   // fetchExports is now handled by useExports hook
   // Use refreshExports() to manually refresh
-  
+
   const fetchExports = async () => {
     try {
       await refreshExports();

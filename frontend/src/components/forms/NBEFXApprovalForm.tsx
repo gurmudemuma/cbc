@@ -4,10 +4,18 @@ import {
   Alert, CircularProgress, Box, Typography, Divider,
 } from '@mui/material';
 import { CheckCircle, XCircle, DollarSign } from 'lucide-react';
+import { CommonPageProps, NBEFXApprovalFormData } from '../../types';
 import RejectionDialog from '../RejectionDialog';
 
-const NBEFXApprovalForm = ({ exportData, onApprove, onReject, loading = false }) => {
-  const [formData, setFormData] = useState({
+interface NBEFXApprovalFormProps extends CommonPageProps {
+  exportData: any;
+  onApprove: (data: NBEFXApprovalFormData) => void;
+  onReject: (data: any) => void;
+  loading?: boolean;
+}
+
+const NBEFXApprovalForm = ({ exportData, onApprove, onReject, loading = false }: NBEFXApprovalFormProps): JSX.Element => {
+  const [formData, setFormData] = useState<NBEFXApprovalFormData>({
     approvedFXAmount: exportData.estimatedValue || '',
     fxRate: '',
     fxAllocationNumber: `FX-${Date.now()}`,

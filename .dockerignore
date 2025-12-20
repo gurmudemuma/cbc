@@ -1,0 +1,52 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+docs
+README*
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# CI/CD
+.github
+.gitlab-ci.yml
+.travis.yml
+.circleci
+
+# Testing
+coverage
+*.test.ts
+*.spec.ts
+__tests__
+__mocks__
+
+# Logs
+logs
+*.log
+
+# Misc
+.env
+.env.local
+.env.*.local
+.dockerignore
+
+# Node modules (will be installed in container)
+# But we need to keep api directories intact
+node_modules
+
+# Build artifacts (will be rebuilt)
+dist
+build
+*.tsbuildinfo
+
+# Keep api directory and all its contents
+!api/

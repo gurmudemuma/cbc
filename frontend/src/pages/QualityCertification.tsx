@@ -30,7 +30,12 @@ import {
   IconButton,
 } from '@mui/material';
 
-const QualityCertification = ({ user }) => {
+interface QualityCertificationProps {
+  user: any;
+  org: string | null;
+}
+
+const QualityCertification = ({ user, org }: QualityCertificationProps): JSX.Element => {
   const { exports: allExports, loading: exportsLoading, error: exportsError, refreshExports } = useExports();
   const exports = allExports.filter((e) => e.status === 'ECTA_QUALITY_PENDING' || e.status === 'ECTA_QUALITY_APPROVED' || e.status === 'ECTA_QUALITY_REJECTED');
   const [filteredExports, setFilteredExports] = useState([]);

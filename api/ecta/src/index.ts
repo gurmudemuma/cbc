@@ -4,7 +4,6 @@ dotenv.config();
 
 import express, { Application, Request, Response } from "express";
 import cors from "cors";
-import morgan from "morgan";
 import { createServer } from "http";
 import qualityRoutes from "./routes/quality.routes";
 import licenseRoutes from "./routes/license.routes";
@@ -13,22 +12,28 @@ import authRoutes from "./routes/auth.routes";
 import exportRoutes from "./routes/export.routes";
 import preregistrationRoutes from "./routes/preregistration.routes";
 import exporterRoutes from "./routes/exporter.routes";
-import { errorHandler } from "./middleware/error.middleware";
-import { FabricGateway } from "./fabric/gateway";
+import { errorHandler } from "../../shared/middleware/error.middleware";
 import { initializeWebSocket } from "../../shared/websocket.service";
 import { envValidator } from "../../shared/env.validator";
+import { createLogger, httpLogger } from "../../shared/logger";
 import {
   applySecurityMiddleware,
   createRateLimiters,
   getCorsConfig,
 } from "../../shared/security.best-practices";
+import { monitoringService } from "../../shared/monitoring.service";
+import { monitoringMiddleware, errorMonitoringMiddleware } from "../../shared/middleware/monitoring.middleware";
+import { getPool, closePool } from "../../shared/database/pool";
+
+// Initialize logger
+const logger = createLogger('ECTAAPI');
 
 // Validate environment variables before starting
 try {
   envValidator.validate();
   envValidator.printSummary();
 } catch (error) {
-  console.error("❌ Environment validation failed:", error);
+  logger.error("Environment validation failed", { error });
   process.exit(1);
 }
 
@@ -48,11 +53,10 @@ applySecurityMiddleware(app, {
 app.use(cors(getCorsConfig(config.CORS_ORIGIN)));
 
 // Request logging
-if (config.NODE_ENV === "development") {
-  app.use(morgan("dev"));
-} else {
-  app.use(morgan("combined"));
-}
+app.use(httpLogger('ECTAAPI'));
+
+// Monitoring middleware
+app.use(monitoringMiddleware);
 
 // Body parsing with size limits
 const maxSize = `${config.MAX_FILE_SIZE_MB}mb`;
@@ -61,9 +65,6 @@ app.use(express.urlencoded({ extended: true, limit: maxSize }));
 
 // Rate limiting
 const { authLimiter, apiLimiter } = createRateLimiters();
-
-// Initialize Fabric Gateway
-const fabricGateway = FabricGateway.getInstance();
 
 // Routes with rate limiting
 app.use("/api/auth/login", authLimiter);
@@ -78,33 +79,45 @@ app.use("/api", apiLimiter, exportRoutes);
 
 // Health check with detailed status
 app.get("/health", async (_req: Request, res: Response) => {
-  const fabricStatus = fabricGateway.isConnected()
-    ? "connected"
-    : "disconnected";
+  try {
+    // Test database connection
+    const pool = getPool();
+    const result = await pool.query('SELECT NOW()');
+    const dbStatus = result.rows.length > 0 ? "connected" : "disconnected";
 
-  res.json({
-    status: "ok",
-    service: "ECTA API",
-    version: "1.0.0",
-    environment: config.NODE_ENV,
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    fabric: fabricStatus,
-    memory: {
-      used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
-      total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
-      unit: "MB",
-    },
-  });
+    res.json({
+      status: "ok",
+      service: "ECTA API",
+      version: "1.0.0",
+      environment: config.NODE_ENV,
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      database: dbStatus,
+      memory: {
+        used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+        total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
+        unit: "MB",
+      },
+    });
+  } catch (error) {
+    logger.error('Health check failed', { error });
+    res.status(503).json({
+      status: "error",
+      service: "ECTA API",
+      database: "disconnected",
+    });
+  }
 });
 
 // Ready check (for Kubernetes)
 app.get("/ready", async (_req: Request, res: Response) => {
-  const isReady = fabricGateway.isConnected();
-
-  if (isReady) {
-    res.status(200).json({ status: "ready" });
-  } else {
+  try {
+    const pool = getPool();
+    const result = await pool.query('SELECT NOW()');
+    const isReady = result.rows.length > 0;
+    if (isReady) res.status(200).json({ status: "ready" });
+    else res.status(503).json({ status: "not ready" });
+  } catch (error) {
     res.status(503).json({ status: "not ready" });
   }
 });
@@ -113,6 +126,9 @@ app.get("/ready", async (_req: Request, res: Response) => {
 app.get("/live", (_req: Request, res: Response) => {
   res.status(200).json({ status: "alive" });
 });
+
+// Error monitoring middleware (before error handler)
+app.use(errorMonitoringMiddleware);
 
 // Error handling
 app.use(errorHandler);
@@ -123,60 +139,58 @@ const websocketService = initializeWebSocket(httpServer);
 
 // Start server
 httpServer.listen(PORT, async () => {
-  console.log(`\n${"=".repeat(60)}`);
-  console.log(`  ECTA API server running`);
-  console.log(`  Ethiopian Coffee and Tea Authority`);
-  console.log(`${"=".repeat(60)}`);
-  console.log(`   Port: ${PORT}`);
-  console.log(`   Environment: ${config.NODE_ENV}`);
-  console.log(`   Organization: ${config.ORGANIZATION_NAME}`);
-  console.log(
-    `   WebSocket: ${config.WEBSOCKET_ENABLED ? "Enabled" : "Disabled"}`,
-  );
-  console.log(`${"=".repeat(60)}\n`);
+  logger.info('ECTA API server starting', {
+    port: PORT,
+    environment: config.NODE_ENV,
+    websocket: config.WEBSOCKET_ENABLED ? 'Enabled' : 'Disabled'
+  });
 
   try {
-    console.log("  Connecting to Hyperledger Fabric network...");
-    await fabricGateway.connect();
-    console.log("  Connected to Hyperledger Fabric network");
-    console.log(`   Channel: ${config.CHANNEL_NAME}`);
-    console.log(`   Chaincode: ${config.CHAINCODE_NAME_EXPORT}`);
+    logger.info('Testing PostgreSQL database connection');
+    const pool = getPool();
+    const result = await pool.query('SELECT NOW()');
+    logger.info('Connected to PostgreSQL database', {
+      timestamp: result.rows[0].now
+    });
+    monitoringService.recordSystemHealth('database', true);
   } catch (error) {
-    console.error("  Failed to connect to Fabric network:", error);
-    console.error("   Please ensure the Fabric network is running");
-    process.exit(1);
+    logger.error('Failed to connect to PostgreSQL database', { error });
+    logger.warn('⚠️  Database connection failed - API will start in degraded mode');
+    monitoringService.recordSystemHealth('database', false);
   }
 
-  console.log("\n  Server is ready to accept requests\n");
+  logger.info('Server is ready to accept requests');
 });
 
 // Graceful shutdown handler
 const gracefulShutdown = async (signal: string) => {
-  console.log(`\n🛑 ${signal} received. Shutting down gracefully...`);
+  logger.info('Shutdown signal received', { signal });
 
   // Stop accepting new requests
   httpServer.close(async () => {
-    console.log("HTTP server closed");
+    logger.info('HTTP server closed');
 
     try {
       // Close WebSocket connections
-      websocketService.close();
-      console.log("WebSocket service closed");
+      if (websocketService) {
+        websocketService.close();
+      }
+      logger.info('WebSocket service closed');
 
-      // Disconnect from Fabric
-      await fabricGateway.disconnect();
-      console.log("Fabric gateway disconnected");
+      // Close database pool
+      await closePool();
+      logger.info('Database pool closed');
 
       process.exit(0);
     } catch (error) {
-      console.error("Error during shutdown:", error);
+      logger.error('Error during shutdown', { error });
       process.exit(1);
     }
   });
 
   // Force shutdown after 30 seconds
   setTimeout(() => {
-    console.error("⚠️  Forced shutdown after timeout");
+    logger.error('Forced shutdown after timeout');
     process.exit(1);
   }, 30000);
 };
@@ -185,11 +199,11 @@ const gracefulShutdown = async (signal: string) => {
 process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
 process.on("uncaughtException", (error) => {
-  console.error("Uncaught Exception:", error);
+  logger.error('Uncaught Exception', { error });
   gracefulShutdown("uncaughtException");
 });
 process.on("unhandledRejection", (reason, promise) => {
-  console.error("Unhandled Rejection at:", promise, "reason:", reason);
+  logger.error('Unhandled Rejection', { reason, promise });
   gracefulShutdown("unhandledRejection");
 });
 

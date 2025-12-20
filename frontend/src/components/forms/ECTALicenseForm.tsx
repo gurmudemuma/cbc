@@ -21,7 +21,17 @@ import RejectionDialog from '../RejectionDialog';
  * ECTA License Approval Form
  * Used by ECTA to validate export licenses
  */
-const ECTALicenseForm = ({ exportData, onApprove, onReject, loading = false }) => {
+
+import { CommonPageProps, ECTALicenseFormData } from '../../types';
+
+interface ECTALicenseFormProps extends CommonPageProps {
+  exportData: any;
+  onApprove: (data: ECTALicenseFormData) => void;
+  onReject: (data: any) => void;
+  loading?: boolean;
+}
+
+const ECTALicenseForm = ({ exportData, onApprove, onReject, loading = false }: ECTALicenseFormProps): JSX.Element => {
   const [formData, setFormData] = useState({
     validatedLicenseNumber: exportData.exportLicenseNumber || '',
     licenseExpiryDate: '',
@@ -29,20 +39,20 @@ const ECTALicenseForm = ({ exportData, onApprove, onReject, loading = false }) =
     validationNotes: '',
   });
   const [showRejectDialog, setShowRejectDialog] = useState(false);
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const handleChange = (field) => (event) => {
+  const handleChange = (field: string) => (event: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
       ...formData,
       [field]: event.target.value,
     });
     if (errors[field]) {
-      setErrors({ ...errors, [field]: null });
+      setErrors({ ...errors, [field]: '' });
     }
   };
 
   const validate = () => {
-    const newErrors = {};
+    const newErrors: Record<string, string> = {};
     
     if (!formData.validatedLicenseNumber || formData.validatedLicenseNumber.trim().length < 5) {
       newErrors.validatedLicenseNumber = 'Valid license number is required';
@@ -70,10 +80,9 @@ const ECTALicenseForm = ({ exportData, onApprove, onReject, loading = false }) =
     }
 
     onApprove({
-      licenseNumber: formData.validatedLicenseNumber.trim(),  // Backend expects 'licenseNumber'
-      notes: formData.validationNotes.trim(),  // Backend expects 'notes'
-      // Backend doesn't use: licenseExpiryDate, exporterTIN
-    });
+      licenseNumber: formData.validatedLicenseNumber.trim(),
+      notes: formData.validationNotes.trim(),
+    } as ECTALicenseFormData);
   };
 
   const handleReject = (rejectionData) => {
@@ -85,7 +94,7 @@ const ECTALicenseForm = ({ exportData, onApprove, onReject, loading = false }) =
     if (!formData.licenseExpiryDate) return false;
     const expiryDate = new Date(formData.licenseExpiryDate);
     const today = new Date();
-    const daysUntilExpiry = Math.floor((expiryDate - today) / (1000 * 60 * 60 * 24));
+    const daysUntilExpiry = Math.floor((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
     return daysUntilExpiry > 0 && daysUntilExpiry <= 30;
   };
 

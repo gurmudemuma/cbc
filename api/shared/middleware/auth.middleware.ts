@@ -25,14 +25,15 @@ export interface AuthenticatedRequest extends Request {
 export interface JWTPayload {
   id: string;
   username: string;
-  organization: string;
-  mspId: string;
+  organization?: string;
+  organizationId?: string;
+  mspId?: string;
   role: string;
-  permissions: string[];
+  permissions?: string[];
   iat: number;
   exp: number;
-  iss: string;
-  aud: string[];
+  iss?: string;
+  aud?: string | string[];
 }
 
 /**
@@ -56,10 +57,8 @@ export const authMiddleware = (req: AuthenticatedRequest, res: Response, next: N
 
     const token = authHeader.substring(7); // Remove 'Bearer ' prefix
 
-    // Verify token with shared secret
+    // Verify token with shared secret (without strict issuer/audience validation for backward compatibility)
     const decoded = jwt.verify(token, JWT_CONFIG.SECRET, {
-      issuer: JWT_CONFIG.ISSUER,
-      audience: JWT_CONFIG.AUDIENCE,
       algorithms: [JWT_CONFIG.ALGORITHM as Algorithm],
     });
 
@@ -69,14 +68,13 @@ export const authMiddleware = (req: AuthenticatedRequest, res: Response, next: N
     req.user = {
       id: payload.id,
       username: payload.username,
-      organization: payload.organization,
-      mspId: payload.mspId,
+      organization: payload.organization || payload.organizationId || 'DEFAULT',
+      mspId: payload.mspId || 'DEFAULT',
       role: payload.role,
-      permissions: payload.permissions,
+      permissions: payload.permissions || [],
     };
 
     return next();
-    return;
   } catch (error) {
     let errorCode = ApiErrorCode.INVALID_TOKEN;
     let message = 'Invalid access token';

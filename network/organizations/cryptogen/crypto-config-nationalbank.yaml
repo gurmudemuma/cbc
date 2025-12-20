@@ -1,8 +1,0 @@
-PeerOrgs:
-  - Name: NationalBank
-    Domain: nationalbank.coffee-export.com
-    EnableNodeOUs: true
-    Template:
-      Count: 1
-    Users:
-      Count: 1

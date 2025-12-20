@@ -37,8 +37,11 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { CommonPageProps } from '../types';
 
-const ExportDashboard = ({ user, org }) => {
+interface ExportDashboardProps extends CommonPageProps {}
+
+const ExportDashboard = ({ user, org }: ExportDashboardProps): JSX.Element => {
   const [exportRequests, setExportRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);

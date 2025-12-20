@@ -13,7 +13,9 @@ import {
   BusinessType,
 } from '../models/ecta-preregistration.model';
 import { EctaPreRegistrationRepository } from '../database/repositories/ecta-preregistration.repository';
-import pool from '../database/db.config';
+import { getPool } from '../database/pool';
+
+const pool = getPool();
 
 export class EctaPreRegistrationService {
   private static instance: EctaPreRegistrationService;

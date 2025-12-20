@@ -1,7 +1,0 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: coffee-export
-  labels:
-    name: coffee-export
-    environment: production

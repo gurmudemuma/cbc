@@ -38,7 +38,12 @@ import DocumentChecklist from '../components/DocumentChecklist';
 import RejectionHandler from '../components/RejectionHandler';
 import WorkflowProgressTracker from '../components/WorkflowProgressTracker';
 
-const ExportDetails = ({ user }) => {
+interface ExportDetailsProps {
+  user: any;
+  org: string | null;
+}
+
+const ExportDetails = ({ user, org }: ExportDetailsProps): JSX.Element => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [exportData, setExportData] = useState(null);
@@ -498,7 +503,7 @@ const ExportDetails = ({ user }) => {
 
           {activeTab === 1 && (
             <Box>
-              <DocumentChecklist exportId={id} />
+              <DocumentChecklist exportId={id} onUpdate={() => {}} />
             </Box>
           )}
 

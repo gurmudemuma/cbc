@@ -3,8 +3,10 @@
  * Automated notifications for expiring licenses and certificates
  */
 
-import pool from '../database/db.config';
+import { getPool } from '../database/pool';
 import cron from 'node-cron';
+
+const pool = getPool();
 
 export interface RenewalReminder {
   reminderId: string;

@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { Box, Grid, Typography, Card, CardContent, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button, Chip, Dialog, DialogContent, DialogTitle, IconButton } from '@mui/material';
 import { FileCheck, Eye, XCircle } from 'lucide-react';
+import { CommonPageProps } from '../types';
 import { useExports } from '../hooks/useExports';
 import ECTAContractForm from '../components/forms/ECTAContractForm';
 import apiClient from '../services/api';
 
-const ECTAContractApproval = ({ user }) => {
+interface ECTAContractApprovalProps extends CommonPageProps {}
+
+const ECTAContractApproval = ({ user, org }: ECTAContractApprovalProps): JSX.Element => {
   const { exports: allExports, refreshExports } = useExports();
   const exports = allExports.filter((e) => e.status === 'ECTA_CONTRACT_PENDING' || e.status === 'ECTA_CONTRACT_APPROVED' || e.status === 'ECTA_CONTRACT_REJECTED');
   const [selectedExport, setSelectedExport] = useState(null);

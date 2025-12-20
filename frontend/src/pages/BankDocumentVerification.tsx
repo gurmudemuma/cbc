@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { Box, Grid, Typography, Card, CardContent, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button, Chip, Dialog, DialogContent, DialogTitle, IconButton } from '@mui/material';
 import { DollarSign, Eye, XCircle } from 'lucide-react';
+import { CommonPageProps } from '../types';
 import { useExports } from '../hooks/useExports';
 import BankDocumentVerificationForm from '../components/forms/BankDocumentVerificationForm';
 import apiClient from '../services/api';
 
-const BankDocumentVerification = ({ user }) => {
+interface BankDocumentVerificationProps extends CommonPageProps {}
+
+const BankDocumentVerification = ({ user, org }: BankDocumentVerificationProps): JSX.Element => {
   const { exports: allExports, refreshExports } = useExports();
   const exports = allExports.filter((e) => e.status === 'BANK_DOCUMENT_PENDING' || e.status === 'BANK_DOCUMENT_VERIFIED' || e.status === 'BANK_DOCUMENT_REJECTED');
   const [selectedExport, setSelectedExport] = useState(null);

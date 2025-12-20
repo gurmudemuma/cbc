@@ -1,4 +1,4 @@
-import { ExportRequest, ExportStatus } from './exportService';
+import { ExportRequest } from './services/export.service';
 
 export interface SearchCriteria {
   status?: string;
@@ -7,21 +7,20 @@ export interface SearchCriteria {
   exporterName?: string;
   coffeeType?: string;
   destinationCountry?: string;
-  commercialBankId?: string; // Changed from commercialbankId
+  commercialBankId?: string;
   minQuantity?: number;
   maxQuantity?: number;
   minEstimatedValue?: number;
   maxEstimatedValue?: number;
-}
-
-interface ExportFilters {
-  status?: string;
-  exporterName?: string;
-  coffeeType?: string;
-  destinationCountry?: string;
-  commercialBankId?: string; // Changed from commercialbankId
-  quantityRange?: { min?: number; max?: number };
-  valueRange?: { min?: number; max?: number };
+  searchTerm?: string;
+  createdAfter?: Date;
+  createdBefore?: Date;
+  minValue?: number;
+  maxValue?: number;
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
 }
 
 export interface PaginatedResult<T> {
@@ -44,7 +43,7 @@ export interface SearchResult<T> extends PaginatedResult<T> {
 export class SearchService {
   private static instance: SearchService;
 
-  private constructor() {}
+  private constructor() { }
 
   public static getInstance(): SearchService {
     if (!SearchService.instance) {
@@ -61,7 +60,7 @@ export class SearchService {
     criteria: SearchCriteria
   ): SearchResult<ExportRequest> {
     const startTime = Date.now();
-    
+
     let filtered = [...exports];
 
     // Apply filters
@@ -176,8 +175,8 @@ export class SearchService {
     const multiplier = sortOrder === 'asc' ? 1 : -1;
 
     return exports.sort((a, b) => {
-      const aValue = a[criteria.sortBy!];
-      const bValue = b[criteria.sortBy!];
+      const aValue = (a as any)[criteria.sortBy!];
+      const bValue = (b as any)[criteria.sortBy!];
 
       if (aValue === undefined || bValue === undefined) return 0;
 
@@ -253,11 +252,13 @@ export class SearchService {
 
     exports.forEach((exp) => {
       // Status facets
-      statuses[exp.status] = (statuses[exp.status] || 0) + 1;
+      const status = exp.status || 'UNKNOWN';
+      statuses[status] = (statuses[status] || 0) + 1;
 
       // Country facets
-      countries[exp.destinationCountry] =
-        (countries[exp.destinationCountry] || 0) + 1;
+      const country = exp.destinationCountry || 'UNKNOWN';
+      countries[country] =
+        (countries[country] || 0) + 1;
 
       // Quality grade facets
       if (exp.qualityGrade) {
@@ -266,11 +267,12 @@ export class SearchService {
       }
 
       // Value range facets
-      if (exp.estimatedValue < 10000) {
+      const estimatedValue = exp.estimatedValue || 0;
+      if (estimatedValue < 10000) {
         valueRanges['0-10000']++;
-      } else if (exp.estimatedValue < 50000) {
+      } else if (estimatedValue < 50000) {
         valueRanges['10000-50000']++;
-      } else if (exp.estimatedValue < 100000) {
+      } else if (estimatedValue < 100000) {
         valueRanges['50000-100000']++;
       } else {
         valueRanges['100000+']++;
@@ -367,9 +369,9 @@ export class SearchService {
       exp.exportId,
       exp.exporterName,
       exp.coffeeType,
-      exp.quantity.toString(),
+      (exp.quantity || 0).toString(),
       exp.destinationCountry,
-      exp.estimatedValue.toString(),
+      (exp.estimatedValue || 0).toString(),
       exp.status,
       exp.createdAt,
       exp.updatedAt,
@@ -378,7 +380,7 @@ export class SearchService {
     const csvContent = [
       headers.join(','),
       ...rows.map((row) =>
-        row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(',')
+        row.map((cell) => `"${(cell || '').replace(/"/g, '""')}"`).join(',')
       ),
     ].join('\n');
 

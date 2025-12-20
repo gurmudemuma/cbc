@@ -1,7 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import { JwtPayload } from 'jsonwebtoken';
-import { FabricGateway } from '../fabric/gateway';
-import { createExportService } from '../../../shared/exportService';
+import { pool } from '../../../shared/database/pool';
+import { createLogger } from '../../../shared/logger';
+import { ErrorCode, AppError } from '../../../shared/error-codes';
+
+const logger = createLogger('LotVerificationController');
 
 interface AuthJWTPayload extends JwtPayload {
   id: string;
@@ -14,284 +17,229 @@ interface RequestWithUser extends Request {
   user?: AuthJWTPayload;
 }
 
-/**
- * Lot Verification Controller for ECX
- * 
- * ECX (Ethiopian Commodity Exchange) is responsible for:
- * - Verifying ECX lot numbers
- * - Verifying warehouse receipt numbers
- * - Confirming coffee quality from warehouse
- * - Creating blockchain record for verified lots
- * - Approving or rejecting lot verification
- * 
- * ECX does NOT:
- * - Issue quality certificates (that's ECTA)
- * - Approve FX (that's NBE)
- * - Clear customs (that's Customs)
- */
 export class LotVerificationController {
-  private fabricGateway: FabricGateway;
-
-  constructor() {
-    this.fabricGateway = FabricGateway.getInstance();
-  }
-
-  /**
-   * Get all exports (ECX can view all)
-   */
   public getAllExports = async (_req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
     try {
-      const contract = this.fabricGateway.getExportContract();
-      const exportService = createExportService(contract);
-      const exports = await exportService.getAllExports();
-      res.json({ success: true, data: exports, count: exports.length });
+      const result = await pool.query('SELECT * FROM exports ORDER BY created_at DESC');
+      res.json({ success: true, data: result.rows, count: result.rows.length });
     } catch (error: any) {
-      res.status(500).json({ 
-        success: false, 
-        message: 'Failed to fetch exports', 
-        error: error.message 
-      });
+      logger.error('Failed to fetch exports', { error: error.message });
+      this.handleError(error, res);
     }
   };
 
-  /**
-   * Get single export by ID
-   */
-  public getExport = async (req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
+  public getExportById = async (req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
     try {
       const { exportId } = req.params;
       if (!exportId) {
-        res.status(400).json({ success: false, message: 'Export ID is required' });
-        return;
+        throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Export ID is required', 400);
       }
-      const contract = this.fabricGateway.getExportContract();
-      const exportService = createExportService(contract);
-      const exportData = await exportService.getExport(exportId);
-      res.json({ success: true, data: exportData });
+
+      const result = await pool.query('SELECT * FROM exports WHERE id = $1', [exportId]);
+      if (result.rows.length === 0) {
+        throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
+      }
+
+      res.json({ success: true, data: result.rows[0] });
     } catch (error: any) {
-      res.status(500).json({ 
-        success: false, 
-        message: 'Failed to fetch export', 
-        error: error.message 
-      });
+      logger.error('Failed to fetch export', { error: error.message });
+      this.handleError(error, res);
     }
   };
 
-  /**
-   * Get exports pending ECX lot verification
-   * Status: PENDING (newly created exports)
-   */
-  public getPendingVerification = async (_req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
+  public getPendingVerifications = async (_req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
     try {
-      const contract = this.fabricGateway.getExportContract();
-      const exportService = createExportService(contract);
-      const exports = await exportService.getExportsByStatus('PENDING');
-      res.json({ 
-        success: true, 
-        data: exports, 
-        count: exports.length,
-        message: 'Exports pending ECX lot verification'
-      });
+      const result = await pool.query(
+        'SELECT * FROM exports WHERE status = $1 ORDER BY created_at DESC',
+        ['ECX_PENDING']
+      );
+      res.json({ success: true, data: result.rows, count: result.rows.length });
     } catch (error: any) {
-      res.status(500).json({ 
-        success: false, 
-        message: 'Failed to fetch pending verifications', 
-        error: error.message 
-      });
+      logger.error('Failed to fetch pending verifications', { error: error.message });
+      this.handleError(error, res);
     }
   };
 
-  /**
-   * Verify lot - Check lot number and warehouse receipt
-   * This is ECX's primary task
-   */
   public verifyLot = async (req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
+    const client = await pool.connect();
     try {
       const { exportId } = req.params;
-      const user = req.user!;
-      
+      const user = req.user;
+      const { notes } = req.body;
+
       if (!exportId) {
-        res.status(400).json({ success: false, message: 'Export ID is required' });
-        return;
+        throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Export ID is required', 400);
       }
 
-      const { 
-        lotNumber, 
-        warehouseReceiptNumber, 
-        warehouseLocation,
-        verifiedBy,
-        notes 
-      } = req.body;
+      await client.query('BEGIN');
 
-      // Validate required fields
-      if (!lotNumber || !warehouseReceiptNumber) {
-        res.status(400).json({ 
-          success: false, 
-          message: 'Lot number and warehouse receipt number are required' 
-        });
-        return;
+      const exportResult = await client.query('SELECT * FROM exports WHERE id = $1', [exportId]);
+      if (exportResult.rows.length === 0) {
+        throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
       }
 
-      // Submit verification to blockchain
-      const contract = this.fabricGateway.getExportContract();
-      await contract.submitTransaction(
-        'VerifyLot',
-        exportId,
-        lotNumber,
-        warehouseReceiptNumber,
-        warehouseLocation || '',
-        verifiedBy || user.username,
-        notes || ''
+      await client.query(
+        `INSERT INTO export_status_history (export_id, old_status, new_status, changed_by, changed_at, notes)
+         VALUES ($1, $2, $3, $4, NOW(), $5)`,
+        [exportId, 'ECX_PENDING', 'LOT_VERIFIED', user?.id, notes || 'Lot verified']
       );
 
-      res.json({ 
-        success: true, 
-        message: 'Lot verification recorded. Awaiting approval.',
-        exportId,
-        lotNumber,
-        warehouseReceiptNumber
+      await client.query('COMMIT');
+
+      logger.info('Lot verified', { exportId, userId: user?.id });
+
+      res.json({
+        success: true,
+        message: 'Lot verification recorded',
+        exportId
       });
     } catch (error: any) {
-      res.status(500).json({ 
-        success: false, 
-        message: 'Failed to verify lot', 
-        error: error.message 
-      });
+      await client.query('ROLLBACK');
+      logger.error('Failed to verify lot', { error: error.message });
+      this.handleError(error, res);
+    } finally {
+      client.release();
     }
   };
 
-  /**
-   * Approve lot verification
-   * Status: PENDING → ECX_VERIFIED
-   */
   public approveLot = async (req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
+    const client = await pool.connect();
     try {
       const { exportId } = req.params;
-      const user = req.user!;
-      
+      const user = req.user;
+      const { notes } = req.body;
+
       if (!exportId) {
-        res.status(400).json({ success: false, message: 'Export ID is required' });
-        return;
+        throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Export ID is required', 400);
       }
 
-      const { approvedBy, notes } = req.body;
+      await client.query('BEGIN');
 
-      // Submit approval to blockchain
-      const contract = this.fabricGateway.getExportContract();
-      await contract.submitTransaction(
-        'ApproveLotVerification',
-        exportId,
-        approvedBy || user.username,
-        notes || ''
+      const exportResult = await client.query('SELECT * FROM exports WHERE id = $1', [exportId]);
+      if (exportResult.rows.length === 0) {
+        throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
+      }
+
+      await client.query(
+        'UPDATE exports SET status = $1, updated_at = NOW() WHERE id = $2',
+        ['ECX_VERIFIED', exportId]
       );
 
-      res.json({ 
-        success: true, 
-        message: 'Lot verification approved. Export can proceed to ECTA.',
+      await client.query(
+        `INSERT INTO export_status_history (export_id, old_status, new_status, changed_by, changed_at, notes)
+         VALUES ($1, $2, $3, $4, NOW(), $5)`,
+        [exportId, 'LOT_VERIFIED', 'ECX_VERIFIED', user?.id, notes || 'Lot approved']
+      );
+
+      await client.query('COMMIT');
+
+      logger.info('Lot approved', { exportId, userId: user?.id });
+
+      res.json({
+        success: true,
+        message: 'Lot approved',
         exportId,
-        newStatus: 'ECX_VERIFIED'
+        status: 'ECX_VERIFIED'
       });
     } catch (error: any) {
-      res.status(500).json({ 
-        success: false, 
-        message: 'Failed to approve lot verification', 
-        error: error.message 
-      });
+      await client.query('ROLLBACK');
+      logger.error('Failed to approve lot', { error: error.message });
+      this.handleError(error, res);
+    } finally {
+      client.release();
     }
   };
 
-  /**
-   * Reject lot verification
-   * Status: PENDING → ECX_REJECTED
-   */
   public rejectLot = async (req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
+    const client = await pool.connect();
     try {
       const { exportId } = req.params;
-      const user = req.user!;
-      
-      if (!exportId) {
-        res.status(400).json({ success: false, message: 'Export ID is required' });
-        return;
-      }
+      const user = req.user;
+      const { reason } = req.body;
 
-      const { reason, rejectedBy } = req.body;
+      if (!exportId) {
+        throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Export ID is required', 400);
+      }
 
       if (!reason) {
-        res.status(400).json({ 
-          success: false, 
-          message: 'Rejection reason is required' 
-        });
-        return;
+        throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Rejection reason is required', 400);
       }
 
-      // Submit rejection to blockchain
-      const contract = this.fabricGateway.getExportContract();
-      await contract.submitTransaction(
-        'RejectLotVerification',
-        exportId,
-        reason,
-        rejectedBy || user.username
+      await client.query('BEGIN');
+
+      const exportResult = await client.query('SELECT * FROM exports WHERE id = $1', [exportId]);
+      if (exportResult.rows.length === 0) {
+        throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
+      }
+
+      await client.query(
+        'UPDATE exports SET status = $1, updated_at = NOW() WHERE id = $2',
+        ['ECX_REJECTED', exportId]
       );
 
-      res.json({ 
-        success: true, 
-        message: 'Lot verification rejected',
+      await client.query(
+        `INSERT INTO export_status_history (export_id, old_status, new_status, changed_by, changed_at, notes)
+         VALUES ($1, $2, $3, $4, NOW(), $5)`,
+        [exportId, 'ECX_PENDING', 'ECX_REJECTED', user?.id, reason]
+      );
+
+      await client.query('COMMIT');
+
+      logger.info('Lot rejected', { exportId, reason, userId: user?.id });
+
+      res.json({
+        success: true,
+        message: 'Lot rejected',
         exportId,
-        newStatus: 'ECX_REJECTED',
         reason
       });
     } catch (error: any) {
-      res.status(500).json({ 
-        success: false, 
-        message: 'Failed to reject lot verification', 
-        error: error.message 
-      });
+      await client.query('ROLLBACK');
+      logger.error('Failed to reject lot', { error: error.message });
+      this.handleError(error, res);
+    } finally {
+      client.release();
     }
   };
 
-  /**
-   * Get verified lots (for reporting)
-   */
   public getVerifiedLots = async (_req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
     try {
-      const contract = this.fabricGateway.getExportContract();
-      const exportService = createExportService(contract);
-      const exports = await exportService.getExportsByStatus('ECX_VERIFIED');
-      res.json({ 
-        success: true, 
-        data: exports, 
-        count: exports.length,
-        message: 'Exports with verified lots'
-      });
+      const result = await pool.query(
+        'SELECT * FROM exports WHERE status = $1 ORDER BY created_at DESC',
+        ['ECX_VERIFIED']
+      );
+      res.json({ success: true, data: result.rows, count: result.rows.length });
     } catch (error: any) {
-      res.status(500).json({ 
-        success: false, 
-        message: 'Failed to fetch verified lots', 
-        error: error.message 
-      });
+      logger.error('Failed to fetch verified lots', { error: error.message });
+      this.handleError(error, res);
     }
   };
 
-  /**
-   * Get rejected lots (for reporting)
-   */
   public getRejectedLots = async (_req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
     try {
-      const contract = this.fabricGateway.getExportContract();
-      const exportService = createExportService(contract);
-      const exports = await exportService.getExportsByStatus('ECX_REJECTED');
-      res.json({ 
-        success: true, 
-        data: exports, 
-        count: exports.length,
-        message: 'Rejected lot verifications'
-      });
+      const result = await pool.query(
+        'SELECT * FROM exports WHERE status = $1 ORDER BY created_at DESC',
+        ['ECX_REJECTED']
+      );
+      res.json({ success: true, data: result.rows, count: result.rows.length });
     } catch (error: any) {
-      res.status(500).json({ 
-        success: false, 
-        message: 'Failed to fetch rejected lots', 
-        error: error.message 
-      });
+      logger.error('Failed to fetch rejected lots', { error: error.message });
+      this.handleError(error, res);
     }
   };
+
+  private handleError(error: any, res: Response): void {
+    if (error instanceof AppError) {
+      res.status(error.httpStatus).json({
+        success: false,
+        error: { code: error.code, message: error.message },
+      });
+      return;
+    }
+
+    res.status(500).json({
+      success: false,
+      error: { code: ErrorCode.INTERNAL_SERVER_ERROR, message: 'An unexpected error occurred' },
+    });
+  }
 }

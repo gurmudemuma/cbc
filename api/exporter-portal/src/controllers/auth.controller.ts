@@ -1,8 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { FabricSDKGateway } from '../fabric/sdk-gateway';
-import { config } from '../config';
-import { createUserService } from '../../../shared/userService';
+import bcrypt from 'bcryptjs';
+import { pool } from '../../../shared/database/pool';
+import { SecurityConfig } from '../../../shared/security.config';
+import { createLogger } from '../../../shared/logger';
+import { ErrorCode, AppError } from '../../../shared/error-codes';
+
+const logger = createLogger('ExporterPortalAuthController');
 
 interface AuthJWTPayload {
   id: string;
@@ -12,10 +16,30 @@ interface AuthJWTPayload {
 }
 
 export class AuthController {
-  private fabricGateway: FabricSDKGateway;
+  private JWT_SECRET: string;
+  private JWT_EXPIRES_IN: string;
+  private JWT_EXPIRES_IN_SECONDS: number;
 
   constructor() {
-    this.fabricGateway = FabricSDKGateway.getInstance();
+    this.JWT_SECRET = SecurityConfig.getJWTSecret();
+    this.JWT_EXPIRES_IN = SecurityConfig.getJWTExpiresIn();
+    this.JWT_EXPIRES_IN_SECONDS = this.parseExpiresIn(this.JWT_EXPIRES_IN);
+  }
+
+  private parseExpiresIn(expiresIn: string): number {
+    const match = expiresIn.match(/^(\d+)([smhd])$/);
+    if (!match || !match[1]) {
+      throw new Error("Invalid expiresIn format");
+    }
+    const value = parseInt(match[1], 10);
+    const unit = match[2];
+    switch (unit) {
+      case "s": return value;
+      case "m": return value * 60;
+      case "h": return value * 3600;
+      case "d": return value * 86400;
+      default: throw new Error("Invalid unit");
+    }
   }
 
   /**
@@ -26,32 +50,47 @@ export class AuthController {
     res: Response,
     _next: NextFunction
   ): Promise<void> => {
+    const client = await pool.connect();
     try {
       const { username, password, email } = req.body;
 
-      const userContract = this.fabricGateway.getUserContract();
-      const userService = createUserService(userContract);
+      if (!username || !password || !email) {
+        throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Username, password, and email are required', 400);
+      }
 
-      // Register exporter user
-      const newUser = await userService.registerUser({
-        username,
-        password,
-        email,
-        organizationId: config.ORGANIZATION_ID,
-        role: 'exporter', // All portal users are exporters
-      });
+      const existingUser = await client.query(
+        'SELECT id FROM users WHERE username = $1 OR email = $2',
+        [username, email]
+      );
+
+      if (existingUser.rows.length > 0) {
+        throw new AppError(ErrorCode.INVALID_STATUS_TRANSITION, 'User already exists', 400);
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      const result = await client.query(
+        `INSERT INTO users (username, email, password_hash, organization_id, role, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+         RETURNING id, username, email, organization_id, role`,
+        [username, email, hashedPassword, 'EXPORTER_PORTAL', 'exporter']
+      );
+
+      const newUser = result.rows[0];
 
       // Generate JWT token
       const token = jwt.sign(
         {
           id: newUser.id,
           username: newUser.username,
-          organizationId: newUser.organizationId,
+          organizationId: newUser.organization_id,
           role: newUser.role,
         },
-        config.JWT_SECRET,
-        { expiresIn: config.JWT_EXPIRES_IN } as any
+        this.JWT_SECRET,
+        { expiresIn: this.JWT_EXPIRES_IN_SECONDS }
       );
+
+      logger.info('Exporter registered', { userId: newUser.id });
 
       res.status(201).json({
         success: true,
@@ -61,22 +100,17 @@ export class AuthController {
             id: newUser.id,
             username: newUser.username,
             email: newUser.email,
-            organizationId: newUser.organizationId,
+            organizationId: newUser.organization_id,
             role: newUser.role,
           },
           token,
         },
       });
-    } catch (error: unknown) {
-      console.error('Error registering exporter:', error);
-      const message = error instanceof Error ? error.message : 'Failed to register exporter';
-      const statusCode = message.includes('already exists') ? 400 : 500;
-      
-      res.status(statusCode).json({
-        success: false,
-        message,
-        error: message,
-      });
+    } catch (error: any) {
+      logger.error('Registration failed', { error: error.message });
+      this.handleError(error, res);
+    } finally {
+      client.release();
     }
   };
 
@@ -91,27 +125,34 @@ export class AuthController {
     try {
       const { username, password } = req.body;
 
-      const userContract = this.fabricGateway.getUserContract();
-      const userService = createUserService(userContract);
-
-      // Authenticate via blockchain
-      const user = await userService.authenticateUser({ username, password });
-
-      if (!user) {
-        res.status(401).json({
-          success: false,
-          message: 'Invalid credentials',
-        });
-        return;
+      if (!username || !password) {
+        throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Username and password are required', 400);
       }
 
-      // Verify user is an exporter
-      if (user.role !== 'exporter') {
-        res.status(403).json({
-          success: false,
-          message: 'Access denied. This portal is for exporters only.',
-        });
-        return;
+      const result = await pool.query(
+        'SELECT id, username, email, password_hash, organization_id, role FROM users WHERE username = $1',
+        [username]
+      );
+
+      if (result.rows.length === 0) {
+        throw new AppError(ErrorCode.UNAUTHORIZED, 'Invalid credentials', 401);
+      }
+
+      const user = result.rows[0];
+      const passwordMatch = await bcrypt.compare(password, user.password_hash);
+
+      if (!passwordMatch) {
+        throw new AppError(ErrorCode.UNAUTHORIZED, 'Invalid credentials', 401);
+      }
+
+      // Verify user is an exporter or admin
+      const allowedRoles = ['exporter', 'admin'];
+      if (!allowedRoles.includes(user.role)) {
+        throw new AppError(
+          ErrorCode.UNAUTHORIZED,
+          'Access denied. Only exporters and admins can access this portal.',
+          403
+        );
       }
 
       // Generate JWT token
@@ -119,12 +160,14 @@ export class AuthController {
         {
           id: user.id,
           username: user.username,
-          organizationId: user.organizationId,
+          organizationId: user.organization_id,
           role: user.role,
         },
-        config.JWT_SECRET,
-        { expiresIn: config.JWT_EXPIRES_IN } as any
+        this.JWT_SECRET,
+        { expiresIn: this.JWT_EXPIRES_IN_SECONDS }
       );
+
+      logger.info('Exporter logged in', { userId: user.id });
 
       res.status(200).json({
         success: true,
@@ -134,22 +177,15 @@ export class AuthController {
             id: user.id,
             username: user.username,
             email: user.email,
-            organizationId: user.organizationId,
+            organizationId: user.organization_id,
             role: user.role,
           },
           token,
         },
       });
-    } catch (error: unknown) {
-      console.error('Error logging in:', error);
-      const message = error instanceof Error ? error.message : 'Failed to login';
-      const statusCode = message.includes('deactivated') ? 403 : 500;
-      
-      res.status(statusCode).json({
-        success: false,
-        message,
-        error: message,
-      });
+    } catch (error: any) {
+      logger.error('Login failed', { error: error.message });
+      this.handleError(error, res);
     }
   };
 
@@ -165,15 +201,11 @@ export class AuthController {
       const { token } = req.body;
 
       if (!token) {
-        res.status(400).json({
-          success: false,
-          message: 'Token is required',
-        });
-        return;
+        throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Token is required', 400);
       }
 
       // Verify old token
-      const decoded = jwt.verify(token, config.JWT_SECRET) as AuthJWTPayload;
+      const decoded = jwt.verify(token, this.JWT_SECRET) as AuthJWTPayload;
 
       // Generate new token
       const newToken = jwt.sign(
@@ -183,9 +215,11 @@ export class AuthController {
           organizationId: decoded.organizationId,
           role: decoded.role,
         },
-        config.JWT_SECRET,
-        { expiresIn: config.JWT_EXPIRES_IN } as any
+        this.JWT_SECRET,
+        { expiresIn: this.JWT_EXPIRES_IN_SECONDS }
       );
+
+      logger.info('Token refreshed', { userId: decoded.id });
 
       res.status(200).json({
         success: true,
@@ -194,15 +228,32 @@ export class AuthController {
           token: newToken,
         },
       });
-    } catch (error: unknown) {
-      console.error('Error refreshing token:', error);
-      const message = error instanceof Error ? error.message : 'Invalid or expired token';
-      
-      res.status(401).json({
-        success: false,
-        message,
-        error: message,
-      });
+    } catch (error: any) {
+      logger.error('Token refresh failed', { error: error.message });
+      this.handleError(error, res);
     }
   };
+
+  private handleError(error: any, res: Response): void {
+    if (error instanceof AppError) {
+      res.status(error.httpStatus).json({
+        success: false,
+        error: { code: error.code, message: error.message },
+      });
+      return;
+    }
+
+    if (error.name === 'JsonWebTokenError') {
+      res.status(401).json({
+        success: false,
+        error: { code: ErrorCode.UNAUTHORIZED, message: 'Invalid token' },
+      });
+      return;
+    }
+
+    res.status(500).json({
+      success: false,
+      error: { code: ErrorCode.INTERNAL_SERVER_ERROR, message: 'An unexpected error occurred' },
+    });
+  }
 }

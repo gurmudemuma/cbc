@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { CommonPageProps } from '../types';
 import {
   Box,
   Typography,
@@ -41,7 +42,9 @@ import {
 import ectaPreRegistrationService from '../services/ectaPreRegistration';
 import { PageContainer, ManagementPaper } from './ECTAPreRegistrationManagement.styles';
 
-const ECTAPreRegistrationManagement = () => {
+interface ECTAPreRegistrationManagementProps extends CommonPageProps {}
+
+const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagementProps): JSX.Element => {
   const [activeTab, setActiveTab] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);

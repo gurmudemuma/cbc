@@ -210,7 +210,7 @@ const WorkflowProgressTracker = ({ exportData }) => {
                     <Chip
                       label={stepStatus.label}
                       size="small"
-                      color={stepStatus.color}
+                      color={stepStatus.color as 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'}
                       sx={{ height: 20, fontSize: '0.7rem' }}
                     />
                   </Box>

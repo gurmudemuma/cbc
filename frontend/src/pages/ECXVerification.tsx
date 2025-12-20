@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Box, Grid, Typography, Card, CardContent, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button, Chip, Dialog, DialogContent, DialogTitle, IconButton } from '@mui/material';
 import { Package, Eye, XCircle } from 'lucide-react';
+import { CommonPageProps } from '../types';
 import { useExports } from '../hooks/useExports';
 import ECXApprovalForm from '../components/forms/ECXApprovalForm';
 import apiClient from '../services/api';
 
-const ECXVerification = ({ user }) => {
+interface ECXVerificationProps extends CommonPageProps {}
+
+const ECXVerification = ({ user, org }: ECXVerificationProps): JSX.Element => {
   const { exports: allExports, loading: exportsLoading, refreshExports } = useExports();
   const exports = allExports.filter((e) => e.status === 'ECX_PENDING' || e.status === 'ECX_VERIFIED' || e.status === 'ECX_REJECTED');
   const [selectedExport, setSelectedExport] = useState(null);

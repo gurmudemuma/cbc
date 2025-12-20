@@ -3,8 +3,10 @@
  * Enhanced audit trail for compliance and regulatory tracking
  */
 
-import pool from '../database/db.config';
+import { getPool } from '../database/pool';
 import { v4 as uuidv4 } from 'uuid';
+
+const pool = getPool();
 
 export interface AuditEvent {
   auditId: string;

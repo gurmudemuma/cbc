@@ -1,19 +1,17 @@
+/**
+ * Enhanced Export Controller
+ * Provides comprehensive export management with PostgreSQL backend
+ */
+
 import { Request, Response, NextFunction } from 'express';
 import { JwtPayload } from 'jsonwebtoken';
-// Note: This controller is currently unused and needs to be integrated with a specific service
-// The FabricGateway should be injected from the service that uses this controller
-import { createExportService } from '../exportService';
-import { CacheService, CacheKeys, CacheTTL } from '../cache.service';
-import { searchService, SearchCriteria } from '../search.service';
-import { monitoringService } from '../monitoring.service';
-import { auditService } from '../audit.service';
-import { notificationService } from '../notification.service';
+import { Pool } from 'pg';
 
-// Placeholder interface - actual FabricGateway should be injected from service
-interface FabricGateway {
-  getExportContract(): any;
-  getInstance?(): FabricGateway;
-}
+import { CacheService, CacheKeys, CacheTTL } from '../cache.service';
+import { ErrorCode, AppError } from '../error-codes';
+import { createLogger } from '../logger';
+
+const logger = createLogger('EnhancedExportController');
 
 interface AuthJWTPayload extends JwtPayload {
   id: string;
@@ -27,410 +25,270 @@ interface RequestWithUser extends Request {
 }
 
 /**
- * Enhanced Export Controller with caching, monitoring, and pagination
+ * Enhanced Export Controller
  */
 export class EnhancedExportController {
-  private fabricGateway: FabricGateway;
-  private cacheService: CacheService;
 
-  constructor(fabricGateway: FabricGateway) {
-    this.fabricGateway = fabricGateway;
+  private cacheService: CacheService;
+  private pool: Pool;
+
+  constructor(pool: Pool) {
+    this.pool = pool;
+
     this.cacheService = CacheService.getInstance();
   }
 
   /**
-   * Create export with monitoring and notifications
+   * Get all exports
+   */
+  public getAllExports = async (
+    req: RequestWithUser,
+    res: Response,
+    _next: NextFunction
+  ): Promise<void> => {
+    try {
+      const user = req.user!;
+      const cacheKey = `exports:${user.organizationId}:all`;
+
+      // Try cache first
+      const cached = await this.cacheService.get(cacheKey);
+      if (cached) {
+        res.json({ success: true, data: cached, cached: true });
+        return;
+      }
+
+      // Fetch from database
+      const result = await this.pool.query('SELECT * FROM exports ORDER BY created_at DESC');
+
+      // Cache the result
+      await this.cacheService.set(cacheKey, result.rows, CacheTTL.MEDIUM);
+
+      res.json({ success: true, data: result.rows });
+    } catch (error: any) {
+      logger.error('Failed to get all exports', { error: error.message });
+      this.handleError(error, res);
+    }
+  };
+
+  /**
+   * Get single export
+   */
+  public getExport = async (
+    req: RequestWithUser,
+    res: Response,
+    _next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { exportId } = req.params;
+
+      if (!exportId) {
+        throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Export ID is required', 400);
+      }
+
+      // Try cache first
+      const cacheKey = CacheKeys.export(exportId);
+      const cached = await this.cacheService.get(cacheKey);
+      if (cached) {
+        res.json({ success: true, data: cached, cached: true });
+        return;
+      }
+
+      // Fetch from database
+      const result = await this.pool.query('SELECT * FROM exports WHERE id = $1', [exportId]);
+
+      if (result.rows.length === 0) {
+        throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
+      }
+
+      const exportData = result.rows[0];
+
+      // Cache the result
+      await this.cacheService.set(cacheKey, exportData, CacheTTL.SHORT);
+
+      res.json({ success: true, data: exportData });
+    } catch (error: any) {
+      logger.error('Failed to get export', { error: error.message });
+      this.handleError(error, res);
+    }
+  };
+
+  /**
+   * Create export
    */
   public createExport = async (
     req: RequestWithUser,
     res: Response,
     _next: NextFunction
   ): Promise<void> => {
+    const client = await this.pool.connect();
     try {
       const user = req.user!;
       const exportData = req.body;
 
-      // Validate required fields
-      if (!exportData.exporterName || !exportData.coffeeType || !exportData.quantity) {
-        throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Missing required fields', 400);
-      }
-
       // Generate export ID
       const exportId = `EXP-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-      // Submit with resilience
-      const result = await this.resilienceService.executeTransaction(async () => {
-        const contract = this.fabricGateway.getExportContract();
-        const exportService = createExportService(contract);
-        const commercialBankId = user.organizationId; // Changed from commercialbankId
-        return await exportService.createExport(
-          exportId,
-          commercialBankId,
-          {
-            ...exportData,
-          }
-        );
-      }, 'createExport');
+      await client.query('BEGIN');
 
-      // Audit log
-      auditService.logStatusChange(
-        user.id,
-        result.exportId,
-        'NONE',
-        'PENDING',
-        AuditAction.EXPORT_CREATED,
-        {
-          ipAddress: req.ip,
-          userAgent: req.get('user-agent'),
-        }
+      const result = await client.query(
+        `INSERT INTO exports (id, exporter_name, coffee_type, quantity, destination_country, status, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+         RETURNING *`,
+        [exportId, exportData.exporter_name, exportData.coffee_type, exportData.quantity, exportData.destination_country, 'PENDING']
       );
+
+      await client.query('COMMIT');
 
       // Invalidate cache
       await this.cacheService.deletePattern('exports:*');
 
-      res.status(201).json({ success: true, data: result, message: 'Export created successfully' });
-    } catch (error: any) {
-      this.handleError(error, res);
-    }
-  };
+      logger.info('Export created', { exportId, userId: user.id });
 
-  public getAllExports = async (req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
-    const startTime = Date.now();
-
-    try {
-      // Build search criteria from query parameters
-      const criteria: SearchCriteria = searchService.buildCriteriaFromParams(req.query);
-
-      // Try to get from cache first
-      const cacheKey = `exports:search:${JSON.stringify(criteria)}`;
-      const cached = await this.cacheService.get(cacheKey);
-
-      if (cached) {
-        monitoringService.recordMetric({
-          type: 'api_response_time' as any,
-          value: Date.now() - startTime,
-          timestamp: new Date(),
-          tags: { endpoint: 'getAllExports', cached: 'true' },
-        });
-
-        res.json(cached);
-        return;
-      }
-
-      // Fetch from blockchain
-      const contract = this.fabricGateway.getExportContract();
-      const exportService = createExportService(contract);
-      const allExports = await exportService.getAllExports();
-
-      // Apply search and pagination
-      const result = searchService.searchExports(allExports, criteria);
-
-      // Get facets for filtering UI
-      const facets = searchService.getFacets(allExports);
-
-      const response = {
+      res.status(201).json({
         success: true,
-        data: result.data,
-        pagination: result.pagination,
-        facets,
-        executionTime: result.executionTime,
-      };
-
-      // Cache the result
-      await this.cacheService.set(cacheKey, response, CacheTTL.MEDIUM);
-
-      // Track metrics
-      monitoringService.recordMetric({
-        type: 'api_response_time' as any,
-        value: Date.now() - startTime,
-        timestamp: new Date(),
-        tags: { endpoint: 'getAllExports', cached: 'false' },
+        message: 'Export created successfully',
+        data: result.rows[0],
       });
-
-      res.json(response);
     } catch (error: any) {
-      const duration = Date.now() - startTime;
-      
-      monitoringService.trackBlockchainTransaction(
-        'getAllExports',
-        duration,
-        false
-      );
-
-      res.status(500).json({
-        success: false,
-        message: 'Failed to fetch exports',
-        error: error.message,
-      });
-    }
-  };
-
-  public getExport = async (req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
-    const startTime = Date.now();
-
-    try {
-      const { exportId } = req.params;
-
-      if (!exportId) {
-        res.status(400).json({
-          success: false,
-          message: 'Export ID is required',
-        });
-        return;
-      }
-
-      // Try cache first
-      const cacheKey = CacheKeys.export(exportId);
-      const cached = await this.cacheService.get(cacheKey);
-
-      if (cached) {
-        res.json({ success: true, data: cached });
-        return;
-      }
-
-      // Fetch from blockchain
-      const contract = this.fabricGateway.getExportContract();
-      const exportService = createExportService(contract);
-      const exportData = await exportService.getExport(exportId);
-
-      // Cache the result
-      await this.cacheService.set(cacheKey, exportData, CacheTTL.MEDIUM);
-
-      monitoringService.trackBlockchainTransaction(
-        'getExport',
-        Date.now() - startTime,
-        true
-      );
-
-      res.json({ success: true, data: exportData });
-    } catch (error: any) {
-      monitoringService.trackBlockchainTransaction(
-        'getExport',
-        Date.now() - startTime,
-        false
-      );
-
-      res.status(500).json({
-        success: false,
-        message: 'Failed to fetch export',
-        error: error.message,
-      });
-    }
-  };
-
-  /**
-   * Get exports by commercial bank ID
-   */
-  public getExportsByCommercialBank = async (req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
-    try {
-      const { commercialBankId } = req.params; // Changed from commercialbankId
-      if (!commercialBankId) {
-        res.status(400).json({ success: false, message: 'Commercial bank ID is required' });
-        return;
-      }
-
-      const contract = this.fabricGateway.getExportContract();
-      const exportService = createExportService(contract);
-      const allExports = await exportService.getAllExports();
-      
-      // Filter exports by commercial bank ID
-      const exports = allExports.filter(exp => exp.commercialBankId === commercialBankId);
-      
-      res.json({ success: true, data: exports, count: exports.length });
-    } catch (error: any) {
-      res.status(500).json({ success: false, message: 'Failed to fetch exports', error: error.message });
-    }
-  };
-
-  /**
-   * Approve banking/financial documents (Commercial Bank)
-   */
-  public approveBanking = async (req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
-    try {
-      const { exportId } = req.params;
-      const user = req.user!;
-      if (!exportId) {
-        throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Export ID is required', 400);
-      }
-
-      const { bankingApprovalID, notes, documentCIDs } = req.body;
-
-      // Submit with resilience
-      await this.resilienceService.executeTransaction(async () => {
-        const contract = this.fabricGateway.getExportContract();
-        return await contract.submitTransaction(
-          'ApproveBanking',
-          exportId,
-          bankingApprovalID || user.username,
-          notes || '',
-          documentCIDs ? JSON.stringify(documentCIDs) : '[]'
-        );
-      }, `approveBanking:${exportId}`);
-
-      // Audit log
-      auditService.logStatusChange(
-        user.id,
-        exportId,
-        'BANK_DOCUMENT_PENDING',
-        'BANK_DOCUMENT_VERIFIED',
-        AuditAction.BANKING_APPROVED,
-        {
-          ipAddress: req.ip,
-          userAgent: req.get('user-agent'),
-          notes,
-        }
-      );
-
-      // Invalidate cache
-      await this.cacheService.deletePattern(`export:${exportId}`);
-      await this.cacheService.deletePattern('exports:*');
-
-      res.json({ success: true, message: 'Banking approved successfully' });
-    } catch (error: any) {
+      await client.query('ROLLBACK');
+      logger.error('Failed to create export', { error: error.message });
       this.handleError(error, res);
+    } finally {
+      client.release();
     }
   };
 
   /**
-   * Approve FX with SLA tracking
+   * Update export status
    */
-  public approveFX = async (
+  public updateExportStatus = async (
     req: RequestWithUser,
     res: Response,
     _next: NextFunction
   ): Promise<void> => {
+    const client = await this.pool.connect();
     try {
       const { exportId } = req.params;
-      const { fxApprovalID, documentCIDs } = req.body;
+      const user = req.user!;
+      const { new_status, reason } = req.body;
 
-      if (!exportId) {
-        res.status(400).json({ success: false, message: 'Export ID is required' });
-        return;
+      if (!exportId || !new_status) {
+        throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Export ID and new status are required', 400);
       }
 
-      const contract = this.fabricGateway.getExportContract();
-      const exportService = createExportService(contract);
+      await client.query('BEGIN');
 
-      // Get export to check SLA
-      const exportData = await exportService.getExport(exportId);
-      const createdAt = new Date(exportData.createdAt);
-      const now = new Date();
-
-      // Check SLA compliance
-      monitoringService.checkSLACompliance(
-        exportId,
-        'fxApproval',
-        createdAt,
-        now
+      const result = await client.query(
+        'UPDATE exports SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+        [new_status, exportId]
       );
 
-      // Approve FX
-      await exportService.approveFX(exportId, { fxApprovalID, documentCIDs });
+      if (result.rows.length === 0) {
+        throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
+      }
+
+      // Record status change
+      await client.query(
+        `INSERT INTO export_status_history (export_id, old_status, new_status, changed_by, changed_at, notes)
+         VALUES ($1, $2, $3, $4, NOW(), $5)`,
+        [exportId, result.rows[0].status, new_status, user.id, reason || '']
+      );
+
+      await client.query('COMMIT');
 
       // Invalidate cache
       await this.cacheService.delete(CacheKeys.export(exportId));
       await this.cacheService.deletePattern('exports:*');
 
-      // Track metrics
-      monitoringService.trackExportDecision(exportId, 'FX', true);
+      logger.info('Export status updated', { exportId, new_status, userId: user.id });
 
-      // Audit log
-      auditService.logFXApproval(
-        req.user!.id,
-        req.user!.username,
-        req.user!.organizationId,
-        exportId,
-        true,
-        undefined,
-        {
-          ipAddress: req.ip,
-          userAgent: req.get('user-agent'),
-        }
-      );
-
-      // Send notification
-      await notificationService.notifyFXDecision(
-        exportId,
-        true,
-        exportData.commercialBankId, // Changed from exportData.commercialbankId
-        undefined,
-        undefined
-      );
-
-      res.json({ success: true, message: 'FX approved successfully' });
-    } catch (error: any) {
-      res.status(500).json({
-        success: false,
-        message: 'Failed to approve FX',
-        error: error.message,
+      res.json({
+        success: true,
+        message: 'Export status updated successfully',
+        data: result.rows[0],
       });
+    } catch (error: any) {
+      await client.query('ROLLBACK');
+      logger.error('Failed to update export status', { error: error.message });
+      this.handleError(error, res);
+    } finally {
+      client.release();
     }
   };
 
   /**
-   * Export search results to CSV
+   * Get export history
    */
-  public exportToCSV = async (
+  public getExportHistory = async (
     req: RequestWithUser,
     res: Response,
     _next: NextFunction
   ): Promise<void> => {
     try {
-      const criteria: SearchCriteria = searchService.buildCriteriaFromParams(req.query);
+      const { exportId } = req.params;
 
-      const contract = this.fabricGateway.getExportContract();
-      const exportService = createExportService(contract);
-      const allExports = await exportService.getAllExports();
+      if (!exportId) {
+        throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Export ID is required', 400);
+      }
 
-      const result = searchService.searchExports(allExports, criteria);
-      const csv = searchService.exportToCSV(result.data);
+      const result = await this.pool.query(
+        'SELECT * FROM export_status_history WHERE export_id = $1 ORDER BY changed_at ASC',
+        [exportId]
+      );
 
-      res.setHeader('Content-Type', 'text/csv');
-      res.setHeader('Content-Disposition', 'attachment; filename=exports.csv');
-      res.send(csv);
+      res.json({ success: true, data: result.rows });
     } catch (error: any) {
-      res.status(500).json({
-        success: false,
-        message: 'Failed to export CSV',
-        error: error.message,
-      });
+      logger.error('Failed to get export history', { error: error.message });
+      this.handleError(error, res);
     }
   };
 
   /**
-   * Get export statistics
+   * Get exports by status
    */
-  public getStatistics = async (
-    _req: RequestWithUser,
+  public getExportsByStatus = async (
+    req: RequestWithUser,
     res: Response,
     _next: NextFunction
   ): Promise<void> => {
     try {
-      const contract = this.fabricGateway.getExportContract();
-      const exportService = createExportService(contract);
-      const allExports = await exportService.getAllExports();
+      const { status } = req.params;
 
-      const facets = searchService.getFacets(allExports);
+      if (!status) {
+        throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Status is required', 400);
+      }
 
-      const statistics = {
-        total: allExports.length,
-        byStatus: facets.statuses,
-        byCountry: facets.countries,
-        byQualityGrade: facets.qualityGrades,
-        byValueRange: facets.valueRanges,
-        totalValue: allExports.reduce((sum, exp) => sum + exp.estimatedValue, 0),
-        averageValue: allExports.length > 0
-          ? allExports.reduce((sum, exp) => sum + exp.estimatedValue, 0) / allExports.length
-          : 0,
-      };
+      const result = await this.pool.query(
+        'SELECT * FROM exports WHERE status = $1 ORDER BY created_at DESC',
+        [status]
+      );
 
-      res.json({ success: true, data: statistics });
+      res.json({ success: true, data: result.rows, count: result.rows.length });
     } catch (error: any) {
-      res.status(500).json({
-        success: false,
-        message: 'Failed to get statistics',
-        error: error.message,
-      });
+      logger.error('Failed to get exports by status', { error: error.message });
+      this.handleError(error, res);
     }
   };
+
+  /**
+   * Centralized error handling
+   */
+  private handleError(error: any, res: Response): void {
+    if (error instanceof AppError) {
+      res.status(error.httpStatus).json({
+        success: false,
+        error: { code: error.code, message: error.message },
+      });
+      return;
+    }
+
+    logger.error('Unexpected error', { error: error.message });
+
+    res.status(500).json({
+      success: false,
+      error: { code: ErrorCode.INTERNAL_SERVER_ERROR, message: 'An unexpected error occurred' },
+    });
+  }
 }
+
+export default EnhancedExportController;

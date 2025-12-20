@@ -4,9 +4,17 @@ import {
   Alert, CircularProgress, Box, Typography, Divider, Checkbox, FormControlLabel,
 } from '@mui/material';
 import { CheckCircle, XCircle, FileCheck } from 'lucide-react';
+import { CommonPageProps, ECTAContractFormData } from '../../types';
 import RejectionDialog from '../RejectionDialog';
 
-const ECTAContractForm = ({ exportData, onApprove, onReject, loading = false }) => {
+interface ECTAContractFormProps extends CommonPageProps {
+  exportData: any;
+  onApprove: (data: ECTAContractFormData) => void;
+  onReject: (data: any) => void;
+  loading?: boolean;
+}
+
+const ECTAContractForm = ({ exportData, onApprove, onReject, loading = false }: ECTAContractFormProps): JSX.Element => {
   const [formData, setFormData] = useState({
     contractNumber: '',
     originCertNumber: `COO-${Date.now()}`,
@@ -17,10 +25,10 @@ const ECTAContractForm = ({ exportData, onApprove, onReject, loading = false }) 
     notes: '',
   });
   const [showRejectDialog, setShowRejectDialog] = useState(false);
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const validate = () => {
-    const newErrors = {};
+    const newErrors: Record<string, string> = {};
     if (!formData.contractNumber?.trim()) newErrors.contractNumber = 'Contract number required';
     if (!formData.originCertNumber?.trim()) newErrors.originCertNumber = 'Origin certificate number required';
     if (!formData.buyerName?.trim()) newErrors.buyerName = 'Buyer name required';
@@ -33,10 +41,9 @@ const ECTAContractForm = ({ exportData, onApprove, onReject, loading = false }) 
     if (!validate()) return;
     onApprove({
       contractNumber: formData.contractNumber.trim(),
-      originCertificateNumber: formData.originCertNumber.trim(),  // Backend expects 'originCertificateNumber'
+      originCertificateNumber: formData.originCertNumber.trim(),
       notes: formData.notes.trim(),
-      // Backend doesn't use: buyerName, buyerCountry, paymentTerms
-    });
+    } as ECTAContractFormData);
   };
 
   return (

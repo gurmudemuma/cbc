@@ -2,6 +2,7 @@ import { forwardRef, useState } from 'react';
 import { styled } from '@mui/material/styles';
 import {
   Button,
+  ButtonProps,
   CircularProgress,
   Tooltip,
   Dialog,
@@ -12,8 +13,19 @@ import {
 } from '@mui/material';
 import { AlertTriangle } from 'lucide-react';
 
+interface ActionButtonProps extends Omit<ButtonProps, 'color'> {
+  children?: React.ReactNode;
+  icon?: React.ReactNode;
+  tooltip?: string;
+  loading?: boolean;
+  confirmTitle?: string;
+  confirmMessage?: string;
+  onClick?: () => void;
+  color?: 'primary' | 'secondary' | 'error' | 'success' | 'info' | 'warning' | 'inherit';
+}
+
 // Styled button with enhanced features
-const StyledActionButton = styled(Button)(({ theme, variant, color, size, fullWidth, loading }) => ({
+const StyledActionButton = styled(Button)<ButtonProps & { loading?: boolean }>(({ theme, variant, color, size, fullWidth }) => ({
   // Consistent sizing
   minWidth: 100,
   padding: theme.spacing(1, 2),
@@ -118,7 +130,7 @@ const LoadingSpinner = styled(CircularProgress)(({ theme }) => ({
  * @param {boolean} props.fullWidth - Full width button
  * @param {boolean} props.disabled - Disabled state
  */
-const ActionButton = forwardRef(({
+const ActionButton = forwardRef<HTMLButtonElement, ActionButtonProps>(({
   children,
   icon,
   tooltip,
@@ -155,11 +167,11 @@ const ActionButton = forwardRef(({
     success: 'success',
   }[variant] || color;
 
-  const handleClick = (event) => {
+  const handleClick = () => {
     if (confirmMessage || confirmTitle) {
       setConfirmOpen(true);
     } else if (onClick) {
-      onClick(event);
+      onClick();
     }
   };
 
@@ -234,7 +246,7 @@ const ActionButton = forwardRef(({
             Confirm
           </Button>
         </DialogActions>
-      </D>
+      </Dialog>
     </>
   );
 });
@@ -242,11 +254,11 @@ const ActionButton = forwardRef(({
 ActionButton.displayName = 'ActionButton';
 
 // Export variants for convenience
-export const PrimaryButton = (props) => (
+export const PrimaryButton = (props: ActionButtonProps) => (
   <ActionButton variant="contained" color="primary" {...props} />
 );
 
-export const SecondaryButton = (props) => (
+export const SecondaryButton = (props: ActionButtonProps) => (
   <ActionButton variant="outlined" color="primary" {...props} />
 );
 

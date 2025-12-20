@@ -4,10 +4,18 @@ import {
   Alert, CircularProgress, Box, Typography, Divider, Select, MenuItem, FormControl, InputLabel,
 } from '@mui/material';
 import { CheckCircle, XCircle, Ship } from 'lucide-react';
+import { CommonPageProps, ShipmentScheduleFormData } from '../../types';
 import RejectionDialog from '../RejectionDialog';
 
-const ShipmentScheduleForm = ({ exportData, onApprove, onReject, loading = false }) => {
-  const [formData, setFormData] = useState({
+interface ShipmentScheduleFormProps extends CommonPageProps {
+  exportData: any;
+  onApprove: (data: ShipmentScheduleFormData) => void;
+  onReject: (data: any) => void;
+  loading?: boolean;
+}
+
+const ShipmentScheduleForm = ({ exportData, onApprove, onReject, loading = false }: ShipmentScheduleFormProps): JSX.Element => {
+  const [formData, setFormData] = useState<ShipmentScheduleFormData>({
     transportMode: 'SEA',
     transportIdentifier: '',
     departureDate: '',

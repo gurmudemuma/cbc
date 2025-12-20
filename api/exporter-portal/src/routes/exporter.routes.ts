@@ -44,49 +44,49 @@ router.use(authenticateToken);
 // Qualification status
 router.get(
   '/qualification-status',
-  requireRole(['exporter']),
+  requireRole(['exporter', 'admin']),
   exporterController.getQualificationStatus,
 );
 
 // Exporter profile registration
 router.post(
   '/profile/register',
-  requireRole(['exporter']),
+  requireRole(['exporter', 'admin']),
   exporterController.registerProfile,
 );
 
 // Get own exporter profile
 router.get(
   '/profile',
-  requireRole(['exporter']),
+  requireRole(['exporter', 'admin']),
   exporterController.getProfile,
 );
 
 // Apply for export license
 router.post(
   '/license/apply',
-  requireRole(['exporter']),
+  requireRole(['exporter', 'admin']),
   exporterController.applyLicense,
 );
 
 // Register laboratory
 router.post(
   '/laboratory/register',
-  requireRole(['exporter']),
+  requireRole(['exporter', 'admin']),
   exporterController.registerLaboratory,
 );
 
 // Register coffee taster
 router.post(
   '/taster/register',
-  requireRole(['exporter']),
+  requireRole(['exporter', 'admin']),
   exporterController.registerTaster,
 );
 
 // Apply for competence certificate
 router.post(
   '/competence/apply',
-  requireRole(['exporter']),
+  requireRole(['exporter', 'admin']),
   exporterController.applyCompetence,
 );
 
