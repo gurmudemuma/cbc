@@ -10,7 +10,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 // Contexts
 import { NotificationProvider } from './contexts/NotificationContext';
+<<<<<<< HEAD
 import { ToastProvider } from './components/ToastProvider';
+=======
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
 // Priority 2 Hooks
 import { useDashboardCustomization } from './hooks/useDashboardCustomization';
@@ -55,7 +58,10 @@ import FXRates from './pages/FXRates';
 import UserManagement from './pages/UserManagement';
 import ShipmentTracking from './pages/ShipmentTracking';
 import ExportDetails from './pages/ExportDetails';
+<<<<<<< HEAD
 import ExportEdit from './pages/ExportEdit';
+=======
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 import CustomsClearance from './pages/CustomsClearance';
 import ExporterPreRegistration from './pages/ExporterPreRegistration';
 import ECTAPreRegistrationManagement from './pages/ECTAPreRegistrationManagement';
@@ -93,14 +99,22 @@ const queryClient = new QueryClient({
 
 const getOrgClass = (org: string | null): string => {
   const orgLower = (org || '').toLowerCase();
+<<<<<<< HEAD
 
+=======
+  
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   // Map organization IDs to CSS class names
   if (orgLower.includes('exporter')) return 'exporter';
   if (orgLower.includes('national') || orgLower.includes('banker')) return 'nb-regulatory';
   if (orgLower === 'ecta') return 'ecta';
   if (orgLower.includes('shipping')) return 'shipping-line';
   if (orgLower.includes('custom')) return 'customs';
+<<<<<<< HEAD
 
+=======
+  
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   // Default fallback
   return 'nb-regulatory';
 };
@@ -122,7 +136,11 @@ const AppThemeProvider: React.FC<AppThemeProviderProps> = ({ children }) => {
     console.log('Creating theme for org:', org, 'mode:', mode);
     return createEnhancedTheme(org, mode);
   }, [org, mode]);
+<<<<<<< HEAD
 
+=======
+  
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   // Toggle between light and dark mode
   const toggleColorMode = useCallback((): void => {
     setMode((prevMode: 'light' | 'dark') => {
@@ -211,18 +229,30 @@ function App(): JSX.Element {
 
   const getRoleBasedRoute = useCallback((orgId: string | null) => {
     const orgLower = orgId?.toLowerCase();
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     // Exporter Portal - External exporters (SDK-based)
     if (orgLower === 'exporter-portal' || orgLower === 'exporterportal') {
       return '/exports';  // Exporters create and track exports
     }
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     // Commercial Bank - Banking operations (consortium member)
     // Note: commercial-bank/commercialbank are the current IDs
     if (orgLower === 'commercial-bank' || orgLower === 'commercialbank') {
       return '/banking';  // Banking operations dashboard
     }
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     // National Bank - FX approval and compliance
     if (
       orgLower === 'nb-regulatory' ||
@@ -233,27 +263,47 @@ function App(): JSX.Element {
     ) {
       return '/fx-approval';
     }
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     // ECX - Lot verification
     if (orgLower === 'ecx') {
       return '/lot-verification';
     }
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     // ECTA - Quality certification, licensing, and contract approval
     if (orgLower === 'ecta') {
       return '/quality';
     }
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     // Shipping Line - Shipment management
     if (orgLower === 'shipping' || orgLower === 'shipping-line' || orgLower === 'shippingline') {
       return '/shipments';
     }
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     // Custom Authorities - Customs clearance
     if (orgLower === 'custom-authorities') {
       return '/customs';
     }
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     return '/dashboard';
   }, []);
 
@@ -296,7 +346,10 @@ function App(): JSX.Element {
           { path: 'dashboard', element: <Dashboard user={user} org={org} /> },
           { path: 'exports', element: <ExportManagement user={user} org={org} /> },
           { path: 'exports/:id', element: <ExportDetails user={user} org={org} /> },
+<<<<<<< HEAD
           { path: 'exports/:id/edit', element: <ExportEdit user={user} org={org} /> },
+=======
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           { path: 'quality', element: <QualityCertification user={user} org={org} /> },
           {
             path: 'origin-certificates',
@@ -313,6 +366,7 @@ function App(): JSX.Element {
           { path: 'banking/financing', element: <BankingOperations user={user} org={org} /> },
           { path: 'banking/compliance', element: <BankingOperations user={user} org={org} /> },
           { path: 'banking/reports', element: <BankingOperations user={user} org={org} /> },
+<<<<<<< HEAD
 
           // Shipment Routes
           { path: 'shipments', element: <ShipmentTracking user={user} org={org} /> },
@@ -321,15 +375,33 @@ function App(): JSX.Element {
           // User Management
           { path: 'users', element: <UserManagement user={user} org={org} /> },
 
+=======
+          
+          // Shipment Routes
+          { path: 'shipments', element: <ShipmentTracking user={user} org={org} /> },
+          { path: 'arrivals', element: <ShipmentTracking user={user} org={org} /> },
+          
+          // User Management
+          { path: 'users', element: <UserManagement user={user} org={org} /> },
+          
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           // Customs Routes
           { path: 'customs', element: <CustomsClearance user={user} org={org} /> },
           { path: 'customs/export', element: <CustomsClearance user={user} org={org} /> },
           { path: 'customs/import', element: <CustomsClearance user={user} org={org} /> },
+<<<<<<< HEAD
 
           // Pre-registration Routes
           { path: 'pre-registration', element: <ExporterPreRegistration user={user} org={org} /> },
           { path: 'ecta/pre-registration', element: <ECTAPreRegistrationManagement user={user} org={org} /> },
 
+=======
+          
+          // Pre-registration Routes
+          { path: 'pre-registration', element: <ExporterPreRegistration user={user} org={org} /> },
+          { path: 'ecta/pre-registration', element: <ECTAPreRegistrationManagement user={user} org={org} /> },
+          
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           // Exporter Portal Routes
           { path: 'profile', element: <ExporterProfile user={user} org={org} /> },
           { path: 'profile/business', element: <ExporterProfile user={user} org={org} /> },
@@ -338,19 +410,28 @@ function App(): JSX.Element {
           { path: 'exports/new', element: <ExportDashboard user={user} org={org} /> },
           { path: 'exports/status', element: <ExportDashboard user={user} org={org} /> },
           { path: 'support', element: <HelpSupport user={user} org={org} /> },
+<<<<<<< HEAD
 
+=======
+          
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           // FX Management Routes
           { path: 'fx', element: <FXRates user={user} org={org} /> },
           { path: 'fx/approvals', element: <FXRates user={user} org={org} /> },
           { path: 'fx/approved', element: <FXRates user={user} org={org} /> },
           { path: 'fx/rejected', element: <FXRates user={user} org={org} /> },
           { path: 'fx/rates', element: <FXRates user={user} org={org} /> },
+<<<<<<< HEAD
 
+=======
+          
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           // Monetary Policy Routes
           { path: 'monetary', element: <MonetaryPolicy user={user} org={org} /> },
           { path: 'monetary/dashboard', element: <MonetaryPolicy user={user} org={org} /> },
           { path: 'monetary/controls', element: <MonetaryPolicy user={user} org={org} /> },
           { path: 'monetary/compliance', element: <MonetaryPolicy user={user} org={org} /> },
+<<<<<<< HEAD
 
           // ECTA Routes
           { path: 'preregistration', element: <ECTAPreRegistrationManagement user={user} org={org} /> },
@@ -364,23 +445,45 @@ function App(): JSX.Element {
           { path: 'preregistration/approved', element: <ECTAPreRegistrationManagement user={user} org={org} /> },
           { path: 'preregistration/rejected', element: <ECTAPreRegistrationManagement user={user} org={org} /> },
 
+=======
+          
+          // ECTA Routes
+          { path: 'preregistration', element: <ECTAPreRegistrationManagement user={user} org={org} /> },
+          { path: 'preregistration/pending', element: <ECTAPreRegistrationManagement user={user} org={org} /> },
+          { path: 'preregistration/review', element: <ECTAPreRegistrationManagement user={user} org={org} /> },
+          { path: 'preregistration/approved', element: <ECTAPreRegistrationManagement user={user} org={org} /> },
+          { path: 'preregistration/rejected', element: <ECTAPreRegistrationManagement user={user} org={org} /> },
+          
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           { path: 'licenses', element: <ECTALicenseApproval user={user} org={org} /> },
           { path: 'licenses/applications', element: <ECTALicenseApproval user={user} org={org} /> },
           { path: 'licenses/active', element: <ECTALicenseApproval user={user} org={org} /> },
           { path: 'licenses/expired', element: <ECTALicenseApproval user={user} org={org} /> },
           { path: 'licenses/renewals', element: <ECTALicenseApproval user={user} org={org} /> },
+<<<<<<< HEAD
 
+=======
+          
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           { path: 'contracts', element: <ECTAContractApproval user={user} org={org} /> },
           { path: 'contracts/pending', element: <ECTAContractApproval user={user} org={org} /> },
           { path: 'contracts/approved', element: <ECTAContractApproval user={user} org={org} /> },
           { path: 'contracts/templates', element: <ECTAContractApproval user={user} org={org} /> },
           { path: 'contracts/history', element: <ECTAContractApproval user={user} org={org} /> },
+<<<<<<< HEAD
 
+=======
+          
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           { path: 'regulatory', element: <Dashboard user={user} org={org} /> },
           { path: 'regulatory/compliance', element: <Dashboard user={user} org={org} /> },
           { path: 'regulatory/audits', element: <Dashboard user={user} org={org} /> },
           { path: 'regulatory/updates', element: <Dashboard user={user} org={org} /> },
+<<<<<<< HEAD
 
+=======
+          
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           // ECX Routes
           { path: 'lot-verification', element: <ECXVerification user={user} org={org} /> },
           { path: 'lots', element: <LotManagement user={user} org={org} /> },
@@ -388,58 +491,94 @@ function App(): JSX.Element {
           { path: 'lots/verified', element: <LotManagement user={user} org={org} /> },
           { path: 'lots/rejected', element: <LotManagement user={user} org={org} /> },
           { path: 'lots/grading', element: <LotManagement user={user} org={org} /> },
+<<<<<<< HEAD
 
+=======
+          
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           { path: 'trading', element: <Dashboard user={user} org={org} /> },
           { path: 'trading/active', element: <Dashboard user={user} org={org} /> },
           { path: 'trading/prices', element: <Dashboard user={user} org={org} /> },
           { path: 'trading/reports', element: <Dashboard user={user} org={org} /> },
           { path: 'trading/history', element: <Dashboard user={user} org={org} /> },
+<<<<<<< HEAD
 
+=======
+          
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           { path: 'warehouse', element: <Dashboard user={user} org={org} /> },
           { path: 'warehouse/receipts', element: <Dashboard user={user} org={org} /> },
           { path: 'warehouse/storage', element: <Dashboard user={user} org={org} /> },
           { path: 'warehouse/quality', element: <Dashboard user={user} org={org} /> },
           { path: 'warehouse/inventory', element: <Dashboard user={user} org={org} /> },
+<<<<<<< HEAD
 
+=======
+          
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           // Shipping Routes
           { path: 'vessels', element: <ShipmentTracking user={user} org={org} /> },
           { path: 'vessels/fleet', element: <ShipmentTracking user={user} org={org} /> },
           { path: 'vessels/schedule', element: <ShipmentTracking user={user} org={org} /> },
           { path: 'vessels/maintenance', element: <ShipmentTracking user={user} org={org} /> },
           { path: 'vessels/reports', element: <ShipmentTracking user={user} org={org} /> },
+<<<<<<< HEAD
 
+=======
+          
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           { path: 'logistics', element: <ShipmentTracking user={user} org={org} /> },
           { path: 'logistics/routes', element: <ShipmentTracking user={user} org={org} /> },
           { path: 'logistics/tracking', element: <ShipmentTracking user={user} org={org} /> },
           { path: 'logistics/ports', element: <ShipmentTracking user={user} org={org} /> },
           { path: 'logistics/delivery', element: <ShipmentTracking user={user} org={org} /> },
+<<<<<<< HEAD
 
+=======
+          
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           // Customs Routes
           { path: 'documents', element: <CustomsClearance user={user} org={org} /> },
           { path: 'documents/export', element: <CustomsClearance user={user} org={org} /> },
           { path: 'documents/compliance', element: <CustomsClearance user={user} org={org} /> },
           { path: 'documents/declarations', element: <CustomsClearance user={user} org={org} /> },
           { path: 'documents/templates', element: <CustomsClearance user={user} org={org} /> },
+<<<<<<< HEAD
 
+=======
+          
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           { path: 'border', element: <CustomsClearance user={user} org={org} /> },
           { path: 'border/checkpoints', element: <CustomsClearance user={user} org={org} /> },
           { path: 'border/security', element: <CustomsClearance user={user} org={org} /> },
           { path: 'border/compliance', element: <CustomsClearance user={user} org={org} /> },
           { path: 'border/reports', element: <CustomsClearance user={user} org={org} /> },
+<<<<<<< HEAD
 
+=======
+          
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           // Admin Routes
           { path: 'admin', element: <UserManagement user={user} org={org} /> },
           { path: 'admin/users', element: <UserManagement user={user} org={org} /> },
           { path: 'admin/settings', element: <Dashboard user={user} org={org} /> },
           { path: 'admin/audit', element: <Dashboard user={user} org={org} /> },
           { path: 'admin/reports', element: <Dashboard user={user} org={org} /> },
+<<<<<<< HEAD
 
+=======
+          
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           // Blockchain Routes
           { path: 'blockchain', element: <Dashboard user={user} org={org} /> },
           { path: 'blockchain/transactions', element: <Dashboard user={user} org={org} /> },
           { path: 'blockchain/status', element: <Dashboard user={user} org={org} /> },
           { path: 'blockchain/peers', element: <Dashboard user={user} org={org} /> },
+<<<<<<< HEAD
 
+=======
+          
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           // Gateway Routes
           { path: 'gateway', element: <Dashboard user={user} org={org} /> },
           { path: 'gateway/exporter-requests', element: <Dashboard user={user} org={org} /> },
@@ -497,6 +636,7 @@ function App(): JSX.Element {
           autoHideDuration={6000}
           preventDuplicate
         >
+<<<<<<< HEAD
           <ToastProvider>
             <NotificationProvider>
               <SkipToMainContent />
@@ -545,6 +685,54 @@ function App(): JSX.Element {
         </SnackbarProvider>
       </LocalizationProvider>
       <ReactQueryDevtools initialIsOpen={false} position="right" />
+=======
+          <NotificationProvider>
+            <SkipToMainContent />
+            
+            {/* Priority 2 Dialogs */}
+            <DashboardCustomizer
+              open={showCustomizer}
+              onClose={() => setShowCustomizer(false)}
+              layout={activeLayout}
+              onUpdateLayout={dashboardMethods.updateLayout}
+              onAddWidget={dashboardMethods.addWidget}
+              onRemoveWidget={dashboardMethods.removeWidget}
+              onToggleVisibility={dashboardMethods.toggleWidgetVisibility}
+            />
+            
+            <KeyboardShortcutsHelp
+              open={showShortcutsHelp}
+              onClose={() => setShowShortcutsHelp(false)}
+            />
+            
+            <AccessibilitySettingsDialog
+              open={showAccessibility}
+              onClose={() => setShowAccessibility(false)}
+              settings={settings}
+              onSettingsChange={updateSettings}
+            />
+            
+            <CssBaseline />
+            <div className={`app ${orgClass} ${mode}-mode`}>
+              <ErrorBoundary>
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={orgClass}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <RouterProvider router={router} />
+                  </motion.div>
+                </AnimatePresence>
+              </ErrorBoundary>
+            </div>
+          </NotificationProvider>
+        </SnackbarProvider>
+      </LocalizationProvider>
+      <ReactQueryDevtools initialIsOpen={false} position="bottom-right" />
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     </QueryClientProvider>
   );
 }

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { styled, keyframes } from '@mui/material/styles';
 import { Box, Card, Chip, alpha } from '@mui/material';
 
@@ -78,5 +79,35 @@ export const PulseChip = styled(Chip)(({ theme }) => ({
     '0%': { boxShadow: `0 0 0 0 ${theme.palette.primary.main}40` },
     '70%': { boxShadow: `0 0 0 10px transparent` },
     '100%': { boxShadow: `0 0 0 0 transparent` },
+=======
+import { styled } from '@mui/material/styles';
+import { Box, Card, Typography, Button, Chip, LinearProgress, Popover } from '@mui/material';
+
+export const DashboardContainer = styled(Box)(({ theme }) => ({
+  padding: theme.spacing(3),
+}));
+
+export const StatCard = styled(Card)(({ theme }) => ({
+  // Add any specific styles for the stat card here
+}));
+
+export const ActivityCard = styled(Card)(({ theme }) => ({
+  // Add any specific styles for the activity card here
+}));
+
+export const QuickActionsCard = styled(Card)(({ theme }) => ({
+  height: '100%',
+}));
+
+export const PulseChip = styled(Chip)(({ theme }) => ({
+  animation: 'pulse 1.5s infinite',
+  '@keyframes pulse': {
+    '0%, 100%': {
+      opacity: 1,
+    },
+    '50%': {
+      opacity: 0.5,
+    },
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   },
 }));

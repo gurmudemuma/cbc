@@ -3,6 +3,7 @@
   "compilerOptions": {
     "outDir": "./dist",
     "noPropertyAccessFromIndexSignature": false,
+<<<<<<< HEAD
     "types": [
       "node"
     ],
@@ -25,3 +26,10 @@
     "../shared/test-setup.ts"
   ]
 }
+=======
+    "types": ["node"]
+  },
+  "include": ["src/**/*", "../shared/**/*"],
+  "exclude": ["node_modules", "dist", "src/__tests__/**", "../shared/**/*.test.ts", "../shared/test-setup.ts"]
+}
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665

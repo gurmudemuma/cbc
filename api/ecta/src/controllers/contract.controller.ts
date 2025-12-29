@@ -1,9 +1,15 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { JwtPayload } from 'jsonwebtoken';
+<<<<<<< HEAD
 import { getPool } from '@shared/database/pool';
 import { createLogger } from '@shared/logger';
 import { ErrorCode, AppError } from '@shared/error-codes';
+=======
+import { getPool } from '../../../shared/database/pool';
+import { createLogger } from '../../../shared/logger';
+import { ErrorCode, AppError } from '../../../shared/error-codes';
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
 const logger = createLogger('ECTAContractController');
 
@@ -202,13 +208,21 @@ VALUES($1, $2, $3, $4, NOW(), $5)`,
 
       await client.query(
         'UPDATE exports SET status = $1, updated_at = NOW() WHERE id = $2',
+<<<<<<< HEAD
         ['ECTA_CONTRACT_REJECTED', exportId]
+=======
+        ['CONTRACT_REJECTED', exportId]
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       );
 
       await client.query(
         `INSERT INTO export_status_history(export_id, old_status, new_status, changed_by, changed_at, notes)
 VALUES($1, $2, $3, $4, NOW(), $5)`,
+<<<<<<< HEAD
         [exportId, 'QUALITY_CERTIFIED', 'ECTA_CONTRACT_REJECTED', user?.id, reason]
+=======
+        [exportId, 'QUALITY_CERTIFIED', 'CONTRACT_REJECTED', user?.id, reason]
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       );
 
       await client.query('COMMIT');

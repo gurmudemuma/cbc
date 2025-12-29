@@ -1,5 +1,9 @@
 import { Router, Request, Response, NextFunction } from 'express';
+<<<<<<< HEAD
 import { authMiddleware as authenticate } from '@shared/middleware/auth.middleware';
+=======
+import { authMiddleware as authenticate } from '../../../shared/middleware/auth.middleware';
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
 interface AuthRequest extends Request {
   user?: {

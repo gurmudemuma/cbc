@@ -1,7 +1,12 @@
 import { Request, Response } from 'express';
 import { Pool } from 'pg';
+<<<<<<< HEAD
 import { ExportService } from '@shared/services/export.service';
 import { createLogger } from '@shared/logger';
+=======
+import { ExportService } from '../../../shared/services/export.service';
+import { createLogger } from '../../../shared/logger';
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
 const logger = createLogger('FXController');
 

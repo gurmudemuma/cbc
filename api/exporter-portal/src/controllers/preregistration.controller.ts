@@ -1,5 +1,6 @@
 import { Response, NextFunction } from 'express';
 import axios from 'axios';
+<<<<<<< HEAD
 import { v4 as uuidv4 } from 'uuid';
 import {
   BusinessType,
@@ -17,6 +18,18 @@ const logger = createLogger('ExporterPreRegistrationController');
 // Retry configuration for inter-service calls
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000; // 1 second
+=======
+import {
+  BusinessType,
+} from '../../../shared/models/ecta-preregistration.model';
+import { ectaPreRegistrationService } from '../../../shared/services/ecta-preregistration.service';
+import { EctaPreRegistrationRepository } from '../../../shared/database/repositories/ecta-preregistration.repository';
+import { AuthenticatedRequest } from '../../../shared/middleware/auth.middleware';
+import { getPool } from '../../../shared/database/pool';
+import { config } from '../config';
+
+const pool = getPool();
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
 
 /**
@@ -39,7 +52,11 @@ export class ExporterPreRegistrationController {
     _next: NextFunction
   ): Promise<void> => {
     try {
+<<<<<<< HEAD
       let userId: string = req.user?.id || '';
+=======
+      const userId = req.user?.id;
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       if (!userId) {
         res.status(401).json({
           success: false,
@@ -48,6 +65,7 @@ export class ExporterPreRegistrationController {
         return;
       }
 
+<<<<<<< HEAD
       // Admin override: Register on behalf of another user
       if (req.user?.role === 'admin' && req.body.targetUserId) {
         userId = String(req.body.targetUserId);
@@ -58,6 +76,12 @@ export class ExporterPreRegistrationController {
         businessName,
         tin,
         // registrationNumber, // Removed from user input
+=======
+      const {
+        businessName,
+        tin,
+        registrationNumber,
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         businessType,
         minimumCapital,
         capitalProofDocument,
@@ -70,7 +94,11 @@ export class ExporterPreRegistrationController {
       } = req.body;
 
       // Validate required fields
+<<<<<<< HEAD
       if (!businessName || !tin || !businessType) {
+=======
+      if (!businessName || !tin || !registrationNumber || !businessType) {
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         res.status(400).json({
           success: false,
           message: 'Missing required fields',
@@ -78,6 +106,7 @@ export class ExporterPreRegistrationController {
         return;
       }
 
+<<<<<<< HEAD
       // Generate System-Standard Registration Number
       // Format: ECTA-{TYPE}-{YEAR}-{RANDOM}
       const typePrefixMap: Record<string, string> = {
@@ -123,6 +152,12 @@ export class ExporterPreRegistrationController {
         });
         return;
       }
+=======
+      // Validate capital requirement
+      const requiredCapital = ectaPreRegistrationService.getMinimumCapitalRequirement(
+        businessType as BusinessType
+      );
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
       if (businessType !== 'FARMER' && minimumCapital < requiredCapital) {
         res.status(400).json({
@@ -142,7 +177,11 @@ export class ExporterPreRegistrationController {
         businessType,
         minimumCapital: minimumCapital || 0,
         capitalVerified: false,
+<<<<<<< HEAD
         capitalProofDocument: capitalProofDocument || null,
+=======
+        capitalProofDocument,
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         officeAddress,
         city,
         region,
@@ -154,15 +193,21 @@ export class ExporterPreRegistrationController {
 
       const profile = await this.repository.createExporterProfile(profileData);
 
+<<<<<<< HEAD
       logger.info('Exporter profile registered', { userId, businessName, tin });
 
+=======
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       res.status(201).json({
         success: true,
         message: 'Exporter profile registered. Awaiting ECTA approval.',
         data: profile,
       });
     } catch (error: any) {
+<<<<<<< HEAD
       logger.error('Failed to register profile', { error: error.message, userId: req.user?.id });
+=======
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       res.status(500).json({
         success: false,
         message: 'Failed to register profile',
@@ -200,14 +245,20 @@ export class ExporterPreRegistrationController {
         return;
       }
 
+<<<<<<< HEAD
       logger.info('Exporter profile retrieved', { userId });
 
+=======
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       res.json({
         success: true,
         data: profile,
       });
     } catch (error: any) {
+<<<<<<< HEAD
       logger.error('Failed to fetch profile', { error: error.message, userId: req.user?.id });
+=======
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       res.status(500).json({
         success: false,
         message: 'Failed to fetch profile',
@@ -267,9 +318,15 @@ export class ExporterPreRegistrationController {
         exporterId,
         laboratoryName,
         address,
+<<<<<<< HEAD
         certificationNumber: null as any, // Will be assigned by ECTA
         certifiedDate: null as any,
         expiryDate: null as any,
+=======
+        certificationNumber: '', // Will be assigned by ECTA
+        certifiedDate: '',
+        expiryDate: '',
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         status: 'PENDING' as const,
         equipment: equipment || [],
         hasRoastingFacility: hasRoastingFacility || false,
@@ -280,15 +337,21 @@ export class ExporterPreRegistrationController {
 
       const laboratory = await this.repository.createLaboratory(laboratoryData);
 
+<<<<<<< HEAD
       logger.info('Laboratory registered', { exporterId, laboratoryName });
 
+=======
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       res.status(201).json({
         success: true,
         message: 'Laboratory registered. Awaiting ECTA inspection and certification.',
         data: laboratory,
       });
     } catch (error: any) {
+<<<<<<< HEAD
       logger.error('Failed to register laboratory', { error: error.message, userId: req.user?.id });
+=======
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       res.status(500).json({
         success: false,
         message: 'Failed to register laboratory',
@@ -366,15 +429,21 @@ export class ExporterPreRegistrationController {
 
       const taster = await this.repository.createTaster(tasterData);
 
+<<<<<<< HEAD
       logger.info('Coffee taster registered', { exporterId, fullName });
 
+=======
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       res.status(201).json({
         success: true,
         message: 'Taster registered. Awaiting ECTA verification.',
         data: taster,
       });
     } catch (error: any) {
+<<<<<<< HEAD
       logger.error('Failed to register taster', { error: error.message, userId: req.user?.id });
+=======
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       res.status(500).json({
         success: false,
         message: 'Failed to register taster',
@@ -433,6 +502,7 @@ export class ExporterPreRegistrationController {
         return;
       }
 
+<<<<<<< HEAD
       const {
         applicationReason,
         additionalDocuments,
@@ -462,6 +532,15 @@ export class ExporterPreRegistrationController {
           exporterId,
           status: 'PENDING_REVIEW',
           submittedAt: applicationData.applicationDate,
+=======
+      // TODO: Create application with competence data from req.body
+      res.json({
+        success: true,
+        message: 'Competence certificate application submitted. ECTA will schedule facility inspection.',
+        data: {
+          exporterId,
+          status: 'PENDING',
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           nextSteps: [
             'ECTA will contact you to schedule facility inspection',
             'Prepare all required documentation',
@@ -470,7 +549,10 @@ export class ExporterPreRegistrationController {
         },
       });
     } catch (error: any) {
+<<<<<<< HEAD
       logger.error('Failed to apply for competence certificate', { error: error.message, userId: req.user?.id });
+=======
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       res.status(500).json({
         success: false,
         message: 'Failed to apply for competence certificate',
@@ -548,6 +630,7 @@ export class ExporterPreRegistrationController {
       // Store application in database
       await this.repository.createLicenseApplication(applicationData);
 
+<<<<<<< HEAD
       // Forward application to ECTA API with retry logic
       await this.forwardLicenseApplicationWithRetry(
         exporterId,
@@ -558,6 +641,36 @@ export class ExporterPreRegistrationController {
       );
 
       logger.info('Export license application submitted', { exporterId, eicRegistrationNumber });
+=======
+      // Forward application to ECTA API
+      try {
+        const ectaResponse = await axios.post(
+          `${config.ECTA_API}/api/preregistration/license-applications`,
+          {
+            exporterId,
+            eicRegistrationNumber,
+            requestedCoffeeTypes: applicationData.requestedCoffeeTypes,
+            requestedOrigins: applicationData.requestedOrigins,
+            applicantProfile: profile,
+            submittedAt: applicationData.applicationDate,
+            submittedBy: req.user?.username || 'unknown',
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              // TODO: Add authentication headers when available
+            },
+            timeout: 10000, // 10 second timeout
+          }
+        );
+
+        console.log('License application forwarded to ECTA:', ectaResponse.data);
+      } catch (ectaError: any) {
+        console.error('Failed to forward application to ECTA:', ectaError.message);
+        // Continue with local response even if ECTA forwarding fails
+        // In production, you might want to implement retry logic or queue the request
+      }
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
       res.json({
         success: true,
@@ -577,7 +690,10 @@ export class ExporterPreRegistrationController {
         },
       });
     } catch (error: any) {
+<<<<<<< HEAD
       logger.error('Failed to apply for export license', { error: error.message, userId: req.user?.id });
+=======
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       res.status(500).json({
         success: false,
         message: 'Failed to apply for export license',
@@ -635,6 +751,7 @@ export class ExporterPreRegistrationController {
       });
     }
   };
+<<<<<<< HEAD
 
   /**
    * Forward license application to ECTA with retry logic
@@ -715,4 +832,6 @@ export class ExporterPreRegistrationController {
       }
     }
   }
+=======
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 }

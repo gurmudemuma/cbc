@@ -1,7 +1,12 @@
 import { Request, Response } from 'express';
 import { Pool } from 'pg';
+<<<<<<< HEAD
 import { ExportService } from '@shared/services/export.service';
 import { createLogger } from '@shared/logger';
+=======
+import { ExportService } from '../../../shared/services/export.service';
+import { createLogger } from '../../../shared/logger';
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
 const logger = createLogger('ECXController');
 
@@ -20,14 +25,22 @@ export class ECXPostgresController {
     try {
       const exports = await this.exportService.getPendingExports();
 
+<<<<<<< HEAD
       return res.json({
+=======
+      res.json({
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         success: true,
         data: exports,
         count: exports.length
       });
     } catch (error) {
       logger.error('Error getting exports', { error });
+<<<<<<< HEAD
       return res.status(500).json({ success: false, error: error instanceof Error ? error.message : 'Internal server error' });
+=======
+      res.status(500).json({ success: false, error: error instanceof Error ? error.message : 'Internal server error' });
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     }
   }
 
@@ -45,10 +58,17 @@ export class ECXPostgresController {
         return res.status(404).json({ success: false, error: 'Export not found' });
       }
 
+<<<<<<< HEAD
       return res.json({ success: true, data: export_record });
     } catch (error) {
       logger.error('Error getting export', { error });
       return res.status(500).json({ success: false, error: error instanceof Error ? error.message : 'Internal server error' });
+=======
+      res.json({ success: true, data: export_record });
+    } catch (error) {
+      logger.error('Error getting export', { error });
+      res.status(500).json({ success: false, error: error instanceof Error ? error.message : 'Internal server error' });
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     }
   }
 
@@ -62,14 +82,22 @@ export class ECXPostgresController {
 
       const exports = await this.exportService.getExportsByStatus(status);
 
+<<<<<<< HEAD
       return res.json({
+=======
+      res.json({
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         success: true,
         data: exports,
         count: exports.length
       });
     } catch (error) {
       logger.error('Error getting exports by status', { error });
+<<<<<<< HEAD
       return res.status(500).json({ success: false, error: error instanceof Error ? error.message : 'Internal server error' });
+=======
+      res.status(500).json({ success: false, error: error instanceof Error ? error.message : 'Internal server error' });
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     }
   }
 
@@ -83,14 +111,22 @@ export class ECXPostgresController {
 
       const history = await this.exportService.getExportHistory(id);
 
+<<<<<<< HEAD
       return res.json({
+=======
+      res.json({
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         success: true,
         data: history,
         count: history.length
       });
     } catch (error) {
       logger.error('Error getting export history', { error });
+<<<<<<< HEAD
       return res.status(500).json({ success: false, error: error instanceof Error ? error.message : 'Internal server error' });
+=======
+      res.status(500).json({ success: false, error: error instanceof Error ? error.message : 'Internal server error' });
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     }
   }
 
@@ -108,10 +144,17 @@ export class ECXPostgresController {
         return res.status(404).json({ success: false, error: 'Export not found' });
       }
 
+<<<<<<< HEAD
       return res.json({ success: true, data: summary });
     } catch (error) {
       logger.error('Error getting export summary', { error });
       return res.status(500).json({ success: false, error: error instanceof Error ? error.message : 'Internal server error' });
+=======
+      res.json({ success: true, data: summary });
+    } catch (error) {
+      logger.error('Error getting export summary', { error });
+      res.status(500).json({ success: false, error: error instanceof Error ? error.message : 'Internal server error' });
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     }
   }
 
@@ -125,14 +168,22 @@ export class ECXPostgresController {
 
       const approvals = await this.exportService.getExportApprovals(id);
 
+<<<<<<< HEAD
       return res.json({
+=======
+      res.json({
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         success: true,
         data: approvals,
         count: approvals.length
       });
     } catch (error) {
       logger.error('Error getting export approvals', { error });
+<<<<<<< HEAD
       return res.status(500).json({ success: false, error: error instanceof Error ? error.message : 'Internal server error' });
+=======
+      res.status(500).json({ success: false, error: error instanceof Error ? error.message : 'Internal server error' });
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     }
   }
 
@@ -146,14 +197,22 @@ export class ECXPostgresController {
 
       const documents = await this.exportService.getExportDocuments(id);
 
+<<<<<<< HEAD
       return res.json({
+=======
+      res.json({
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         success: true,
         data: documents,
         count: documents.length
       });
     } catch (error) {
       logger.error('Error getting export documents', { error });
+<<<<<<< HEAD
       return res.status(500).json({ success: false, error: error instanceof Error ? error.message : 'Internal server error' });
+=======
+      res.status(500).json({ success: false, error: error instanceof Error ? error.message : 'Internal server error' });
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     }
   }
 
@@ -165,14 +224,22 @@ export class ECXPostgresController {
     try {
       const approvals = await this.exportService.getPendingApprovals();
 
+<<<<<<< HEAD
       return res.json({
+=======
+      res.json({
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         success: true,
         data: approvals,
         count: approvals.length
       });
     } catch (error) {
       logger.error('Error getting pending approvals', { error });
+<<<<<<< HEAD
       return res.status(500).json({ success: false, error: error instanceof Error ? error.message : 'Internal server error' });
+=======
+      res.status(500).json({ success: false, error: error instanceof Error ? error.message : 'Internal server error' });
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     }
   }
 
@@ -188,14 +255,22 @@ export class ECXPostgresController {
       `;
       const result = await this.pool.query(query);
 
+<<<<<<< HEAD
       return res.json({
+=======
+      res.json({
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         success: true,
         data: result.rows,
         count: result.rows.length
       });
     } catch (error) {
       logger.error('Error getting export summaries', { error });
+<<<<<<< HEAD
       return res.status(500).json({ success: false, error: error instanceof Error ? error.message : 'Internal server error' });
+=======
+      res.status(500).json({ success: false, error: error instanceof Error ? error.message : 'Internal server error' });
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     }
   }
 }

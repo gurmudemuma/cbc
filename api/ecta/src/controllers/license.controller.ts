@@ -1,8 +1,14 @@
 import { Request, Response, NextFunction } from 'express';
 import { JwtPayload } from 'jsonwebtoken';
+<<<<<<< HEAD
 import { pool } from '@shared/database/pool';
 import { createLogger } from '@shared/logger';
 import { ErrorCode, AppError } from '@shared/error-codes';
+=======
+import { pool } from '../../../shared/database/pool';
+import { createLogger } from '../../../shared/logger';
+import { ErrorCode, AppError } from '../../../shared/error-codes';
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
 const logger = createLogger('ECTALicenseController');
 
@@ -50,9 +56,15 @@ export class LicenseController {
         'SELECT * FROM exports WHERE status = $1 ORDER BY created_at DESC',
         ['ECX_VERIFIED']
       );
+<<<<<<< HEAD
       res.json({
         success: true,
         data: result.rows,
+=======
+      res.json({ 
+        success: true, 
+        data: result.rows, 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         count: result.rows.length,
         message: 'Exports pending ECTA license approval'
       });
@@ -70,7 +82,11 @@ export class LicenseController {
     try {
       const { exportId } = req.params;
       const user = req.user!;
+<<<<<<< HEAD
 
+=======
+      
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       if (!exportId) {
         throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Export ID is required', 400);
       }
@@ -105,8 +121,13 @@ export class LicenseController {
 
       logger.info('License reviewed', { exportId, exporterLicenseNumber, userId: user.id });
 
+<<<<<<< HEAD
       res.json({
         success: true,
+=======
+      res.json({ 
+        success: true, 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         message: 'License review recorded. Awaiting approval decision.',
         exportId,
         exporterLicenseNumber
@@ -128,7 +149,11 @@ export class LicenseController {
     try {
       const { exportId } = req.params;
       const user = req.user!;
+<<<<<<< HEAD
 
+=======
+      
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       if (!exportId) {
         throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Export ID is required', 400);
       }
@@ -163,8 +188,13 @@ export class LicenseController {
 
       logger.info('License issued', { exportId, licenseNumber, userId: user.id });
 
+<<<<<<< HEAD
       res.json({
         success: true,
+=======
+      res.json({ 
+        success: true, 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         message: 'Export license issued successfully',
         exportId,
         licenseNumber,
@@ -187,7 +217,11 @@ export class LicenseController {
     try {
       const { exportId } = req.params;
       const user = req.user!;
+<<<<<<< HEAD
 
+=======
+      
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       if (!exportId) {
         throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Export ID is required', 400);
       }
@@ -228,8 +262,13 @@ export class LicenseController {
 
       logger.info('License approved', { exportId, licenseNumber, userId: user.id });
 
+<<<<<<< HEAD
       res.json({
         success: true,
+=======
+      res.json({ 
+        success: true, 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         message: 'License approved. Export can proceed to quality inspection.',
         exportId,
         licenseNumber,
@@ -252,7 +291,11 @@ export class LicenseController {
     try {
       const { exportId } = req.params;
       const user = req.user!;
+<<<<<<< HEAD
 
+=======
+      
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       if (!exportId) {
         throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Export ID is required', 400);
       }
@@ -280,21 +323,34 @@ export class LicenseController {
 
       await client.query(
         'UPDATE exports SET status = $1, updated_at = NOW() WHERE id = $2',
+<<<<<<< HEAD
         ['ECTA_LICENSE_REJECTED', exportId]
+=======
+        ['LICENSE_REJECTED', exportId]
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       );
 
       await client.query(
         `INSERT INTO export_status_history (export_id, old_status, new_status, changed_by, changed_at, notes)
          VALUES ($1, $2, $3, $4, NOW(), $5)`,
+<<<<<<< HEAD
         [exportId, 'ECX_VERIFIED', 'ECTA_LICENSE_REJECTED', user.id, reason]
+=======
+        [exportId, 'ECX_VERIFIED', 'LICENSE_REJECTED', user.id, reason]
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       );
 
       await client.query('COMMIT');
 
       logger.info('License rejected', { exportId, reason, userId: user.id });
 
+<<<<<<< HEAD
       res.json({
         success: true,
+=======
+      res.json({ 
+        success: true, 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         message: 'License rejected',
         exportId,
         newStatus: 'LICENSE_REJECTED',
@@ -318,9 +374,15 @@ export class LicenseController {
         'SELECT * FROM exports WHERE status = $1 ORDER BY created_at DESC',
         ['ECTA_LICENSE_APPROVED']
       );
+<<<<<<< HEAD
       res.json({
         success: true,
         data: result.rows,
+=======
+      res.json({ 
+        success: true, 
+        data: result.rows, 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         count: result.rows.length,
         message: 'Exports with approved licenses'
       });
@@ -339,9 +401,15 @@ export class LicenseController {
         'SELECT * FROM exports WHERE status = $1 ORDER BY created_at DESC',
         ['LICENSE_REJECTED']
       );
+<<<<<<< HEAD
       res.json({
         success: true,
         data: result.rows,
+=======
+      res.json({ 
+        success: true, 
+        data: result.rows, 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         count: result.rows.length,
         message: 'Rejected license applications'
       });

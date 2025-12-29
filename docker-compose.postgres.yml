@@ -6,6 +6,10 @@ volumes:
 networks:
   coffee-export:
     name: coffee-export-network
+<<<<<<< HEAD
+=======
+    external: true
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
 services:
   # ===========================

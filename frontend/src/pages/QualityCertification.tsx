@@ -1,7 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Award, CheckCircle, XCircle, Search, Eye } from 'lucide-react';
 import apiClient from '../services/api';
+<<<<<<< HEAD
 import { useExports } from '../hooks/useExportManager';
+=======
+import { useExports } from '../hooks/useExports';
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 import ECTAQualityForm from '../components/forms/ECTAQualityForm';
 import {
   Box,
@@ -286,8 +290,11 @@ const QualityCertification = ({ user, org }: QualityCertificationProps): JSX.Ele
               onApprove={handleApprove}
               onReject={handleReject}
               loading={loading}
+<<<<<<< HEAD
               user={user}
               org={org}
+=======
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
             />
           )}
         </DialogContent>

@@ -1,8 +1,14 @@
 import { Request, Response, NextFunction } from 'express';
 import { JwtPayload } from 'jsonwebtoken';
+<<<<<<< HEAD
 import { pool } from '@shared/database/pool';
 import { createLogger } from '@shared/logger';
 import { ErrorCode, AppError } from '@shared/error-codes';
+=======
+import { pool } from '../../../shared/database/pool';
+import { createLogger } from '../../../shared/logger';
+import { ErrorCode, AppError } from '../../../shared/error-codes';
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
 const logger = createLogger('ExportController');
 
@@ -211,8 +217,13 @@ export class ExportController {
 
       logger.info('Documents rejected', { exportId, userId: user.id, reason });
 
+<<<<<<< HEAD
       res.json({
         success: true,
+=======
+      res.json({ 
+        success: true, 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         message: 'Documents rejected successfully',
         reason,
         status: 'BANK_DOCUMENT_REJECTED'
@@ -441,6 +452,7 @@ export class ExportController {
       },
     });
   }
+<<<<<<< HEAD
 
 
   /**
@@ -492,4 +504,6 @@ export class ExportController {
       this.handleError(error, res);
     }
   };
+=======
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 }

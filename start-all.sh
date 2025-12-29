@@ -282,6 +282,7 @@ show_startup_summary() {
     echo ""
     
     echo -e "${CYAN}API Services:${NC}"
+<<<<<<< HEAD
     echo "  Commercial Bank:     http://localhost:3001"
     echo "  Custom Authorities:  http://localhost:3002"
     echo "  ECTA:                http://localhost:3003"
@@ -289,6 +290,15 @@ show_startup_summary() {
     echo "  National Bank:       http://localhost:3005"
     echo "  ECX:                 http://localhost:3006"
     echo "  Shipping Line:       http://localhost:3007"
+=======
+    echo "  Commercial Bank:    http://localhost:3001"
+    echo "  National Bank:       http://localhost:3002"
+    echo "  ECTA:                http://localhost:3003"
+    echo "  Shipping Line:       http://localhost:3004"
+    echo "  Custom Authorities:  http://localhost:3005"
+    echo "  ECX:                 http://localhost:3006"
+    echo "  Exporter Portal:     http://localhost:3007"
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     echo ""
     
     echo -e "${CYAN}API Documentation:${NC}"

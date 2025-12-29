@@ -110,7 +110,11 @@ fix_env_file() {
     sed -i 's/^NODE_ENV=.*/NODE_ENV=development/' "$env_file"
     
     # Fix CORS for local development
+<<<<<<< HEAD
     sed -i 's/^CORS_ORIGIN=.*/CORS_ORIGIN=http:\\/\\/localhost:5173/' "$env_file"
+=======
+    sed -i 's/^CORS_ORIGIN=.*/CORS_ORIGIN=http:\/\/localhost:5173,http:\/\/localhost:3000/' "$env_file"
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     
     print_success "Fixed .env for ${service}"
     return 0

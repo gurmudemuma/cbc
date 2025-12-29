@@ -4,9 +4,15 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
+<<<<<<< HEAD
 import { createUserService, PostgresUserService } from '@shared/services/postgres-user.service';
 import { logger } from '@shared/logger';
 import { ApiResponse } from '@shared/types/api-response.types';
+=======
+import { createUserService, PostgresUserService } from '../../../shared/services/postgres-user.service';
+import { logger } from '../../../shared/logger';
+import { ApiResponse } from '../../../shared/types/api-response.types';
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
 export interface AuthenticatedRequest extends Request {
   user?: {

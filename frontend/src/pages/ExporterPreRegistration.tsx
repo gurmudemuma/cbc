@@ -38,7 +38,10 @@ import {
 } from '@mui/icons-material';
 import ectaPreRegistrationService from '../services/ectaPreRegistration';
 import { PageContainer, RegistrationPaper } from './ExporterPreRegistration.styles';
+<<<<<<< HEAD
 import PreRegistrationWorkflowTracker from '../components/PreRegistrationWorkflowTracker';
+=======
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
 const steps = [
   'Business Profile',
@@ -71,7 +74,10 @@ const ExporterPreRegistration = ({ user, org }: ExporterPreRegistrationProps): J
     businessType: 'PRIVATE',
     minimumCapital: 15000000,
     capitalVerified: false,
+<<<<<<< HEAD
     capitalProofDocument: '', // IPFS hash or document ID
+=======
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     officeAddress: '',
     city: '',
     region: '',
@@ -97,6 +103,7 @@ const ExporterPreRegistration = ({ user, org }: ExporterPreRegistrationProps): J
   const [tasterData, setTasterData] = useState({
     fullName: '',
     dateOfBirth: '',
+<<<<<<< HEAD
     nationalId: '',
     qualificationLevel: 'CERTIFICATE',
     qualificationDocument: '',
@@ -105,6 +112,13 @@ const ExporterPreRegistration = ({ user, org }: ExporterPreRegistrationProps): J
     certificateExpiryDate: '',
     employmentStartDate: new Date().toISOString().split('T')[0], // Default to today
     employmentContract: '',
+=======
+    diplomaNumber: '',
+    diplomaIssueDate: '',
+    proficiencyCertificateNumber: '',
+    proficiencyCertificateIssueDate: '',
+    proficiencyCertificateExpiryDate: '',
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     phone: '',
     email: '',
   });
@@ -120,14 +134,20 @@ const ExporterPreRegistration = ({ user, org }: ExporterPreRegistrationProps): J
     annualCapacity: 0,
     targetMarkets: '',
     certificationGoals: '',
+<<<<<<< HEAD
     additionalDocuments: [],
+=======
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   });
 
   const [licenseData, setLicenseData] = useState({
     licenseType: 'STANDARD',
     eicRegistrationNumber: '',
+<<<<<<< HEAD
     requestedCoffeeTypes: ['ARABICA', 'ROBUSTA'], // Default values
     requestedOrigins: ['SIDAMA', 'YIRGACHEFFE', 'HARRAR'], // Default values
+=======
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     exportDestinations: '',
     annualExportVolume: 0,
     businessPlan: '',
@@ -138,6 +158,7 @@ const ExporterPreRegistration = ({ user, org }: ExporterPreRegistrationProps): J
     socialResponsibility: false,
   });
 
+<<<<<<< HEAD
   // Auto-save key based on user ID
   const DRAFT_KEY = `exporter_registration_draft_${user?.id || 'guest'}`;
 
@@ -185,6 +206,8 @@ const ExporterPreRegistration = ({ user, org }: ExporterPreRegistrationProps): J
     window.location.reload(); // Simple way to reset state
   };
 
+=======
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   // Load qualification status on mount
   useEffect(() => {
     loadQualificationStatus();
@@ -205,7 +228,11 @@ const ExporterPreRegistration = ({ user, org }: ExporterPreRegistrationProps): J
     try {
       const status = await ectaPreRegistrationService.checkQualificationStatus();
       setQualificationStatus(status);
+<<<<<<< HEAD
 
+=======
+      
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       // Auto-advance to next incomplete step only if no URL step parameter
       const stepParam = searchParams.get('step');
       if (!stepParam && status.profile?.status === 'ACTIVE') {
@@ -240,7 +267,11 @@ const ExporterPreRegistration = ({ user, org }: ExporterPreRegistrationProps): J
       }
     } else if (activeStep === 2) {
       // Basic validation for taster registration
+<<<<<<< HEAD
       if (!tasterData.fullName || !tasterData.proficiencyCertificateNumber || !tasterData.certificateIssueDate) {
+=======
+      if (!tasterData.fullName || !tasterData.diplomaNumber) {
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         setError('Please fill in all required taster information');
         return;
       }
@@ -257,7 +288,11 @@ const ExporterPreRegistration = ({ user, org }: ExporterPreRegistrationProps): J
         return;
       }
     }
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     setError(null);
     setActiveStep((prevStep) => prevStep + 1);
   };
@@ -275,8 +310,11 @@ const ExporterPreRegistration = ({ user, org }: ExporterPreRegistrationProps): J
       await ectaPreRegistrationService.registerProfile(profileData);
       setSuccess('Profile registered successfully! Waiting for ECTA approval.');
       await loadQualificationStatus();
+<<<<<<< HEAD
       // Auto-advance
       setActiveStep(1);
+=======
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to register profile');
     } finally {
@@ -293,7 +331,10 @@ const ExporterPreRegistration = ({ user, org }: ExporterPreRegistrationProps): J
       await ectaPreRegistrationService.registerLaboratory(laboratoryData);
       setSuccess('Laboratory registered successfully! Waiting for ECTA certification.');
       await loadQualificationStatus();
+<<<<<<< HEAD
       setActiveStep(2);
+=======
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to register laboratory');
     } finally {
@@ -301,6 +342,7 @@ const ExporterPreRegistration = ({ user, org }: ExporterPreRegistrationProps): J
     }
   };
 
+<<<<<<< HEAD
   const handleProfileResubmit = async () => {
     setLoading(true);
     setError(null);
@@ -345,6 +387,8 @@ const ExporterPreRegistration = ({ user, org }: ExporterPreRegistrationProps): J
     }
   };
 
+=======
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   const handleTasterSubmit = async () => {
     setLoading(true);
     setError(null);
@@ -354,7 +398,10 @@ const ExporterPreRegistration = ({ user, org }: ExporterPreRegistrationProps): J
       await ectaPreRegistrationService.registerTaster(tasterData);
       setSuccess('Taster registered successfully! Waiting for ECTA verification.');
       await loadQualificationStatus();
+<<<<<<< HEAD
       setActiveStep(3);
+=======
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to register taster');
     } finally {
@@ -368,7 +415,11 @@ const ExporterPreRegistration = ({ user, org }: ExporterPreRegistrationProps): J
     setSuccess(null);
 
     try {
+<<<<<<< HEAD
       await ectaPreRegistrationService.applyForCompetenceCertificate();
+=======
+      await ectaPreRegistrationService.applyForCompetenceCertificate(competenceData);
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       setSuccess('Competence certificate application submitted! Waiting for ECTA inspection.');
       await loadQualificationStatus();
     } catch (err) {
@@ -399,6 +450,7 @@ const ExporterPreRegistration = ({ user, org }: ExporterPreRegistrationProps): J
       case 0:
         return (
           <Box>
+<<<<<<< HEAD
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
               <Typography variant="h6">
                 <Business sx={{ mr: 1, verticalAlign: 'middle' }} />
@@ -410,6 +462,14 @@ const ExporterPreRegistration = ({ user, org }: ExporterPreRegistrationProps): J
             </Box>
             <Typography variant="body2" color="text.secondary" paragraph>
               Register your business with ECTA. Minimum capital requirement: ETB {profileData.businessType === 'FARMER' ? '0 (Exempt)' : (profileData.businessType === 'PRIVATE' ? '15,000,000' : '20,000,000')}
+=======
+            <Typography variant="h6" gutterBottom>
+              <Business sx={{ mr: 1, verticalAlign: 'middle' }} />
+              Business Profile Registration
+            </Typography>
+            <Typography variant="body2" color="text.secondary" paragraph>
+              Register your business with ECTA. Minimum capital requirement: ETB {profileData.businessType === 'PRIVATE' ? '15,000,000' : '20,000,000'}
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
             </Typography>
 
             <Grid container spacing={3}>
@@ -431,7 +491,19 @@ const ExporterPreRegistration = ({ user, org }: ExporterPreRegistrationProps): J
                   required
                 />
               </Grid>
+<<<<<<< HEAD
               {/* Registration Number is now auto-generated by the system */}
+=======
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Registration Number"
+                  value={profileData.registrationNumber}
+                  onChange={(e) => setProfileData({ ...profileData, registrationNumber: e.target.value })}
+                  required
+                />
+              </Grid>
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
               <Grid item xs={12} md={6}>
                 <FormControl fullWidth>
                   <InputLabel>Business Type</InputLabel>
@@ -440,9 +512,15 @@ const ExporterPreRegistration = ({ user, org }: ExporterPreRegistrationProps): J
                     onChange={(e) => setProfileData({ ...profileData, businessType: e.target.value })}
                   >
                     <MenuItem value="PRIVATE">Private Limited Company</MenuItem>
+<<<<<<< HEAD
                     <MenuItem value="JOINT_STOCK">Share Company</MenuItem>
                     <MenuItem value="TRADE_ASSOCIATION">Trade Association</MenuItem>
                     <MenuItem value="FARMER">Farmer-Exporter</MenuItem>
+=======
+                    <MenuItem value="SHARE_COMPANY">Share Company</MenuItem>
+                    <MenuItem value="TRADE_ASSOCIATION">Trade Association</MenuItem>
+                    <MenuItem value="FARMER_EXPORTER">Farmer-Exporter</MenuItem>
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
                   </Select>
                 </FormControl>
               </Grid>
@@ -513,6 +591,7 @@ const ExporterPreRegistration = ({ user, org }: ExporterPreRegistrationProps): J
               </Grid>
             </Grid>
 
+<<<<<<< HEAD
             {/* Show rejection alert if profile is rejected */}
             {qualificationStatus?.profile?.status === 'REJECTED' && (
               <Alert severity="error" sx={{ mt: 3 }}>
@@ -536,11 +615,17 @@ const ExporterPreRegistration = ({ user, org }: ExporterPreRegistrationProps): J
             <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between' }}>
               <Button
                 onClick={handleBack}
+=======
+            <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between' }}>
+              <Button 
+                onClick={handleBack} 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
                 disabled={activeStep === 0}
               >
                 Back
               </Button>
               <Box sx={{ display: 'flex', gap: 2 }}>
+<<<<<<< HEAD
                 {qualificationStatus?.profile ? (
                   <>
                     {qualificationStatus.profile.status === 'REJECTED' ? (
@@ -580,6 +665,22 @@ const ExporterPreRegistration = ({ user, org }: ExporterPreRegistrationProps): J
                     {loading ? <CircularProgress size={24} /> : 'Register & Continue'}
                   </Button>
                 )}
+=======
+                <Button 
+                  variant="outlined" 
+                  onClick={handleProfileSubmit}
+                  disabled={loading}
+                >
+                  {loading ? <CircularProgress size={24} /> : 'Submit Profile'}
+                </Button>
+                <Button 
+                  variant="contained" 
+                  onClick={handleNext}
+                  disabled={loading}
+                >
+                  Next
+                </Button>
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
               </Box>
             </Box>
           </Box>
@@ -692,6 +793,7 @@ const ExporterPreRegistration = ({ user, org }: ExporterPreRegistrationProps): J
               </Grid>
             </Grid>
 
+<<<<<<< HEAD
             {/* Show rejection alert if laboratory is rejected */}
             {qualificationStatus?.laboratory?.status === 'REJECTED' && (
               <Alert severity="error" sx={{ mt: 3 }}>
@@ -715,11 +817,17 @@ const ExporterPreRegistration = ({ user, org }: ExporterPreRegistrationProps): J
             <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between' }}>
               <Button
                 onClick={handleBack}
+=======
+            <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between' }}>
+              <Button 
+                onClick={handleBack} 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
                 disabled={activeStep === 0}
               >
                 Back
               </Button>
               <Box sx={{ display: 'flex', gap: 2 }}>
+<<<<<<< HEAD
                 {qualificationStatus?.laboratory ? (
                   <>
                     {qualificationStatus.laboratory.status === 'REJECTED' ? (
@@ -759,6 +867,22 @@ const ExporterPreRegistration = ({ user, org }: ExporterPreRegistrationProps): J
                     {loading ? <CircularProgress size={24} /> : 'Register & Continue'}
                   </Button>
                 )}
+=======
+                <Button 
+                  variant="outlined" 
+                  onClick={handleLaboratorySubmit}
+                  disabled={loading}
+                >
+                  {loading ? <CircularProgress size={24} /> : 'Submit Laboratory'}
+                </Button>
+                <Button 
+                  variant="contained" 
+                  onClick={handleNext}
+                  disabled={loading}
+                >
+                  Next
+                </Button>
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
               </Box>
             </Box>
           </Box>
@@ -799,14 +923,22 @@ const ExporterPreRegistration = ({ user, org }: ExporterPreRegistrationProps): J
               <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
+<<<<<<< HEAD
                   label="National ID"
                   value={tasterData.nationalId}
                   onChange={(e) => setTasterData({ ...tasterData, nationalId: e.target.value })}
+=======
+                  label="Diploma Number"
+                  value={tasterData.diplomaNumber}
+                  onChange={(e) => setTasterData({ ...tasterData, diplomaNumber: e.target.value })}
+                  required
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
                 />
               </Grid>
               <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
+<<<<<<< HEAD
                   label="Qualification Level"
                   select
                   value={tasterData.qualificationLevel}
@@ -817,6 +949,15 @@ const ExporterPreRegistration = ({ user, org }: ExporterPreRegistrationProps): J
                   <MenuItem value="DEGREE">Degree</MenuItem>
                   <MenuItem value="MASTER">Master</MenuItem>
                 </TextField>
+=======
+                  label="Diploma Issue Date"
+                  type="date"
+                  value={tasterData.diplomaIssueDate}
+                  onChange={(e) => setTasterData({ ...tasterData, diplomaIssueDate: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                  required
+                />
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
               </Grid>
               <Grid item xs={12} md={6}>
                 <TextField
@@ -832,8 +973,13 @@ const ExporterPreRegistration = ({ user, org }: ExporterPreRegistrationProps): J
                   fullWidth
                   label="Certificate Issue Date"
                   type="date"
+<<<<<<< HEAD
                   value={tasterData.certificateIssueDate}
                   onChange={(e) => setTasterData({ ...tasterData, certificateIssueDate: e.target.value })}
+=======
+                  value={tasterData.proficiencyCertificateIssueDate}
+                  onChange={(e) => setTasterData({ ...tasterData, proficiencyCertificateIssueDate: e.target.value })}
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
                   InputLabelProps={{ shrink: true }}
                   required
                 />
@@ -843,6 +989,7 @@ const ExporterPreRegistration = ({ user, org }: ExporterPreRegistrationProps): J
                   fullWidth
                   label="Certificate Expiry Date"
                   type="date"
+<<<<<<< HEAD
                   value={tasterData.certificateExpiryDate}
                   onChange={(e) => setTasterData({ ...tasterData, certificateExpiryDate: e.target.value })}
                   InputLabelProps={{ shrink: true }}
@@ -856,6 +1003,10 @@ const ExporterPreRegistration = ({ user, org }: ExporterPreRegistrationProps): J
                   type="date"
                   value={tasterData.employmentStartDate}
                   onChange={(e) => setTasterData({ ...tasterData, employmentStartDate: e.target.value })}
+=======
+                  value={tasterData.proficiencyCertificateExpiryDate}
+                  onChange={(e) => setTasterData({ ...tasterData, proficiencyCertificateExpiryDate: e.target.value })}
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
                   InputLabelProps={{ shrink: true }}
                   required
                 />
@@ -866,6 +1017,10 @@ const ExporterPreRegistration = ({ user, org }: ExporterPreRegistrationProps): J
                   label="Phone"
                   value={tasterData.phone}
                   onChange={(e) => setTasterData({ ...tasterData, phone: e.target.value })}
+<<<<<<< HEAD
+=======
+                  required
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
                 />
               </Grid>
               <Grid item xs={12} md={6}>
@@ -875,6 +1030,10 @@ const ExporterPreRegistration = ({ user, org }: ExporterPreRegistrationProps): J
                   type="email"
                   value={tasterData.email}
                   onChange={(e) => setTasterData({ ...tasterData, email: e.target.value })}
+<<<<<<< HEAD
+=======
+                  required
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
                 />
               </Grid>
             </Grid>
@@ -882,6 +1041,7 @@ const ExporterPreRegistration = ({ user, org }: ExporterPreRegistrationProps): J
             <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between' }}>
               <Button onClick={handleBack}>Back</Button>
               <Box sx={{ display: 'flex', gap: 2 }}>
+<<<<<<< HEAD
                 {qualificationStatus?.taster ? (
                   <>
                     <Button
@@ -908,6 +1068,22 @@ const ExporterPreRegistration = ({ user, org }: ExporterPreRegistrationProps): J
                     {loading ? <CircularProgress size={24} /> : 'Register & Continue'}
                   </Button>
                 )}
+=======
+                <Button
+                  variant="outlined"
+                  onClick={handleTasterSubmit}
+                  disabled={loading}
+                >
+                  {loading ? <CircularProgress size={24} /> : 'Submit Taster'}
+                </Button>
+                <Button
+                  variant="contained"
+                  onClick={handleNext}
+                  disabled={loading}
+                >
+                  Next
+                </Button>
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
               </Box>
             </Box>
           </Box>
@@ -1064,22 +1240,37 @@ const ExporterPreRegistration = ({ user, org }: ExporterPreRegistrationProps): J
             </Grid>
 
             <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between' }}>
+<<<<<<< HEAD
               <Button
                 onClick={handleBack}
+=======
+              <Button 
+                onClick={handleBack} 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
                 disabled={activeStep === 0}
               >
                 Back
               </Button>
               <Box sx={{ display: 'flex', gap: 2 }}>
+<<<<<<< HEAD
                 <Button
                   variant="outlined"
+=======
+                <Button 
+                  variant="outlined" 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
                   onClick={handleCompetenceApply}
                   disabled={loading || !competenceData.applicationReason || !competenceData.businessExperience || !competenceData.exportPlans}
                 >
                   {loading ? <CircularProgress size={24} /> : 'Apply for Certificate'}
                 </Button>
+<<<<<<< HEAD
                 <Button
                   variant="contained"
+=======
+                <Button 
+                  variant="contained" 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
                   onClick={handleNext}
                   disabled={loading || !competenceData.applicationReason || !competenceData.businessExperience || !competenceData.exportPlans}
                 >
@@ -1196,7 +1387,11 @@ const ExporterPreRegistration = ({ user, org }: ExporterPreRegistrationProps): J
                   required
                 />
               </Grid>
+<<<<<<< HEAD
               <Grid item xs={12} md={6}>
+=======
+              <Grid item xs={12}>
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
                 <TextField
                   fullWidth
                   label="EIC Registration Number"
@@ -1207,6 +1402,7 @@ const ExporterPreRegistration = ({ user, org }: ExporterPreRegistrationProps): J
                   helperText="Required for export license application"
                 />
               </Grid>
+<<<<<<< HEAD
               <Grid item xs={12} md={6}>
                 <FormControl fullWidth>
                   <InputLabel>Requested Coffee Types</InputLabel>
@@ -1258,6 +1454,8 @@ const ExporterPreRegistration = ({ user, org }: ExporterPreRegistrationProps): J
                   </Select>
                 </FormControl>
               </Grid>
+=======
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
               <Grid item xs={12}>
                 <TextField
                   fullWidth
@@ -1339,8 +1537,13 @@ const ExporterPreRegistration = ({ user, org }: ExporterPreRegistrationProps): J
             </Grid>
 
             <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between' }}>
+<<<<<<< HEAD
               <Button
                 onClick={handleBack}
+=======
+              <Button 
+                onClick={handleBack} 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
                 disabled={activeStep === 0}
               >
                 Back
@@ -1373,6 +1576,7 @@ const ExporterPreRegistration = ({ user, org }: ExporterPreRegistrationProps): J
           Complete all steps to qualify for coffee export operations
         </Typography>
 
+<<<<<<< HEAD
         {/* Workflow Progress Tracker */}
         {qualificationStatus && (
           <Box sx={{ mb: 4 }}>
@@ -1402,6 +1606,8 @@ const ExporterPreRegistration = ({ user, org }: ExporterPreRegistrationProps): J
         )}
 
 
+=======
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
           {steps.map((label) => (
             <Step key={label}>

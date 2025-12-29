@@ -112,7 +112,11 @@ for service in "${!SERVICES[@]}"; do
     sed -i "s/PORT=.*/PORT=$port/g" "$env_file"
     
     # Update CORS_ORIGIN for Docker
+<<<<<<< HEAD
     sed -i "s|CORS_ORIGIN=.*|CORS_ORIGIN=http://localhost:80,http://localhost:5173|g" "$env_file"
+=======
+    sed -i "s|CORS_ORIGIN=.*|CORS_ORIGIN=http://localhost:80,http://localhost:5173,http://localhost:3000|g" "$env_file"
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     
     print_success "Updated $service"
 done

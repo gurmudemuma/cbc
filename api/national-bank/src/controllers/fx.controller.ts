@@ -1,7 +1,13 @@
 import { Request, Response, NextFunction } from "express";
+<<<<<<< HEAD
 import { pool } from "@shared/database/pool";
 import { createLogger } from "@shared/logger";
 import { ErrorCode, AppError } from "@shared/error-codes";
+=======
+import { pool } from "../../../shared/database/pool";
+import { createLogger } from "../../../shared/logger";
+import { ErrorCode, AppError } from "../../../shared/error-codes";
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
 const logger = createLogger('FXController');
 
@@ -30,12 +36,20 @@ export class FXController {
     try {
       const { exportId } = req.params;
       const result = await pool.query('SELECT * FROM exports WHERE id = $1', [exportId]);
+<<<<<<< HEAD
 
+=======
+      
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       if (result.rows.length === 0) {
         res.status(404).json({ success: false, message: 'Export not found' });
         return;
       }
+<<<<<<< HEAD
 
+=======
+      
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       res.json({ success: true, data: result.rows[0] });
     } catch (error: any) {
       logger.error('Failed to fetch export', { error: error.message });

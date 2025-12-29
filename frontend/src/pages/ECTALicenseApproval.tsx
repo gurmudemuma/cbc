@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Box, Grid, Typography, Card, CardContent, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button, Chip, Dialog, DialogContent, DialogTitle, IconButton } from '@mui/material';
 import { FileCheck, Eye, XCircle } from 'lucide-react';
+<<<<<<< HEAD
 import { CommonPageProps, Export, ECTALicenseFormData } from '../types';
 import { useExports } from '../hooks/useExportManager';
 import ECTALicenseForm from '../components/forms/ECTALicenseForm';
@@ -17,13 +18,34 @@ const ECTALicenseApproval = ({ user, org }: ECTALicenseApprovalProps): JSX.Eleme
 
   const handleApprove = async (data: ECTALicenseFormData) => {
     if (!selectedExport) return;
+=======
+import { CommonPageProps } from '../types';
+import { useExports } from '../hooks/useExports';
+import ECTALicenseForm from '../components/forms/ECTALicenseForm';
+import apiClient from '../services/api';
+
+interface ECTALicenseApprovalProps extends CommonPageProps {}
+
+const ECTALicenseApproval = ({ user, org }: ECTALicenseApprovalProps): JSX.Element => {
+  const { exports: allExports, refreshExports } = useExports();
+  const exports = allExports.filter((e) => e.status === 'ECTA_LICENSE_PENDING' || e.status === 'ECTA_LICENSE_APPROVED' || e.status === 'ECTA_LICENSE_REJECTED');
+  const [selectedExport, setSelectedExport] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleApprove = async (data) => {
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     setLoading(true);
     try {
       await apiClient.post(`/ecta/license/${selectedExport.exportId}/approve`, data);
       setIsModalOpen(false);
       setSelectedExport(null);
       refreshExports();
+<<<<<<< HEAD
     } catch (error: any) {
+=======
+    } catch (error) {
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       console.error('Approval error:', error);
       alert('Failed to approve: ' + (error.response?.data?.message || error.message));
     } finally {
@@ -31,15 +53,23 @@ const ECTALicenseApproval = ({ user, org }: ECTALicenseApprovalProps): JSX.Eleme
     }
   };
 
+<<<<<<< HEAD
   const handleReject = async ({ category, reason }: { category: string; reason: string }) => {
     if (!selectedExport) return;
+=======
+  const handleReject = async ({ category, reason }) => {
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     setLoading(true);
     try {
       await apiClient.post(`/ecta/license/${selectedExport.exportId}/reject`, { category, reason });
       setIsModalOpen(false);
       setSelectedExport(null);
       refreshExports();
+<<<<<<< HEAD
     } catch (error: any) {
+=======
+    } catch (error) {
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       console.error('Rejection error:', error);
       alert('Failed to reject: ' + (error.response?.data?.message || error.message));
     } finally {

@@ -59,6 +59,7 @@ const ectaPreRegistrationService = {
   },
 
   /**
+<<<<<<< HEAD
    * Resubmit exporter profile after rejection (Exporter Portal)
    */
   resubmitProfile: async (exporterId) => {
@@ -67,6 +68,8 @@ const ectaPreRegistrationService = {
   },
 
   /**
+=======
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
    * Validate exporter qualification (ECTA)
    */
   validateExporter: async (exporterId) => {
@@ -98,6 +101,7 @@ const ectaPreRegistrationService = {
    * Certify laboratory (ECTA)
    */
   certifyLaboratory: async (laboratoryId, certificationData) => {
+<<<<<<< HEAD
     // Map frontend field names to backend expected names
     const payload = {
       certificationNumber: certificationData.certificateNumber, // Map certificateNumber → certificationNumber
@@ -151,6 +155,9 @@ const ectaPreRegistrationService = {
    */
   resubmitLaboratory: async (laboratoryId) => {
     const response = await apiClient.post(`/preregistration/laboratories/${laboratoryId}/resubmit`);
+=======
+    const response = await apiClient.post(`/preregistration/laboratories/${laboratoryId}/certify`, certificationData);
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     return response.data;
   },
 
@@ -190,6 +197,7 @@ const ectaPreRegistrationService = {
    * Issue competence certificate (ECTA)
    */
   issueCompetenceCertificate: async (exporterId, certificateData) => {
+<<<<<<< HEAD
     // Map frontend field names to backend expected names
     const payload = {
       certificateNumber: certificateData.certificateNumber,
@@ -208,6 +216,9 @@ const ectaPreRegistrationService = {
    */
   rejectCompetenceCertificate: async (exporterId, reason) => {
     const response = await apiClient.post(`/preregistration/competence/${exporterId}/reject`, { reason });
+=======
+    const response = await apiClient.post(`/preregistration/competence/${exporterId}/issue`, certificateData);
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     return response.data;
   },
 
@@ -221,8 +232,13 @@ const ectaPreRegistrationService = {
   applyForExportLicense: async (licenseData) => {
     const response = await apiClient.post('/exporter/license/apply', {
       eicRegistrationNumber: licenseData.eicRegistrationNumber || 'EIC-' + Date.now(),
+<<<<<<< HEAD
       requestedCoffeeTypes: licenseData.requestedCoffeeTypes || ['ARABICA', 'ROBUSTA'],
       requestedOrigins: licenseData.requestedOrigins || ['SIDAMA', 'YIRGACHEFFE', 'HARRAR'],
+=======
+      requestedCoffeeTypes: licenseData.coffeeTypes || ['ARABICA', 'ROBUSTA'],
+      requestedOrigins: licenseData.origins || ['SIDAMA', 'YIRGACHEFFE', 'HARRAR'],
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       licenseType: licenseData.licenseType,
       annualExportVolume: licenseData.annualExportVolume,
       exportDestinations: licenseData.exportDestinations,
@@ -245,6 +261,7 @@ const ectaPreRegistrationService = {
    * Issue export license (ECTA)
    */
   issueExportLicense: async (exporterId, licenseData) => {
+<<<<<<< HEAD
     // Map frontend field names to backend expected names
     const payload = {
       licenseNumber: licenseData.certificateNumber, // Frontend uses certificateNumber for all
@@ -264,6 +281,9 @@ const ectaPreRegistrationService = {
    */
   rejectExportLicense: async (exporterId, reason) => {
     const response = await apiClient.post(`/preregistration/licenses/${exporterId}/reject`, { reason });
+=======
+    const response = await apiClient.post(`/preregistration/licenses/${exporterId}/issue`, licenseData);
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     return response.data;
   },
 
@@ -278,6 +298,7 @@ const ectaPreRegistrationService = {
     const response = await apiClient.get('/exporter/qualification-status');
     return response.data;
   },
+<<<<<<< HEAD
 
   // ============================================================================
   // 360-DEGREE DASHBOARD
@@ -306,6 +327,8 @@ const ectaPreRegistrationService = {
     const response = await apiClient.get('/preregistration/dashboard/stats');
     return response.data;
   },
+=======
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 };
 
 export default ectaPreRegistrationService;

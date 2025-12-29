@@ -2,11 +2,19 @@ import { useState } from 'react';
 import { Box, Grid, Typography, Card, CardContent, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button, Chip, Dialog, DialogContent, DialogTitle, IconButton } from '@mui/material';
 import { DollarSign, Eye, XCircle } from 'lucide-react';
 import { CommonPageProps } from '../types';
+<<<<<<< HEAD
 import { useExports } from '../hooks/useExportManager';
 import BankDocumentVerificationForm from '../components/forms/BankDocumentVerificationForm';
 import apiClient from '../services/api';
 
 interface BankDocumentVerificationProps extends CommonPageProps { }
+=======
+import { useExports } from '../hooks/useExports';
+import BankDocumentVerificationForm from '../components/forms/BankDocumentVerificationForm';
+import apiClient from '../services/api';
+
+interface BankDocumentVerificationProps extends CommonPageProps {}
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
 const BankDocumentVerification = ({ user, org }: BankDocumentVerificationProps): JSX.Element => {
   const { exports: allExports, refreshExports } = useExports();

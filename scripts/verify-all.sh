@@ -99,7 +99,11 @@ if [ $FAILED -eq 0 ]; then
   echo -e "${GREEN}✓ All services verified!${NC}"
   echo ""
   echo "📍 Access services at:"
+<<<<<<< HEAD
   echo "   Frontend:          http://localhost:5173"
+=======
+  echo "   Frontend:          http://localhost:3000"
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   echo "   Commercial Bank:   http://localhost:3001/health"
   echo "   Custom Authorities: http://localhost:3002/health"
   echo "   ECTA:              http://localhost:3003/health"

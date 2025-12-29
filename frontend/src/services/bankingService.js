@@ -15,7 +15,11 @@ const bankingService = {
    */
   getPendingDocuments: async (filter = null) => {
     const params = filter ? { status: filter } : {};
+<<<<<<< HEAD
     const response = await apiClient.get('/banking/documents', { params });
+=======
+    const response = await apiClient.get('/api/banking/documents', { params });
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     return response.data;
   },
 
@@ -52,7 +56,11 @@ const bankingService = {
    */
   getFinancingRequests: async (filter = null) => {
     const params = filter ? { status: filter } : {};
+<<<<<<< HEAD
     const response = await apiClient.get('/banking/financing', { params });
+=======
+    const response = await apiClient.get('/api/banking/financing', { params });
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     return response.data;
   },
 
@@ -89,7 +97,11 @@ const bankingService = {
    */
   getComplianceChecks: async (filter = null) => {
     const params = filter ? { status: filter } : {};
+<<<<<<< HEAD
     const response = await apiClient.get('/banking/compliance', { params });
+=======
+    const response = await apiClient.get('/api/banking/compliance', { params });
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     return response.data;
   },
 
@@ -105,7 +117,11 @@ const bankingService = {
    * Run compliance check
    */
   runComplianceCheck: async (exporterId, checkType) => {
+<<<<<<< HEAD
     const response = await apiClient.post('/banking/compliance/run', { exporterId, checkType });
+=======
+    const response = await apiClient.post('/api/banking/compliance/run', { exporterId, checkType });
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     return response.data;
   },
 
@@ -118,7 +134,11 @@ const bankingService = {
    */
   getAllExportRequests: async (filter = null) => {
     const params = filter ? { status: filter } : {};
+<<<<<<< HEAD
     const response = await apiClient.get('/banking/exports', { params });
+=======
+    const response = await apiClient.get('/api/banking/exports', { params });
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     return response.data;
   },
 
@@ -146,7 +166,11 @@ const bankingService = {
    * Get blockchain transaction history
    */
   getBlockchainTransactions: async () => {
+<<<<<<< HEAD
     const response = await apiClient.get('/banking/blockchain/transactions');
+=======
+    const response = await apiClient.get('/api/banking/blockchain/transactions');
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     return response.data;
   },
 
@@ -154,7 +178,11 @@ const bankingService = {
    * Get blockchain network status
    */
   getNetworkStatus: async () => {
+<<<<<<< HEAD
     const response = await apiClient.get('/banking/blockchain/status');
+=======
+    const response = await apiClient.get('/api/banking/blockchain/status');
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     return response.data;
   },
 
@@ -162,7 +190,11 @@ const bankingService = {
    * Get peer information
    */
   getPeerInfo: async () => {
+<<<<<<< HEAD
     const response = await apiClient.get('/banking/blockchain/peers');
+=======
+    const response = await apiClient.get('/api/banking/blockchain/peers');
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     return response.data;
   },
 
@@ -174,7 +206,11 @@ const bankingService = {
    * Get exporter portal requests
    */
   getExporterPortalRequests: async () => {
+<<<<<<< HEAD
     const response = await apiClient.get('/banking/gateway/exporter-requests');
+=======
+    const response = await apiClient.get('/api/banking/gateway/exporter-requests');
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     return response.data;
   },
 
@@ -182,7 +218,11 @@ const bankingService = {
    * Get API gateway logs
    */
   getGatewayLogs: async () => {
+<<<<<<< HEAD
     const response = await apiClient.get('/banking/gateway/logs');
+=======
+    const response = await apiClient.get('/api/banking/gateway/logs');
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     return response.data;
   },
 
@@ -194,7 +234,11 @@ const bankingService = {
    * Get banking statistics
    */
   getBankingStatistics: async () => {
+<<<<<<< HEAD
     const response = await apiClient.get('/exports/dashboard/stats');
+=======
+    const response = await apiClient.get('/api/banking/statistics');
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     return response.data;
   },
 };

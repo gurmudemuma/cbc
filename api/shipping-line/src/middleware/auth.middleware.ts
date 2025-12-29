@@ -1,6 +1,10 @@
 import { Request, Response, NextFunction } from "express";
 import jwt, { JwtPayload } from "jsonwebtoken";
+<<<<<<< HEAD
 import { SecurityConfig } from "@shared/security.config";
+=======
+import { SecurityConfig } from "../../../shared/security.config";
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
 // Define the structure of the JWT payload
 interface AuthJWTPayload extends JwtPayload {

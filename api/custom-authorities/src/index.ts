@@ -8,14 +8,22 @@ import { createServer } from "http";
 import customsRoutes from "./routes/customs.routes";
 import authRoutes from "./routes/auth.routes";
 import exportRoutes from "./routes/export.routes";
+<<<<<<< HEAD
 import { errorHandler } from "@shared/middleware/error.middleware";
 import { initializeWebSocket } from "@shared/websocket.service";
 import { envValidator } from "@shared/env.validator";
 import { createLogger, httpLogger } from "@shared/logger";
+=======
+import { errorHandler } from "../../shared/middleware/error.middleware";
+import { initializeWebSocket } from "../../shared/websocket.service";
+import { envValidator } from "../../shared/env.validator";
+import { createLogger, httpLogger } from "../../shared/logger";
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 import {
   applySecurityMiddleware,
   createRateLimiters,
   getCorsConfig,
+<<<<<<< HEAD
 } from "@shared/security.best-practices";
 import { CacheService } from "@shared/cache.service";
 import { monitoringService } from "@shared/monitoring.service";
@@ -24,6 +32,16 @@ import swaggerUi from "swagger-ui-express";
 import swaggerJsdoc from "swagger-jsdoc";
 import { swaggerOptions } from "@shared/swagger.config";
 import { getPool } from "@shared/database/pool";
+=======
+} from "../../shared/security.best-practices";
+import { CacheService } from "../../shared/cache.service";
+import { monitoringService } from "../../shared/monitoring.service";
+import { monitoringMiddleware, errorMonitoringMiddleware } from "../../shared/middleware/monitoring.middleware";
+import swaggerUi from "swagger-ui-express";
+import swaggerJsdoc from "swagger-jsdoc";
+import { swaggerOptions } from "../../shared/swagger.config";
+import { getPool } from "../../shared/database/pool";
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
 // Initialize logger
 const logger = createLogger('CustomAuthoritiesAPI');

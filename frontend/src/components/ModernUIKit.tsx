@@ -69,6 +69,7 @@ export const ModernStatCard: React.FC<StatCardProps> = ({
         sx={{
           cursor: onClick ? 'pointer' : 'default',
           height: '100%',
+<<<<<<< HEAD
           background: theme.palette.mode === 'dark'
             ? `linear-gradient(135deg, ${alpha(colorMap[color], 0.25)} 0%, ${alpha(theme.palette.background.paper, 0.6)} 100%)`
             : `linear-gradient(135deg, ${alpha(colorMap[color], 0.05)} 0%, #FFFFFF 100%)`,
@@ -109,21 +110,41 @@ export const ModernStatCard: React.FC<StatCardProps> = ({
         }}
       >
         <CardContent sx={{ p: 3, '&:last-child': { pb: 3 }, position: 'relative', zIndex: 1 }}>
+=======
+          background: `linear-gradient(135deg, ${alpha(colorMap[color], 0.05)}, ${alpha(colorMap[color], 0.02)})`,
+          border: `1px solid ${alpha(colorMap[color], 0.1)}`,
+          transition: 'all 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+          '&:hover': {
+            boxShadow: `0 12px 24px ${alpha(colorMap[color], 0.15)}`,
+            borderColor: alpha(colorMap[color], 0.2),
+          },
+        }}
+      >
+        <CardContent>
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           <Stack spacing={2}>
             {/* Header with Icon */}
             <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
               <Box>
+<<<<<<< HEAD
                 <Typography variant="caption" sx={{ fontWeight: 700, color: theme.palette.text.secondary, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+=======
+                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
                   {title}
                 </Typography>
               </Box>
               {icon && (
                 <Box
+<<<<<<< HEAD
                   className="icon-box"
+=======
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
                   sx={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
+<<<<<<< HEAD
                     width: 48,
                     height: 48,
                     borderRadius: '16px',
@@ -131,6 +152,13 @@ export const ModernStatCard: React.FC<StatCardProps> = ({
                     color: colorMap[color],
                     boxShadow: `0 8px 16px ${alpha(colorMap[color], 0.1)}`,
                     transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+=======
+                    width: 40,
+                    height: 40,
+                    borderRadius: 2,
+                    background: alpha(colorMap[color], 0.1),
+                    color: colorMap[color],
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
                   }}
                 >
                   {icon}
@@ -141,6 +169,7 @@ export const ModernStatCard: React.FC<StatCardProps> = ({
             {/* Value */}
             <Box>
               <Typography
+<<<<<<< HEAD
                 variant="h3"
                 sx={{
                   fontWeight: 800,
@@ -152,12 +181,23 @@ export const ModernStatCard: React.FC<StatCardProps> = ({
                   mb: 0.5,
                   fontSize: '2.25rem',
                   letterSpacing: '-0.02em'
+=======
+                variant="h4"
+                sx={{
+                  fontWeight: 700,
+                  color: colorMap[color],
+                  mb: 0.5,
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
                 }}
               >
                 {value}
               </Typography>
               {subtitle && (
+<<<<<<< HEAD
                 <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontWeight: 500 }}>
+=======
+                <Typography variant="caption" color="text.secondary">
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
                   {subtitle}
                 </Typography>
               )}
@@ -167,6 +207,7 @@ export const ModernStatCard: React.FC<StatCardProps> = ({
             {trend && (
               <Stack direction="row" alignItems="center" spacing={0.5}>
                 {trend.direction === 'up' && (
+<<<<<<< HEAD
                   <Chip
                     size="small"
                     component="span"
@@ -183,6 +224,22 @@ export const ModernStatCard: React.FC<StatCardProps> = ({
                     label={`${trend.value}%`}
                     sx={{ bgcolor: alpha('#EF4444', 0.1), color: '#EF4444', fontWeight: 600, height: 24 }}
                   />
+=======
+                  <>
+                    <TrendingUp size={14} style={{ color: '#10B981' }} />
+                    <Typography variant="caption" sx={{ color: '#10B981', fontWeight: 600 }}>
+                      +{trend.value}%
+                    </Typography>
+                  </>
+                )}
+                {trend.direction === 'down' && (
+                  <>
+                    <TrendingDown size={14} style={{ color: '#EF4444' }} />
+                    <Typography variant="caption" sx={{ color: '#EF4444', fontWeight: 600 }}>
+                      -{trend.value}%
+                    </Typography>
+                  </>
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
                 )}
                 {trend.direction === 'neutral' && (
                   <Typography variant="caption" color="text.secondary">
@@ -233,18 +290,27 @@ export const ModernProgressCard: React.FC<ProgressCardProps> = ({
   return (
     <Card
       sx={{
+<<<<<<< HEAD
         background: theme.palette.mode === 'dark'
           ? alpha(theme.palette.background.paper, 0.6)
           : '#FFFFFF',
         border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
         boxShadow: 'none',
         borderRadius: 3,
+=======
+        background: `linear-gradient(135deg, ${alpha(colorMap[color], 0.05)}, ${alpha(colorMap[color], 0.02)})`,
+        border: `1px solid ${alpha(colorMap[color], 0.1)}`,
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       }}
     >
       <CardContent>
         <Stack spacing={2}>
           <Stack direction="row" justifyContent="space-between" alignItems="center">
+<<<<<<< HEAD
             <Typography variant="subtitle2" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
+=======
+            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
               {title}
             </Typography>
             {showPercentage && (
@@ -359,7 +425,11 @@ export const ModernStatusBadge: React.FC<StatusBadgeProps> = ({
         fontSize: sizeConfig.fontSize,
         transition: 'all 200ms ease',
         '&:hover': {
+<<<<<<< HEAD
           transform: 'scale(1.02)',
+=======
+          transform: 'scale(1.05)',
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         },
       }}
     >
@@ -399,6 +469,7 @@ export const ModernEmptyState: React.FC<EmptyStateProps> = ({
         py: 8,
         px: 3,
         textAlign: 'center',
+<<<<<<< HEAD
         background: 'rgba(0,0,0,0.02)',
         borderRadius: 4,
         border: '1px dashed rgba(0,0,0,0.1)',
@@ -406,6 +477,12 @@ export const ModernEmptyState: React.FC<EmptyStateProps> = ({
     >
       {icon && (
         <Box sx={{ mb: 2, opacity: 0.5, transform: 'scale(1.2)' }}>
+=======
+      }}
+    >
+      {icon && (
+        <Box sx={{ mb: 2, opacity: 0.5 }}>
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           {icon}
         </Box>
       )}
@@ -454,6 +531,7 @@ export const ModernFeatureCard: React.FC<FeatureCardProps> = ({
           cursor: onClick ? 'pointer' : 'default',
           height: '100%',
           transition: 'all 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+<<<<<<< HEAD
           borderRadius: 4,
           border: '1px solid rgba(0,0,0,0.05)',
           '&:hover': {
@@ -463,25 +541,46 @@ export const ModernFeatureCard: React.FC<FeatureCardProps> = ({
         }}
       >
         <CardContent sx={{ p: 4 }}>
+=======
+          '&:hover': {
+            boxShadow: '0 12px 24px rgba(0, 0, 0, 0.1)',
+          },
+        }}
+      >
+        <CardContent>
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           <Stack spacing={2}>
             <Box
               sx={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+<<<<<<< HEAD
                 width: 64,
                 height: 64,
                 borderRadius: 3,
+=======
+                width: 56,
+                height: 56,
+                borderRadius: 2,
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
                 background: 'linear-gradient(135deg, rgba(66, 66, 66, 0.1), rgba(66, 66, 66, 0.05))',
               }}
             >
               {icon}
             </Box>
             <Box>
+<<<<<<< HEAD
               <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
                 {title}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
+=======
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                {title}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
                 {description}
               </Typography>
             </Box>
@@ -517,24 +616,41 @@ export const ModernMetricDisplay: React.FC<MetricDisplayProps> = ({
     <Box
       sx={{
         p: 2,
+<<<<<<< HEAD
         borderRadius: 3,
         background: alpha(theme.palette.primary.main, 0.03),
+=======
+        borderRadius: 2,
+        background: alpha(theme.palette.primary.main, 0.05),
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
       }}
     >
       <Stack spacing={1}>
         <Stack direction="row" justifyContent="space-between" alignItems="center">
+<<<<<<< HEAD
           <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, letterSpacing: '0.02em', textTransform: 'uppercase' }}>
+=======
+          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
             {label}
           </Typography>
           {icon && <Box sx={{ opacity: 0.6 }}>{icon}</Box>}
         </Stack>
         <Stack direction="row" alignItems="baseline" spacing={0.5}>
+<<<<<<< HEAD
           <Typography variant="h4" sx={{ fontWeight: 700, color: 'text.primary' }}>
             {value}
           </Typography>
           {unit && (
             <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+=======
+          <Typography variant="h5" sx={{ fontWeight: 700 }}>
+            {value}
+          </Typography>
+          {unit && (
+            <Typography variant="caption" color="text.secondary">
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
               {unit}
             </Typography>
           )}
@@ -543,14 +659,22 @@ export const ModernMetricDisplay: React.FC<MetricDisplayProps> = ({
           <Stack direction="row" alignItems="center" spacing={0.5}>
             {change > 0 ? (
               <>
+<<<<<<< HEAD
                 <TrendingUp size={14} style={{ color: '#10B981' }} />
+=======
+                <TrendingUp size={12} style={{ color: '#10B981' }} />
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
                 <Typography variant="caption" sx={{ color: '#10B981', fontWeight: 600 }}>
                   +{change}%
                 </Typography>
               </>
             ) : (
               <>
+<<<<<<< HEAD
                 <TrendingDown size={14} style={{ color: '#EF4444' }} />
+=======
+                <TrendingDown size={12} style={{ color: '#EF4444' }} />
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
                 <Typography variant="caption" sx={{ color: '#EF4444', fontWeight: 600 }}>
                   {change}%
                 </Typography>
@@ -582,6 +706,7 @@ export const ModernSectionHeader: React.FC<SectionHeaderProps> = ({
     <Stack
       direction="row"
       justifyContent="space-between"
+<<<<<<< HEAD
       alignItems="flex-end"
       sx={{ mb: 4, mt: 2 }}
     >
@@ -591,11 +716,26 @@ export const ModernSectionHeader: React.FC<SectionHeaderProps> = ({
         </Typography>
         {subtitle && (
           <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 600 }}>
+=======
+      alignItems="flex-start"
+      sx={{ mb: 3 }}
+    >
+      <Box>
+        <Typography variant="h5" sx={{ fontWeight: 700, mb: subtitle ? 0.5 : 0 }}>
+          {title}
+        </Typography>
+        {subtitle && (
+          <Typography variant="body2" color="text.secondary">
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
             {subtitle}
           </Typography>
         )}
       </Box>
+<<<<<<< HEAD
       {action && <Box sx={{ mb: 0.5 }}>{action}</Box>}
+=======
+      {action && <Box>{action}</Box>}
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     </Stack>
   );
 };

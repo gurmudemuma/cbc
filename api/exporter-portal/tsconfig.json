@@ -2,6 +2,7 @@
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "./dist",
+<<<<<<< HEAD
     "skipLibCheck": true,
     "noEmitOnError": false,
     "baseUrl": "..",
@@ -21,3 +22,15 @@
     "**/*.test.ts"
   ]
 }
+=======
+    "baseUrl": "./",
+    "paths": {
+      "@/*": ["src/*"]
+    },
+    "skipLibCheck": true,
+    "noEmitOnError": false
+  },
+  "include": ["src/**/*", "../shared/**/*"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts"]
+}
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665

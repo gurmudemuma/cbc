@@ -14,7 +14,11 @@ Get CBC running in 5 minutes:
 ./scripts/verify-all.sh
 
 # 3. Access frontend
+<<<<<<< HEAD
 # Open http://localhost:5173 in your browser
+=======
+# Open http://localhost:3000 in your browser
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 ```
 
 **That's it!** All services are now running.
@@ -47,7 +51,11 @@ Once running, access services at:
 
 | Service | URL | Port |
 |---------|-----|------|
+<<<<<<< HEAD
 | Frontend | http://localhost:5173 | 5173 |
+=======
+| Frontend | http://localhost:3000 | 3000 |
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 | Commercial Bank API | http://localhost:3001 | 3001 |
 | Custom Authorities API | http://localhost:3002 | 3002 |
 | ECTA API | http://localhost:3003 | 3003 |
@@ -236,7 +244,11 @@ See LICENSE file for details.
 1. **Read**: [Quick Start Guide](./docs/QUICK_START.md)
 2. **Run**: `./scripts/start-all.sh`
 3. **Verify**: `./scripts/verify-all.sh`
+<<<<<<< HEAD
 4. **Access**: http://localhost:5173
+=======
+4. **Access**: http://localhost:3000
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 5. **Explore**: [Full Documentation](./docs/README.md)
 
 ---

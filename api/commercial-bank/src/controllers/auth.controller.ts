@@ -1,10 +1,17 @@
 import { Request, Response, NextFunction } from "express";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import bcrypt from "bcryptjs";
+<<<<<<< HEAD
 import { pool } from "@shared/database/pool";
 import { SecurityConfig } from "@shared/security.config";
 import { createLogger } from "@shared/logger";
 import { ErrorCode, AppError } from "@shared/error-codes";
+=======
+import { pool } from "../../../shared/database/pool";
+import { SecurityConfig } from "../../../shared/security.config";
+import { createLogger } from "../../../shared/logger";
+import { ErrorCode, AppError } from "../../../shared/error-codes";
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
 const logger = createLogger('CommercialBankAuthController');
 

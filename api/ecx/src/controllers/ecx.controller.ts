@@ -4,9 +4,15 @@
  */
 
 import { Request, Response } from 'express';
+<<<<<<< HEAD
 import { pool } from '@shared/database/pool';
 import { createLogger } from '@shared/logger';
 import { ErrorCode, AppError } from '@shared/error-codes';
+=======
+import { pool } from '../../../shared/database/pool';
+import { createLogger } from '../../../shared/logger';
+import { ErrorCode, AppError } from '../../../shared/error-codes';
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
 const logger = createLogger('ECXController');
 
@@ -206,8 +212,13 @@ export class ECXController {
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW())
          RETURNING *`,
         [exportId, commercialBankId, exporterName, exporterTIN, exportLicenseNumber, coffeeType,
+<<<<<<< HEAD
           quantity, destinationCountry, estimatedValue, ecxLotNumber, warehouseLocation,
           warehouseReceiptNumber, 'ECX_CREATED']
+=======
+         quantity, destinationCountry, estimatedValue, ecxLotNumber, warehouseLocation,
+         warehouseReceiptNumber, 'ECX_CREATED']
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       );
 
       await client.query('COMMIT');

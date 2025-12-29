@@ -11,8 +11,13 @@ import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 import ecxRoutes from './routes/ecx.routes';
 import lotVerificationRoutes from './routes/lot-verification.routes';
+<<<<<<< HEAD
 import { createLogger } from '@shared/logger';
 import { getPool } from '@shared/database/pool';
+=======
+import { createLogger } from '../../shared/logger';
+import { getPool } from '../../shared/database/pool';
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
 // Load environment variables
 dotenv.config();

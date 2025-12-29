@@ -28,9 +28,14 @@ import {
 import { motion } from 'framer-motion';
 import { CommonPageProps } from '../types';
 import exporterService from '../services/exporterService';
+<<<<<<< HEAD
 import ExporterDashboard from '../components/ExporterDashboard';
 
 interface ExporterProfileProps extends CommonPageProps { }
+=======
+
+interface ExporterProfileProps extends CommonPageProps {}
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
 const ExporterProfile = ({ user, org }: ExporterProfileProps): JSX.Element => {
   const [activeTab, setActiveTab] = useState(0);
@@ -82,7 +87,11 @@ const ExporterProfile = ({ user, org }: ExporterProfileProps): JSX.Element => {
       try {
         const profile = await exporterService.getProfile();
         const verification = await exporterService.getVerificationStatus();
+<<<<<<< HEAD
 
+=======
+        
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         setProfileData({
           personalInfo: {
             fullName: profile.fullName || user?.username || '',
@@ -194,7 +203,10 @@ const ExporterProfile = ({ user, org }: ExporterProfileProps): JSX.Element => {
             <Tab icon={<User size={20} />} label="Personal Info" />
             <Tab icon={<Building size={20} />} label="Business Info" />
             <Tab icon={<CheckCircle size={20} />} label="Verification Status" />
+<<<<<<< HEAD
             <Tab label="Dashboard" />
+=======
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           </Tabs>
 
           {/* Personal Information Tab */}
@@ -322,7 +334,11 @@ const ExporterProfile = ({ user, org }: ExporterProfileProps): JSX.Element => {
                   Complete all verification steps to unlock full exporter capabilities.
                 </Alert>
               </Grid>
+<<<<<<< HEAD
 
+=======
+              
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
               <Grid item xs={12} md={6}>
                 <Card variant="outlined">
                   <CardContent>
@@ -389,6 +405,7 @@ const ExporterProfile = ({ user, org }: ExporterProfileProps): JSX.Element => {
             </Grid>
           </TabPanel>
 
+<<<<<<< HEAD
           {/* 360-Degree Dashboard Tab */}
           <TabPanel value={activeTab} index={3}>
             <ExporterDashboard exporterId={user?.id} />
@@ -396,6 +413,10 @@ const ExporterProfile = ({ user, org }: ExporterProfileProps): JSX.Element => {
 
           <Divider />
 
+=======
+          <Divider />
+          
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           <Box sx={{ p: 3, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
             {isEditing ? (
               <>

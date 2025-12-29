@@ -1,11 +1,20 @@
 import { Request, Response, NextFunction } from 'express';
 import { JwtPayload } from 'jsonwebtoken';
+<<<<<<< HEAD
 import { pool } from '@shared/database/pool';
 import { CacheService, CacheKeys, CacheTTL } from '@shared/cache.service';
 import { auditService, AuditAction } from '@shared/audit.service';
 import { ErrorCode, AppError } from '@shared/error-codes';
 import { ectaPreRegistrationService } from '@shared/services/ecta-preregistration.service';
 import { createLogger } from '@shared/logger';
+=======
+import { pool } from '../../../shared/database/pool';
+import { CacheService, CacheKeys, CacheTTL } from '../../../shared/cache.service';
+import { auditService, AuditAction } from '../../../shared/audit.service';
+import { ErrorCode, AppError } from '../../../shared/error-codes';
+import { ectaPreRegistrationService } from '../../../shared/services/ecta-preregistration.service';
+import { createLogger } from '../../../shared/logger';
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
 const logger = createLogger('ExportPostgresController');
 
@@ -44,7 +53,11 @@ export class ExportPostgresController {
       // Validate exporter pre-registration status
       if (exportData.exporterId) {
         const canExport = await ectaPreRegistrationService.canCreateExportRequest(exportData.exporterId);
+<<<<<<< HEAD
 
+=======
+        
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         if (!canExport.allowed) {
           res.status(403).json({
             success: false,
@@ -538,7 +551,10 @@ export class ExportPostgresController {
       return;
     }
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     // Log unexpected errors
     logger.error('Unexpected error', { error: error.message, stack: error.stack });
 
@@ -551,6 +567,7 @@ export class ExportPostgresController {
       },
     });
   }
+<<<<<<< HEAD
 
   /**
    * Get dashboard statistics for Commercial Bank
@@ -618,4 +635,6 @@ export class ExportPostgresController {
       this.handleError(error, res);
     }
   };
+=======
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 }

@@ -23,6 +23,7 @@ import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { config } from "./config/index";
+<<<<<<< HEAD
 import { createLogger, httpLogger } from "@shared/logger";
 import authRoutes from "./routes/auth.routes";
 import exportRoutes from "./routes/export.routes";
@@ -36,6 +37,16 @@ import {
   getCorsConfig,
 } from "@shared/security.best-practices";
 import { monitoringService } from "@shared/monitoring.service";
+=======
+import { createLogger, httpLogger } from "../../shared/logger";
+import authRoutes from "./routes/auth.routes";
+import exportRoutes from "./routes/export.routes";
+import exporterRoutes from "./routes/exporter.routes";
+import { getPool } from "../../shared/database/pool";
+import { errorHandler } from "../../shared/middleware/error.middleware";
+import { monitoringMiddleware, errorMonitoringMiddleware } from "../../shared/middleware/monitoring.middleware";
+import { monitoringService } from "../../shared/monitoring.service";
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
 const logger = createLogger('ExporterPortalAPI');
 const app = express();

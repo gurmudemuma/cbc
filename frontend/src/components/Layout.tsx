@@ -65,6 +65,7 @@ const drawerWidth = 260;
 const collapsedWidth = 80;
 
 // Styled components
+<<<<<<< HEAD
 // Styled components
 const StyledAppBar = styled(AppBar)(({ theme }) => ({
   zIndex: theme.zIndex.drawer + 1,
@@ -80,6 +81,19 @@ const StyledAppBar = styled(AppBar)(({ theme }) => ({
     duration: theme.transitions.duration.leavingScreen,
   }),
   color: theme.palette.text.primary,
+=======
+const StyledAppBar = styled(AppBar)(({ theme }) => ({
+  zIndex: theme.zIndex.drawer + 1,
+  background: theme.palette.background.paper,
+  borderBottom: `1px solid ${theme.palette.divider}`,
+  boxShadow: theme.shadows[1],
+  backdropFilter: 'blur(8px)',
+  WebkitBackdropFilter: 'blur(8px)',
+  transition: theme.transitions.create(['width', 'margin'], {
+    easing: theme.transitions.easing.sharp,
+    duration: theme.transitions.duration.leavingScreen,
+  }),
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 }));
 
 const StyledDrawer = styled(Drawer, {
@@ -96,6 +110,7 @@ const StyledDrawer = styled(Drawer, {
       duration: theme.transitions.duration.enteringScreen,
     }),
     overflowX: 'hidden',
+<<<<<<< HEAD
     background: theme.palette.mode === 'dark'
       ? theme.palette.background.default
       : '#ffffff',
@@ -103,12 +118,20 @@ const StyledDrawer = styled(Drawer, {
     boxShadow: 'none',
     position: 'fixed',
     top: 64, // Below the AppBar
+=======
+    background: theme.palette.background.default,
+    borderRight: `1px solid ${theme.palette.divider}`,
+    boxShadow: 'none',
+    position: 'fixed',
+    top: 64,
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     left: 0,
     height: 'calc(100vh - 64px)',
     '&:hover': {
       '& .MuiListItemIcon': {
         opacity: 1,
       },
+<<<<<<< HEAD
       '&::-webkit-scrollbar-thumb': {
         visibility: 'visible',
       }
@@ -123,6 +146,8 @@ const StyledDrawer = styled(Drawer, {
       background: theme.palette.divider,
       borderRadius: '3px',
       visibility: 'hidden',
+=======
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     },
   },
 }));
@@ -130,6 +155,7 @@ const StyledDrawer = styled(Drawer, {
 const StyledListItemButton = styled(ListItemButton, {
   shouldForwardProp: (prop) => prop !== 'active' && prop !== 'collapsed',
 })<{ active?: boolean; collapsed?: boolean }>(({ theme, active, collapsed }) => ({
+<<<<<<< HEAD
   borderRadius: 12,
   margin: theme.spacing(0.5, 1.5),
   padding: theme.spacing(1.25, 2),
@@ -150,10 +176,39 @@ const StyledListItemButton = styled(ListItemButton, {
     },
     '& .MuiListItemIcon-root': {
       color: theme.palette.primary.main,
+=======
+  borderRadius: theme.shape.borderRadius,
+  margin: theme.spacing(0.5, 1.5),
+  padding: theme.spacing(1.25, 2),
+  transition: theme.transitions.create(
+    ['background-color', 'transform', 'padding', 'box-shadow'],
+    {
+      duration: theme.transitions.duration.shorter,
+      easing: theme.transitions.easing.easeInOut,
+    }
+  ),
+  position: 'relative',
+  overflow: 'hidden',
+  '&:hover': {
+    backgroundColor: theme.palette.action.hover,
+    transform: 'translateX(4px)',
+    boxShadow: theme.shadows[2],
+  },
+  ...(active && {
+    backgroundColor: theme.palette.primary.main,
+    color: theme.palette.primary.contrastText,
+    '&:hover': {
+      backgroundColor: theme.palette.primary.dark,
+      transform: 'translateX(4px)',
+    },
+    '& .MuiListItemIcon-root': {
+      color: theme.palette.primary.contrastText,
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     },
     '&::before': {
       content: '""',
       position: 'absolute',
+<<<<<<< HEAD
       left: 0,
       top: '50%',
       transform: 'translateY(-50%)',
@@ -162,18 +217,33 @@ const StyledListItemButton = styled(ListItemButton, {
       backgroundColor: theme.palette.primary.main,
       borderTopRightRadius: 4,
       borderBottomRightRadius: 4,
+=======
+      left: -4,
+      top: '50%',
+      transform: 'translateY(-50%)',
+      width: 8,
+      height: '60%',
+      backgroundColor: theme.palette.primary.contrastText,
+      borderRadius: theme.shape.borderRadius,
+      boxShadow: theme.shadows[2],
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     },
   }),
   ...(collapsed && {
     justifyContent: 'center',
     padding: theme.spacing(1.5),
+<<<<<<< HEAD
     minWidth: 48,
+=======
+    minWidth: 40,
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     '& .MuiListItemText-root': {
       display: 'none',
     },
     '& .MuiListItemIcon-root': {
       minWidth: 'auto',
       margin: 0,
+<<<<<<< HEAD
     },
     '&:hover': {
       transform: 'none',
@@ -184,6 +254,21 @@ const StyledListItemButton = styled(ListItemButton, {
     '& .MuiListItemIcon-root': {
       color: theme.palette.text.secondary,
       transition: 'color 0.2s',
+=======
+      opacity: 0.9,
+    },
+    '&:hover': {
+      transform: 'scale(1.1)',
+    },
+  }),
+  ...(!active && {
+    '&:hover': {
+      backgroundColor: theme.palette.action.hover,
+      transform: 'translateX(2px)',
+    },
+    '& .MuiListItemIcon-root': {
+      color: theme.palette.text.secondary,
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     },
   })
 }));
@@ -193,9 +278,14 @@ const DrawerHeader = styled('div')(({ theme }) => ({
   alignItems: 'center',
   justifyContent: 'space-between',
   padding: theme.spacing(2),
+<<<<<<< HEAD
   // Removed border for cleaner look, or make it very subtle
   // borderBottom: `1px solid ${theme.palette.divider}`,
   background: 'transparent',
+=======
+  borderBottom: `1px solid ${theme.palette.divider}`,
+  background: theme.palette.background.paper,
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   ...theme.mixins.toolbar,
 }));
 
@@ -204,10 +294,15 @@ const Main = styled('main', {
 })<{ open?: boolean; collapsed?: boolean }>(({ theme, open, collapsed }) => ({
   flexGrow: 1,
   paddingTop: '64px',
+<<<<<<< HEAD
+=======
+  paddingLeft: 0,
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   transition: theme.transitions.create(['margin', 'padding'], {
     easing: theme.transitions.easing.sharp,
     duration: theme.transitions.duration.leavingScreen,
   }),
+<<<<<<< HEAD
   marginLeft: 0,
   backgroundColor: theme.palette.background.default,
   minHeight: '100vh',
@@ -217,6 +312,23 @@ const ContentWrapper = styled('div')(({ theme }) => ({
   padding: theme.spacing(4),
   maxWidth: 1600,
   margin: '0 auto',
+=======
+  marginLeft: collapsed ? collapsedWidth : drawerWidth,
+  backgroundColor: theme.palette.background.default,
+  minHeight: '100vh',
+  [theme.breakpoints.down('md')]: {
+    marginLeft: 0,
+    paddingTop: '56px',
+    paddingLeft: 0,
+  },
+}));
+
+const ContentWrapper = styled('div')(({ theme }) => ({
+  paddingTop: theme.spacing(3),
+  paddingRight: theme.spacing(3),
+  paddingBottom: theme.spacing(3),
+  paddingLeft: 0,
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   [theme.breakpoints.down('md')]: {
     padding: theme.spacing(2),
   },
@@ -227,11 +339,19 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+<<<<<<< HEAD
 
   // Priority 2 State
   const { settings, updateSettings } = useAccessibilitySettings();
   const [showAccessibility, setShowAccessibility] = useState(false);
 
+=======
+  
+  // Priority 2 State
+  const { settings, updateSettings } = useAccessibilitySettings();
+  const [showAccessibility, setShowAccessibility] = useState(false);
+  
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [expandedItems, setExpandedItems] = useState({});
@@ -266,10 +386,17 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
   const getRoleNavigation = () => {
     const orgLower = (org || user?.organizationId || '').toLowerCase();
     const userRole = user?.role?.toLowerCase();
+<<<<<<< HEAD
 
     // Define organization checks
     const isCommercialBank = orgLower === 'commercial-bank' || orgLower === 'commercialbank';
 
+=======
+    
+    // Define organization checks
+    const isCommercialBank = orgLower === 'commercial-bank' || orgLower === 'commercialbank';
+    
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     // Define permission checks
     const canCreateExports = userRole === 'exporter' || userRole === 'admin' || isCommercialBank;
 
@@ -277,9 +404,15 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
     // Exporter Portal - External exporters (SDK-based, non-consortium)
     if (orgLower === 'exporter-portal' || orgLower === 'exporterportal') {
       return [
+<<<<<<< HEAD
         {
           name: 'Exporter Profile',
           path: '/profile',
+=======
+        { 
+          name: 'Exporter Profile', 
+          path: '/profile', 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           icon: User,
           children: [
             { name: 'My Profile', path: '/profile', icon: User },
@@ -287,6 +420,7 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
             { name: 'Verification Status', path: '/profile/verification', icon: CheckCircle },
           ]
         },
+<<<<<<< HEAD
         {
           name: 'Pre-Registration',
           path: '/pre-registration',
@@ -295,11 +429,21 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
             { name: 'Qualification Progress', path: '/pre-registration', icon: FileCheck },
             { name: 'Profile Registration', path: '/pre-registration?step=0', icon: Building },
             { name: 'Laboratory Certification', path: '/pre-registration?step=1', icon: Award },
+=======
+        { 
+          name: 'Pre-Registration', 
+          path: '/pre-registration', 
+          icon: UserCheck,
+          children: [
+            { name: 'Profile Registration', path: '/pre-registration?step=0', icon: Building },
+            { name: 'Laboratory Registration', path: '/pre-registration?step=1', icon: FileCheck },
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
             { name: 'Taster Registration', path: '/pre-registration?step=2', icon: User },
             { name: 'Competence Certificate', path: '/pre-registration?step=3', icon: Award },
             { name: 'Export License', path: '/pre-registration?step=4', icon: FileText },
           ]
         },
+<<<<<<< HEAD
         {
           name: 'Contract Management',
           path: '/contracts',
@@ -315,6 +459,11 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
         {
           name: 'My Applications',
           path: '/applications',
+=======
+        { 
+          name: 'My Applications', 
+          path: '/applications', 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           icon: FileText,
           children: [
             { name: 'Pending Applications', path: '/applications', icon: FileText, filter: 'PENDING', badge: badgeCounts.PENDING },
@@ -323,9 +472,15 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
             { name: 'Rejected', path: '/applications', icon: X, filter: 'FX_REJECTED', badge: badgeCounts.FX_REJECTED },
           ]
         },
+<<<<<<< HEAD
         {
           name: 'Export Dashboard',
           path: '/exports',
+=======
+        { 
+          name: 'Export Dashboard', 
+          path: '/exports', 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           icon: Package,
           children: [
             { name: 'Create Export Request', path: '/exports/new', icon: Plus, disabled: !canCreateExports },
@@ -343,9 +498,15 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
       // Banker role - Banking operations and document verification
       if (userRole === 'bank' || userRole === 'banker' || userRole === 'admin') {
         return [
+<<<<<<< HEAD
           {
             name: 'Banking Operations',
             path: '/banking',
+=======
+          { 
+            name: 'Banking Operations', 
+            path: '/banking', 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
             icon: DollarSign,
             children: [
               { name: 'Document Verification', path: '/banking/documents', icon: FileCheck, filter: 'BANKING_PENDING', badge: badgeCounts.BANKING_PENDING },
@@ -354,9 +515,15 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
               { name: 'Banking Reports', path: '/banking/reports', icon: FileText },
             ]
           },
+<<<<<<< HEAD
           {
             name: 'Export Management',
             path: '/exports',
+=======
+          { 
+            name: 'Export Management', 
+            path: '/exports', 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
             icon: Package,
             children: [
               { name: 'All Export Requests', path: '/exports', icon: Package, filter: 'ALL' },
@@ -365,9 +532,15 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
               { name: 'Rejected', path: '/exports', icon: X, filter: 'BANKING_REJECTED', badge: badgeCounts.BANKING_REJECTED },
             ]
           },
+<<<<<<< HEAD
           {
             name: 'Blockchain Operations',
             path: '/blockchain',
+=======
+          { 
+            name: 'Blockchain Operations', 
+            path: '/blockchain', 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
             icon: Package,
             children: [
               { name: 'Transaction History', path: '/blockchain/transactions', icon: FileText },
@@ -375,9 +548,15 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
               { name: 'Peer Management', path: '/blockchain/peers', icon: Users },
             ]
           },
+<<<<<<< HEAD
           {
             name: 'External Gateway',
             path: '/gateway',
+=======
+          { 
+            name: 'External Gateway', 
+            path: '/gateway', 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
             icon: Users,
             children: [
               { name: 'Exporter Portal Requests', path: '/gateway/exporter-requests', icon: FileText, badge: badgeCounts.PENDING },
@@ -386,6 +565,7 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
           },
         ];
       }
+<<<<<<< HEAD
 
       // Exporter role accessing through Commercial Bank
       if (userRole === 'exporter') {
@@ -393,6 +573,15 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
           {
             name: 'My Export Requests',
             path: '/exports',
+=======
+      
+      // Exporter role accessing through Commercial Bank
+      if (userRole === 'exporter') {
+        return [
+          { 
+            name: 'My Export Requests', 
+            path: '/exports', 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
             icon: Package,
             children: [
               { name: 'Draft Requests', path: '/exports', icon: Package, filter: 'PENDING', badge: badgeCounts.PENDING },
@@ -405,7 +594,11 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
           { name: 'My Documents', path: '/documents', icon: FileText },
         ];
       }
+<<<<<<< HEAD
 
+=======
+      
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       // Default fallback for Commercial Bank
       return [
         { name: 'Export Overview', path: '/exports', icon: Package },
@@ -424,9 +617,15 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
       // Governor role - Can approve FX and manage monetary policy
       if (userRole === 'governor' || userRole === 'admin') {
         return [
+<<<<<<< HEAD
           {
             name: 'FX Management',
             path: '/fx',
+=======
+          { 
+            name: 'FX Management', 
+            path: '/fx', 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
             icon: DollarSign,
             children: [
               { name: 'Pending FX Approvals', path: '/fx/approvals', icon: DollarSign, filter: 'FX_PENDING', badge: badgeCounts.FX_PENDING },
@@ -435,9 +634,15 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
               { name: 'FX Rate Management', path: '/fx/rates', icon: DollarSign },
             ]
           },
+<<<<<<< HEAD
           {
             name: 'Monetary Policy',
             path: '/monetary',
+=======
+          { 
+            name: 'Monetary Policy', 
+            path: '/monetary', 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
             icon: Building,
             children: [
               { name: 'Policy Dashboard', path: '/monetary/dashboard', icon: Building },
@@ -445,9 +650,15 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
               { name: 'Compliance Monitoring', path: '/monetary/compliance', icon: FileCheck },
             ]
           },
+<<<<<<< HEAD
           {
             name: 'Export Oversight',
             path: '/exports',
+=======
+          { 
+            name: 'Export Oversight', 
+            path: '/exports', 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
             icon: Package,
             children: [
               { name: 'Export Transactions', path: '/exports/transactions', icon: Package },
@@ -455,9 +666,15 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
               { name: 'Regulatory Reports', path: '/exports/reports', icon: FileText },
             ]
           },
+<<<<<<< HEAD
           {
             name: 'System Administration',
             path: '/admin',
+=======
+          { 
+            name: 'System Administration', 
+            path: '/admin', 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
             icon: Settings,
             children: [
               { name: 'User Management', path: '/admin/users', icon: Users },
@@ -467,7 +684,11 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
           },
         ];
       }
+<<<<<<< HEAD
 
+=======
+      
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       // Default fallback for National Bank
       return [
         { name: 'FX Dashboard', path: '/fx', icon: DollarSign },
@@ -479,9 +700,15 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
     // ECX - Ethiopian Commodity Exchange (consortium member)
     if (orgLower === 'ecx') {
       return [
+<<<<<<< HEAD
         {
           name: 'Lot Management',
           path: '/lots',
+=======
+        { 
+          name: 'Lot Management', 
+          path: '/lots', 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           icon: Package,
           children: [
             { name: 'Pending Verification', path: '/lots/pending', icon: Package, filter: 'PENDING' },
@@ -490,9 +717,15 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
             { name: 'Lot Grading', path: '/lots/grading', icon: Award },
           ]
         },
+<<<<<<< HEAD
         {
           name: 'Trading Operations',
           path: '/trading',
+=======
+        { 
+          name: 'Trading Operations', 
+          path: '/trading', 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           icon: DollarSign,
           children: [
             { name: 'Active Trading', path: '/trading/active', icon: DollarSign },
@@ -501,9 +734,15 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
             { name: 'Trading History', path: '/trading/history', icon: FileText },
           ]
         },
+<<<<<<< HEAD
         {
           name: 'Warehouse Management',
           path: '/warehouse',
+=======
+        { 
+          name: 'Warehouse Management', 
+          path: '/warehouse', 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           icon: Building,
           children: [
             { name: 'Warehouse Receipts', path: '/warehouse/receipts', icon: FileText },
@@ -512,9 +751,15 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
             { name: 'Inventory Reports', path: '/warehouse/inventory', icon: FileText },
           ]
         },
+<<<<<<< HEAD
         {
           name: 'Export Verification',
           path: '/exports',
+=======
+        { 
+          name: 'Export Verification', 
+          path: '/exports', 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           icon: Package,
           children: [
             { name: 'Pending ECX Verification', path: '/exports/pending', icon: Package, filter: 'PENDING', badge: badgeCounts.PENDING },
@@ -528,6 +773,7 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
     // ECTA - Ethiopian Coffee & Tea Authority (consortium member)
     if (orgLower === 'ecta') {
       return [
+<<<<<<< HEAD
         {
           name: 'Pre-Registration Management',
           path: '/preregistration',
@@ -579,6 +825,55 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
         {
           name: 'Regulatory Oversight',
           path: '/regulatory',
+=======
+        { 
+          name: 'Pre-Registration Oversight', 
+          path: '/preregistration', 
+          icon: UserCheck,
+          children: [
+            { name: 'Pending Applications', path: '/preregistration/pending', icon: FileText, filter: 'PENDING' },
+            { name: 'Under Review', path: '/preregistration/review', icon: FileCheck, filter: 'FX_PENDING' },
+            { name: 'Approved Applications', path: '/preregistration/approved', icon: CheckCircle, filter: 'FX_APPROVED' },
+            { name: 'Rejected Applications', path: '/preregistration/rejected', icon: X, filter: 'FX_REJECTED' },
+          ]
+        },
+        { 
+          name: 'License Management', 
+          path: '/licenses', 
+          icon: Award,
+          children: [
+            { name: 'License Applications', path: '/licenses/applications', icon: FileText, filter: 'PENDING' },
+            { name: 'Active Licenses', path: '/licenses/active', icon: Award, filter: 'FX_APPROVED' },
+            { name: 'Expired Licenses', path: '/licenses/expired', icon: X, filter: 'COMPLETED' },
+            { name: 'License Renewals', path: '/licenses/renewals', icon: FileCheck },
+          ]
+        },
+        { 
+          name: 'Quality Certification', 
+          path: '/quality', 
+          icon: Award,
+          children: [
+            { name: 'Pending Quality Review', path: '/quality/pending', icon: FileCheck, filter: 'QUALITY_PENDING', badge: badgeCounts.QUALITY_PENDING },
+            { name: 'Quality Inspections', path: '/quality/inspections', icon: Award },
+            { name: 'Certified Exports', path: '/quality/certified', icon: CheckCircle, filter: 'QUALITY_CERTIFIED', badge: badgeCounts.QUALITY_CERTIFIED },
+            { name: 'Quality Reports', path: '/quality/reports', icon: FileText },
+          ]
+        },
+        { 
+          name: 'Contract Approval', 
+          path: '/contracts', 
+          icon: FileText,
+          children: [
+            { name: 'Pending Contracts', path: '/contracts/pending', icon: FileText, filter: 'PENDING' },
+            { name: 'Approved Contracts', path: '/contracts/approved', icon: CheckCircle, filter: 'FX_APPROVED' },
+            { name: 'Contract Templates', path: '/contracts/templates', icon: FileText },
+            { name: 'Contract History', path: '/contracts/history', icon: FileText },
+          ]
+        },
+        { 
+          name: 'Regulatory Oversight', 
+          path: '/regulatory', 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           icon: ShieldCheck,
           children: [
             { name: 'Compliance Monitoring', path: '/regulatory/compliance', icon: ShieldCheck },
@@ -592,9 +887,15 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
     // Custom Authorities - Border control & customs (consortium member)
     if (orgLower === 'custom-authorities') {
       return [
+<<<<<<< HEAD
         {
           name: 'Customs Clearance',
           path: '/customs',
+=======
+        { 
+          name: 'Customs Clearance', 
+          path: '/customs', 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           icon: ShieldCheck,
           children: [
             { name: 'Pending Clearance', path: '/customs/pending', icon: ShieldCheck, filter: 'EXPORT_CUSTOMS_PENDING', badge: badgeCounts.EXPORT_CUSTOMS_PENDING },
@@ -603,9 +904,15 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
             { name: 'Rejected/Held', path: '/customs/rejected', icon: X, filter: 'EXPORT_CUSTOMS_REJECTED', badge: badgeCounts.EXPORT_CUSTOMS_REJECTED },
           ]
         },
+<<<<<<< HEAD
         {
           name: 'Documentation',
           path: '/documents',
+=======
+        { 
+          name: 'Documentation', 
+          path: '/documents', 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           icon: FileText,
           children: [
             { name: 'Export Documentation', path: '/documents/export', icon: FileText },
@@ -614,9 +921,15 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
             { name: 'Document Templates', path: '/documents/templates', icon: FileText },
           ]
         },
+<<<<<<< HEAD
         {
           name: 'Border Control',
           path: '/border',
+=======
+        { 
+          name: 'Border Control', 
+          path: '/border', 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           icon: ShieldCheck,
           children: [
             { name: 'Border Checkpoints', path: '/border/checkpoints', icon: ShieldCheck },
@@ -625,9 +938,15 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
             { name: 'Border Reports', path: '/border/reports', icon: FileText },
           ]
         },
+<<<<<<< HEAD
         {
           name: 'Administration',
           path: '/admin',
+=======
+        { 
+          name: 'Administration', 
+          path: '/admin', 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           icon: Settings,
           children: [
             { name: 'User Management', path: '/admin/users', icon: Users },
@@ -641,9 +960,15 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
     // Shipping Line - Logistics & transportation (consortium member)
     if (orgLower === 'shipping' || orgLower === 'shipping-line' || orgLower === 'shippingline') {
       return [
+<<<<<<< HEAD
         {
           name: 'Shipment Management',
           path: '/shipments',
+=======
+        { 
+          name: 'Shipment Management', 
+          path: '/shipments', 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           icon: Ship,
           children: [
             { name: 'Pending Shipments', path: '/shipments/pending', icon: Ship, filter: 'SHIPMENT_PENDING', badge: badgeCounts.SHIPMENT_PENDING },
@@ -652,9 +977,15 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
             { name: 'Delivered', path: '/shipments/delivered', icon: CheckCircle, filter: 'COMPLETED' },
           ]
         },
+<<<<<<< HEAD
         {
           name: 'Vessel Operations',
           path: '/vessels',
+=======
+        { 
+          name: 'Vessel Operations', 
+          path: '/vessels', 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           icon: Ship,
           children: [
             { name: 'Fleet Management', path: '/vessels/fleet', icon: Ship },
@@ -663,9 +994,15 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
             { name: 'Vessel Reports', path: '/vessels/reports', icon: FileText },
           ]
         },
+<<<<<<< HEAD
         {
           name: 'Logistics Coordination',
           path: '/logistics',
+=======
+        { 
+          name: 'Logistics Coordination', 
+          path: '/logistics', 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           icon: Package,
           children: [
             { name: 'Route Planning', path: '/logistics/routes', icon: Package },
@@ -674,9 +1011,15 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
             { name: 'Delivery Confirmation', path: '/logistics/delivery', icon: CheckCircle },
           ]
         },
+<<<<<<< HEAD
         {
           name: 'Administration',
           path: '/admin',
+=======
+        { 
+          name: 'Administration', 
+          path: '/admin', 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           icon: Settings,
           children: [
             { name: 'User Management', path: '/admin/users', icon: Users },
@@ -789,7 +1132,11 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
           const active = isActive(item);
           const hasChildren = item.children && item.children.length > 0;
           const isExpanded = expandedItems[item.name];
+<<<<<<< HEAD
 
+=======
+          
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           const parentItem = (
             <StyledListItemButton
               key={`${item.path}-${item.name}-${idx}`}
@@ -814,7 +1161,11 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
               </ListItemIcon>
               {!collapsed && (
                 <>
+<<<<<<< HEAD
                   <ListItemText
+=======
+                  <ListItemText 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
                     primary={item.name}
                     primaryTypographyProps={{
                       fontSize: '0.95rem',
@@ -863,7 +1214,11 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
                             <ChildIcon size={18} />
                           )}
                         </ListItemIcon>
+<<<<<<< HEAD
                         <ListItemText
+=======
+                        <ListItemText 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
                           primary={child.name}
                           primaryTypographyProps={{
                             fontSize: '0.875rem',
@@ -896,7 +1251,11 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
           >
             <MenuIcon />
           </IconButton>
+<<<<<<< HEAD
 
+=======
+          
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: 1 }}>
             <Coffee size={32} />
             {!isMobile && (
@@ -929,7 +1288,11 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
                     </Typography>
                   </Box>
                 }
+<<<<<<< HEAD
                 sx={{
+=======
+                sx={{ 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
                   height: 48,
                   '& .MuiChip-label': {
                     display: 'flex',

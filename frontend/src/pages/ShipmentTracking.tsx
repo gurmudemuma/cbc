@@ -1,8 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Ship, MapPin, Calendar, CheckCircle, Clock, Search, Eye, XCircle } from 'lucide-react';
 import apiClient from '../services/api';
+<<<<<<< HEAD
 import { useExports } from '../hooks/useExportManager';
 import { Export } from '../types';
+=======
+import { useExports } from '../hooks/useExports';
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 import ShipmentScheduleForm from '../components/forms/ShipmentScheduleForm';
 import {
   Box,
@@ -39,8 +43,13 @@ interface ShipmentTrackingProps {
 const ShipmentTracking = ({ user, org }: ShipmentTrackingProps): JSX.Element => {
   const { exports: allExports, loading: exportsLoading, error: exportsError, refreshExports } = useExports();
   const exports = allExports.filter((e) => e.status === 'CUSTOMS_CLEARED' || e.status === 'SHIPMENT_PENDING' || e.status === 'SHIPMENT_SCHEDULED' || e.status === 'SHIPPED' || e.status === 'SHIPMENT_REJECTED');
+<<<<<<< HEAD
   const [filteredExports, setFilteredExports] = useState<Export[]>([]);
   const [selectedExport, setSelectedExport] = useState<Export | null>(null);
+=======
+  const [filteredExports, setFilteredExports] = useState([]);
+  const [selectedExport, setSelectedExport] = useState(null);
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -147,7 +156,11 @@ const ShipmentTracking = ({ user, org }: ShipmentTrackingProps): JSX.Element => 
 
   const calculateDuration = (departure, arrival) => {
     if (!departure || !arrival) return 'N/A';
+<<<<<<< HEAD
     const days = Math.ceil((new Date(arrival).getTime() - new Date(departure).getTime()) / (1000 * 60 * 60 * 24));
+=======
+    const days = Math.ceil((new Date(arrival) - new Date(departure)) / (1000 * 60 * 60 * 24));
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     return `${days} days`;
   };
 
@@ -368,8 +381,11 @@ const ShipmentTracking = ({ user, org }: ShipmentTrackingProps): JSX.Element => 
               onApprove={handleApprove}
               onReject={handleReject}
               loading={loading}
+<<<<<<< HEAD
               user={user}
               org={org}
+=======
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
             />
           )}
         </DialogContent>

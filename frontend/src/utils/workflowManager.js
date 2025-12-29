@@ -10,6 +10,7 @@ export const WORKFLOW_STATES = {
   DRAFT: 'DRAFT',
   PENDING: 'PENDING',
 
+<<<<<<< HEAD
   // Pre-Registration States (NEW - Exporter qualification)
   PROFILE_PENDING: 'PROFILE_PENDING',
   PROFILE_ACTIVE: 'PROFILE_ACTIVE',
@@ -35,6 +36,8 @@ export const WORKFLOW_STATES = {
   CONTRACT_APPROVED: 'CONTRACT_APPROVED',
   CONTRACT_REJECTED: 'CONTRACT_REJECTED',
 
+=======
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   // ECX Stage (NEW - First mandatory step)
   ECX_PENDING: 'ECX_PENDING',
   ECX_VERIFIED: 'ECX_VERIFIED',
@@ -81,8 +84,11 @@ export const WORKFLOW_STATES = {
 
 // Workflow Stages - UPDATED with corrected sequence
 export const WORKFLOW_STAGES = {
+<<<<<<< HEAD
   PRE_REGISTRATION: { order: 0, name: 'Pre-Registration', org: 'ECTA' },
   CONTRACT_REGISTRATION: { order: 0.5, name: 'Contract Registration', org: 'ECTA' },
+=======
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   CREATION: { order: 1, name: 'Export Creation', org: 'Portal' },
   ECX_VERIFICATION: { order: 2, name: 'ECX Verification', org: 'ECX' },
   ECTA_REGULATION: { order: 3, name: 'ECTA Regulation', org: 'ECTA' },

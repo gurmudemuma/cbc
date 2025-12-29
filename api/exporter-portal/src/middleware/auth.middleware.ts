@@ -30,7 +30,11 @@ export const authenticateToken = (
 
   try {
     const decoded = jwt.verify(token, config.JWT_SECRET) as JWTPayload;
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     // Verify user is an exporter or admin
     const allowedRoles = ['exporter', 'admin'];
     if (!allowedRoles.includes(decoded.role)) {
@@ -44,7 +48,11 @@ export const authenticateToken = (
     (req as any).user = decoded;
     next();
   } catch (error) {
+<<<<<<< HEAD
     res.status(401).json({
+=======
+    res.status(403).json({
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       success: false,
       message: 'Invalid or expired token',
     });

@@ -14,7 +14,11 @@ WORKDIR /app
 
 # Copy workspace package files (for dependencies)
 COPY package*.json ./
+<<<<<<< HEAD
 COPY api/tsconfig.base.json ./api/
+=======
+COPY api/tsconfig.base.json ./
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
 # Copy service-specific files
 COPY api/commercial-bank/package*.json ./api/commercial-bank/

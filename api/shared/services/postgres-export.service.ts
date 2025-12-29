@@ -299,7 +299,11 @@ export class PostgresExportService {
         byStatus: {}
       };
 
+<<<<<<< HEAD
       result.rows.forEach((row: any) => {
+=======
+      result.rows.forEach(row => {
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         summary.byStatus[row.status] = {
           count: parseInt(row.count),
           totalQuantity: parseFloat(row.total_quantity || 0)

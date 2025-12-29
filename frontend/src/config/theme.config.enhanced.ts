@@ -3,44 +3,78 @@ import { PaletteOptions } from '@mui/material/styles';
 
 // Modern base theme configuration
 export const baseTheme = {
+<<<<<<< HEAD
   shape: {
+=======
+  shape: { 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     borderRadius: 16,
   },
   spacing: 8,
   typography: {
     fontFamily: '"Inter", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "Helvetica", "Arial", sans-serif',
+<<<<<<< HEAD
     h1: {
       fontWeight: 800,
+=======
+    h1: { 
+      fontWeight: 800, 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       fontSize: '2.5rem',
       lineHeight: 1.1,
       letterSpacing: '-0.8px',
     },
+<<<<<<< HEAD
     h2: {
       fontWeight: 800,
+=======
+    h2: { 
+      fontWeight: 800, 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       fontSize: '2rem',
       lineHeight: 1.15,
       letterSpacing: '-0.5px',
     },
+<<<<<<< HEAD
     h3: {
       fontWeight: 700,
+=======
+    h3: { 
+      fontWeight: 700, 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       fontSize: '1.75rem',
       lineHeight: 1.2,
       letterSpacing: '-0.3px',
     },
+<<<<<<< HEAD
     h4: {
       fontWeight: 700,
+=======
+    h4: { 
+      fontWeight: 700, 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       fontSize: '1.5rem',
       lineHeight: 1.25,
       letterSpacing: '-0.2px',
     },
+<<<<<<< HEAD
     h5: {
       fontWeight: 600,
+=======
+    h5: { 
+      fontWeight: 600, 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       fontSize: '1.25rem',
       lineHeight: 1.3,
       letterSpacing: '-0.1px',
     },
+<<<<<<< HEAD
     h6: {
       fontWeight: 600,
+=======
+    h6: { 
+      fontWeight: 600, 
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       fontSize: '1.125rem',
       lineHeight: 1.35,
     },
@@ -391,6 +425,7 @@ export const componentOverrides = (palette: any) => ({
       },
     },
   },
+<<<<<<< HEAD
   MuiTableContainer: {
     styleOverrides: {
       root: {
@@ -459,6 +494,8 @@ export const componentOverrides = (palette: any) => ({
       },
     },
   },
+=======
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 });
 
 // Organization-specific palettes
@@ -466,6 +503,7 @@ export const orgPalettes: Record<string, PaletteOptions> = {
   'commercial-bank': {
     mode: 'light',
     primary: {
+<<<<<<< HEAD
       main: '#4A148C', // Premium Royal Purple
       light: '#7C43BD',
       dark: '#12005E',
@@ -487,6 +525,29 @@ export const orgPalettes: Record<string, PaletteOptions> = {
       disabled: '#9E9E9E',
     },
     divider: '#E1BEE7',
+=======
+      main: '#6A1B9A',
+      light: '#8E24AA',
+      dark: '#4A148C',
+      contrastText: '#FFD700',
+    },
+    secondary: {
+      main: '#D4AF37',
+      light: '#FFD700',
+      dark: '#B8860B',
+      contrastText: '#1A1A1A',
+    },
+    background: {
+      default: '#FAFAFA',
+      paper: '#FFFFFF',
+    },
+    text: {
+      primary: '#1A1A1A',
+      secondary: '#6A1B9A',
+      disabled: '#9E9E9E',
+    },
+    divider: '#E0E0E0',
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   },
   'commercialbank': {
     mode: 'light',
@@ -516,6 +577,7 @@ export const orgPalettes: Record<string, PaletteOptions> = {
   'exporter-portal': {
     mode: 'light',
     primary: {
+<<<<<<< HEAD
       main: '#1E4620', // Deeper, more professional Green
       light: '#4CAF50',
       dark: '#0D2B0F',
@@ -534,6 +596,26 @@ export const orgPalettes: Record<string, PaletteOptions> = {
     text: {
       primary: '#1B3A1F',
       secondary: '#3B6B3F',
+=======
+      main: '#2E7D32',
+      light: '#4CAF50',
+      dark: '#1B5E20',
+      contrastText: '#ffffff',
+    },
+    secondary: {
+      main: '#F9A825',
+      light: '#FBC02D',
+      dark: '#F57F17',
+      contrastText: '#1A1A1A',
+    },
+    background: {
+      default: '#FAFAFA',
+      paper: '#FFFFFF',
+    },
+    text: {
+      primary: '#1A1A1A',
+      secondary: '#2E7D32',
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       disabled: '#9E9E9E',
     },
     divider: '#E0E0E0',
@@ -565,6 +647,7 @@ export const orgPalettes: Record<string, PaletteOptions> = {
   'national-bank': {
     mode: 'light',
     primary: {
+<<<<<<< HEAD
       main: '#0D47A1', // Authoritative Navy
       light: '#5472D3',
       dark: '#002171',
@@ -585,10 +668,33 @@ export const orgPalettes: Record<string, PaletteOptions> = {
       secondary: '#546E7A',
     },
     divider: '#CFD8DC',
+=======
+      main: '#1565C0',
+      light: '#1976D2',
+      dark: '#0D47A1',
+      contrastText: '#ffffff',
+    },
+    secondary: {
+      main: '#FFA000',
+      light: '#FFB300',
+      dark: '#FF8F00',
+      contrastText: '#000000',
+    },
+    background: {
+      default: '#F5F9FC',
+      paper: '#FFFFFF',
+    },
+    text: {
+      primary: '#0D3C61',
+      secondary: '#1565C0',
+    },
+    divider: '#BBDEFB',
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   },
   'nationalbank': {
     mode: 'light',
     primary: {
+<<<<<<< HEAD
       main: '#0D47A1',
       light: '#5472D3',
       dark: '#002171',
@@ -609,6 +715,28 @@ export const orgPalettes: Record<string, PaletteOptions> = {
       secondary: '#546E7A',
     },
     divider: '#CFD8DC',
+=======
+      main: '#1565C0',
+      light: '#1976D2',
+      dark: '#0D47A1',
+      contrastText: '#ffffff',
+    },
+    secondary: {
+      main: '#FFA000',
+      light: '#FFB300',
+      dark: '#FF8F00',
+      contrastText: '#000000',
+    },
+    background: {
+      default: '#F5F9FC',
+      paper: '#FFFFFF',
+    },
+    text: {
+      primary: '#0D3C61',
+      secondary: '#1565C0',
+    },
+    divider: '#BBDEFB',
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   },
   'ecta': {
     mode: 'light',
@@ -735,7 +863,11 @@ export const orgPalettes: Record<string, PaletteOptions> = {
 // Main theme creation function
 export function createEnhancedTheme(org?: string, mode: 'light' | 'dark' = 'light'): Theme {
   const palette = org && orgPalettes[org] ? orgPalettes[org] : defaultPalette;
+<<<<<<< HEAD
 
+=======
+  
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   return createTheme({
     ...baseTheme,
     palette: {

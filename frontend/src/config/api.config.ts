@@ -43,7 +43,11 @@ const getEnvVar = (key: string, fallback: string): string => {
 
 // API Endpoints - Use environment variables with localhost fallbacks
 export const API_ENDPOINTS: ApiEndpoints = {
+<<<<<<< HEAD
   exporterPortal: getEnvVar('VITE_API_EXPORTER_PORTAL', 'http://localhost:3004/api'),
+=======
+  exporterPortal: getEnvVar('VITE_API_EXPORTER_PORTAL', 'http://localhost:3004'),
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   commercialBank: getEnvVar('VITE_API_COMMERCIAL_BANK', 'http://localhost:3001'),
   nationalBank: getEnvVar('VITE_API_NATIONAL_BANK', 'http://localhost:3005'),
   ecta: getEnvVar('VITE_API_ECTA', 'http://localhost:3003'),

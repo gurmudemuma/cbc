@@ -6,10 +6,17 @@ import {
   CoffeeLaboratory,
   CompetenceCertificate,
   ExportLicense,
+<<<<<<< HEAD
 } from '@shared/models/ecta-preregistration.model';
 import { ectaPreRegistrationService } from '@shared/services/ecta-preregistration.service';
 import { pool } from '@shared/database/pool';
 import { createLogger } from '@shared/logger';
+=======
+} from '../../../shared/models/ecta-preregistration.model';
+import { ectaPreRegistrationService } from '../../../shared/services/ecta-preregistration.service';
+import { pool } from '../../../shared/database/pool';
+import { createLogger } from '../../../shared/logger';
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
 const logger = createLogger('PreRegistrationController');
 
@@ -104,6 +111,7 @@ export class PreRegistrationController {
         return;
       }
 
+<<<<<<< HEAD
       const now = new Date().toISOString();
       const result = await pool.query(
         `UPDATE exporter_profiles 
@@ -122,14 +130,26 @@ export class PreRegistrationController {
       }
 
       logger.info('Exporter profile approved', { exporterId, approvedBy: user.username });
+=======
+      // TODO: Update exporter status to ACTIVE
+      // profile.status = 'ACTIVE';
+      // profile.approvedBy = user.username;
+      // profile.approvedAt = new Date().toISOString();
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
       res.json({
         success: true,
         message: 'Exporter profile approved',
+<<<<<<< HEAD
         data: result.rows[0],
       });
     } catch (error: any) {
       logger.error('Failed to approve exporter', { error: error.message, exporterId: req.params.exporterId });
+=======
+        data: { exporterId, approvedBy: user.username },
+      });
+    } catch (error: any) {
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       res.status(500).json({
         success: false,
         message: 'Failed to approve exporter',
@@ -159,6 +179,7 @@ export class PreRegistrationController {
         return;
       }
 
+<<<<<<< HEAD
       const now = new Date().toISOString();
 
       // Get current profile to append to rejection history
@@ -200,14 +221,25 @@ export class PreRegistrationController {
       );
 
       logger.info('Exporter profile rejected', { exporterId, rejectedBy: user.username, reason });
+=======
+      // TODO: Update exporter status to REJECTED
+      // profile.status = 'REVOKED';
+      // profile.rejectionReason = reason;
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
       res.json({
         success: true,
         message: 'Exporter profile rejected',
+<<<<<<< HEAD
         data: result.rows[0],
       });
     } catch (error: any) {
       logger.error('Failed to reject exporter', { error: error.message, exporterId: req.params.exporterId });
+=======
+        data: { exporterId, reason, rejectedBy: user.username },
+      });
+    } catch (error: any) {
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       res.status(500).json({
         success: false,
         message: 'Failed to reject exporter',
@@ -217,6 +249,7 @@ export class PreRegistrationController {
   };
 
   /**
+<<<<<<< HEAD
    * Resubmit exporter profile after rejection
    */
   public resubmitProfile = async (
@@ -452,12 +485,17 @@ export class PreRegistrationController {
       });
     }
   };
+=======
+   * Get pending laboratory certifications
+   */
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   public getPendingLaboratories = async (
     _req: RequestWithUser,
     res: Response,
     _next: NextFunction
   ): Promise<void> => {
     try {
+<<<<<<< HEAD
       // Join with exporter_profiles to get exporter name and details
       const query = `
         SELECT 
@@ -501,6 +539,18 @@ export class PreRegistrationController {
       });
     } catch (error: any) {
       logger.error('Failed to fetch pending laboratories', { error: error.message });
+=======
+      // TODO: Implement database query for status='PENDING'
+      const pending: CoffeeLaboratory[] = [];
+      
+      res.json({
+        success: true,
+        data: pending,
+        count: pending.length,
+        message: 'Laboratory certifications pending inspection',
+      });
+    } catch (error: any) {
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       res.status(500).json({
         success: false,
         message: 'Failed to fetch pending laboratories',
@@ -581,6 +631,7 @@ export class PreRegistrationController {
     _next: NextFunction
   ): Promise<void> => {
     try {
+<<<<<<< HEAD
       const result = await pool.query(
         `SELECT cc.*, ep.business_name, ep.business_type, ep.tin,
                 (SELECT status = 'ACTIVE' FROM coffee_laboratories cl WHERE cl.exporter_id = ep.exporter_id LIMIT 1) as laboratory_certified,
@@ -613,6 +664,18 @@ export class PreRegistrationController {
       });
     } catch (error: any) {
       logger.error('Failed to fetch pending certificates', { error: error.message });
+=======
+      // TODO: Implement database query for status='PENDING'
+      const pending: CompetenceCertificate[] = [];
+      
+      res.json({
+        success: true,
+        data: pending,
+        count: pending.length,
+        message: 'Competence certificate applications pending review',
+      });
+    } catch (error: any) {
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       res.status(500).json({
         success: false,
         message: 'Failed to fetch pending certificates',
@@ -659,7 +722,11 @@ export class PreRegistrationController {
 
       // Validate exporter has certified lab and qualified taster
       const validation = await ectaPreRegistrationService.validateExporter(exporterId);
+<<<<<<< HEAD
 
+=======
+      
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       if (!validation.hasCertifiedLaboratory) {
         res.status(400).json({
           success: false,
@@ -799,6 +866,7 @@ export class PreRegistrationController {
     _next: NextFunction
   ): Promise<void> => {
     try {
+<<<<<<< HEAD
       const result = await pool.query(
         `SELECT el.*, ep.business_name, ep.business_type, ep.tin, ep.capital_verified,
                 (SELECT status = 'ACTIVE' FROM competence_certificates cc WHERE cc.exporter_id = ep.exporter_id LIMIT 1) as has_competence_certificate
@@ -831,6 +899,18 @@ export class PreRegistrationController {
       });
     } catch (error: any) {
       logger.error('Failed to fetch pending licenses', { error: error.message });
+=======
+      // TODO: Implement database query for status='PENDING_REVIEW'
+      const pending: ExportLicense[] = [];
+      
+      res.json({
+        success: true,
+        data: pending,
+        count: pending.length,
+        message: 'Export license applications pending review',
+      });
+    } catch (error: any) {
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       res.status(500).json({
         success: false,
         message: 'Failed to fetch pending licenses',
@@ -870,7 +950,11 @@ export class PreRegistrationController {
 
       // Validate exporter has valid competence certificate
       const validation = await ectaPreRegistrationService.validateExporter(exporterId);
+<<<<<<< HEAD
 
+=======
+      
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       if (!validation.hasCompetenceCertificate) {
         res.status(400).json({
           success: false,
@@ -918,6 +1002,7 @@ export class PreRegistrationController {
     }
   };
 
+<<<<<<< HEAD
   // ============================================================================
   // TASTER VERIFICATION
   // ============================================================================
@@ -1202,6 +1287,8 @@ export class PreRegistrationController {
     }
   };
 
+=======
+>>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   /**
    * Validate exporter qualification
    */
