@@ -1,0 +1,301 @@
+################################################################################
+# Docker Compose Configuration for All API Services
+#
+# This file defines all 7 API services for the CBC project
+# 
+# Usage:
+#   docker-compose -f docker-compose.apis.yml up              # Start all services
+#   docker-compose -f docker-compose.apis.yml up -d           # Start in background
+#   docker-compose -f docker-compose.apis.yml down            # Stop all services
+#   docker-compose -f docker-compose.apis.yml logs -f         # View logs
+#   docker-compose -f docker-compose.apis.yml ps              # Show status
+#
+# Note: This assumes postgres, redis, and ipfs are already running from docker-compose.postgres.yml
+#
+################################################################################
+
+services:
+  # ============================================================================
+  # Commercial Bank API (Port 3001)
+  # ============================================================================
+  commercial-bank:
+    build:
+      context: .
+      dockerfile: api/commercial-bank/Dockerfile
+    container_name: cbc-commercial-bank
+    env_file:
+      - ./api/commercial-bank/.env
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: coffee_export_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_SSL: "false"
+      CORS_ORIGIN: "http://localhost:5173"
+      WEBSOCKET_ENABLED: "true"
+      LOG_LEVEL: info
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    ports:
+      - "3001:3001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - coffee-export
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ============================================================================
+  # Custom Authorities API (Port 3002)
+  # ============================================================================
+  custom-authorities:
+    build:
+      context: .
+      dockerfile: api/custom-authorities/Dockerfile
+    container_name: cbc-custom-authorities
+    env_file:
+      - ./api/custom-authorities/.env
+    environment:
+      NODE_ENV: development
+      PORT: 3002
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: coffee_export_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_SSL: "false"
+      CORS_ORIGIN: "http://localhost:5173"
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      WEBSOCKET_ENABLED: "true"
+      LOG_LEVEL: info
+    ports:
+      - "3002:3002"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - coffee-export
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ============================================================================
+  # ECTA API (Port 3003)
+  # ============================================================================
+  ecta:
+    build:
+      context: .
+      dockerfile: api/ecta/Dockerfile
+    container_name: cbc-ecta
+    env_file:
+      - ./api/ecta/.env
+    environment:
+      NODE_ENV: development
+      PORT: 3003
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: coffee_export_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_SSL: "false"
+      CORS_ORIGIN: "http://localhost:5173"
+      WEBSOCKET_ENABLED: "true"
+      LOG_LEVEL: info
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    ports:
+      - "3003:3003"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3003/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - coffee-export
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ============================================================================
+  # Exporter Portal API (Port 3004)
+  # ============================================================================
+  exporter-portal:
+    build:
+      context: .
+      dockerfile: api/exporter-portal/Dockerfile
+    container_name: cbc-exporter-portal
+    env_file:
+      - ./api/exporter-portal/.env
+    environment:
+      NODE_ENV: development
+      PORT: 3004
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: coffee_export_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_SSL: "false"
+      CORS_ORIGIN: "http://localhost:5173"
+      LOG_LEVEL: info
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    ports:
+      - "3004:3004"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3004/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - coffee-export
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ============================================================================
+  # National Bank API (Port 3005)
+  # ============================================================================
+  national-bank:
+    build:
+      context: .
+      dockerfile: api/national-bank/Dockerfile
+    container_name: cbc-national-bank
+    env_file:
+      - ./api/national-bank/.env
+    environment:
+      NODE_ENV: development
+      PORT: 3005
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: coffee_export_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_SSL: "false"
+      CORS_ORIGIN: "http://localhost:5173"
+      WEBSOCKET_ENABLED: "true"
+      LOG_LEVEL: info
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    ports:
+      - "3005:3005"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3005/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - coffee-export
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ============================================================================
+  # ECX API (Port 3006)
+  # ============================================================================
+  ecx:
+    build:
+      context: .
+      dockerfile: api/ecx/Dockerfile
+    container_name: cbc-ecx
+    env_file:
+      - ./api/ecx/.env
+    environment:
+      NODE_ENV: development
+      PORT: 3006
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: coffee_export_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_SSL: "false"
+      CORS_ORIGIN: "http://localhost:5173"
+      LOG_LEVEL: info
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    ports:
+      - "3006:3006"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3006/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - coffee-export
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ============================================================================
+  # Shipping Line API (Port 3007)
+  # ============================================================================
+  shipping-line:
+    build:
+      context: .
+      dockerfile: api/shipping-line/Dockerfile
+    container_name: cbc-shipping-line
+    env_file:
+      - ./api/shipping-line/.env
+    environment:
+      NODE_ENV: development
+      PORT: 3007
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: coffee_export_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_SSL: "false"
+      CORS_ORIGIN: "http://localhost:5173"
+      WEBSOCKET_ENABLED: "true"
+      LOG_LEVEL: info
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    ports:
+      - "3007:3007"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3007/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - coffee-export
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+################################################################################
+# Networks
+################################################################################
+networks:
+  coffee-export:
+    name: coffee-export-network

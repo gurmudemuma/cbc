@@ -1,0 +1,33 @@
+{
+  "name": "coffee-export-blockchain",
+  "version": "1.0.0",
+  "description": "Coffee Export Blockchain System",
+  "private": true,
+  "workspaces": [
+    "api/commercial-bank",
+    "api/custom-authorities",
+    "api/ecta",
+    "api/ecx",
+    "api/exporter-portal",
+    "api/national-bank",
+    "api/shipping-line",
+    "api/shared"
+  ],
+  "scripts": {
+    "install-all": "npm install --legacy-peer-deps",
+    "build": "npm run build --workspaces",
+    "start": "npm start --workspaces",
+    "dev": "npm run dev --workspaces",
+    "test": "npm test --workspaces",
+    "lint": "npm run lint --workspaces",
+    "lint:fix": "npm run lint:fix --workspaces",
+    "format": "npm run format --workspaces",
+    "format:check": "npm run format:check --workspaces",
+    "type-check": "npm run type-check --workspaces",
+    "clean": "npm run clean --workspaces && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.0.0"
+  }
+}

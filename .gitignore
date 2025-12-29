@@ -1,0 +1,114 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build outputs
+dist/
+build/
+*.js.map
+
+# Compiled TypeScript files (keep source .ts files only)
+api/shared/*.js
+api/shared/*.d.ts
+api/shared/*.d.ts.map
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Keep template files (they are safe to commit)
+!.env.template
+!.env.*.template
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Fabric network artifacts
+network/organizations/peerOrganizations/
+network/organizations/ordererOrganizations/
+network/channel-artifacts/
+*.block
+*.tx
+
+# Wallets
+api/*/wallet/
+wallet/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Docker
+.docker/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Chaincode binaries
+chaincode/**/vendor/
+chaincode/**/*.tar.gz
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Certificates (keep templates, ignore generated)
+*.pem
+*.key
+*.crt
+!**/ca-cert.pem
+
+# Backup files and directories
+*.bak
+*.backup
+*.backup.*
+.env.backup*
+api.backup*/
+bin.backup*/
+*-backup/
+*backup*/
+
+# Error logs and build artifacts
+*.txt
+!README.txt
+!CONTRIBUTING.txt
+!QUICK_START.txt
+build_errors.txt
+api_build_all.txt
+AUDIT_SUMMARY.txt
+
+# Empty placeholder files (often created by scripts)
+Chaincode
+Creating
+Done.
+Downloading
+Downloading:
+Endorser
+Generating
+Loaded
+Loading
+Orderer.EtcdRaft.Options
+Received
+Retrieving
+Successfully
+There
+Writing
+config.json
+modified_config.json
+update.json
+update_in_envelope.json
