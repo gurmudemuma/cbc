@@ -18,6 +18,15 @@
 
 set -e
 
+# Function to pause on exit
+pause_on_exit() {
+    echo ""
+    echo "Press Enter to exit..."
+    read _
+}
+trap pause_on_exit EXIT
+
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'

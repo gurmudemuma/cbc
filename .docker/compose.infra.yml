@@ -6,15 +6,15 @@ volumes:
 networks:
   coffee-export:
     name: coffee-export-network
-<<<<<<< HEAD
-=======
+
+
     external: true
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
+
 
 services:
-  # ===========================
+  # ======
   # PostgreSQL Database (Required)
-  # ===========================
+  # ======
   postgres:
     container_name: postgres
     image: postgres:15-alpine
@@ -28,12 +28,12 @@ services:
       - coffee-export
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      - ./api/shared/database/init.sql:/docker-entrypoint-initdb.d/init.sql
-      - ./api/shared/database/migrations/001_create_ecta_preregistration_tables.sql:/docker-entrypoint-initdb.d/001_create_ecta_preregistration_tables.sql
-      - ./api/shared/database/migrations/002_create_documents_table.sql:/docker-entrypoint-initdb.d/002_create_documents_table.sql
-      - ./api/shared/database/migrations/003_create_audit_log_table.sql:/docker-entrypoint-initdb.d/003_create_audit_log_table.sql
-      - ./api/shared/database/migrations/004_create_exports_table.sql:/docker-entrypoint-initdb.d/004_create_exports_table.sql
-      - ./api/shared/database/migrations/005_create_users_table.sql:/docker-entrypoint-initdb.d/005_create_users_table.sql
+      - ../services/shared/database/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ../services/shared/database/migrations/001_create_ecta_preregistration_tables.sql:/docker-entrypoint-initdb.d/001_create_ecta_preregistration_tables.sql
+      - ../services/shared/database/migrations/002_create_documents_table.sql:/docker-entrypoint-initdb.d/002_create_documents_table.sql
+      - ../services/shared/database/migrations/003_create_audit_log_table.sql:/docker-entrypoint-initdb.d/003_create_audit_log_table.sql
+      - ../services/shared/database/migrations/004_create_exports_table.sql:/docker-entrypoint-initdb.d/004_create_exports_table.sql
+      - ../services/shared/database/migrations/005_create_users_table.sql:/docker-entrypoint-initdb.d/005_create_users_table.sql
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
@@ -42,9 +42,9 @@ services:
       retries: 5
       start_period: 30s
 
-  # ===========================
+  # ======
   # IPFS Node (Optional - for document storage)
-  # ===========================
+  # ======
   ipfs:
     container_name: ipfs
     image: ipfs/kubo:latest
@@ -67,9 +67,9 @@ services:
       retries: 3
       start_period: 30s
 
-  # ===========================
+  # ======
   # Redis Cache (Required for caching and sessions)
-  # ===========================
+  # ======
   redis:
     container_name: redis
     image: redis:7-alpine

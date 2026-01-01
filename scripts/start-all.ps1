@@ -233,10 +233,12 @@ function Show-Help {
 switch ($Command.ToLower()) {
     "help" {
         Show-Help
+        Read-Host "Press Enter to exit..."
         exit 0
     }
     "stop" {
         Stop-AllServices
+        Read-Host "Press Enter to exit..."
         exit 0
     }
     "start" {
@@ -245,27 +247,33 @@ switch ($Command.ToLower()) {
         Write-Host ""
         
         if (!(Check-Prerequisites)) {
+            Read-Host "Press Enter to exit..."
             exit 1
         }
         
         if (!(Start-Infrastructure)) {
+            Read-Host "Press Enter to exit..."
             exit 1
         }
         
         if (!(Start-APIServices)) {
+            Read-Host "Press Enter to exit..."
             exit 1
         }
         
         if (!(Start-Frontend)) {
+            Read-Host "Press Enter to exit..."
             exit 1
         }
         
         Show-Summary
+        Read-Host "Press Enter to exit..."
         exit 0
     }
     default {
         Print-Error "Unknown command: $Command"
         Show-Help
+        Read-Host "Press Enter to exit..."
         exit 1
     }
 }
