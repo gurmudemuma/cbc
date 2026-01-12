@@ -4,14 +4,14 @@
   "description": "Coffee Export Blockchain System",
   "private": true,
   "workspaces": [
-    "api/commercial-bank",
-    "api/custom-authorities",
-    "api/ecta",
-    "api/ecx",
-    "api/exporter-portal",
-    "api/national-bank",
-    "api/shipping-line",
-    "api/shared"
+    "services/commercial-bank",
+    "services/custom-authorities",
+    "services/ecta",
+    "services/ecx",
+    "services/exporter-portal",
+    "services/national-bank",
+    "services/shipping-line",
+    "services/shared"
   ],
   "scripts": {
     "install-all": "npm install --legacy-peer-deps",

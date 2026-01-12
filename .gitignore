@@ -48,7 +48,7 @@ wallet/
 .DS_Store
 
 # Docker
-.docker/
+# .docker/
 
 # Temporary files
 tmp/

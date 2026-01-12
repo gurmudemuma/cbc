@@ -3,6 +3,15 @@
 # CBC Verify All Services Script
 # Verifies all services are running and healthy
 
+# Function to pause on exit
+pause_on_exit() {
+    echo ""
+    echo "Press Enter to exit..."
+    read _
+}
+trap pause_on_exit EXIT
+
+
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$PROJECT_DIR"
 
@@ -107,15 +116,14 @@ if [ $FAILED -eq 0 ]; then
   echo "   National Bank:     http://localhost:3005/health"
   echo "   ECX:               http://localhost:3006/health"
   echo "   Shipping Line:     http://localhost:3007/health"
-  exit 0
 else
   echo -e "${RED}✗ $FAILED service(s) failed verification${NC}"
   echo ""
   echo "💡 To start services:"
   echo "   ./scripts/start-all.sh"
-  echo ""
-  echo "💡 To view logs:"
-  echo "   docker-compose -f docker-compose.postgres.yml logs -f"
-  echo "   docker-compose -f docker-compose.apis.yml logs -f"
-  exit 1
 fi
+
+echo ""
+echo "💡 To view logs:"
+echo "   docker-compose -f .docker/compose.infra.yml logs -f"
+echo "   docker-compose -f .docker/compose.apis.yml logs -f"
