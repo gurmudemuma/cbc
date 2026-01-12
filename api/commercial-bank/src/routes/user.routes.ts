@@ -5,11 +5,7 @@
 
 import { Router } from 'express';
 import { createUserController } from '../controllers/user.controller';
-<<<<<<< HEAD
 import { authMiddleware } from '@shared/middleware/auth.middleware';
-=======
-import { authMiddleware } from '../../../shared/middleware/auth.middleware';
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
 const router = Router();
 const userController = createUserController();

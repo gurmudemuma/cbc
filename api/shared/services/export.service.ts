@@ -63,21 +63,68 @@ export interface ExportApprovalData {
 }
 
 export class ExportService {
-  constructor(private pool: Pool) {}
+  constructor(private pool: Pool) { }
+
+  /**
+   * Create a new export request
+   */
+  /**
+   * Generate a standardized export ID: EXP-YYYYMMDD-XXXX
+   */
+  public async generateExportId(): Promise<string> {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    const datePrefix = `EXP-${year}${month}${day}`;
+
+    try {
+      // Find the latest export ID with this prefix
+      const query = `
+        SELECT export_id FROM exports
+        WHERE export_id LIKE $1
+        ORDER BY export_id DESC
+        LIMIT 1
+      `;
+      const result = await this.pool.query(query, [`${datePrefix}-%`]);
+
+      let sequence = 1;
+      if (result.rows.length > 0) {
+        const lastId = result.rows[0].export_id;
+        const parts = lastId.split('-');
+        const lastSequence = parseInt(parts[parts.length - 1], 10);
+        if (!isNaN(lastSequence)) {
+          sequence = lastSequence + 1;
+        }
+      }
+
+      return `${datePrefix}-${String(sequence).padStart(4, '0')}`;
+    } catch (error) {
+      logger.error('Error generating export ID', { error });
+      // Fallback to UUID if generation fails but keep prefix
+      return `${datePrefix}-${uuidv4().substring(0, 8)}`;
+    }
+  }
 
   /**
    * Create a new export request
    */
   async createExport(data: CreateExportRequest) {
     try {
-      const export_id = uuidv4();
+      const export_id = await this.generateExportId();
+      const profileResult = await this.pool.query(
+        'SELECT tin FROM exporter_profiles WHERE exporter_id = $1',
+        [data.exporter_id]
+      );
+      const exporterTin = profileResult.rows[0]?.tin || null;
+
       const query = `
         INSERT INTO exports (
-          export_id, exporter_id, coffee_type, origin_region, quantity,
+          export_id, exporter_id, exporter_tin, coffee_type, origin_region, quantity,
           destination_country, estimated_value, buyer_name, buyer_country, buyer_email,
           status, created_at, updated_at
         ) VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'PENDING', NOW(), NOW()
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'PENDING', NOW(), NOW()
         )
         RETURNING *;
       `;
@@ -85,6 +132,7 @@ export class ExportService {
       const result = await this.pool.query(query, [
         export_id,
         data.exporter_id,
+        exporterTin,
         data.coffee_type,
         data.origin_region || null,
         data.quantity,

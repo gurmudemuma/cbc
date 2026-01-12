@@ -13,12 +13,9 @@ router.route('/')
   .get(exportController.getMyExports)  // Get all exports (for exporter)
   .post(exportController.createExport); // Create new export request
 
-<<<<<<< HEAD
 // Get dashboard statistics (MUST come before /:id routes)
 router.get('/stats', exportController.getDashboardStats);
 
-=======
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 // Get my exports (alias for backward compatibility)
 router.get('/my-exports', exportController.getMyExports);
 

@@ -1,5 +1,4 @@
-<<<<<<< HEAD
-import { styled, keyframes } from '@mui/material/styles';
+﻿import { styled, keyframes } from '@mui/material/styles';
 import { Box, Paper } from '@mui/material';
 
 const slideUp = keyframes`
@@ -36,15 +35,4 @@ export const RegistrationPaper = styled(Paper)(({ theme }) => ({
   [theme.breakpoints.down('sm')]: {
     padding: theme.spacing(3),
   },
-=======
-import { styled } from '@mui/material/styles';
-import { Box, Paper } from '@mui/material';
-
-export const PageContainer = styled(Box)({
-  animation: 'fadeIn 0.3s ease-in-out',
-});
-
-export const RegistrationPaper = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(4),
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 }));

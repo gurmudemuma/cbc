@@ -21,7 +21,13 @@ router.get("/exports", qualityController.getAllExports);
 // Get export by ID
 router.get("/exports/:exportId", qualityController.getExportById);
 
-// Issue quality certificate
+// Approve quality (issue certificate)
+router.post("/:exportId/approve", qualityController.issueQualityCertificate);
+
+// Reject quality
+router.post("/:exportId/reject", qualityController.rejectQuality);
+
+// Issue quality certificate (legacy route)
 router.post(
   "/certify",
   validateQualityCertificate,

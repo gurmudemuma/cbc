@@ -1,76 +1,4 @@
 @echo off
-<<<<<<< HEAD
-setlocal enabledelayedexpansion
-REM ============================================================================
-REM Start All APIs Simple Script
-REM ============================================================================
-
-set SCRIPT_DIR=%~dp0
-set LOG_DIR=%SCRIPT_DIR%logs
-set SERVICES="commercial-bank:3001" "custom-authorities:3002" "ecta:3003" "exporter-portal:3004" "national-bank:3005" "ecx:3006" "shipping-line:3007"
-
-REM Handle arguments
-set COMMAND=%~1
-if "%COMMAND%"=="" set COMMAND=start
-
-if "%COMMAND%"=="stop" goto :stop_all_services
-if "%COMMAND%"=="logs" goto :show_logs
-if "%COMMAND%"=="check" goto :check_prerequisites
-if "%COMMAND%"=="help" goto :show_help
-
-:start
-echo [INFO] Starting API Services...
-
-if not exist "%LOG_DIR%" mkdir "%LOG_DIR%"
-
-for %%s in (%SERVICES%) do (
-    for /f "tokens=1,2 delims=:" %%a in ("%%~s") do (
-        echo [INFO] Starting %%a on port %%b...
-        set NODE_ENV=development
-        start "CBC-%%a" cmd /k "cd /d %SCRIPT_DIR%api\%%a && npm run dev"
-        timeout /t 2 /nobreak >nul
-    )
-)
-
-echo.
-echo [OK] All services started.
-echo [INFO] Waiting 20 seconds for services to initialize...
-timeout /t 20 /nobreak >nul
-
-goto :check_health
-
-:check_health
-echo.
-echo [INFO] Checking Service Health...
-for %%s in (%SERVICES%) do (
-    for /f "tokens=1,2 delims=:" %%a in ("%%~s") do (
-        powershell -Command "try { $r = Invoke-WebRequest -Uri 'http://localhost:%%b/health' -UseBasicParsing -TimeoutSec 2; if ($r.StatusCode -eq 200) { Write-Host '[OK] %%a is healthy' -ForegroundColor Green } } catch { Write-Host '[ERROR] %%a is not responding' -ForegroundColor Red }"
-    )
-)
-echo.
-echo [INFO] Startup complete!
-goto :eof
-
-:stop_all_services
-echo [INFO] Stopping all CBC services...
-taskkill /FI "WINDOWTITLE eq CBC-*" /T /F >nul 2>&1
-echo [OK] Services stopped.
-goto :eof
-
-:show_logs
-echo [INFO] Logs are in %LOG_DIR%
-goto :eof
-
-:check_prerequisites
-echo [INFO] Checking prerequisites...
-node --version
-npm --version
-goto :eof
-
-:show_help
-echo Usage: start-all-apis.bat [start|stop|logs|check|help]
-goto :eof
-=======
 REM ============================================================================
 REM Start All APIs Script (Windows)
 REM 
@@ -96,13 +24,14 @@ for /f "tokens=1-2 delims=/:" %%a in ('time /t') do (set mytime=%%a%%b)
 set TIMESTAMP=%mydate%_%mytime%
 
 REM API Services Configuration
-set "SERVICES[0]=commercial-bank:3001"
-set "SERVICES[1]=custom-authorities:3002"
-set "SERVICES[2]=ecta:3003"
-set "SERVICES[3]=exporter-portal:3004"
-set "SERVICES[4]=national-bank:3005"
-set "SERVICES[5]=ecx:3006"
-set "SERVICES[6]=shipping-line:3007"
+set SERVICES=commercial-bank:3001 custom-authorities:3002 ecta:3003 exporter-portal:3004 national-bank:3005 ecx:3006 shipping-line:3007 esw:3008
+
+REM ============================================================================
+REM Execution Logic
+REM ============================================================================
+
+call :main %*
+goto :eof
 
 REM ============================================================================
 REM Helper Functions
@@ -166,16 +95,10 @@ if not exist "%SCRIPT_DIR%api" (
     call :print_success "API directory found"
 )
 
-REM Check if node_modules exists
-if not exist "%SCRIPT_DIR%api\node_modules" (
-    call :print_warning "node_modules not found. Run 'npm install' first"
-    exit /b 1
-) else (
-    call :print_success "node_modules found"
-)
 
 call :print_success "All prerequisites met"
 exit /b 0
+
 
 REM ============================================================================
 REM Port Availability Check
@@ -228,7 +151,7 @@ REM Service Start Functions
 REM ============================================================================
 
 :start_service
-setlocal
+setlocal enabledelayedexpansion
 set SERVICE=%~1
 set PORT=%~2
 set SERVICE_DIR=%SCRIPT_DIR%api\%SERVICE%
@@ -244,10 +167,23 @@ if not exist "%SERVICE_DIR%" (
 
 cd /d "%SERVICE_DIR%"
 
-REM Start service in background
+REM Check for node_modules and install if missing
+if not exist "node_modules" (
+    call :print_warning "node_modules not found for %SERVICE%. Installing dependencies..."
+    call :print_info "Running 'npm install'... this may take a moment."
+    call npm install
+    if !errorlevel! neq 0 (
+        call :print_error "Failed to install dependencies for %SERVICE%"
+        endlocal
+        exit /b 1
+    )
+    call :print_success "Dependencies installed for %SERVICE%"
+)
+
+REM Start service in background - keep window open for visibility
 set PORT=%PORT%
 set NODE_ENV=development
-start "CBC-%SERVICE%" cmd /k npm run dev > "%LOG_FILE%" 2>&1
+start "CBC-%SERVICE%" cmd /k npm run dev
 
 REM Wait for service to start
 timeout /t 2 /nobreak >nul
@@ -261,17 +197,60 @@ call :print_header "Starting All API Services"
 
 for %%s in (%SERVICES%) do (
     for /f "tokens=1,2 delims=:" %%a in ("%%s") do (
-        call :start_service %%a %%b
-        if !errorlevel! neq 0 exit /b 1
+        REM Check if port is listening
+        netstat -ano | findstr ":%%b" | findstr "LISTENING" >nul 2>&1
+        if !errorlevel! equ 0 (
+            call :print_warning "%%a is already running on port %%b (Skipping startup)"
+        ) else (
+            call :start_service %%a %%b
+            if !errorlevel! neq 0 exit /b 1
+        )
     )
 )
 
 call :print_info "Waiting for services to be ready..."
-timeout /t 3 /nobreak >nul
+timeout /t 5 /nobreak >nul
 
+call :print_header "Verifying Services Are Listening"
+call :verify_ports_listening
+
+echo.
 call :print_header "Checking Service Health"
 call :check_service_health
 
+exit /b 0
+
+REM ============================================================================
+REM Port Verification Functions
+REM ============================================================================
+
+:verify_ports_listening
+setlocal enabledelayedexpansion
+set ALL_LISTENING=1
+
+for %%s in (%SERVICES%) do (
+    for /f "tokens=1,2 delims=:" %%a in ("%%s") do (
+        set SERVICE=%%a
+        set PORT=%%b
+        
+        REM Check if port is listening
+        netstat -ano | findstr ":!PORT!" | findstr "LISTENING" >nul 2>&1
+        if !errorlevel! equ 0 (
+            call :print_success "!SERVICE! is listening on port !PORT!"
+        ) else (
+            call :print_error "!SERVICE! is NOT listening on port !PORT!"
+            set ALL_LISTENING=0
+        )
+    )
+)
+
+if !ALL_LISTENING! equ 0 (
+    echo.
+    call :print_warning "Some services are not listening on their ports"
+    call :show_troubleshooting
+)
+
+endlocal
 exit /b 0
 
 REM ============================================================================
@@ -355,12 +334,48 @@ echo     Exporter Portal API   - http://localhost:3004
 echo     National Bank API     - http://localhost:3005
 echo     ECX API               - http://localhost:3006
 echo     Shipping Line API     - http://localhost:3007
+echo     ESW API               - http://localhost:3008
 echo.
 echo Examples:
 echo     start-all-apis.bat
 echo     start-all-apis.bat check
 echo     start-all-apis.bat logs
 echo     start-all-apis.bat stop
+echo.
+exit /b 0
+
+:show_troubleshooting
+echo.
+echo ========================================
+echo Troubleshooting Guide
+echo ========================================
+echo.
+echo If services are not starting properly:
+echo.
+echo 1. Check service windows:
+echo    - Look for CBC-* windows that may have error messages
+echo    - Services should stay open, not close immediately
+echo.
+echo 2. Check if ports are already in use:
+echo    netstat -ano ^| findstr ":300"
+echo.
+echo 3. Verify infrastructure is running:
+echo    docker ps
+echo    - PostgreSQL should be on port 5432
+echo    - Redis should be on port 6379
+echo.
+echo 4. Check database connection:
+echo    docker exec postgres pg_isready -U postgres
+echo.
+echo 5. Start a service manually to see errors:
+echo    cd api\commercial-bank
+echo    npm run dev
+echo.
+echo 6. Check if node_modules are installed:
+echo    - Each service needs: cd api\^<service^> ^&^& npm install
+echo.
+echo 7. View recent logs (if available):
+echo    dir logs\*.log
 echo.
 exit /b 0
 
@@ -420,9 +435,10 @@ if "%COMMAND%"=="start" (
     if !errorlevel! neq 0 exit /b 1
     echo.
     
-    call :check_all_ports
-    if !errorlevel! neq 0 exit /b 1
     echo.
+    REM Skip strict check_all_ports to allow partial startup
+    REM call :check_all_ports
+    REM if !errorlevel! neq 0 exit /b 1
     
     call :setup_environment
     echo.
@@ -440,6 +456,7 @@ if "%COMMAND%"=="start" (
     echo   national-bank: http://localhost:3005
     echo   ecx: http://localhost:3006
     echo   shipping-line: http://localhost:3007
+    echo   esw: http://localhost:3008
     echo.
     call :print_info "View logs: start-all-apis.bat logs"
     call :print_info "Stop services: start-all-apis.bat stop"
@@ -452,6 +469,4 @@ call :print_error "Unknown command: %COMMAND%"
 call :show_help
 exit /b 1
 
-REM Run main function
-call :main %*
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
+REM End of script

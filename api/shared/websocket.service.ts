@@ -1,10 +1,6 @@
 import { Server as HTTPServer } from 'http';
 import { Server as SocketIOServer, Socket } from 'socket.io';
-<<<<<<< HEAD
 import * as jwt from 'jsonwebtoken';
-=======
-import jwt from 'jsonwebtoken';
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 import { createLogger } from './logger';
 
 const logger = createLogger('WebSocketService');
@@ -61,21 +57,13 @@ export class WebSocketService {
         socket.organization = decoded.organization;
         socket.messageCount = 0;
         socket.lastMessageTime = Date.now();
-<<<<<<< HEAD
 
-=======
-        
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         logger.info('WebSocket authenticated', {
           userId: socket.userId,
           username: socket.username,
           organization: socket.organization
         });
-<<<<<<< HEAD
 
-=======
-        
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         next();
       } catch (error) {
         logger.warn('WebSocket authentication failed', {
@@ -89,35 +77,20 @@ export class WebSocketService {
     // Rate limiting middleware
     this.io.use((socket: AuthenticatedSocket, next) => {
       const originalEmit = socket.emit.bind(socket);
-<<<<<<< HEAD
 
       socket.emit = function (event: string, ...args: any[]) {
         const now = Date.now();
         socket.messageCount = socket.messageCount || 0;
         socket.lastMessageTime = socket.lastMessageTime || now;
 
-=======
-      
-      socket.emit = function(event: string, ...args: any[]) {
-        const now = Date.now();
-        socket.messageCount = socket.messageCount || 0;
-        socket.lastMessageTime = socket.lastMessageTime || now;
-        
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         // Reset counter every second
         if (now - socket.lastMessageTime > 1000) {
           socket.messageCount = 0;
           socket.lastMessageTime = now;
         }
-<<<<<<< HEAD
 
         socket.messageCount++;
 
-=======
-        
-        socket.messageCount++;
-        
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         // Limit to 100 messages per second
         if (socket.messageCount > 100) {
           logger.warn('WebSocket rate limit exceeded', {
@@ -127,17 +100,10 @@ export class WebSocketService {
           socket.disconnect(true);
           return false;
         }
-<<<<<<< HEAD
 
         return originalEmit(event, ...args);
       };
 
-=======
-        
-        return originalEmit(event, ...args);
-      };
-      
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       next();
     });
   }
@@ -150,11 +116,7 @@ export class WebSocketService {
         username: socket.username,
         organization: socket.organization
       });
-<<<<<<< HEAD
 
-=======
-      
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       // Store connected client
       if (socket.userId) {
         this.connectedClients.set(socket.userId, socket);

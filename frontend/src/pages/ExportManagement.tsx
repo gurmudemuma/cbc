@@ -1,11 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-<<<<<<< HEAD
 import { useExports } from '../hooks/useExportManager';
 import { Export } from '../types';
-=======
-import { useExports } from '../hooks/useExports';
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 import {
   Package,
   Plus,
@@ -79,11 +75,7 @@ interface ExportManagementProps {
 const ExportManagement = ({ user, org }: ExportManagementProps): JSX.Element => {
   const navigate = useNavigate();
   const { exports, loading: exportsLoading, error: exportsError, refreshExports } = useExports();
-<<<<<<< HEAD
   const [filteredExports, setFilteredExports] = useState<Export[]>([]);
-=======
-  const [filteredExports, setFilteredExports] = useState([]);
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -142,11 +134,7 @@ const ExportManagement = ({ user, org }: ExportManagementProps): JSX.Element => 
   const [workflowHistory, setWorkflowHistory] = useState([]);
 
   // Detail view dialog state
-<<<<<<< HEAD
   const [detailDialog, setDetailDialog] = useState({ open: false, exportId: null, exportData: null, stage: '' });
-=======
-  const [detailDialog, setDetailDialog] = useState({ open: false, exportId: null });
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
   // Determine user role and permissions - Use BOTH organizationId AND role
   const orgId = user?.organizationId?.toLowerCase();
@@ -586,11 +574,7 @@ const ExportManagement = ({ user, org }: ExportManagementProps): JSX.Element => 
       });
 
       alert('Export rejected successfully. Exporter will be notified to resubmit.');
-<<<<<<< HEAD
       setRejectionDialog({ open: false, exportId: null, exportData: null, stage: '' });
-=======
-      setRejectionDialog({ open: false, exportId: null, exportData: null, stage: null });
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       setRejectionReason('');
       fetchExports();
     } catch (error) {
@@ -630,11 +614,7 @@ const ExportManagement = ({ user, org }: ExportManagementProps): JSX.Element => 
 
   // Resubmission handler for exporters
   const openResubmitDialog = (exportItem) => {
-<<<<<<< HEAD
     setResubmitDialog({ open: true, exportId: exportItem.exportId, exportData: exportItem, stage: '' });
-=======
-    setResubmitDialog({ open: true, exportId: exportItem.exportId, exportData: exportItem });
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   };
 
   const handleResubmit = async () => {
@@ -646,11 +626,7 @@ const ExportManagement = ({ user, org }: ExportManagementProps): JSX.Element => 
       });
 
       alert('Export resubmitted successfully for review');
-<<<<<<< HEAD
       setResubmitDialog({ open: false, exportId: null, exportData: null, stage: '' });
-=======
-      setResubmitDialog({ open: false, exportId: null, exportData: null });
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       fetchExports();
     } catch (error) {
       alert('Failed to resubmit: ' + (error.response?.data?.message || error.message));
@@ -676,11 +652,7 @@ const ExportManagement = ({ user, org }: ExportManagementProps): JSX.Element => 
     // View Details - Available to all roles for review before action
     actions.push({
       label: 'View Details',
-<<<<<<< HEAD
       action: () => setDetailDialog({ open: true, exportId: exportItem.exportId, exportData: exportItem, stage: '' }),
-=======
-      action: () => setDetailDialog({ open: true, exportId: exportItem.exportId }),
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       color: 'info',
       icon: <Eye size={16} />,
       variant: 'outlined',
@@ -711,11 +683,7 @@ const ExportManagement = ({ user, org }: ExportManagementProps): JSX.Element => 
     if (canApproveFX && (status === 'PENDING' || status === 'FX_PENDING')) {
       actions.push({
         label: 'Approve',
-<<<<<<< HEAD
         action: () => setDetailDialog({ open: true, exportId: exportItem.exportId, exportData: exportItem, stage: '' }),
-=======
-        action: () => setDetailDialog({ open: true, exportId: exportItem.exportId }),
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         color: 'success',
         icon: <CheckCircle size={16} />,
       });
@@ -731,11 +699,7 @@ const ExportManagement = ({ user, org }: ExportManagementProps): JSX.Element => 
     if (canCertifyQuality && (status === 'FX_APPROVED' || status === 'QUALITY_PENDING')) {
       actions.push({
         label: 'Certify',
-<<<<<<< HEAD
         action: () => setDetailDialog({ open: true, exportId: exportItem.exportId, exportData: exportItem, stage: '' }),
-=======
-        action: () => setDetailDialog({ open: true, exportId: exportItem.exportId }),
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         color: 'success',
         icon: <CheckCircle size={16} />,
       });
@@ -754,11 +718,7 @@ const ExportManagement = ({ user, org }: ExportManagementProps): JSX.Element => 
     ) {
       actions.push({
         label: 'Clear',
-<<<<<<< HEAD
         action: () => setDetailDialog({ open: true, exportId: exportItem.exportId, exportData: exportItem, stage: '' }),
-=======
-        action: () => setDetailDialog({ open: true, exportId: exportItem.exportId }),
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         color: 'success',
         icon: <CheckCircle size={16} />,
       });
@@ -774,11 +734,7 @@ const ExportManagement = ({ user, org }: ExportManagementProps): JSX.Element => 
     if (canManageShipment && (status === 'EXPORT_CUSTOMS_CLEARED' || status === 'SHIPMENT_PENDING')) {
       actions.push({
         label: 'Schedule',
-<<<<<<< HEAD
         action: () => setDetailDialog({ open: true, exportId: exportItem.exportId, exportData: exportItem, stage: '' }),
-=======
-        action: () => setDetailDialog({ open: true, exportId: exportItem.exportId }),
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         color: 'primary',
         icon: <CheckCircle size={16} />,
       });
@@ -939,10 +895,10 @@ const ExportManagement = ({ user, org }: ExportManagementProps): JSX.Element => 
                         </TableRow>
                       </TableHead>
                       <TableBody>
-                        {filteredExports.map((exp) => {
+                        {filteredExports.map((exp, idx) => {
                           const availableActions = getAvailableActions(exp);
                           return (
-                            <TableRow key={exp.exportId} hover>
+                            <TableRow key={`${exp.exportId}-${idx}`} hover>
                               <TableCell>
                                 <Typography variant="body2" fontWeight="medium">
                                   {exp.exportId}
@@ -993,7 +949,7 @@ const ExportManagement = ({ user, org }: ExportManagementProps): JSX.Element => 
                                 <Stack direction="row" spacing={1} justifyContent="flex-end">
                                   {availableActions.map((action, idx) => (
                                     <Button
-                                      key={idx}
+                                      key={`action-${idx}`}
                                       size="small"
                                       variant={action.variant || 'contained'}
                                       color={action.color}
@@ -1116,11 +1072,7 @@ const ExportManagement = ({ user, org }: ExportManagementProps): JSX.Element => 
                   {/* Shipping Line Shipper - Logistics */}
                   {canManageShipment && (
                     <>
-<<<<<<< HEAD
                       <Alert severity="info" sx={{ mb: 1 }}>
-=======
-                      <Alert severity="primary" sx={{ mb: 1 }}>
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
                         <Typography variant="caption">Schedule and manage shipments</Typography>
                       </Alert>
                       <Button variant="contained" fullWidth onClick={() => setView('shipments')}>
@@ -1345,7 +1297,7 @@ const ExportManagement = ({ user, org }: ExportManagementProps): JSX.Element => 
                           ${newExportData.estimatedValue || '0.00'} {newExportData.currency}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
-                          Calculated: {newExportData.quantity || 0} kg × $
+                          Calculated: {newExportData.quantity || 0} kg Ã— $
                           {newExportData.unitPrice || 0}/kg
                         </Typography>
                       </Alert>
@@ -1561,11 +1513,7 @@ const ExportManagement = ({ user, org }: ExportManagementProps): JSX.Element => 
         <Dialog
           open={rejectionDialog.open}
           onClose={() =>
-<<<<<<< HEAD
             setRejectionDialog({ open: false, exportId: null, exportData: null, stage: '' })
-=======
-            setRejectionDialog({ open: false, exportId: null, exportData: null, stage: null })
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           }
           maxWidth="sm"
           fullWidth
@@ -1618,11 +1566,7 @@ const ExportManagement = ({ user, org }: ExportManagementProps): JSX.Element => 
           <DialogActions>
             <Button
               onClick={() =>
-<<<<<<< HEAD
                 setRejectionDialog({ open: false, exportId: null, exportData: null, stage: '' })
-=======
-                setRejectionDialog({ open: false, exportId: null, exportData: null, stage: null })
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
               }
             >
               Cancel
@@ -1641,11 +1585,7 @@ const ExportManagement = ({ user, org }: ExportManagementProps): JSX.Element => 
         {/* Resubmission Dialog */}
         <Dialog
           open={resubmitDialog.open}
-<<<<<<< HEAD
           onClose={() => setResubmitDialog({ open: false, exportId: null, exportData: null, stage: '' })}
-=======
-          onClose={() => setResubmitDialog({ open: false, exportId: null, exportData: null })}
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           maxWidth="md"
           fullWidth
         >
@@ -1751,21 +1691,13 @@ const ExportManagement = ({ user, org }: ExportManagementProps): JSX.Element => 
           </DialogContent>
           <DialogActions>
             <Button
-<<<<<<< HEAD
               onClick={() => setResubmitDialog({ open: false, exportId: null, exportData: null, stage: '' })}
-=======
-              onClick={() => setResubmitDialog({ open: false, exportId: null, exportData: null })}
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
             >
               Cancel
             </Button>
             <Button
               onClick={() => {
-<<<<<<< HEAD
                 setResubmitDialog({ open: false, exportId: null, exportData: null, stage: '' });
-=======
-                setResubmitDialog({ open: false, exportId: null, exportData: null });
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
                 navigate(`/exports/${resubmitDialog.exportId}/edit`);
               }}
               variant="outlined"
@@ -1786,11 +1718,7 @@ const ExportManagement = ({ user, org }: ExportManagementProps): JSX.Element => 
         {/* Export Detail Dialog - For viewing complete export details before approval/rejection */}
         <ExportDetailDialog
           open={detailDialog.open}
-<<<<<<< HEAD
           onClose={() => setDetailDialog({ open: false, exportId: null, exportData: null, stage: '' })}
-=======
-          onClose={() => setDetailDialog({ open: false, exportId: null })}
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           exportId={detailDialog.exportId}
           userRole={displayRole}
           onApprove={(exportData) => {

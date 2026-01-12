@@ -1,20 +1,9 @@
-import { Router, Request, Response, NextFunction } from 'express';
-<<<<<<< HEAD
+import { Router } from 'express';
+import { ExporterController } from '../controllers/exporter.controller';
 import { authMiddleware as authenticate } from '@shared/middleware/auth.middleware';
-=======
-import { authMiddleware as authenticate } from '../../../shared/middleware/auth.middleware';
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
-
-interface AuthRequest extends Request {
-  user?: {
-    id: string;
-    username: string;
-    organizationId: string;
-    role: string;
-  };
-}
 
 const router = Router();
+const controller = new ExporterController();
 
 // All routes require authentication
 router.use(authenticate);
@@ -23,49 +12,7 @@ router.use(authenticate);
 // EXPORTER ENDPOINTS (Frontend compatibility)
 // ============================================================================
 
-// Get qualification status - proxy to preregistration
-router.get('/qualification-status', async (req: AuthRequest, res: Response, _next: NextFunction) => {
-  // This endpoint provides compatibility with frontend expectations
-  // It returns the overall qualification status for an exporter
-  try {
-    const userId = req.user?.id;
-    if (!userId) {
-      res.status(401).json({
-        success: false,
-        message: 'User not authenticated',
-      });
-      return;
-    }
-
-    // Mock qualification status for now
-    // In a real implementation, this would check the exporter's status
-    // across all ECTA systems (licenses, certificates, etc.)
-    res.json({
-      success: true,
-      data: {
-        isQualified: false,
-        hasProfile: false,
-        hasLaboratory: false,
-        hasTaster: false,
-        hasCompetenceCertificate: false,
-        hasExportLicense: false,
-        nextStep: 'Register exporter profile',
-        requiredActions: [
-          'Complete exporter profile registration',
-          'Register certified laboratory',
-          'Register qualified coffee taster',
-          'Apply for competence certificate',
-          'Apply for export license'
-        ]
-      }
-    });
-  } catch (error: any) {
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get qualification status',
-      error: error.message,
-    });
-  }
-});
+// Get qualification status
+router.get('/qualification-status', controller.getQualificationStatus);
 
 export default router;

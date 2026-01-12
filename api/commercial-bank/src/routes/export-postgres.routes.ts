@@ -1,12 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { ExportPostgresController } from '../controllers/export-postgres.controller';
-<<<<<<< HEAD
 import { authMiddleware } from '@shared/middleware/auth.middleware';
 import { inputValidator } from '@shared/input.sanitizer';
-=======
-import { authMiddleware } from '../../../shared/middleware/auth.middleware';
-import { inputValidator } from '../../../shared/input.sanitizer';
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
 const router = Router();
 const exportController = new ExportPostgresController();
@@ -49,7 +44,6 @@ router.get(
 );
 
 /**
-<<<<<<< HEAD
  * GET /api/exports/dashboard/stats
  * Get aggregated dashboard statistics for Commercial Bank
  */
@@ -60,8 +54,6 @@ router.get(
 );
 
 /**
-=======
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
  * GET /api/exports/:exportId
  * Get a specific export by ID
  */
@@ -134,11 +126,8 @@ router.get(
   exportController.getApprovals
 );
 
-<<<<<<< HEAD
 
 
-=======
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 /**
  * GET /api/exports/summary/statistics
  * Get export summary statistics

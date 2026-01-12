@@ -4,11 +4,7 @@
  */
 
 import { getPool } from '../database/pool';
-<<<<<<< HEAD
 import * as cron from 'node-cron';
-=======
-import cron from 'node-cron';
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
 const pool = getPool();
 
@@ -80,11 +76,7 @@ export class RenewalReminderService {
   async checkAndSendReminders(): Promise<void> {
     try {
       const reminders = await this.getExpiringItems();
-<<<<<<< HEAD
 
-=======
-      
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       for (const reminder of reminders) {
         await this.sendRenewalReminder(reminder);
       }
@@ -141,13 +133,8 @@ export class RenewalReminderService {
     `;
 
     const result = await pool.query(query);
-<<<<<<< HEAD
 
     return result.rows.map((row: any) => ({
-=======
-    
-    return result.rows.map(row => ({
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       reminderId: `comp_cert_${row.certificate_id}`,
       entityId: row.certificate_id,
       entityType: 'competence_certificate' as const,
@@ -182,13 +169,8 @@ export class RenewalReminderService {
     `;
 
     const result = await pool.query(query);
-<<<<<<< HEAD
 
     return result.rows.map((row: any) => ({
-=======
-    
-    return result.rows.map(row => ({
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       reminderId: `export_license_${row.license_id}`,
       entityId: row.license_id,
       entityType: 'export_license' as const,
@@ -223,13 +205,8 @@ export class RenewalReminderService {
     `;
 
     const result = await pool.query(query);
-<<<<<<< HEAD
 
     return result.rows.map((row: any) => ({
-=======
-    
-    return result.rows.map(row => ({
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       reminderId: `laboratory_${row.laboratory_id}`,
       entityId: row.laboratory_id,
       entityType: 'laboratory' as const,
@@ -264,13 +241,8 @@ export class RenewalReminderService {
     `;
 
     const result = await pool.query(query);
-<<<<<<< HEAD
 
     return result.rows.map((row: any) => ({
-=======
-    
-    return result.rows.map(row => ({
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       reminderId: `taster_${row.taster_id}`,
       entityId: row.taster_id,
       entityType: 'taster' as const,
@@ -299,27 +271,16 @@ export class RenewalReminderService {
   async sendRenewalReminder(reminder: RenewalReminder): Promise<void> {
     try {
       const template = this.getNotificationTemplate(reminder);
-<<<<<<< HEAD
 
-=======
-      
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       // In a real implementation, you would integrate with an email service
       // For now, we'll log the notification
       console.log(`📧 Sending ${reminder.reminderType} reminder to ${reminder.exporterEmail}`);
       console.log(`Subject: ${template.subject}`);
       console.log(`Body: ${template.body}`);
-<<<<<<< HEAD
 
       // Mark as sent (in a real implementation, you'd store this in a notifications table)
       await this.markReminderSent(reminder.reminderId);
 
-=======
-      
-      // Mark as sent (in a real implementation, you'd store this in a notifications table)
-      await this.markReminderSent(reminder.reminderId);
-      
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     } catch (error) {
       console.error(`❌ Failed to send reminder for ${reminder.entityName}:`, error);
     }
@@ -330,11 +291,7 @@ export class RenewalReminderService {
    */
   private getNotificationTemplate(reminder: RenewalReminder): NotificationTemplate {
     const formatDate = (dateStr: string) => new Date(dateStr).toLocaleDateString();
-<<<<<<< HEAD
 
-=======
-    
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     switch (reminder.reminderType) {
       case 'early_warning':
         return {
@@ -429,11 +386,7 @@ Ethiopian Coffee & Tea Authority
   async sendWeeklyRenewalSummary(): Promise<void> {
     try {
       const reminders = await this.getExpiringItems();
-<<<<<<< HEAD
 
-=======
-      
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       const summary = {
         totalExpiring: reminders.length,
         expired: reminders.filter(r => r.reminderType === 'expired').length,
@@ -448,15 +401,9 @@ Ethiopian Coffee & Tea Authority
       };
 
       console.log('📊 Weekly Renewal Summary:', summary);
-<<<<<<< HEAD
 
       // In a real implementation, send this to ECTA administrators
 
-=======
-      
-      // In a real implementation, send this to ECTA administrators
-      
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     } catch (error) {
       console.error('❌ Error generating weekly renewal summary:', error);
     }
@@ -468,19 +415,11 @@ Ethiopian Coffee & Tea Authority
   async triggerManualCheck(): Promise<RenewalReminder[]> {
     console.log('🔧 Manual renewal check triggered');
     const reminders = await this.getExpiringItems();
-<<<<<<< HEAD
 
     for (const reminder of reminders) {
       await this.sendRenewalReminder(reminder);
     }
 
-=======
-    
-    for (const reminder of reminders) {
-      await this.sendRenewalReminder(reminder);
-    }
-    
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     return reminders;
   }
 }

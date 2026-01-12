@@ -3,21 +3,13 @@ import { createLogger } from '../logger';
 
 const logger = createLogger('DatabasePool');
 
-<<<<<<< HEAD
 export let pool: any = null;
-=======
-export let pool: Pool | null = null;
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
 /**
  * Initialize the PostgreSQL connection pool
  * Should be called once at application startup
  */
-<<<<<<< HEAD
 export function initializePool(): any {
-=======
-export function initializePool(): Pool {
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   if (pool) {
     logger.info('Database pool already initialized, returning existing instance');
     return pool;
@@ -68,11 +60,7 @@ export function initializePool(): Pool {
 
   pool = new Pool(poolConfig);
 
-<<<<<<< HEAD
   pool.on('error', (err: any) => {
-=======
-  pool.on('error', (err) => {
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     logger.error('Unexpected error on idle client', { error: err });
   });
 
@@ -88,11 +76,7 @@ export function initializePool(): Pool {
  * Get the existing database pool
  * If pool doesn't exist, initializes it
  */
-<<<<<<< HEAD
 export function getPool(): any {
-=======
-export function getPool(): Pool {
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   if (!pool) {
     return initializePool();
   }

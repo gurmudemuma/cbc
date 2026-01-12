@@ -54,11 +54,7 @@ if [ "$1" != "--no-frontend" ]; then
     fi
     npm start &
     cd ..
-<<<<<<< HEAD
     echo -e "${GREEN}✓${NC} Frontend started (http://localhost:5173)"
-=======
-    echo -e "${GREEN}✓${NC} Frontend started (http://localhost:3000)"
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   else
     echo -e "${YELLOW}⚠${NC} Frontend directory not found, skipping"
   fi
@@ -70,11 +66,7 @@ echo ""
 echo -e "${GREEN}✓ All services started!${NC}"
 echo ""
 echo "📍 Service URLs:"
-<<<<<<< HEAD
 echo "   Frontend:          http://localhost:5173"
-=======
-echo "   Frontend:          http://localhost:3000"
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 echo "   Commercial Bank:   http://localhost:3001"
 echo "   Custom Authorities: http://localhost:3002"
 echo "   ECTA:              http://localhost:3003"

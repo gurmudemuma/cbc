@@ -1,16 +1,13 @@
-/**
+﻿/**
  * API Configuration
  * Centralized API endpoint management
  *
- * UPDATED: Reorganized to match Ethiopian coffee export workflow
- * - exporter-portal: Exporter Portal API (Port 3007) - External entity (SDK-based)
- * - commercial-bank: Commercial Bank API (Port 3001) - Consortium member
- * - national-bank: National Bank of Ethiopia API (Port 3002)
- * - ecta: Ethiopian Coffee & Tea Authority API (Port 3003)
- * - custom-authorities: Custom Authorities API (Port 3005)
- * - ecx: Ethiopian Commodity Exchange API (Port 3006)
- * - shipping-line: Shipping Line API (Port 3004)
+ * SINGLE SOURCE OF TRUTH: This file imports shared constants from the backend
+ * to ensure frontend and backend use identical endpoint definitions.
  */
+
+// Import shared constants from backend (single source of truth)
+import { SERVICES, getAllServices, ServiceConfig } from '../../../api/shared/api-endpoints.constants';
 
 // Type definitions
 export interface Organization {
@@ -26,134 +23,107 @@ export interface Organization {
   type?: 'external' | 'consortium';
 }
 
-export interface ApiEndpoints {
-  exporterPortal: string;
-  commercialBank: string;
-  nationalBank: string;
-  ecta: string;
-  customAuthorities: string;
-  ecx: string;
-  shippingLine: string;
-}
+export type ApiEndpoints = Record<string, string>;
 
 // Get environment variables with fallbacks
 const getEnvVar = (key: string, fallback: string): string => {
   return (import.meta.env[key] as string) || fallback;
 };
 
-// API Endpoints - Use environment variables with localhost fallbacks
-export const API_ENDPOINTS: ApiEndpoints = {
-<<<<<<< HEAD
-  exporterPortal: getEnvVar('VITE_API_EXPORTER_PORTAL', 'http://localhost:3004/api'),
-=======
-  exporterPortal: getEnvVar('VITE_API_EXPORTER_PORTAL', 'http://localhost:3004'),
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
-  commercialBank: getEnvVar('VITE_API_COMMERCIAL_BANK', 'http://localhost:3001'),
-  nationalBank: getEnvVar('VITE_API_NATIONAL_BANK', 'http://localhost:3005'),
-  ecta: getEnvVar('VITE_API_ECTA', 'http://localhost:3003'),
-  customAuthorities: getEnvVar('VITE_API_CUSTOM_AUTHORITIES', 'http://localhost:3002'),
-  ecx: getEnvVar('VITE_API_ECX', 'http://localhost:3006'),
-  shippingLine: getEnvVar('VITE_API_SHIPPING_LINE', 'http://localhost:3007'),
+// Determine if we're in production/staging (uses API gateway)
+const isProduction = import.meta.env.VITE_ENV === 'production';
+const isStaging = import.meta.env.VITE_ENV === 'staging';
+const apiGatewayUrl = isProduction
+  ? getEnvVar('VITE_API_BASE_URL', 'https://api.coffeeexport.com')
+  : isStaging
+    ? getEnvVar('VITE_API_BASE_URL', 'https://staging-api.coffeeexport.com')
+    : null;
+
+// Build service URLs based on environment
+const buildUrl = (serviceId: string): string => {
+  const service = Object.values(SERVICES).find(s => s.id === serviceId);
+  if (!service) return 'http://localhost:3000';
+
+  if (apiGatewayUrl) {
+    // Production/staging: use API gateway with service path
+    return `${apiGatewayUrl}/${serviceId}`;
+  }
+
+  // Development: use individual service ports
+  const envKey = `VITE_API_${serviceId.toUpperCase().replace(/-/g, '_')}`;
+  return getEnvVar(envKey, `http://localhost:${service.port}`);
 };
 
-// Organization Configuration - UPDATED with corrected workflow
-export const ORGANIZATIONS: Organization[] = [
-  {
-    id: 'exporter-portal',
-    value: 'exporter-portal',
-    label: 'Exporter Portal',
-    fullName: 'Coffee Exporter Portal',
-    apiUrl: API_ENDPOINTS.exporterPortal,
-    port: 3004,
-    mspId: null,
-    description: 'External exporters - Submit export requests via SDK',
-    order: 0,
-    type: 'external',
-  },
-  {
-    id: 'ecx',
-    value: 'ecx',
-    label: 'ECX',
-    fullName: 'Ethiopian Commodity Exchange',
-    apiUrl: API_ENDPOINTS.ecx,
-    port: 3006,
-    mspId: 'ECXMSP',
-    description: 'ECX - Verifies coffee lots and creates blockchain records',
-    order: 1,
-    type: 'consortium',
-  },
-  {
-    id: 'ecta',
-    value: 'ecta',
-    label: 'ECTA',
-    fullName: 'Ethiopian Coffee & Tea Authority',
-    apiUrl: API_ENDPOINTS.ecta,
-    port: 3003,
-    mspId: 'ECTAMSP',
-    description: 'ECTA - Primary regulator: License, Quality, Origin, Contract',
-    order: 2,
-    type: 'consortium',
-  },
-  {
-    id: 'commercial-bank',
-    value: 'commercial-bank',
-    label: 'Commercial Bank',
-    fullName: 'Commercial Bank',
-    apiUrl: API_ENDPOINTS.commercialBank,
-    port: 3001,
-    mspId: 'CommercialBankMSP',
-    description: 'Commercial Bank - Document verification and FX submission',
-    order: 3,
-    type: 'consortium',
-  },
-  {
-    id: 'national-bank',
-    value: 'national-bank',
-    label: 'NBE',
-    fullName: 'National Bank of Ethiopia',
-    apiUrl: API_ENDPOINTS.nationalBank,
-    port: 3005,
-    mspId: 'NationalBankMSP',
-    description: 'NBE - Foreign exchange approval only',
-    order: 4,
-  },
-  {
-    id: 'custom-authorities',
-    value: 'custom-authorities',
-    label: 'Customs',
-    fullName: 'Ethiopian Customs Commission',
-    apiUrl: API_ENDPOINTS.customAuthorities,
-    port: 3002,
-    mspId: 'CustomAuthoritiesMSP',
-    description: 'Customs - Export clearance and compliance',
-    order: 5,
-  },
-  {
-    id: 'shipping-line',
-    value: 'shipping-line',
-    label: 'Shipping Line',
-    fullName: 'Shipping Line',
-    apiUrl: API_ENDPOINTS.shippingLine,
-    port: 3007,
-    mspId: 'ShippingLineMSP',
-    description: 'Shipping Line - Manages shipments and logistics',
-    order: 6,
-  },
-];
+// API Endpoints - Generated dynamically from SERVICES
+export const API_ENDPOINTS = Object.values(SERVICES).reduce((acc, service) => {
+  // Map service IDs to camelCase property names for backward compatibility if needed
+  // or just use the service IDs directly if the app supports it.
+  // The previous api.config.ts had camelCase keys (commercialBank, nationalBank, etc.)
+  // We will map them manually to ensure compatibility with existing code.
+
+  const keyMap: Record<string, string> = {
+    'exporter-portal': 'exporterPortal',
+    'commercial-bank': 'commercialBank',
+    'national-bank': 'nationalBank',
+    'ecta': 'ecta',
+    'custom-authorities': 'customAuthorities',
+    'ecx': 'ecx',
+    'shipping-line': 'shippingLine',
+  };
+
+  const key = keyMap[service.id] || service.id;
+  acc[key] = buildUrl(service.id);
+  return acc;
+}, {} as Record<string, string>);
+
+// Custom label mapping for better UI display
+const labelMap: Record<string, string> = {
+  'exporter-portal': 'Exporter Portal',
+  'commercial-bank': 'Commercial Bank',
+  'national-bank': 'National Bank of Ethiopia (NBE)',
+  'ecta': 'Ethiopian Coffee & Tea Authority (ECTA)',
+  'custom-authorities': 'Ethiopian Customs Commission',
+  'ecx': 'Ethiopian Commodity Exchange (ECX)',
+  'shipping-line': 'Shipping Line',
+};
+
+// Organization Configuration - Built from shared constants
+export const ORGANIZATIONS: Organization[] = getAllServices().map((service) => ({
+  id: service.id,
+  value: service.id,
+  label: labelMap[service.id] || service.name,
+  fullName: service.name,
+  apiUrl: buildUrl(service.id),
+  port: service.port,
+  mspId: service.mspId,
+  description: service.description,
+  order: service.order,
+  type: service.type as 'external' | 'consortium',
+}));
+
+// Organizations that support authentication (for login dropdown)
+export const LOGIN_ORGANIZATIONS: Organization[] = ORGANIZATIONS.filter(
+  (org) => {
+    const service = Object.values(SERVICES).find(s => s.id === org.id);
+    return service?.hasAuth !== false; // Include if hasAuth is true or undefined (default true)
+  }
+);
 
 // Get API URL by organization value
-export const getApiUrl = (orgValue: string): string => {
+export const getApiUrl = (orgValue: string | null): string => {
+  if (!orgValue) return API_ENDPOINTS.commercialBank;
   const org = ORGANIZATIONS.find((o) => o.value === orgValue);
   return org ? org.apiUrl : API_ENDPOINTS.commercialBank;
 };
 
 // Get organization by value
-export const getOrganization = (orgValue: string): Organization | undefined => {
+export const getOrganization = (orgValue: string | null): Organization | undefined => {
+  if (!orgValue) return undefined;
   return ORGANIZATIONS.find((o) => o.value === orgValue);
 };
 
 // Get MSP ID by organization value
-export const getMspId = (orgValue: string): string => {
+export const getMspId = (orgValue: string | null): string => {
   const org = getOrganization(orgValue);
   return org?.mspId || 'CommercialBankMSP';
 };
@@ -161,6 +131,7 @@ export const getMspId = (orgValue: string): string => {
 export default {
   API_ENDPOINTS,
   ORGANIZATIONS,
+  LOGIN_ORGANIZATIONS,
   getApiUrl,
   getOrganization,
   getMspId,

@@ -1,14 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import { JwtPayload } from 'jsonwebtoken';
-<<<<<<< HEAD
 import { pool } from '@shared/database/pool';
 import { createLogger } from '@shared/logger';
 import { ErrorCode, AppError } from '@shared/error-codes';
-=======
-import { pool } from '../../../shared/database/pool';
-import { createLogger } from '../../../shared/logger';
-import { ErrorCode, AppError } from '../../../shared/error-codes';
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
 const logger = createLogger('ECTAExportController');
 
@@ -41,7 +35,7 @@ export class ExportController {
         throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Export ID is required', 400);
       }
 
-      const result = await pool.query('SELECT * FROM exports WHERE id = $1', [exportId]);
+      const result = await pool.query('SELECT * FROM exports WHERE export_id = $1', [exportId]);
       if (result.rows.length === 0) {
         throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
       }
@@ -83,7 +77,7 @@ export class ExportController {
 
       await client.query('BEGIN');
 
-      const exportResult = await client.query('SELECT * FROM exports WHERE id = $1', [exportId]);
+      const exportResult = await client.query('SELECT * FROM exports WHERE export_id = $1', [exportId]);
       if (exportResult.rows.length === 0) {
         throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
       }
@@ -98,7 +92,7 @@ export class ExportController {
       }
 
       await client.query(
-        'UPDATE exports SET status = $1, quality_grade = $2, updated_at = NOW() WHERE id = $3',
+        'UPDATE exports SET status = $1, quality_grade = $2, updated_at = NOW() WHERE export_id = $3',
         ['QUALITY_CERTIFIED', qualityGrade, exportId]
       );
 
@@ -152,7 +146,7 @@ export class ExportController {
 
       await client.query('BEGIN');
 
-      const exportResult = await client.query('SELECT * FROM exports WHERE id = $1', [exportId]);
+      const exportResult = await client.query('SELECT * FROM exports WHERE export_id = $1', [exportId]);
       if (exportResult.rows.length === 0) {
         throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
       }
@@ -167,7 +161,7 @@ export class ExportController {
       }
 
       await client.query(
-        'UPDATE exports SET status = $1, updated_at = NOW() WHERE id = $2',
+        'UPDATE exports SET status = $1, updated_at = NOW() WHERE export_id = $2',
         ['QUALITY_REJECTED', exportId]
       );
 
@@ -205,7 +199,7 @@ export class ExportController {
         throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Export ID is required', 400);
       }
 
-      const result = await pool.query('SELECT * FROM exports WHERE id = $1', [exportId]);
+      const result = await pool.query('SELECT * FROM exports WHERE export_id = $1', [exportId]);
       if (result.rows.length === 0) {
         throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
       }
@@ -256,7 +250,7 @@ export class ExportController {
         throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Export ID is required', 400);
       }
 
-      const result = await pool.query('SELECT * FROM exports WHERE id = $1', [exportId]);
+      const result = await pool.query('SELECT * FROM exports WHERE export_id = $1', [exportId]);
       if (result.rows.length === 0) {
         throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
       }
@@ -319,7 +313,7 @@ export class ExportController {
         throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Export ID is required', 400);
       }
 
-      const result = await pool.query('SELECT * FROM exports WHERE id = $1', [exportId]);
+      const result = await pool.query('SELECT * FROM exports WHERE export_id = $1', [exportId]);
       if (result.rows.length === 0) {
         throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
       }
@@ -367,7 +361,7 @@ export class ExportController {
         throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Export ID is required', 400);
       }
 
-      const result = await pool.query('SELECT * FROM exports WHERE id = $1', [exportId]);
+      const result = await pool.query('SELECT * FROM exports WHERE export_id = $1', [exportId]);
       if (result.rows.length === 0) {
         throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
       }
@@ -394,3 +388,4 @@ export class ExportController {
     });
   }
 }
+

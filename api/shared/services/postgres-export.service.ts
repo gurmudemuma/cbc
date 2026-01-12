@@ -93,7 +93,7 @@ export class PostgresExportService {
     try {
       const pool = getPool();
       const result = await pool.query(
-        `SELECT * FROM exports WHERE id = $1`,
+        `SELECT * FROM exports WHERE export_id = $1`,
         [exportId]
       );
       return result.rows[0] || null;
@@ -169,7 +169,7 @@ export class PostgresExportService {
 
       // Get current export
       const currentResult = await client.query(
-        `SELECT * FROM exports WHERE id = $1`,
+        `SELECT * FROM exports WHERE export_id = $1`,
         [exportId]
       );
 
@@ -182,7 +182,7 @@ export class PostgresExportService {
 
       // Update export
       const updateResult = await client.query(
-        `UPDATE exports SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
+        `UPDATE exports SET status = $1, updated_at = NOW() WHERE export_id = $2 RETURNING *`,
         [newStatus, exportId]
       );
 
@@ -299,11 +299,7 @@ export class PostgresExportService {
         byStatus: {}
       };
 
-<<<<<<< HEAD
       result.rows.forEach((row: any) => {
-=======
-      result.rows.forEach(row => {
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         summary.byStatus[row.status] = {
           count: parseInt(row.count),
           totalQuantity: parseFloat(row.total_quantity || 0)
@@ -366,3 +362,4 @@ export class PostgresExportService {
 
 // Export singleton instance
 export const postgresExportService = new PostgresExportService();
+

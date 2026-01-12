@@ -11,19 +11,11 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-<<<<<<< HEAD
     "noImplicitAny": false,
     "strictNullChecks": true,
     "strictFunctionTypes": true,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-=======
-    "noImplicitAny": true,
-    "strictNullChecks": true,
-    "strictFunctionTypes": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "noPropertyAccessFromIndexSignature": false,

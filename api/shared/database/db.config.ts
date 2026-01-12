@@ -16,11 +16,7 @@ const pool = new Pool({
   connectionTimeoutMillis: 2000,
 });
 
-<<<<<<< HEAD
 pool.on('error', (err: any) => {
-=======
-pool.on('error', (err) => {
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   console.error('Unexpected error on idle client', err);
   process.exit(-1);
 });

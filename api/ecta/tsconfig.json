@@ -1,18 +1,55 @@
 {
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "./dist",
-    "noPropertyAccessFromIndexSignature": false,
-<<<<<<< HEAD
-    "types": [
-      "node"
+    "target": "ES2020",
+    "module": "commonjs",
+    "lib": [
+      "ES2020"
     ],
-    "baseUrl": "..",
+    "outDir": "./dist",
+    "strict": false,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": false,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "strictFunctionTypes": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noImplicitReturns": false,
+    "noFallthroughCasesInSwitch": false,
+    "noPropertyAccessFromIndexSignature": false,
+    "baseUrl": ".",
     "paths": {
       "@shared/*": [
-        "shared/*"
+        "../shared/*"
+      ],
+      "@controllers/*": [
+        "../shared/controllers/*"
+      ],
+      "@middleware/*": [
+        "../shared/middleware/*"
+      ],
+      "@models/*": [
+        "../shared/models/*"
+      ],
+      "@services/*": [
+        "../shared/services/*"
+      ],
+      "@utils/*": [
+        "../shared/utils/*"
+      ],
+      "@types/*": [
+        "../shared/types/*"
       ]
-    }
+    },
+    "types": [
+      "node"
+    ]
   },
   "include": [
     "src/**/*",
@@ -21,15 +58,8 @@
   "exclude": [
     "node_modules",
     "dist",
-    "src/__tests__/**",
+    "**/*.test.ts",
     "../shared/**/*.test.ts",
     "../shared/test-setup.ts"
   ]
 }
-=======
-    "types": ["node"]
-  },
-  "include": ["src/**/*", "../shared/**/*"],
-  "exclude": ["node_modules", "dist", "src/__tests__/**", "../shared/**/*.test.ts", "../shared/test-setup.ts"]
-}
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665

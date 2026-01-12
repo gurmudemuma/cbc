@@ -3,7 +3,9 @@
   "compilerOptions": {
     "target": "ES2020",
     "module": "commonjs",
-    "lib": ["ES2020"],
+    "lib": [
+      "ES2020"
+    ],
     "outDir": "./dist",
     "strict": true,
     "esModuleInterop": true,
@@ -21,8 +23,43 @@
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "noPropertyAccessFromIndexSignature": false,
-    "types": ["node"]
+    "baseUrl": ".",
+    "paths": {
+      "@shared/*": [
+        "../shared/*"
+      ],
+      "@controllers/*": [
+        "../shared/controllers/*"
+      ],
+      "@middleware/*": [
+        "../shared/middleware/*"
+      ],
+      "@models/*": [
+        "../shared/models/*"
+      ],
+      "@services/*": [
+        "../shared/services/*"
+      ],
+      "@utils/*": [
+        "../shared/utils/*"
+      ],
+      "@types/*": [
+        "../shared/types/*"
+      ]
+    },
+    "types": [
+      "node"
+    ]
   },
-  "include": ["src/**/*", "../shared/**/*"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "../shared/**/*.test.ts", "../shared/test-setup.ts"]
+  "include": [
+    "src/**/*",
+    "../shared/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts",
+    "../shared/**/*.test.ts",
+    "../shared/test-setup.ts"
+  ]
 }

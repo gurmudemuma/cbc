@@ -300,11 +300,7 @@ export class IPFSDocumentService {
     `;
     const result = await pool.query(query, [entityId, entityType]);
     
-<<<<<<< HEAD
     return result.rows.map((row: any) => ({
-=======
-    return result.rows.map(row => ({
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       documentId: row.document_id,
       entityId: row.entity_id,
       entityType: row.entity_type,

@@ -27,10 +27,7 @@
     "clean": "npm run clean --workspaces && rm -rf node_modules"
   },
   "devDependencies": {
-<<<<<<< HEAD
     "tsconfig-paths": "^4.2.0",
-=======
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     "typescript": "^5.0.0"
   }
 }

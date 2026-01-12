@@ -1,17 +1,9 @@
 import { Request, Response, NextFunction } from "express";
-<<<<<<< HEAD
 import { pool } from "@shared/database/pool";
 import { createLogger } from "@shared/logger";
 import { ErrorCode, AppError } from "@shared/error-codes";
 import { ectaPreRegistrationService } from "@shared/services/ecta-preregistration.service";
 import { EctaPreRegistrationRepository } from "@shared/database/repositories/ecta-preregistration.repository";
-=======
-import { pool } from "../../../shared/database/pool";
-import { createLogger } from "../../../shared/logger";
-import { ErrorCode, AppError } from "../../../shared/error-codes";
-import { ectaPreRegistrationService } from "../../../shared/services/ecta-preregistration.service";
-import { EctaPreRegistrationRepository } from "../../../shared/database/repositories/ecta-preregistration.repository";
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
 const logger = createLogger('ExporterPortalExportController');
 
@@ -128,7 +120,6 @@ export class ExportController {
       await client.query('BEGIN');
 
       const result = await client.query(
-<<<<<<< HEAD
         `INSERT INTO exports (
            export_id, 
            exporter_id, 
@@ -149,24 +140,13 @@ export class ExportController {
            created_at, 
            updated_at
          )
-=======
-        `INSERT INTO exports (id, exporter_name, exporter_tin, export_license_number, coffee_type, 
-         quantity, destination_country, estimated_value, ecx_lot_number, warehouse_receipt_number,
-         quality_certificate_number, sales_contract_number, export_permit_number, 
-         origin_certificate_number, created_by, status, created_at, updated_at)
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW(), NOW())
          RETURNING *`,
         [
           exportData.exportId,
-<<<<<<< HEAD
           exporterId, // Use exporterId from profile, NOT userId
           exportData.exporterName || profile.businessName || '',
           exportData.exporterTIN || profile.tin || '',
-=======
-          exportData.exporterName || '',
-          exportData.exporterTIN || '',
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           exportData.exportLicenseNumber,
           exportData.coffeeType,
           exportData.quantity,
@@ -178,10 +158,6 @@ export class ExportController {
           exportData.salesContractNumber,
           exportData.exportPermitNumber,
           exportData.originCertificateNumber,
-<<<<<<< HEAD
-=======
-          userId,
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           'DRAFT'
         ]
       );
@@ -228,7 +204,6 @@ export class ExportController {
         throw new AppError(ErrorCode.UNAUTHORIZED, 'User not authenticated', 401);
       }
 
-<<<<<<< HEAD
       // Lookup exporter profile first
       const repository = new EctaPreRegistrationRepository(pool);
       const profile = await repository.getExporterProfileByUserId(userId);
@@ -245,11 +220,6 @@ export class ExportController {
       const result = await pool.query(
         'SELECT * FROM exports WHERE exporter_id = $1 ORDER BY created_at DESC',
         [profile.exporterId]
-=======
-      const result = await pool.query(
-        'SELECT * FROM exports WHERE created_by = $1 ORDER BY created_at DESC',
-        [userId]
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       );
 
       res.status(200).json({
@@ -265,12 +235,9 @@ export class ExportController {
   /**
    * Get single export by ID (only if owned by user)
    */
-<<<<<<< HEAD
   /**
    * Get single export by ID (only if owned by user)
    */
-=======
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   public getExportById = async (
     req: Request,
     res: Response,
@@ -280,7 +247,6 @@ export class ExportController {
       const { id } = req.params;
       const userId = (req as any).user?.id;
 
-<<<<<<< HEAD
       // Lookup exporter profile
       const repository = new EctaPreRegistrationRepository(pool);
       const profile = await repository.getExporterProfileByUserId(userId);
@@ -291,10 +257,6 @@ export class ExportController {
 
       const result = await pool.query(
         'SELECT * FROM exports WHERE export_id = $1',
-=======
-      const result = await pool.query(
-        'SELECT * FROM exports WHERE id = $1',
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         [id]
       );
 
@@ -305,11 +267,7 @@ export class ExportController {
       const exportRecord = result.rows[0];
 
       // Verify ownership
-<<<<<<< HEAD
       if (exportRecord.exporter_id !== profile.exporterId) {
-=======
-      if (exportRecord.created_by !== userId) {
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         throw new AppError(
           ErrorCode.UNAUTHORIZED,
           'Access denied. You can only view your own exports.',
@@ -330,12 +288,9 @@ export class ExportController {
   /**
    * Get export history/audit trail
    */
-<<<<<<< HEAD
   /**
    * Get export history/audit trail
    */
-=======
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   public getExportHistory = async (
     req: Request,
     res: Response,
@@ -345,7 +300,6 @@ export class ExportController {
       const { id } = req.params;
       const userId = (req as any).user?.id;
 
-<<<<<<< HEAD
       // Lookup exporter profile
       const repository = new EctaPreRegistrationRepository(pool);
       const profile = await repository.getExporterProfileByUserId(userId);
@@ -356,10 +310,6 @@ export class ExportController {
 
       const exportResult = await pool.query(
         'SELECT * FROM exports WHERE export_id = $1',
-=======
-      const exportResult = await pool.query(
-        'SELECT * FROM exports WHERE id = $1',
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         [id]
       );
 
@@ -369,11 +319,7 @@ export class ExportController {
 
       const exportRecord = exportResult.rows[0];
 
-<<<<<<< HEAD
       if (exportRecord.exporter_id !== profile.exporterId) {
-=======
-      if (exportRecord.created_by !== userId) {
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         throw new AppError(ErrorCode.UNAUTHORIZED, 'Access denied', 403);
       }
 
@@ -397,13 +343,10 @@ export class ExportController {
    * Submit export to ECX for lot verification
    * Status: DRAFT → ECX_PENDING
    */
-<<<<<<< HEAD
   /**
    * Submit export to ECX for lot verification
    * Status: DRAFT → ECX_PENDING
    */
-=======
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   public submitToECX = async (
     req: Request,
     res: Response,
@@ -414,7 +357,6 @@ export class ExportController {
       const { id } = req.params;
       const userId = (req as any).user?.id;
 
-<<<<<<< HEAD
       // Lookup exporter profile
       const repository = new EctaPreRegistrationRepository(pool);
       const profile = await repository.getExporterProfileByUserId(userId);
@@ -425,10 +367,6 @@ export class ExportController {
 
       const exportResult = await client.query(
         'SELECT * FROM exports WHERE export_id = $1',
-=======
-      const exportResult = await client.query(
-        'SELECT * FROM exports WHERE id = $1',
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         [id]
       );
 
@@ -438,11 +376,7 @@ export class ExportController {
 
       const exportRecord = exportResult.rows[0];
 
-<<<<<<< HEAD
       if (exportRecord.exporter_id !== profile.exporterId) {
-=======
-      if (exportRecord.created_by !== userId) {
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         throw new AppError(
           ErrorCode.UNAUTHORIZED,
           'Access denied. You can only submit your own exports.',
@@ -462,11 +396,7 @@ export class ExportController {
       await client.query('BEGIN');
 
       await client.query(
-<<<<<<< HEAD
         'UPDATE exports SET status = $1, updated_at = NOW() WHERE export_id = $2',
-=======
-        'UPDATE exports SET status = $1, updated_at = NOW() WHERE id = $2',
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         ['ECX_PENDING', id]
       );
 
@@ -498,13 +428,10 @@ export class ExportController {
    * Submit export to ECTA for license approval
    * Status: ECX_VERIFIED → ECTA_LICENSE_PENDING
    */
-<<<<<<< HEAD
   /**
    * Submit export to ECTA for license approval
    * Status: ECX_VERIFIED → ECTA_LICENSE_PENDING
    */
-=======
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   public submitToECTA = async (
     req: Request,
     res: Response,
@@ -515,7 +442,6 @@ export class ExportController {
       const { id } = req.params;
       const userId = (req as any).user?.id;
 
-<<<<<<< HEAD
       // Lookup exporter profile
       const repository = new EctaPreRegistrationRepository(pool);
       const profile = await repository.getExporterProfileByUserId(userId);
@@ -526,10 +452,6 @@ export class ExportController {
 
       const exportResult = await client.query(
         'SELECT * FROM exports WHERE export_id = $1',
-=======
-      const exportResult = await client.query(
-        'SELECT * FROM exports WHERE id = $1',
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         [id]
       );
 
@@ -539,11 +461,7 @@ export class ExportController {
 
       const exportRecord = exportResult.rows[0];
 
-<<<<<<< HEAD
       if (exportRecord.exporter_id !== profile.exporterId) {
-=======
-      if (exportRecord.created_by !== userId) {
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         throw new AppError(ErrorCode.UNAUTHORIZED, 'Access denied', 403);
       }
 
@@ -559,11 +477,7 @@ export class ExportController {
       await client.query('BEGIN');
 
       await client.query(
-<<<<<<< HEAD
         'UPDATE exports SET status = $1, updated_at = NOW() WHERE export_id = $2',
-=======
-        'UPDATE exports SET status = $1, updated_at = NOW() WHERE id = $2',
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         ['ECTA_LICENSE_PENDING', id]
       );
 
@@ -595,13 +509,10 @@ export class ExportController {
    * Submit export to Commercial Bank for document verification
    * Status: ECTA_CONTRACT_APPROVED → BANK_DOCUMENT_PENDING
    */
-<<<<<<< HEAD
   /**
    * Submit export to Commercial Bank for document verification
    * Status: ECTA_CONTRACT_APPROVED → BANK_DOCUMENT_PENDING
    */
-=======
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   public submitToBank = async (
     req: Request,
     res: Response,
@@ -612,7 +523,6 @@ export class ExportController {
       const { id } = req.params;
       const userId = (req as any).user?.id;
 
-<<<<<<< HEAD
       // Lookup exporter profile
       const repository = new EctaPreRegistrationRepository(pool);
       const profile = await repository.getExporterProfileByUserId(userId);
@@ -623,10 +533,6 @@ export class ExportController {
 
       const exportResult = await client.query(
         'SELECT * FROM exports WHERE export_id = $1',
-=======
-      const exportResult = await client.query(
-        'SELECT * FROM exports WHERE id = $1',
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         [id]
       );
 
@@ -636,11 +542,7 @@ export class ExportController {
 
       const exportRecord = exportResult.rows[0];
 
-<<<<<<< HEAD
       if (exportRecord.exporter_id !== profile.exporterId) {
-=======
-      if (exportRecord.created_by !== userId) {
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         throw new AppError(ErrorCode.UNAUTHORIZED, 'Access denied', 403);
       }
 
@@ -656,11 +558,7 @@ export class ExportController {
       await client.query('BEGIN');
 
       await client.query(
-<<<<<<< HEAD
         'UPDATE exports SET status = $1, updated_at = NOW() WHERE export_id = $2',
-=======
-        'UPDATE exports SET status = $1, updated_at = NOW() WHERE id = $2',
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         ['BANK_DOCUMENT_PENDING', id]
       );
 
@@ -692,12 +590,9 @@ export class ExportController {
   /**
    * Get document checklist and upload status
    */
-<<<<<<< HEAD
   /**
    * Get document checklist and upload status
    */
-=======
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   public getDocumentStatus = async (
     req: Request,
     res: Response,
@@ -707,7 +602,6 @@ export class ExportController {
       const { id } = req.params;
       const userId = (req as any).user?.id;
 
-<<<<<<< HEAD
       // Lookup exporter profile
       const repository = new EctaPreRegistrationRepository(pool);
       const profile = await repository.getExporterProfileByUserId(userId);
@@ -718,10 +612,6 @@ export class ExportController {
 
       const exportResult = await pool.query(
         'SELECT * FROM exports WHERE export_id = $1',
-=======
-      const exportResult = await pool.query(
-        'SELECT * FROM exports WHERE id = $1',
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         [id]
       );
 
@@ -731,11 +621,7 @@ export class ExportController {
 
       const exportRecord = exportResult.rows[0];
 
-<<<<<<< HEAD
       if (exportRecord.exporter_id !== profile.exporterId) {
-=======
-      if (exportRecord.created_by !== userId) {
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         throw new AppError(ErrorCode.UNAUTHORIZED, 'Access denied', 403);
       }
 
@@ -769,7 +655,6 @@ export class ExportController {
     }
   };
 
-<<<<<<< HEAD
   /**
    * Get dashboard statistics
    * Aggregates key metrics for the dashboard
@@ -832,8 +717,6 @@ export class ExportController {
     }
   };
 
-=======
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   private handleError(error: any, res: Response): void {
     if (error instanceof AppError) {
       res.status(error.httpStatus).json({

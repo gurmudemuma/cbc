@@ -23,11 +23,11 @@ import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { config } from "./config/index";
-<<<<<<< HEAD
 import { createLogger, httpLogger } from "@shared/logger";
 import authRoutes from "./routes/auth.routes";
 import exportRoutes from "./routes/export.routes";
 import exporterRoutes from "./routes/exporter.routes";
+import preregistrationRoutes from "./routes/preregistration.routes";
 import { getPool } from "@shared/database/pool";
 import { errorHandler } from "@shared/middleware/error.middleware";
 import { monitoringMiddleware, errorMonitoringMiddleware } from "@shared/middleware/monitoring.middleware";
@@ -37,16 +37,6 @@ import {
   getCorsConfig,
 } from "@shared/security.best-practices";
 import { monitoringService } from "@shared/monitoring.service";
-=======
-import { createLogger, httpLogger } from "../../shared/logger";
-import authRoutes from "./routes/auth.routes";
-import exportRoutes from "./routes/export.routes";
-import exporterRoutes from "./routes/exporter.routes";
-import { getPool } from "../../shared/database/pool";
-import { errorHandler } from "../../shared/middleware/error.middleware";
-import { monitoringMiddleware, errorMonitoringMiddleware } from "../../shared/middleware/monitoring.middleware";
-import { monitoringService } from "../../shared/monitoring.service";
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
 const logger = createLogger('ExporterPortalAPI');
 const app = express();
@@ -85,6 +75,7 @@ app.use("/api/auth/login", authLimiter);
 app.use("/api/auth/register", authLimiter);
 app.use("/api/auth", authRoutes);
 app.use("/api/exporter", apiLimiter, exporterRoutes);
+app.use("/api/exporter", apiLimiter, preregistrationRoutes);
 app.use("/api/exports", apiLimiter, exportRoutes);
 
 // Health check

@@ -323,11 +323,7 @@ start_service() {
     export DB_PASSWORD=$DB_PASSWORD
     export IPFS_HOST=$IPFS_HOST
     export IPFS_PORT=$IPFS_PORT
-<<<<<<< HEAD
     export CORS_ORIGIN="http://localhost:5173"
-=======
-    export CORS_ORIGIN="http://localhost:5173,http://localhost:3000"
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     export LOG_LEVEL="info"
     
     # Determine the correct path to index.js

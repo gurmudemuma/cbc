@@ -1,12 +1,9 @@
-import { useState, useEffect } from 'react';
-import { Award, CheckCircle, XCircle, Search, Eye } from 'lucide-react';
+﻿import { useState, useEffect } from 'react';
+import { Award, CheckCircle, XCircle, Search, Eye, Info } from 'lucide-react';
 import apiClient from '../services/api';
-<<<<<<< HEAD
 import { useExports } from '../hooks/useExportManager';
-=======
-import { useExports } from '../hooks/useExports';
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 import ECTAQualityForm from '../components/forms/ECTAQualityForm';
+import ExportDetailView from '../components/ExportDetailView';
 import {
   Box,
   Button,
@@ -32,6 +29,8 @@ import {
   Typography,
   Divider,
   IconButton,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 
 interface QualityCertificationProps {
@@ -41,13 +40,26 @@ interface QualityCertificationProps {
 
 const QualityCertification = ({ user, org }: QualityCertificationProps): JSX.Element => {
   const { exports: allExports, loading: exportsLoading, error: exportsError, refreshExports } = useExports();
-  const exports = allExports.filter((e) => e.status === 'ECTA_QUALITY_PENDING' || e.status === 'ECTA_QUALITY_APPROVED' || e.status === 'ECTA_QUALITY_REJECTED');
+  // Show exports ready for quality inspection (ECTA_LICENSE_APPROVED) or already processed
+  const exports = allExports.filter((e) => 
+    e.status === 'ECTA_QUALITY_PENDING' || 
+    e.status === 'ECTA_LICENSE_APPROVED' || 
+    e.status === 'ECTA_QUALITY_APPROVED' || 
+    e.status === 'ECTA_QUALITY_REJECTED'
+  );
   const [filteredExports, setFilteredExports] = useState([]);
   const [selectedExport, setSelectedExport] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDetailViewOpen, setIsDetailViewOpen] = useState(false);
+  const [viewingExport, setViewingExport] = useState(null);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' | 'info' | 'warning' }>({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
 
   // API base URL is set in App.jsx based on user's organization
   // No need to set it here
@@ -55,6 +67,14 @@ const QualityCertification = ({ user, org }: QualityCertificationProps): JSX.Ele
   useEffect(() => {
     filterExports();
   }, [exports, searchTerm, statusFilter]);
+
+  const showNotification = (message: string, severity: 'success' | 'error' | 'info' | 'warning') => {
+    setSnackbar({ open: true, message, severity });
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbar({ ...snackbar, open: false });
+  };
 
   const filterExports = () => {
     let filtered = [...exports];
@@ -82,13 +102,20 @@ const QualityCertification = ({ user, org }: QualityCertificationProps): JSX.Ele
   const handleApprove = async (data) => {
     setLoading(true);
     try {
-      await apiClient.post(`/ecta/quality/${selectedExport.exportId}/approve`, data);
+      const response = await apiClient.post(`/ecta/quality/${selectedExport.exportId}/approve`, data);
       setIsModalOpen(false);
       setSelectedExport(null);
+      showNotification(
+        `Quality certificate issued successfully for Export ${selectedExport.exportId}. Grade: ${data.qualityGrade}`,
+        'success'
+      );
       refreshExports();
     } catch (error) {
       console.error('Approval error:', error);
-      alert('Failed to approve: ' + (error.response?.data?.message || error.message));
+      showNotification(
+        `Failed to approve quality: ${error.response?.data?.message || error.response?.data?.error?.message || error.message}`,
+        'error'
+      );
     } finally {
       setLoading(false);
     }
@@ -97,16 +124,28 @@ const QualityCertification = ({ user, org }: QualityCertificationProps): JSX.Ele
   const handleReject = async ({ category, reason }) => {
     setLoading(true);
     try {
-      await apiClient.post(`/ecta/quality/${selectedExport.exportId}/reject`, { category, reason });
+      const response = await apiClient.post(`/ecta/quality/${selectedExport.exportId}/reject`, { category, reason });
       setIsModalOpen(false);
       setSelectedExport(null);
+      showNotification(
+        `Quality rejected for Export ${selectedExport.exportId}. Reason: ${category}`,
+        'warning'
+      );
       refreshExports();
     } catch (error) {
       console.error('Rejection error:', error);
-      alert('Failed to reject: ' + (error.response?.data?.message || error.message));
+      showNotification(
+        `Failed to reject quality: ${error.response?.data?.message || error.response?.data?.error?.message || error.message}`,
+        'error'
+      );
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleViewDetails = (exp) => {
+    setViewingExport(exp);
+    setIsDetailViewOpen(true);
   };
 
   const getStatusColor = (status) => {
@@ -231,17 +270,33 @@ const QualityCertification = ({ user, org }: QualityCertificationProps): JSX.Ele
                         <TableCell>{new Date(exp.createdAt).toLocaleDateString()}</TableCell>
                         <TableCell align="right">
                           {exp.status === 'ECTA_QUALITY_PENDING' ? (
-                            <Button
-                              variant="contained"
-                              size="small"
-                              startIcon={<Eye />}
-                              onClick={() => { setSelectedExport(exp); setIsModalOpen(true); }}
-                            >
-                              Review Quality
-                            </Button>
+                            <>
+                              <Button
+                                variant="outlined"
+                                size="small"
+                                startIcon={<Info />}
+                                onClick={() => handleViewDetails(exp)}
+                                sx={{ mr: 1 }}
+                              >
+                                View Details
+                              </Button>
+                              <Button
+                                variant="contained"
+                                size="small"
+                                startIcon={<Eye />}
+                                onClick={() => { setSelectedExport(exp); setIsModalOpen(true); }}
+                              >
+                                Review Quality
+                              </Button>
+                            </>
                           ) : (
-                            <Button variant="outlined" size="small">
-                              View
+                            <Button 
+                              variant="outlined" 
+                              size="small"
+                              startIcon={<Info />}
+                              onClick={() => handleViewDetails(exp)}
+                            >
+                              View Details
                             </Button>
                           )}
                         </TableCell>
@@ -290,15 +345,29 @@ const QualityCertification = ({ user, org }: QualityCertificationProps): JSX.Ele
               onApprove={handleApprove}
               onReject={handleReject}
               loading={loading}
-<<<<<<< HEAD
               user={user}
               org={org}
-=======
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
             />
           )}
         </DialogContent>
       </Dialog>
+
+      <Snackbar 
+        open={snackbar.open} 
+        autoHideDuration={6000} 
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+
+      <ExportDetailView
+        open={isDetailViewOpen}
+        onClose={() => setIsDetailViewOpen(false)}
+        exportData={viewingExport}
+      />
     </Box>
   );
 };

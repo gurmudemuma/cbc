@@ -208,7 +208,7 @@ export class EnhancedExportController {
       }
 
       // Fetch from database
-      const result = await this.pool.query('SELECT * FROM exports WHERE id = $1', [exportId]);
+      const result = await this.pool.query('SELECT * FROM exports WHERE export_id = $1', [exportId]);
 
       if (result.rows.length === 0) {
         throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
@@ -318,13 +318,13 @@ export class EnhancedExportController {
 
       await client.query('BEGIN');
 
-      const exportResult = await client.query('SELECT * FROM exports WHERE id = $1', [exportId]);
+      const exportResult = await client.query('SELECT * FROM exports WHERE export_id = $1', [exportId]);
       if (exportResult.rows.length === 0) {
         throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
       }
 
       await client.query(
-        'UPDATE exports SET status = $1, quality_grade = $2, updated_at = NOW() WHERE id = $3',
+        'UPDATE exports SET status = $1, quality_grade = $2, updated_at = NOW() WHERE export_id = $3',
         ['QUALITY_CERTIFIED', validatedData.quality_grade, exportId]
       );
 

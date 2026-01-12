@@ -1,9 +1,12 @@
-/**
+﻿/**
  * Monetary Service
  * Handles monetary policy, FX management, and compliance for National Bank
+ * 
+ * UPDATED: Now uses shared endpoint constants for consistency
  */
 
 import apiClient from './api';
+import { FX_ENDPOINTS, MONETARY_ENDPOINTS } from '../../../api/shared/api-endpoints.constants';
 
 const monetaryService = {
   // ============================================================================
@@ -15,11 +18,7 @@ const monetaryService = {
    */
   getFXApprovalRequests: async (filter = null) => {
     const params = filter ? { status: filter } : {};
-<<<<<<< HEAD
-    const response = await apiClient.get('/fx/approvals', { params });
-=======
-    const response = await apiClient.get('/api/fx/approvals', { params });
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
+    const response = await apiClient.get(FX_ENDPOINTS.FX_APPROVALS, { params });
     return response.data;
   },
 
@@ -27,7 +26,7 @@ const monetaryService = {
    * Get FX approval details
    */
   getFXApprovalDetails: async (approvalId) => {
-    const response = await apiClient.get(`/api/fx/approvals/${approvalId}`);
+    const response = await apiClient.get(FX_ENDPOINTS.FX_APPROVAL_DETAILS(approvalId));
     return response.data;
   },
 
@@ -35,7 +34,7 @@ const monetaryService = {
    * Approve FX request
    */
   approveFXRequest: async (approvalId, approvalData) => {
-    const response = await apiClient.post(`/api/fx/approvals/${approvalId}/approve`, approvalData);
+    const response = await apiClient.post(FX_ENDPOINTS.FX_APPROVE(approvalId), approvalData);
     return response.data;
   },
 
@@ -43,7 +42,7 @@ const monetaryService = {
    * Reject FX request
    */
   rejectFXRequest: async (approvalId, rejectionReason) => {
-    const response = await apiClient.post(`/api/fx/approvals/${approvalId}/reject`, { reason: rejectionReason });
+    const response = await apiClient.post(FX_ENDPOINTS.FX_REJECT(approvalId), { reason: rejectionReason });
     return response.data;
   },
 
@@ -51,11 +50,7 @@ const monetaryService = {
    * Get FX rates
    */
   getFXRates: async () => {
-<<<<<<< HEAD
-    const response = await apiClient.get('/fx/rates');
-=======
-    const response = await apiClient.get('/api/fx/rates');
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
+    const response = await apiClient.get(FX_ENDPOINTS.FX_RATES);
     return response.data;
   },
 
@@ -63,11 +58,7 @@ const monetaryService = {
    * Update FX rates
    */
   updateFXRates: async (rateData) => {
-<<<<<<< HEAD
-    const response = await apiClient.post('/fx/rates', rateData);
-=======
-    const response = await apiClient.post('/api/fx/rates', rateData);
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
+    const response = await apiClient.post(FX_ENDPOINTS.FX_RATES, rateData);
     return response.data;
   },
 
@@ -79,11 +70,7 @@ const monetaryService = {
    * Get current monetary policies
    */
   getMonetaryPolicies: async () => {
-<<<<<<< HEAD
-    const response = await apiClient.get('/monetary/policies');
-=======
-    const response = await apiClient.get('/api/monetary/policies');
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
+    const response = await apiClient.get(MONETARY_ENDPOINTS.POLICIES);
     return response.data;
   },
 
@@ -91,7 +78,7 @@ const monetaryService = {
    * Get policy details
    */
   getPolicyDetails: async (policyId) => {
-    const response = await apiClient.get(`/api/monetary/policies/${policyId}`);
+    const response = await apiClient.get(MONETARY_ENDPOINTS.POLICY_DETAILS(policyId));
     return response.data;
   },
 
@@ -99,11 +86,7 @@ const monetaryService = {
    * Create new policy
    */
   createPolicy: async (policyData) => {
-<<<<<<< HEAD
-    const response = await apiClient.post('/monetary/policies', policyData);
-=======
-    const response = await apiClient.post('/api/monetary/policies', policyData);
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
+    const response = await apiClient.post(MONETARY_ENDPOINTS.POLICIES, policyData);
     return response.data;
   },
 
@@ -111,7 +94,7 @@ const monetaryService = {
    * Update policy
    */
   updatePolicy: async (policyId, policyData) => {
-    const response = await apiClient.put(`/api/monetary/policies/${policyId}`, policyData);
+    const response = await apiClient.put(MONETARY_ENDPOINTS.POLICY_DETAILS(policyId), policyData);
     return response.data;
   },
 
@@ -119,7 +102,7 @@ const monetaryService = {
    * Activate policy
    */
   activatePolicy: async (policyId) => {
-    const response = await apiClient.post(`/api/monetary/policies/${policyId}/activate`);
+    const response = await apiClient.post(MONETARY_ENDPOINTS.POLICY_ACTIVATE(policyId));
     return response.data;
   },
 
@@ -127,7 +110,7 @@ const monetaryService = {
    * Deactivate policy
    */
   deactivatePolicy: async (policyId) => {
-    const response = await apiClient.post(`/api/monetary/policies/${policyId}/deactivate`);
+    const response = await apiClient.post(MONETARY_ENDPOINTS.POLICY_DEACTIVATE(policyId));
     return response.data;
   },
 
@@ -139,11 +122,7 @@ const monetaryService = {
    * Get exchange controls
    */
   getExchangeControls: async () => {
-<<<<<<< HEAD
-    const response = await apiClient.get('/monetary/controls');
-=======
-    const response = await apiClient.get('/api/monetary/controls');
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
+    const response = await apiClient.get(MONETARY_ENDPOINTS.CONTROLS);
     return response.data;
   },
 
@@ -151,7 +130,7 @@ const monetaryService = {
    * Get control details
    */
   getControlDetails: async (controlId) => {
-    const response = await apiClient.get(`/api/monetary/controls/${controlId}`);
+    const response = await apiClient.get(MONETARY_ENDPOINTS.CONTROL_DETAILS(controlId));
     return response.data;
   },
 
@@ -159,7 +138,7 @@ const monetaryService = {
    * Update control settings
    */
   updateControlSettings: async (controlId, settingsData) => {
-    const response = await apiClient.put(`/api/monetary/controls/${controlId}`, settingsData);
+    const response = await apiClient.put(MONETARY_ENDPOINTS.CONTROL_DETAILS(controlId), settingsData);
     return response.data;
   },
 
@@ -167,7 +146,7 @@ const monetaryService = {
    * Enable control
    */
   enableControl: async (controlId) => {
-    const response = await apiClient.post(`/api/monetary/controls/${controlId}/enable`);
+    const response = await apiClient.post(MONETARY_ENDPOINTS.CONTROL_ENABLE(controlId));
     return response.data;
   },
 
@@ -175,7 +154,7 @@ const monetaryService = {
    * Disable control
    */
   disableControl: async (controlId) => {
-    const response = await apiClient.post(`/api/monetary/controls/${controlId}/disable`);
+    const response = await apiClient.post(MONETARY_ENDPOINTS.CONTROL_DISABLE(controlId));
     return response.data;
   },
 
@@ -187,11 +166,7 @@ const monetaryService = {
    * Get compliance monitoring data
    */
   getComplianceMonitoring: async () => {
-<<<<<<< HEAD
-    const response = await apiClient.get('/monetary/compliance');
-=======
-    const response = await apiClient.get('/api/monetary/compliance');
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
+    const response = await apiClient.get(MONETARY_ENDPOINTS.COMPLIANCE);
     return response.data;
   },
 
@@ -199,7 +174,7 @@ const monetaryService = {
    * Get compliance details
    */
   getComplianceDetails: async (complianceId) => {
-    const response = await apiClient.get(`/api/monetary/compliance/${complianceId}`);
+    const response = await apiClient.get(MONETARY_ENDPOINTS.COMPLIANCE_DETAILS(complianceId));
     return response.data;
   },
 
@@ -207,11 +182,7 @@ const monetaryService = {
    * Run compliance check
    */
   runComplianceCheck: async (exporterId, checkType) => {
-<<<<<<< HEAD
-    const response = await apiClient.post('/monetary/compliance/run', { exporterId, checkType });
-=======
-    const response = await apiClient.post('/api/monetary/compliance/run', { exporterId, checkType });
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
+    const response = await apiClient.post(MONETARY_ENDPOINTS.COMPLIANCE_RUN, { exporterId, checkType });
     return response.data;
   },
 
@@ -223,11 +194,7 @@ const monetaryService = {
    * Get export transactions for oversight
    */
   getExportTransactions: async () => {
-<<<<<<< HEAD
-    const response = await apiClient.get('/monetary/exports/transactions');
-=======
-    const response = await apiClient.get('/api/monetary/exports/transactions');
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
+    const response = await apiClient.get(MONETARY_ENDPOINTS.EXPORTS_TRANSACTIONS);
     return response.data;
   },
 
@@ -235,11 +202,7 @@ const monetaryService = {
    * Get currency flows
    */
   getCurrencyFlows: async () => {
-<<<<<<< HEAD
-    const response = await apiClient.get('/monetary/exports/currency');
-=======
-    const response = await apiClient.get('/api/monetary/exports/currency');
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
+    const response = await apiClient.get(MONETARY_ENDPOINTS.EXPORTS_CURRENCY);
     return response.data;
   },
 
@@ -247,11 +210,7 @@ const monetaryService = {
    * Get regulatory reports
    */
   getRegulatoryReports: async () => {
-<<<<<<< HEAD
-    const response = await apiClient.get('/monetary/exports/reports');
-=======
-    const response = await apiClient.get('/api/monetary/exports/reports');
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
+    const response = await apiClient.get(MONETARY_ENDPOINTS.EXPORTS_REPORTS);
     return response.data;
   },
 
@@ -263,11 +222,7 @@ const monetaryService = {
    * Get system settings
    */
   getSystemSettings: async () => {
-<<<<<<< HEAD
-    const response = await apiClient.get('/monetary/admin/settings');
-=======
-    const response = await apiClient.get('/api/monetary/admin/settings');
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
+    const response = await apiClient.get(MONETARY_ENDPOINTS.ADMIN_SETTINGS);
     return response.data;
   },
 
@@ -275,11 +230,7 @@ const monetaryService = {
    * Update system settings
    */
   updateSystemSettings: async (settingsData) => {
-<<<<<<< HEAD
-    const response = await apiClient.put('/monetary/admin/settings', settingsData);
-=======
-    const response = await apiClient.put('/api/monetary/admin/settings', settingsData);
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
+    const response = await apiClient.put(MONETARY_ENDPOINTS.ADMIN_SETTINGS, settingsData);
     return response.data;
   },
 
@@ -287,11 +238,7 @@ const monetaryService = {
    * Get audit logs
    */
   getAuditLogs: async () => {
-<<<<<<< HEAD
-    const response = await apiClient.get('/monetary/admin/audit');
-=======
-    const response = await apiClient.get('/api/monetary/admin/audit');
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
+    const response = await apiClient.get(MONETARY_ENDPOINTS.ADMIN_AUDIT);
     return response.data;
   },
 
@@ -303,11 +250,7 @@ const monetaryService = {
    * Get FX statistics
    */
   getFXStatistics: async () => {
-<<<<<<< HEAD
-    const response = await apiClient.get('/fx/statistics');
-=======
-    const response = await apiClient.get('/api/fx/statistics');
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
+    const response = await apiClient.get(FX_ENDPOINTS.FX_STATISTICS);
     return response.data;
   },
 
@@ -315,11 +258,7 @@ const monetaryService = {
    * Get monetary policy statistics
    */
   getMonetaryStatistics: async () => {
-<<<<<<< HEAD
-    const response = await apiClient.get('/monetary/statistics');
-=======
-    const response = await apiClient.get('/api/monetary/statistics');
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
+    const response = await apiClient.get(MONETARY_ENDPOINTS.STATISTICS);
     return response.data;
   },
 
@@ -327,11 +266,7 @@ const monetaryService = {
    * Get compliance statistics
    */
   getComplianceStatistics: async () => {
-<<<<<<< HEAD
-    const response = await apiClient.get('/monetary/compliance/statistics');
-=======
-    const response = await apiClient.get('/api/monetary/compliance/statistics');
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
+    const response = await apiClient.get(MONETARY_ENDPOINTS.COMPLIANCE_STATISTICS);
     return response.data;
   },
 };

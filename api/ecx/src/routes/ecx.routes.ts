@@ -4,11 +4,7 @@
 
 import { Router } from 'express';
 import { ecxController } from '../controllers/ecx.controller';
-<<<<<<< HEAD
 import { authMiddleware } from '@shared/middleware/auth.middleware';
-=======
-import { authMiddleware } from '../../shared/middleware/auth.middleware';
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
 const router = Router();
 
@@ -178,6 +174,45 @@ router.get('/exports/:exportId', ecxController.getExport.bind(ecxController));
  *         description: Exports retrieved
  */
 router.get('/exports/status/:status', ecxController.getExportsByStatus.bind(ecxController));
+/**
+ * @swagger
+ * /api/ecx/exports/{exportId}/verify:
+ *   post:
+ *     summary: Verify existing export request against ECX lot
+ *     tags: [ECX]
+ *     parameters:
+ *       - in: path
+ *         name: exportId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - lotNumber
+ *               - warehouseReceiptNumber
+ *             properties:
+ *               lotNumber:
+ *                 type: string
+ *               warehouseReceiptNumber:
+ *                 type: string
+ *               warehouseLocation:
+ *                 type: string
+ *               notes:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Export verified successfully
+ *       403:
+ *         description: TIN Mismatch
+ *       404:
+ *         description: Export or Lot not found
+ */
+router.post('/exports/:exportId/verify', ecxController.verifyExport.bind(ecxController));
 
 /**
  * @swagger

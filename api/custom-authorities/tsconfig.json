@@ -3,14 +3,31 @@
   "compilerOptions": {
     "outDir": "./dist",
     "noPropertyAccessFromIndexSignature": false,
-<<<<<<< HEAD
     "types": [
       "node"
     ],
-    "baseUrl": "..",
+    "baseUrl": ".",
     "paths": {
       "@shared/*": [
-        "shared/*"
+        "../shared/*"
+      ],
+      "@controllers/*": [
+        "../shared/controllers/*"
+      ],
+      "@middleware/*": [
+        "../shared/middleware/*"
+      ],
+      "@models/*": [
+        "../shared/models/*"
+      ],
+      "@services/*": [
+        "../shared/services/*"
+      ],
+      "@utils/*": [
+        "../shared/utils/*"
+      ],
+      "@types/*": [
+        "../shared/types/*"
       ]
     }
   },
@@ -26,10 +43,3 @@
     "../shared/test-setup.ts"
   ]
 }
-=======
-    "types": ["node"]
-  },
-  "include": ["src/**/*", "../shared/**/*"],
-  "exclude": ["node_modules", "dist", "src/__tests__/**", "../shared/**/*.test.ts", "../shared/test-setup.ts"]
-}
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665

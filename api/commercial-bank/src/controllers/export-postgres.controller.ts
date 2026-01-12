@@ -1,22 +1,17 @@
+
 import { Request, Response, NextFunction } from 'express';
 import { JwtPayload } from 'jsonwebtoken';
-<<<<<<< HEAD
+import { randomUUID } from 'crypto';
 import { pool } from '@shared/database/pool';
 import { CacheService, CacheKeys, CacheTTL } from '@shared/cache.service';
 import { auditService, AuditAction } from '@shared/audit.service';
 import { ErrorCode, AppError } from '@shared/error-codes';
 import { ectaPreRegistrationService } from '@shared/services/ecta-preregistration.service';
 import { createLogger } from '@shared/logger';
-=======
-import { pool } from '../../../shared/database/pool';
-import { CacheService, CacheKeys, CacheTTL } from '../../../shared/cache.service';
-import { auditService, AuditAction } from '../../../shared/audit.service';
-import { ErrorCode, AppError } from '../../../shared/error-codes';
-import { ectaPreRegistrationService } from '../../../shared/services/ecta-preregistration.service';
-import { createLogger } from '../../../shared/logger';
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
+import { ExportService } from '@shared/services/export.service';
 
 const logger = createLogger('ExportPostgresController');
+const exportService = new ExportService(pool);
 
 interface AuthJWTPayload extends JwtPayload {
   id: string;
@@ -46,18 +41,14 @@ export class ExportPostgresController {
       const exportData = req.body;
 
       // Validate required fields
-      if (!exportData.exporterName || !exportData.coffeeType || !exportData.quantity) {
-        throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Missing required fields', 400);
+      if (!exportData.coffeeType || !exportData.quantity) {
+        throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Missing required fields: coffeeType and quantity are required', 400);
       }
 
       // Validate exporter pre-registration status
       if (exportData.exporterId) {
         const canExport = await ectaPreRegistrationService.canCreateExportRequest(exportData.exporterId);
-<<<<<<< HEAD
 
-=======
-        
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         if (!canExport.allowed) {
           res.status(403).json({
             success: false,
@@ -70,28 +61,37 @@ export class ExportPostgresController {
         }
       }
 
-      // Generate export ID
-      const exportId = `EXP-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      // Fetch Exporter TIN
+      const exporterId = exportData.exporterId || user.organizationId;
+      const profileResult = await pool.query(
+        'SELECT tin FROM exporter_profiles WHERE exporter_id = $1',
+        [exporterId]
+      );
+      const exporterTin = profileResult.rows[0]?.tin || null;
+
+      // Generate export ID (Standardized Format)
+      const exportId = await exportService.generateExportId();
 
       // Start transaction
       await client.query('BEGIN');
 
-      // Insert export record
+      // Insert export record - matching actual database schema
       const insertResult = await client.query(
-        `INSERT INTO exports (
-          id, exporter_id, exporter_name, coffee_type, quantity, 
-          destination_country, status, created_by, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
-        RETURNING *`,
+        `INSERT INTO exports(
+  export_id, exporter_id, exporter_tin, coffee_type, quantity,
+  destination_country, buyer_name, estimated_value, status
+) VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9)
+RETURNING * `,
         [
           exportId,
-          exportData.exporterId || user.organizationId,
-          exportData.exporterName,
+          exporterId,
+          exporterTin,
           exportData.coffeeType,
           exportData.quantity,
           exportData.destinationCountry || 'Unknown',
-          'PENDING',
-          user.id
+          exportData.buyerName || exportData.exporterName || 'Unknown',
+          exportData.estimatedValue || 0,
+          'PENDING'
         ]
       );
 
@@ -99,9 +99,9 @@ export class ExportPostgresController {
 
       // Insert initial status history
       await client.query(
-        `INSERT INTO export_status_history (
-          export_id, old_status, new_status, changed_by, changed_at, notes
-        ) VALUES ($1, $2, $3, $4, NOW(), $5)`,
+        `INSERT INTO export_status_history(
+  export_id, old_status, new_status, changed_by, reason
+) VALUES($1, $2, $3, $4, $5)`,
         [exportId, 'NONE', 'PENDING', user.id, 'Export created']
       );
 
@@ -145,7 +145,7 @@ export class ExportPostgresController {
   public getAllExports = async (req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
     try {
       const user = req.user!;
-      const cacheKey = `exports:${user.organizationId}:all`;
+      const cacheKey = `exports:${user.organizationId}: all`;
 
       // Try cache first
       const cached = await this.cacheService.get(cacheKey);
@@ -268,7 +268,7 @@ export class ExportPostgresController {
       if (exportData.status !== 'QUALITY_CERTIFIED') {
         throw new AppError(
           ErrorCode.INVALID_STATUS_TRANSITION,
-          `Export must be quality certified. Current status: ${exportData.status}`,
+          `Export must be quality certified.Current status: ${exportData.status} `,
           400
         );
       }
@@ -283,17 +283,17 @@ export class ExportPostgresController {
 
       // Insert status history
       await client.query(
-        `INSERT INTO export_status_history (
-          export_id, old_status, new_status, changed_by, changed_at, notes
-        ) VALUES ($1, $2, $3, $4, NOW(), $5)`,
+        `INSERT INTO export_status_history(
+  export_id, old_status, new_status, changed_by, changed_at, notes
+) VALUES($1, $2, $3, $4, NOW(), $5)`,
         [exportId, 'QUALITY_CERTIFIED', 'FX_APPROVED', user.id, approvalNotes || 'FX approved']
       );
 
       // Insert approval record
       await client.query(
-        `INSERT INTO export_approvals (
-          export_id, organization, approval_type, status, approved_by, approved_at, notes
-        ) VALUES ($1, $2, $3, $4, $5, NOW(), $6)`,
+        `INSERT INTO export_approvals(
+  export_id, organization, approval_type, status, approved_by, approved_at, notes
+) VALUES($1, $2, $3, $4, $5, NOW(), $6)`,
         [exportId, 'NATIONAL_BANK', 'FX_APPROVAL', 'APPROVED', user.id, approvalNotes]
       );
 
@@ -370,7 +370,7 @@ export class ExportPostgresController {
       if (exportData.status !== 'QUALITY_CERTIFIED') {
         throw new AppError(
           ErrorCode.INVALID_STATUS_TRANSITION,
-          `Export must be quality certified. Current status: ${exportData.status}`,
+          `Export must be quality certified.Current status: ${exportData.status} `,
           400
         );
       }
@@ -385,18 +385,18 @@ export class ExportPostgresController {
 
       // Insert status history
       await client.query(
-        `INSERT INTO export_status_history (
-          export_id, old_status, new_status, changed_by, changed_at, notes
-        ) VALUES ($1, $2, $3, $4, NOW(), $5)`,
+        `INSERT INTO export_status_history(
+  export_id, old_status, new_status, changed_by, changed_at, notes
+) VALUES($1, $2, $3, $4, NOW(), $5)`,
         [exportId, 'QUALITY_CERTIFIED', 'FX_REJECTED', user.id, notes || rejectionReason]
       );
 
       // Insert approval record
       await client.query(
-        `INSERT INTO export_approvals (
-          export_id, organization, approval_type, status, approved_by, approved_at, notes
-        ) VALUES ($1, $2, $3, $4, $5, NOW(), $6)`,
-        [exportId, 'NATIONAL_BANK', 'FX_APPROVAL', 'REJECTED', user.id, `${rejectionReason}: ${notes || ''}`]
+        `INSERT INTO export_approvals(
+  export_id, organization, approval_type, status, approved_by, approved_at, notes
+) VALUES($1, $2, $3, $4, $5, NOW(), $6)`,
+        [exportId, 'NATIONAL_BANK', 'FX_APPROVAL', 'REJECTED', user.id, `${rejectionReason}: ${notes || ''} `]
       );
 
       // Commit transaction
@@ -501,10 +501,10 @@ export class ExportPostgresController {
       const user = req.user!;
 
       const result = await pool.query(
-        `SELECT 
-          status,
-          COUNT(*) as count,
-          SUM(quantity) as total_quantity
+        `SELECT
+status,
+  COUNT(*) as count,
+  SUM(quantity) as total_quantity
          FROM exports
          WHERE exporter_id = $1 OR created_by = $2
          GROUP BY status
@@ -551,10 +551,7 @@ export class ExportPostgresController {
       return;
     }
 
-<<<<<<< HEAD
 
-=======
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     // Log unexpected errors
     logger.error('Unexpected error', { error: error.message, stack: error.stack });
 
@@ -567,7 +564,6 @@ export class ExportPostgresController {
       },
     });
   }
-<<<<<<< HEAD
 
   /**
    * Get dashboard statistics for Commercial Bank
@@ -581,25 +577,25 @@ export class ExportPostgresController {
           SELECT COUNT(*) as count 
           FROM exports 
           WHERE status = 'QUALITY_CERTIFIED'
-        `,
+  `,
         approvedFx: `
           SELECT COUNT(*) as count,
-          COALESCE(MIN(approved_at), NOW()) as first_approval,
-          COALESCE(MAX(approved_at), NOW()) as last_approval
+  COALESCE(MIN(approved_at), NOW()) as first_approval,
+  COALESCE(MAX(approved_at), NOW()) as last_approval
           FROM export_approvals 
           WHERE approval_type = 'FX_APPROVAL' AND status = 'APPROVED'
-        `,
+  `,
         rejectedFx: `
           SELECT COUNT(*) as count 
           FROM export_approvals 
           WHERE approval_type = 'FX_APPROVAL' AND status = 'REJECTED'
-        `,
+  `,
         totalProcessed: `
             SELECT COUNT(*) as count
             FROM export_status_history
             WHERE new_status = 'FX_APPROVED' 
                OR new_status = 'FX_REJECTED'
-        `
+  `
       };
 
       const [pendingRes, approvedRes, rejectedRes, processedRes] = await Promise.all([
@@ -635,6 +631,4 @@ export class ExportPostgresController {
       this.handleError(error, res);
     }
   };
-=======
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 }

@@ -176,15 +176,29 @@ if not exist "%SCRIPT_DIR%start-all-apis.bat" (
 ) else (
     call start-all-apis.bat
     if %errorlevel% neq 0 (
-        call :print_warning "API startup had issues, trying Docker Compose..."
-        docker-compose -f docker-compose.apis.yml up -d
+        call :print_warning "API startup had issues"
     )
 )
 
-call :print_success "API services started"
 echo.
-call :print_info "Waiting 30 seconds for APIs to be ready..."
-timeout /t 30 /nobreak >nul
+call :print_info "Verifying API services are listening..."
+set ALL_RUNNING=1
+
+REM Check Commercial Bank (3001)
+netstat -ano | findstr ":3001" | findstr "LISTENING" >nul 2>nul
+if %errorlevel% neq 0 set ALL_RUNNING=0
+
+REM Check ECTA (3003)
+netstat -ano | findstr ":3003" | findstr "LISTENING" >nul 2>nul
+if %errorlevel% neq 0 set ALL_RUNNING=0
+
+if %ALL_RUNNING% equ 1 (
+    call :print_success "All API services verified running"
+) else (
+    call :print_warning "Some API services may not have started correctly"
+    call :print_info "Check the service windows for error messages"
+)
+
 echo.
 exit /b 0
 
@@ -257,6 +271,7 @@ echo   Exporter Portal:       http://localhost:3004
 echo   National Bank:         http://localhost:3005
 echo   ECX:                   http://localhost:3006
 echo   Shipping Line:         http://localhost:3007
+echo   ESW:                   http://localhost:3008
 echo.
 echo   Infrastructure:
 echo   PostgreSQL:            localhost:5432
@@ -264,11 +279,12 @@ echo   Redis:                 localhost:6379
 echo   IPFS:                  localhost:5001
 echo.
 
+echo.
 echo Useful Commands:
-echo   View API logs:         docker-compose -f docker-compose.apis.yml logs -f
-echo   View infrastructure:   docker-compose -f docker-compose.postgres.yml logs -f
+echo   View API logs:         dir logs^/*.log
 echo   Stop everything:       start-all.bat stop
 echo   Check status:          docker ps
+echo   Check ports:           netstat -ano ^| findstr ":300"
 echo.
 
 call :print_success "System is ready for use!"

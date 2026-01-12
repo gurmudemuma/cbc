@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Global Type Definitions for CBC Frontend
  */
 
@@ -23,11 +23,12 @@ export interface CommonPageProps {
 export interface Export {
   exportId: string;
   id?: string;
+  exporterTin?: string; // Standardized TIN
+  exporter_tin?: string; // Raw DB column
   status: string;
   coffeeType: string;
   quantity: number;
   estimatedValue: number;
-<<<<<<< HEAD
   exporterName: string;
   destinationCountry: string;
   updatedAt: string;           // Required field
@@ -37,10 +38,6 @@ export interface Export {
   transportIdentifier?: string; // Added from usage
   departureDate?: string;      // Added from usage
   arrivalDate?: string;        // Added from usage
-=======
-  updatedAt: string;
-  createdAt?: string;
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   fxApprovedBy?: string;
   bankingApprovedBy?: string;
   qualityCertifiedBy?: string;
@@ -120,6 +117,7 @@ export interface ECTALicenseFormData {
   exporterTIN?: string;
   validationNotes?: string;
   licenseNumber?: string;
+  validUntil?: string;
   notes?: string;
   [key: string]: any;
 }

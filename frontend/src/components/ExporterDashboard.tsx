@@ -79,14 +79,23 @@ interface DashboardData {
 interface ExporterDashboardProps {
     exporterId?: string;
     tin?: string;
+    dashboardData?: DashboardData;
 }
 
-const ExporterDashboard: React.FC<ExporterDashboardProps> = ({ exporterId, tin }) => {
-    const [dashboard, setDashboard] = useState<DashboardData | null>(null);
-    const [loading, setLoading] = useState(true);
+const ExporterDashboard: React.FC<ExporterDashboardProps> = ({ exporterId, tin, dashboardData: propDashboardData }) => {
+    const [dashboard, setDashboard] = useState<DashboardData | null>(propDashboardData || null);
+    const [loading, setLoading] = useState(!propDashboardData);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
+        // If dashboard data is provided as prop, use it directly
+        if (propDashboardData) {
+            setDashboard(propDashboardData);
+            setLoading(false);
+            return;
+        }
+
+        // Otherwise fetch it (for ECTA officials viewing other exporters)
         const fetchDashboard = async () => {
             try {
                 setLoading(true);
@@ -98,7 +107,7 @@ const ExporterDashboard: React.FC<ExporterDashboardProps> = ({ exporterId, tin }
                 } else if (tin) {
                     response = await ectaPreRegistrationService.getExporterDashboardByTin(tin);
                 } else {
-                    throw new Error('Either exporterId or tin must be provided');
+                    throw new Error('Either exporterId, tin, or dashboardData must be provided');
                 }
 
                 setDashboard(response.data);
@@ -110,7 +119,7 @@ const ExporterDashboard: React.FC<ExporterDashboardProps> = ({ exporterId, tin }
         };
 
         fetchDashboard();
-    }, [exporterId, tin]);
+    }, [exporterId, tin, propDashboardData]);
 
     const getStatusIcon = (status: string, approved: boolean) => {
         if (approved) return <CheckCircle color="success" />;

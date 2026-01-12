@@ -29,11 +29,7 @@ export interface AuditEvent {
   complianceRelevant: boolean;
 }
 
-<<<<<<< HEAD
 export type AuditEventType =
-=======
-export type AuditEventType = 
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   | 'PROFILE_CREATED' | 'PROFILE_UPDATED' | 'PROFILE_APPROVED' | 'PROFILE_REJECTED'
   | 'LABORATORY_REGISTERED' | 'LABORATORY_CERTIFIED' | 'LABORATORY_REJECTED'
   | 'TASTER_REGISTERED' | 'TASTER_VERIFIED' | 'TASTER_REJECTED'
@@ -43,13 +39,8 @@ export type AuditEventType =
   | 'VALIDATION_PERFORMED' | 'EXPORT_BLOCKED' | 'EXPORT_ALLOWED'
   | 'SYSTEM_ACCESS' | 'UNAUTHORIZED_ACCESS' | 'DATA_EXPORT' | 'CONFIGURATION_CHANGE';
 
-<<<<<<< HEAD
 export type EntityType =
   | 'exporter_profile' | 'laboratory' | 'taster' | 'competence_certificate'
-=======
-export type EntityType = 
-  | 'exporter_profile' | 'laboratory' | 'taster' | 'competence_certificate' 
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   | 'export_license' | 'document' | 'export_request' | 'system';
 
 export type AuditSeverity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
@@ -90,22 +81,14 @@ export interface ComplianceReport {
 }
 
 export class PreRegistrationAuditService {
-<<<<<<< HEAD
 
-=======
-  
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   /**
    * Log an audit event
    */
   async logEvent(event: Omit<AuditEvent, 'auditId' | 'timestamp'>): Promise<string> {
     const auditId = uuidv4();
     const timestamp = new Date().toISOString();
-<<<<<<< HEAD
 
-=======
-    
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     const query = `
       INSERT INTO preregistration_audit_log (
         audit_id, event_type, entity_type, entity_id, user_id, user_role, 
@@ -115,11 +98,7 @@ export class PreRegistrationAuditService {
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
       RETURNING audit_id
     `;
-<<<<<<< HEAD
 
-=======
-    
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     const values = [
       auditId, event.eventType, event.entityType, event.entityId,
       event.userId, event.userRole, event.organizationId, event.action,
@@ -128,24 +107,14 @@ export class PreRegistrationAuditService {
       event.ipAddress, event.userAgent, event.sessionId, timestamp,
       event.severity, event.complianceRelevant
     ];
-<<<<<<< HEAD
 
     await pool.query(query, values);
 
-=======
-    
-    await pool.query(query, values);
-    
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     // Log critical events immediately
     if (event.severity === 'CRITICAL') {
       console.error(`🚨 CRITICAL AUDIT EVENT: ${event.eventType} - ${event.description}`);
     }
-<<<<<<< HEAD
 
-=======
-    
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     return auditId;
   }
 
@@ -361,28 +330,17 @@ export class PreRegistrationAuditService {
     // Data query
     const limit = query.limit || 100;
     const offset = query.offset || 0;
-<<<<<<< HEAD
 
-=======
-    
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     const dataQuery = `
       SELECT * FROM preregistration_audit_log 
       ${whereClause} 
       ORDER BY timestamp DESC 
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
     `;
-<<<<<<< HEAD
 
     const dataResult = await pool.query(dataQuery, [...values, limit, offset]);
 
     const events: AuditEvent[] = dataResult.rows.map((row: any) => ({
-=======
-    
-    const dataResult = await pool.query(dataQuery, [...values, limit, offset]);
-    
-    const events: AuditEvent[] = dataResult.rows.map(row => ({
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       auditId: row.audit_id,
       eventType: row.event_type,
       entityType: row.entity_type,
@@ -415,11 +373,7 @@ export class PreRegistrationAuditService {
     generatedBy: string
   ): Promise<ComplianceReport> {
     const reportId = uuidv4();
-<<<<<<< HEAD
 
-=======
-    
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     // Get all events in period
     const { events } = await this.queryEvents({
       startDate,
@@ -458,24 +412,14 @@ export class PreRegistrationAuditService {
     events.forEach(event => {
       userActivity[event.userId] = (userActivity[event.userId] || 0) + 1;
     });
-<<<<<<< HEAD
 
     const topUsers = Object.entries(userActivity)
       .sort(([, a], [, b]) => b - a)
-=======
-    
-    const topUsers = Object.entries(userActivity)
-      .sort(([,a], [,b]) => b - a)
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       .slice(0, 10)
       .map(([userId, eventCount]) => ({ userId, eventCount }));
 
     // Suspicious activities (multiple failures, unauthorized access, etc.)
-<<<<<<< HEAD
     const suspiciousActivities = events.filter(event =>
-=======
-    const suspiciousActivities = events.filter(event => 
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       event.severity === 'CRITICAL' ||
       event.eventType === 'UNAUTHORIZED_ACCESS' ||
       (event.eventType.includes('REJECTED') && event.severity === 'HIGH')
@@ -546,11 +490,7 @@ export class PreRegistrationAuditService {
       'DATA_EXPORT': 'EXPORT',
       'CONFIGURATION_CHANGE': 'CONFIGURE'
     };
-<<<<<<< HEAD
 
-=======
-    
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     return actionMap[eventType] || eventType;
   }
 
@@ -586,11 +526,7 @@ export class PreRegistrationAuditService {
       'DATA_EXPORT': `Data exported by user ${entityId}`,
       'CONFIGURATION_CHANGE': `Configuration changed by ${entityId}`
     };
-<<<<<<< HEAD
 
-=======
-    
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     return descriptionMap[eventType] || `${eventType} for ${entityId}`;
   }
 
@@ -626,11 +562,7 @@ export class PreRegistrationAuditService {
       'DATA_EXPORT': 'HIGH',
       'CONFIGURATION_CHANGE': 'CRITICAL'
     };
-<<<<<<< HEAD
 
-=======
-    
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     return severityMap[eventType] || 'MEDIUM';
   }
 }

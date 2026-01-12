@@ -3,7 +3,9 @@
   "compilerOptions": {
     "target": "ES2020",
     "module": "commonjs",
-    "lib": ["ES2020"],
+    "lib": [
+      "ES2020"
+    ],
     "outDir": "./dist",
     "strict": false,
     "esModuleInterop": true,
@@ -21,8 +23,41 @@
     "noImplicitReturns": false,
     "noFallthroughCasesInSwitch": false,
     "noPropertyAccessFromIndexSignature": false,
-    "types": ["node"]
+    "baseUrl": ".",
+    "paths": {
+      "@shared/*": [
+        "./*"
+      ],
+      "@controllers/*": [
+        "controllers/*"
+      ],
+      "@middleware/*": [
+        "middleware/*"
+      ],
+      "@models/*": [
+        "models/*"
+      ],
+      "@services/*": [
+        "services/*"
+      ],
+      "@utils/*": [
+        "utils/*"
+      ],
+      "@types/*": [
+        "types/*"
+      ]
+    },
+    "types": [
+      "node"
+    ]
   },
-  "include": ["**/*.ts"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "test-setup.ts"]
+  "include": [
+    "**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts",
+    "test-setup.ts"
+  ]
 }

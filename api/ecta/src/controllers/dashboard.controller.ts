@@ -208,8 +208,31 @@ export class DashboardController {
                 exporters: `
                     SELECT 
                         COUNT(*) as total,
-                        COUNT(CASE WHEN status = 'PENDING_APPROVAL' THEN 1 END) as pending
+                        COUNT(CASE WHEN status = 'PENDING_APPROVAL' THEN 1 END) as pending,
+                        COUNT(CASE WHEN status = 'ACTIVE' THEN 1 END) as active,
+                        COUNT(CASE WHEN status = 'REJECTED' THEN 1 END) as rejected
                     FROM exporter_profiles
+                `,
+                laboratories: `
+                    SELECT 
+                        COUNT(*) as total,
+                        COUNT(CASE WHEN status = 'PENDING' THEN 1 END) as pending,
+                        COUNT(CASE WHEN status = 'ACTIVE' THEN 1 END) as active
+                    FROM coffee_laboratories
+                `,
+                tasters: `
+                    SELECT 
+                        COUNT(*) as total,
+                        COUNT(CASE WHEN status = 'PENDING' THEN 1 END) as pending,
+                        COUNT(CASE WHEN status = 'ACTIVE' THEN 1 END) as active
+                    FROM coffee_tasters
+                `,
+                competence: `
+                    SELECT 
+                        COUNT(*) as total,
+                        COUNT(CASE WHEN status = 'PENDING' THEN 1 END) as pending,
+                        COUNT(CASE WHEN status = 'ACTIVE' THEN 1 END) as active
+                    FROM competence_certificates
                 `,
                 contracts: `
                     SELECT 
@@ -221,13 +244,17 @@ export class DashboardController {
                 licenses: `
                     SELECT 
                         COUNT(*) as total,
-                        COUNT(CASE WHEN status = 'PENDING' THEN 1 END) as pending
+                        COUNT(CASE WHEN status = 'PENDING' THEN 1 END) as pending,
+                        COUNT(CASE WHEN status = 'ACTIVE' THEN 1 END) as active
                     FROM export_licenses
                 `
             };
 
-            const [exportersRes, contractsRes, licensesRes] = await Promise.all([
+            const [exportersRes, labsRes, tastersRes, competenceRes, contractsRes, licensesRes] = await Promise.all([
                 pool.query(queries.exporters),
+                pool.query(queries.laboratories),
+                pool.query(queries.tasters),
+                pool.query(queries.competence),
                 pool.query(queries.contracts),
                 pool.query(queries.licenses)
             ]);
@@ -235,7 +262,24 @@ export class DashboardController {
             const stats = {
                 exporters: {
                     total: parseInt(exportersRes.rows[0].total, 10),
-                    pending: parseInt(exportersRes.rows[0].pending, 10)
+                    pending: parseInt(exportersRes.rows[0].pending, 10),
+                    active: parseInt(exportersRes.rows[0].active, 10),
+                    rejected: parseInt(exportersRes.rows[0].rejected, 10)
+                },
+                laboratories: {
+                    total: parseInt(labsRes.rows[0].total, 10),
+                    pending: parseInt(labsRes.rows[0].pending, 10),
+                    active: parseInt(labsRes.rows[0].active, 10)
+                },
+                tasters: {
+                    total: parseInt(tastersRes.rows[0].total, 10),
+                    pending: parseInt(tastersRes.rows[0].pending, 10),
+                    active: parseInt(tastersRes.rows[0].active, 10)
+                },
+                competence: {
+                    total: parseInt(competenceRes.rows[0].total, 10),
+                    pending: parseInt(competenceRes.rows[0].pending, 10),
+                    active: parseInt(competenceRes.rows[0].active, 10)
                 },
                 contracts: {
                     total: parseInt(contractsRes.rows[0].total, 10),
@@ -244,7 +288,8 @@ export class DashboardController {
                 },
                 licenses: {
                     total: parseInt(licensesRes.rows[0].total, 10),
-                    pending: parseInt(licensesRes.rows[0].pending, 10)
+                    pending: parseInt(licensesRes.rows[0].pending, 10),
+                    active: parseInt(licensesRes.rows[0].active, 10)
                 }
             };
 

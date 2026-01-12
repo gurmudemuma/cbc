@@ -1,14 +1,8 @@
 import { Request, Response, NextFunction } from "express";
 import { JwtPayload } from "jsonwebtoken";
-<<<<<<< HEAD
 import { getPool } from "@shared/database/pool";
 import { createLogger } from "@shared/logger";
 import { ErrorCode, AppError } from "@shared/error-codes";
-=======
-import { getPool } from "../../../shared/database/pool";
-import { createLogger } from "../../../shared/logger";
-import { ErrorCode, AppError } from "../../../shared/error-codes";
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
 const logger = createLogger('CustomAuthoritiesExportController');
 
@@ -133,13 +127,13 @@ export class ExportController {
 
       await client.query('BEGIN');
 
-      const exportResult = await client.query('SELECT * FROM exports WHERE id = $1', [exportId]);
+      const exportResult = await client.query('SELECT * FROM exports WHERE export_id = $1', [exportId]);
       if (exportResult.rows.length === 0) {
         throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
       }
 
       await client.query(
-        'UPDATE exports SET status = $1, customs_declaration_number = $2, updated_at = NOW() WHERE id = $3',
+        'UPDATE exports SET status = $1, customs_declaration_number = $2, updated_at = NOW() WHERE export_id = $3',
         ['CUSTOMS_CLEARED', declarationNumber, exportId]
       );
 
@@ -189,13 +183,13 @@ export class ExportController {
 
       await client.query('BEGIN');
 
-      const exportResult = await client.query('SELECT * FROM exports WHERE id = $1', [exportId]);
+      const exportResult = await client.query('SELECT * FROM exports WHERE export_id = $1', [exportId]);
       if (exportResult.rows.length === 0) {
         throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
       }
 
       await client.query(
-        'UPDATE exports SET status = $1, updated_at = NOW() WHERE id = $2',
+        'UPDATE exports SET status = $1, updated_at = NOW() WHERE export_id = $2',
         ['CUSTOMS_REJECTED', exportId]
       );
 
@@ -251,7 +245,7 @@ export class ExportController {
       }
 
       await client.query(
-        'UPDATE exports SET status = $1, import_customs_declaration_number = $2, updated_at = NOW() WHERE id = $3',
+        'UPDATE exports SET status = $1, import_customs_declaration_number = $2, updated_at = NOW() WHERE export_id = $3',
         ['IMPORT_CUSTOMS_CLEARED', declarationNumber, exportId]
       );
 

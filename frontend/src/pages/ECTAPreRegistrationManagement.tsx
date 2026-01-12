@@ -1,14 +1,11 @@
-/**
+﻿/**
  * ECTA Pre-Registration Management Dashboard
  * For ECTA staff to manage exporter applications and approvals
  */
 
 import React, { useState, useEffect } from 'react';
 import { CommonPageProps } from '../types';
-<<<<<<< HEAD
-import { useQuery } from '@tanstack/react-query';
-=======
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Box,
   Typography,
@@ -32,6 +29,10 @@ import {
   Grid,
   IconButton,
   Tooltip,
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel,
 } from '@mui/material';
 import {
   CheckCircle,
@@ -45,31 +46,17 @@ import {
 } from '@mui/icons-material';
 import ectaPreRegistrationService from '../services/ectaPreRegistration';
 import { PageContainer, ManagementPaper } from './ECTAPreRegistrationManagement.styles';
-<<<<<<< HEAD
 import { ModernStatCard } from '../components/ModernUIKit';
 
 interface ECTAPreRegistrationManagementProps extends CommonPageProps { }
-=======
-
-interface ECTAPreRegistrationManagementProps extends CommonPageProps {}
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
 const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagementProps): JSX.Element => {
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
-<<<<<<< HEAD
-=======
-  // Data states
-  const [pendingProfiles, setPendingProfiles] = useState([]);
-  const [pendingLaboratories, setPendingLaboratories] = useState([]);
-  const [pendingCompetence, setPendingCompetence] = useState([]);
-  const [pendingLicenses, setPendingLicenses] = useState([]);
-  const [allExporters, setAllExporters] = useState([]);
-
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   // Dialog states
   const [selectedItem, setSelectedItem] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -79,9 +66,12 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
     certificateNumber: '',
     issueDate: new Date().toISOString().split('T')[0],
     expiryDate: '',
+    laboratoryId: '',
+    tasterId: '',
   });
+  const [availableLaboratories, setAvailableLaboratories] = useState([]);
+  const [availableTasters, setAvailableTasters] = useState([]);
 
-<<<<<<< HEAD
   const location = window.location;
 
   useEffect(() => {
@@ -98,21 +88,10 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
   // React Query Fetch Function
   const fetchData = async () => {
     console.log('Fetching data for tab:', activeTab);
-=======
-  useEffect(() => {
-    loadData();
-  }, [activeTab]);
-
-  const loadData = async () => {
-    setLoading(true);
-    setError(null);
-
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     try {
       switch (activeTab) {
         case 0:
           const profiles = await ectaPreRegistrationService.getPendingApplications();
-<<<<<<< HEAD
           return Array.isArray(profiles) ? profiles : profiles?.data || [];
         case 1:
           const labs = await ectaPreRegistrationService.getPendingLaboratories();
@@ -168,36 +147,12 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
   const pendingLicenses = activeTab === 4 ? tableData || [] : [];
   const allExporters = activeTab === 5 ? tableData || [] : [];
 
-=======
-          setPendingProfiles(Array.isArray(profiles) ? profiles : profiles?.data || []);
-          break;
-        case 1:
-          const labs = await ectaPreRegistrationService.getPendingLaboratories();
-          setPendingLaboratories(Array.isArray(labs) ? labs : labs?.data || []);
-          break;
-        case 2:
-          const competence = await ectaPreRegistrationService.getPendingCompetenceCertificates();
-          setPendingCompetence(Array.isArray(competence) ? competence : competence?.data || []);
-          break;
-        case 3:
-          const licenses = await ectaPreRegistrationService.getPendingLicenses();
-          setPendingLicenses(Array.isArray(licenses) ? licenses : licenses?.data || []);
-          break;
-        case 4:
-          const exporters = await ectaPreRegistrationService.getAllExporters();
-          setAllExporters(Array.isArray(exporters) ? exporters : exporters?.data || []);
-          break;
-        default:
-          break;
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load data');
-    } finally {
-      setLoading(false);
-    }
+  // Helper function to refresh both table data and global stats
+  const refreshAllData = () => {
+    refetch(); // Refresh current tab data
+    queryClient.invalidateQueries({ queryKey: ['ecta', 'global-stats'] }); // Refresh dashboard stats
   };
 
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   const handleApproveProfile = async (exporterId) => {
     setLoading(true);
     setError(null);
@@ -205,11 +160,7 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
     try {
       await ectaPreRegistrationService.approveExporter(exporterId);
       setSuccess('Exporter profile approved successfully');
-<<<<<<< HEAD
-      refetch(); // Use refetch instead of loadData
-=======
-      loadData();
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
+      refreshAllData();
       setDialogOpen(false);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to approve profile');
@@ -230,11 +181,7 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
     try {
       await ectaPreRegistrationService.rejectExporter(exporterId, rejectReason);
       setSuccess('Exporter profile rejected');
-<<<<<<< HEAD
-      refetch();
-=======
-      loadData();
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
+      refreshAllData();
       setDialogOpen(false);
       setRejectReason('');
     } catch (err) {
@@ -251,16 +198,14 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
     try {
       await ectaPreRegistrationService.certifyLaboratory(laboratoryId, certificateData);
       setSuccess('Laboratory certified successfully');
-<<<<<<< HEAD
-      refetch();
-=======
-      loadData();
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
+      refreshAllData();
       setDialogOpen(false);
       setCertificateData({
         certificateNumber: '',
         issueDate: new Date().toISOString().split('T')[0],
         expiryDate: '',
+        laboratoryId: '',
+        tasterId: '',
       });
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to certify laboratory');
@@ -276,16 +221,14 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
     try {
       await ectaPreRegistrationService.issueCompetenceCertificate(exporterId, certificateData);
       setSuccess('Competence certificate issued successfully');
-<<<<<<< HEAD
-      refetch();
-=======
-      loadData();
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
+      refreshAllData();
       setDialogOpen(false);
       setCertificateData({
         certificateNumber: '',
         issueDate: new Date().toISOString().split('T')[0],
         expiryDate: '',
+        laboratoryId: '',
+        tasterId: '',
       });
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to issue certificate');
@@ -301,16 +244,14 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
     try {
       await ectaPreRegistrationService.issueExportLicense(exporterId, certificateData);
       setSuccess('Export license issued successfully');
-<<<<<<< HEAD
-      refetch();
-=======
-      loadData();
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
+      refreshAllData();
       setDialogOpen(false);
       setCertificateData({
         certificateNumber: '',
         issueDate: new Date().toISOString().split('T')[0],
         expiryDate: '',
+        laboratoryId: '',
+        tasterId: '',
       });
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to issue license');
@@ -319,7 +260,6 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
     }
   };
 
-<<<<<<< HEAD
   const handleVerifyTaster = async (tasterId) => {
     setLoading(true);
     setError(null);
@@ -327,7 +267,7 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
     try {
       await ectaPreRegistrationService.verifyTaster(tasterId);
       setSuccess('Taster verified successfully');
-      refetch();
+      refreshAllData();
       setDialogOpen(false);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to verify taster');
@@ -348,7 +288,7 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
     try {
       await ectaPreRegistrationService.rejectTaster(tasterId, rejectReason);
       setSuccess('Taster verification rejected');
-      refetch();
+      refreshAllData();
       setDialogOpen(false);
       setRejectReason('');
     } catch (err) {
@@ -370,7 +310,7 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
     try {
       await ectaPreRegistrationService.rejectCompetenceCertificate(exporterId, rejectReason);
       setSuccess('Competence certificate application rejected');
-      refetch();
+      refreshAllData();
       setDialogOpen(false);
       setRejectReason('');
     } catch (err) {
@@ -392,7 +332,7 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
     try {
       await ectaPreRegistrationService.rejectExportLicense(exporterId, rejectReason);
       setSuccess('Export license application rejected');
-      refetch();
+      refreshAllData();
       setDialogOpen(false);
       setRejectReason('');
     } catch (err) {
@@ -402,12 +342,26 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
     }
   };
 
-=======
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
-  const openDialog = (item, type) => {
+  const openDialog = async (item, type) => {
     setSelectedItem(item);
     setDialogType(type);
     setDialogOpen(true);
+
+    // Fetch laboratories and tasters for competence certificate dialog
+    if (type === 'issue-competence' && item?.exporterId) {
+      try {
+        const [labsResponse, tastersResponse] = await Promise.all([
+          ectaPreRegistrationService.getExporterLaboratories(item.exporterId),
+          ectaPreRegistrationService.getExporterTasters(item.exporterId),
+        ]);
+        
+        setAvailableLaboratories(labsResponse?.data || []);
+        setAvailableTasters(tastersResponse?.data || []);
+      } catch (err) {
+        console.error('Failed to fetch laboratories/tasters:', err);
+        setError('Failed to load laboratories and tasters');
+      }
+    }
   };
 
   const closeDialog = () => {
@@ -419,7 +373,11 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
       certificateNumber: '',
       issueDate: new Date().toISOString().split('T')[0],
       expiryDate: '',
+      laboratoryId: '',
+      tasterId: '',
     });
+    setAvailableLaboratories([]);
+    setAvailableTasters([]);
   };
 
   const getStatusChip = (status) => {
@@ -454,11 +412,7 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
         </TableHead>
         <TableBody>
           {(pendingProfiles || []).map((profile) => (
-<<<<<<< HEAD
             <TableRow key={profile.exporter_id}>
-=======
-            <TableRow key={profile.id}>
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
               <TableCell>{profile.businessName}</TableCell>
               <TableCell>{profile.tin}</TableCell>
               <TableCell>{profile.businessType}</TableCell>
@@ -474,11 +428,7 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
                   <IconButton
                     size="small"
                     color="success"
-<<<<<<< HEAD
                     onClick={() => handleApproveProfile(profile.exporter_id)}
-=======
-                    onClick={() => handleApproveProfile(profile.id)}
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
                   >
                     <CheckCircle />
                   </IconButton>
@@ -498,7 +448,7 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
           {(!pendingProfiles || pendingProfiles.length === 0) && (
             <TableRow>
               <TableCell colSpan={6} align="center">
-                No pending applications
+                No exporter applications found
               </TableCell>
             </TableRow>
           )}
@@ -546,7 +496,7 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
           {pendingLaboratories.length === 0 && (
             <TableRow>
               <TableCell colSpan={5} align="center">
-                No pending laboratory certifications
+                No laboratory certifications found
               </TableCell>
             </TableRow>
           )}
@@ -555,7 +505,6 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
     </TableContainer>
   );
 
-<<<<<<< HEAD
   const renderPendingTasters = () => (
     <TableContainer>
       <Table>
@@ -608,7 +557,7 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
           {pendingTasters.length === 0 && (
             <TableRow>
               <TableCell colSpan={6} align="center">
-                No pending taster verifications
+                No taster verifications found
               </TableCell>
             </TableRow>
           )}
@@ -617,8 +566,6 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
     </TableContainer>
   );
 
-=======
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   const renderPendingCompetence = () => (
     <TableContainer>
       <Table>
@@ -658,7 +605,6 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
                   startIcon={<VerifiedUser />}
                   onClick={() => openDialog(item, 'issue-competence')}
                   disabled={!item.laboratoryCertified || !item.tasterVerified}
-<<<<<<< HEAD
                   sx={{ mr: 1 }}
                 >
                   Issue Certificate
@@ -672,18 +618,13 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
                 >
                   Reject
                 </Button>
-=======
-                >
-                  Issue Certificate
-                </Button>
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
               </TableCell>
             </TableRow>
           ))}
           {pendingCompetence.length === 0 && (
             <TableRow>
               <TableCell colSpan={5} align="center">
-                No pending competence certificate applications
+                No competence certificate applications found
               </TableCell>
             </TableRow>
           )}
@@ -731,7 +672,6 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
                   startIcon={<Description />}
                   onClick={() => openDialog(item, 'issue-license')}
                   disabled={!item.hasCompetenceCertificate || !item.capitalVerified}
-<<<<<<< HEAD
                   sx={{ mr: 1 }}
                 >
                   Issue License
@@ -745,18 +685,13 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
                 >
                   Reject
                 </Button>
-=======
-                >
-                  Issue License
-                </Button>
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
               </TableCell>
             </TableRow>
           ))}
           {pendingLicenses.length === 0 && (
             <TableRow>
               <TableCell colSpan={5} align="center">
-                No pending export license applications
+                No export license applications found
               </TableCell>
             </TableRow>
           )}
@@ -861,7 +796,6 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
       );
     }
 
-<<<<<<< HEAD
     if (dialogType === 'reject-taster') {
       return (
         <Dialog open={dialogOpen} onClose={closeDialog} maxWidth="sm" fullWidth>
@@ -961,8 +895,6 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
       );
     }
 
-=======
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     if (dialogType === 'certify-lab' || dialogType === 'issue-competence' || dialogType === 'issue-license') {
       const titles = {
         'certify-lab': 'Certify Laboratory',
@@ -990,6 +922,55 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
                   required
                 />
               </Grid>
+              
+              {/* Laboratory and Taster selection for competence certificate */}
+              {dialogType === 'issue-competence' && (
+                <>
+                  <Grid item xs={12}>
+                    <FormControl fullWidth required>
+                      <InputLabel>Laboratory</InputLabel>
+                      <Select
+                        value={certificateData.laboratoryId}
+                        onChange={(e) => setCertificateData({ ...certificateData, laboratoryId: e.target.value })}
+                        label="Laboratory"
+                      >
+                        {availableLaboratories.length === 0 && (
+                          <MenuItem value="" disabled>
+                            No certified laboratories found
+                          </MenuItem>
+                        )}
+                        {availableLaboratories.map((lab) => (
+                          <MenuItem key={lab.laboratory_id} value={lab.laboratory_id}>
+                            {lab.laboratory_name} - {lab.city}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <FormControl fullWidth required>
+                      <InputLabel>Taster</InputLabel>
+                      <Select
+                        value={certificateData.tasterId}
+                        onChange={(e) => setCertificateData({ ...certificateData, tasterId: e.target.value })}
+                        label="Taster"
+                      >
+                        {availableTasters.length === 0 && (
+                          <MenuItem value="" disabled>
+                            No verified tasters found
+                          </MenuItem>
+                        )}
+                        {availableTasters.map((taster) => (
+                          <MenuItem key={taster.taster_id} value={taster.taster_id}>
+                            {taster.full_name} - {taster.qualification_level}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                </>
+              )}
+              
               <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
@@ -1020,7 +1001,12 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
               variant="contained"
               color="primary"
               onClick={handlers[dialogType]}
-              disabled={loading || !certificateData.certificateNumber || !certificateData.expiryDate}
+              disabled={
+                loading || 
+                !certificateData.certificateNumber || 
+                !certificateData.expiryDate ||
+                (dialogType === 'issue-competence' && (!certificateData.laboratoryId || !certificateData.tasterId))
+              }
             >
               {loading ? <CircularProgress size={24} /> : 'Issue'}
             </Button>
@@ -1097,13 +1083,8 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
           <Button
             variant="outlined"
             startIcon={<Refresh />}
-<<<<<<< HEAD
-            onClick={() => refetch()}
+            onClick={() => refreshAllData()}
             disabled={isLoading || loading}
-=======
-            onClick={loadData}
-            disabled={loading}
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           >
             Refresh
           </Button>
@@ -1121,7 +1102,6 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
           </Alert>
         )}
 
-<<<<<<< HEAD
         {/* Global Stats Grid */}
         {globalStats && (
           <Grid container spacing={3} sx={{ mb: 4 }}>
@@ -1165,30 +1145,20 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
         )}
 
         <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)} sx={{ mb: 3 }}>
-          <Tab icon={<Business />} label="Pending Profiles" />
-          <Tab icon={<Science />} label="Pending Labs" />
-          <Tab icon={<VerifiedUser />} label="Pending Tasters" />
-=======
-        <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)} sx={{ mb: 3 }}>
-          <Tab icon={<Business />} label="Pending Profiles" />
-          <Tab icon={<Science />} label="Pending Labs" />
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
-          <Tab icon={<VerifiedUser />} label="Pending Competence" />
-          <Tab icon={<Description />} label="Pending Licenses" />
+          <Tab icon={<Business />} label="Exporter Profiles" />
+          <Tab icon={<Science />} label="Laboratories" />
+          <Tab icon={<VerifiedUser />} label="Coffee Tasters" />
+          <Tab icon={<VerifiedUser />} label="Competence Certificates" />
+          <Tab icon={<Description />} label="Export Licenses" />
           <Tab icon={<CheckCircle />} label="All Exporters" />
         </Tabs>
 
-<<<<<<< HEAD
         {(isLoading || loading) && !tableData && (
-=======
-        {loading && (
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
           <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
             <CircularProgress />
           </Box>
         )}
 
-<<<<<<< HEAD
         {(!isLoading && !loading) || tableData ? (
           <>
             {activeTab === 0 && renderPendingProfiles()}
@@ -1199,17 +1169,6 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
             {activeTab === 5 && renderAllExporters()}
           </>
         ) : null}
-=======
-        {!loading && (
-          <>
-            {activeTab === 0 && renderPendingProfiles()}
-            {activeTab === 1 && renderPendingLaboratories()}
-            {activeTab === 2 && renderPendingCompetence()}
-            {activeTab === 3 && renderPendingLicenses()}
-            {activeTab === 4 && renderAllExporters()}
-          </>
-        )}
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
         {renderDialog()}
       </ManagementPaper>

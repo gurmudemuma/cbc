@@ -2,7 +2,9 @@ import axios from 'axios';
 
 // Get base URL from environment or use default
 const getBaseURL = () => {
-  return '/api';
+  // Use empty string since all paths now include /api prefix
+  // and Vite proxy handles routing based on /api/* patterns
+  return '';
 };
 
 const apiClient = axios.create({

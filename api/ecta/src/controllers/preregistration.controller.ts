@@ -6,17 +6,10 @@ import {
   CoffeeLaboratory,
   CompetenceCertificate,
   ExportLicense,
-<<<<<<< HEAD
 } from '@shared/models/ecta-preregistration.model';
 import { ectaPreRegistrationService } from '@shared/services/ecta-preregistration.service';
 import { pool } from '@shared/database/pool';
 import { createLogger } from '@shared/logger';
-=======
-} from '../../../shared/models/ecta-preregistration.model';
-import { ectaPreRegistrationService } from '../../../shared/services/ecta-preregistration.service';
-import { pool } from '../../../shared/database/pool';
-import { createLogger } from '../../../shared/logger';
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
 const logger = createLogger('PreRegistrationController');
 
@@ -63,7 +56,7 @@ export class PreRegistrationController {
   };
 
   /**
-   * Get pending exporter applications
+   * Get pending exporter applications (ECTA view)
    */
   public getPendingApplications = async (
     _req: RequestWithUser,
@@ -71,21 +64,22 @@ export class PreRegistrationController {
     _next: NextFunction
   ): Promise<void> => {
     try {
-      const result = await pool.query(
-        'SELECT * FROM exporter_profiles WHERE status = $1 ORDER BY created_at DESC',
-        ['PENDING_APPROVAL']
-      );
+      const result = await pool.query(`
+        SELECT * FROM exporter_profiles 
+        WHERE status = 'PENDING_APPROVAL'
+        ORDER BY created_at DESC
+      `);
       res.json({
         success: true,
         data: result.rows,
         count: result.rows.length,
-        message: 'Exporter applications pending ECTA approval',
+        message: 'Pending exporter applications',
       });
     } catch (error: any) {
-      logger.error('Failed to fetch pending applications', { error: error.message });
+      logger.error('Failed to fetch applications', { error: error.message });
       res.status(500).json({
         success: false,
-        message: 'Failed to fetch pending applications',
+        message: 'Failed to fetch applications',
         error: error.message,
       });
     }
@@ -111,7 +105,6 @@ export class PreRegistrationController {
         return;
       }
 
-<<<<<<< HEAD
       const now = new Date().toISOString();
       const result = await pool.query(
         `UPDATE exporter_profiles 
@@ -130,26 +123,14 @@ export class PreRegistrationController {
       }
 
       logger.info('Exporter profile approved', { exporterId, approvedBy: user.username });
-=======
-      // TODO: Update exporter status to ACTIVE
-      // profile.status = 'ACTIVE';
-      // profile.approvedBy = user.username;
-      // profile.approvedAt = new Date().toISOString();
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
       res.json({
         success: true,
         message: 'Exporter profile approved',
-<<<<<<< HEAD
         data: result.rows[0],
       });
     } catch (error: any) {
       logger.error('Failed to approve exporter', { error: error.message, exporterId: req.params.exporterId });
-=======
-        data: { exporterId, approvedBy: user.username },
-      });
-    } catch (error: any) {
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       res.status(500).json({
         success: false,
         message: 'Failed to approve exporter',
@@ -179,7 +160,6 @@ export class PreRegistrationController {
         return;
       }
 
-<<<<<<< HEAD
       const now = new Date().toISOString();
 
       // Get current profile to append to rejection history
@@ -221,25 +201,14 @@ export class PreRegistrationController {
       );
 
       logger.info('Exporter profile rejected', { exporterId, rejectedBy: user.username, reason });
-=======
-      // TODO: Update exporter status to REJECTED
-      // profile.status = 'REVOKED';
-      // profile.rejectionReason = reason;
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
       res.json({
         success: true,
         message: 'Exporter profile rejected',
-<<<<<<< HEAD
         data: result.rows[0],
       });
     } catch (error: any) {
       logger.error('Failed to reject exporter', { error: error.message, exporterId: req.params.exporterId });
-=======
-        data: { exporterId, reason, rejectedBy: user.username },
-      });
-    } catch (error: any) {
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       res.status(500).json({
         success: false,
         message: 'Failed to reject exporter',
@@ -249,7 +218,6 @@ export class PreRegistrationController {
   };
 
   /**
-<<<<<<< HEAD
    * Resubmit exporter profile after rejection
    */
   public resubmitProfile = async (
@@ -485,17 +453,12 @@ export class PreRegistrationController {
       });
     }
   };
-=======
-   * Get pending laboratory certifications
-   */
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   public getPendingLaboratories = async (
     _req: RequestWithUser,
     res: Response,
     _next: NextFunction
   ): Promise<void> => {
     try {
-<<<<<<< HEAD
       // Join with exporter_profiles to get exporter name and details
       const query = `
         SELECT 
@@ -506,11 +469,11 @@ export class PreRegistrationController {
           ep.region as exporter_region
         FROM coffee_laboratories cl
         LEFT JOIN exporter_profiles ep ON cl.exporter_id = ep.exporter_id
-        WHERE cl.status = $1
+        WHERE cl.status = 'PENDING'
         ORDER BY cl.created_at DESC
       `;
 
-      const result = await pool.query(query, ['PENDING']);
+      const result = await pool.query(query);
 
       // Map to frontend-friendly format
       const laboratories = result.rows.map(row => ({
@@ -535,25 +498,13 @@ export class PreRegistrationController {
         success: true,
         data: laboratories,
         count: laboratories.length,
-        message: 'Laboratory certifications pending inspection',
+        message: 'Pending laboratory certifications',
       });
     } catch (error: any) {
-      logger.error('Failed to fetch pending laboratories', { error: error.message });
-=======
-      // TODO: Implement database query for status='PENDING'
-      const pending: CoffeeLaboratory[] = [];
-      
-      res.json({
-        success: true,
-        data: pending,
-        count: pending.length,
-        message: 'Laboratory certifications pending inspection',
-      });
-    } catch (error: any) {
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
+      logger.error('Failed to fetch laboratories', { error: error.message });
       res.status(500).json({
         success: false,
-        message: 'Failed to fetch pending laboratories',
+        message: 'Failed to fetch laboratories',
         error: error.message,
       });
     }
@@ -631,16 +582,14 @@ export class PreRegistrationController {
     _next: NextFunction
   ): Promise<void> => {
     try {
-<<<<<<< HEAD
       const result = await pool.query(
         `SELECT cc.*, ep.business_name, ep.business_type, ep.tin,
                 (SELECT status = 'ACTIVE' FROM coffee_laboratories cl WHERE cl.exporter_id = ep.exporter_id LIMIT 1) as laboratory_certified,
                 (SELECT status = 'ACTIVE' FROM coffee_tasters ct WHERE ct.exporter_id = ep.exporter_id LIMIT 1) as taster_verified
          FROM competence_certificates cc
          JOIN exporter_profiles ep ON cc.exporter_id = ep.exporter_id
-         WHERE cc.status = $1
-         ORDER BY cc.created_at DESC`,
-        ['PENDING']
+         WHERE cc.status = 'PENDING'
+         ORDER BY cc.created_at DESC`
       );
 
       const mappedData = result.rows.map(row => ({
@@ -660,25 +609,13 @@ export class PreRegistrationController {
         success: true,
         data: mappedData,
         count: mappedData.length,
-        message: 'Competence certificate applications pending review',
+        message: 'Pending competence certificate applications',
       });
     } catch (error: any) {
-      logger.error('Failed to fetch pending certificates', { error: error.message });
-=======
-      // TODO: Implement database query for status='PENDING'
-      const pending: CompetenceCertificate[] = [];
-      
-      res.json({
-        success: true,
-        data: pending,
-        count: pending.length,
-        message: 'Competence certificate applications pending review',
-      });
-    } catch (error: any) {
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
+      logger.error('Failed to fetch certificates', { error: error.message });
       res.status(500).json({
         success: false,
-        message: 'Failed to fetch pending certificates',
+        message: 'Failed to fetch certificates',
         error: error.message,
       });
     }
@@ -722,11 +659,7 @@ export class PreRegistrationController {
 
       // Validate exporter has certified lab and qualified taster
       const validation = await ectaPreRegistrationService.validateExporter(exporterId);
-<<<<<<< HEAD
 
-=======
-      
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       if (!validation.hasCertifiedLaboratory) {
         res.status(400).json({
           success: false,
@@ -866,15 +799,19 @@ export class PreRegistrationController {
     _next: NextFunction
   ): Promise<void> => {
     try {
-<<<<<<< HEAD
       const result = await pool.query(
         `SELECT el.*, ep.business_name, ep.business_type, ep.tin, ep.capital_verified,
                 (SELECT status = 'ACTIVE' FROM competence_certificates cc WHERE cc.exporter_id = ep.exporter_id LIMIT 1) as has_competence_certificate
          FROM export_licenses el
          JOIN exporter_profiles ep ON el.exporter_id = ep.exporter_id
-         WHERE el.status = $1
-         ORDER BY el.created_at DESC`,
-        ['PENDING_REVIEW']
+         WHERE el.status IN ('PENDING_REVIEW', 'PENDING')
+         ORDER BY 
+           CASE 
+             WHEN el.status = 'PENDING_REVIEW' THEN 0
+             WHEN el.status = 'PENDING' THEN 1
+             ELSE 2
+           END,
+           el.created_at DESC`
       );
 
       const mappedData = result.rows.map(row => ({
@@ -895,25 +832,13 @@ export class PreRegistrationController {
         success: true,
         data: mappedData,
         count: mappedData.length,
-        message: 'Export license applications pending review',
+        message: 'Pending export license applications',
       });
     } catch (error: any) {
-      logger.error('Failed to fetch pending licenses', { error: error.message });
-=======
-      // TODO: Implement database query for status='PENDING_REVIEW'
-      const pending: ExportLicense[] = [];
-      
-      res.json({
-        success: true,
-        data: pending,
-        count: pending.length,
-        message: 'Export license applications pending review',
-      });
-    } catch (error: any) {
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
+      logger.error('Failed to fetch licenses', { error: error.message });
       res.status(500).json({
         success: false,
-        message: 'Failed to fetch pending licenses',
+        message: 'Failed to fetch licenses',
         error: error.message,
       });
     }
@@ -950,11 +875,7 @@ export class PreRegistrationController {
 
       // Validate exporter has valid competence certificate
       const validation = await ectaPreRegistrationService.validateExporter(exporterId);
-<<<<<<< HEAD
 
-=======
-      
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       if (!validation.hasCompetenceCertificate) {
         res.status(400).json({
           success: false,
@@ -1002,7 +923,6 @@ export class PreRegistrationController {
     }
   };
 
-<<<<<<< HEAD
   // ============================================================================
   // TASTER VERIFICATION
   // ============================================================================
@@ -1023,11 +943,11 @@ export class PreRegistrationController {
           ep.tin as exporter_tin
         FROM coffee_tasters ct
         LEFT JOIN exporter_profiles ep ON ct.exporter_id = ep.exporter_id
-        WHERE ct.status = $1
+        WHERE ct.status = 'PENDING'
         ORDER BY ct.created_at DESC
       `;
 
-      const result = await pool.query(query, ['PENDING']);
+      const result = await pool.query(query);
 
       const tasters = result.rows.map(row => ({
         id: row.taster_id,
@@ -1048,13 +968,91 @@ export class PreRegistrationController {
         success: true,
         data: tasters,
         count: tasters.length,
-        message: 'Taster verifications pending review',
+        message: 'Pending taster verifications',
       });
     } catch (error: any) {
-      logger.error('Failed to fetch pending tasters', { error: error.message });
+      logger.error('Failed to fetch tasters', { error: error.message });
       res.status(500).json({
         success: false,
-        message: 'Failed to fetch pending tasters',
+        message: 'Failed to fetch tasters',
+        error: error.message,
+      });
+    }
+  };
+
+  /**
+   * Get laboratories for a specific exporter
+   */
+  public getExporterLaboratories = async (
+    req: RequestWithUser,
+    res: Response,
+    _next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { exporterId } = req.params;
+
+      if (!exporterId) {
+        res.status(400).json({
+          success: false,
+          message: 'Exporter ID is required',
+        });
+        return;
+      }
+
+      const result = await pool.query(
+        'SELECT * FROM coffee_laboratories WHERE exporter_id = $1 AND status = $2 ORDER BY created_at DESC',
+        [exporterId, 'ACTIVE']
+      );
+
+      res.json({
+        success: true,
+        data: result.rows,
+        count: result.rows.length,
+      });
+    } catch (error: any) {
+      logger.error('Failed to fetch exporter laboratories', { error: error.message, exporterId: req.params.exporterId });
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch laboratories',
+        error: error.message,
+      });
+    }
+  };
+
+  /**
+   * Get tasters for a specific exporter
+   */
+  public getExporterTasters = async (
+    req: RequestWithUser,
+    res: Response,
+    _next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { exporterId } = req.params;
+
+      if (!exporterId) {
+        res.status(400).json({
+          success: false,
+          message: 'Exporter ID is required',
+        });
+        return;
+      }
+
+      const result = await pool.query(
+        'SELECT * FROM coffee_tasters WHERE exporter_id = $1 AND status = $2 ORDER BY created_at DESC',
+        [exporterId, 'ACTIVE']
+      );
+
+      res.json({
+        success: true,
+        data: result.rows,
+        count: result.rows.length,
+      });
+    } catch (error: any) {
+      logger.error('Failed to fetch exporter tasters', { error: error.message, exporterId: req.params.exporterId });
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch tasters',
         error: error.message,
       });
     }
@@ -1287,8 +1285,6 @@ export class PreRegistrationController {
     }
   };
 
-=======
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   /**
    * Validate exporter qualification
    */

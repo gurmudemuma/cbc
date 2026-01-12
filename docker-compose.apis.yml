@@ -48,11 +48,6 @@ services:
       retries: 5
     networks:
       - coffee-export
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
     restart: unless-stopped
 
   # ============================================================================
@@ -88,11 +83,6 @@ services:
       retries: 5
     networks:
       - coffee-export
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
     restart: unless-stopped
 
   # ============================================================================
@@ -128,11 +118,6 @@ services:
       retries: 5
     networks:
       - coffee-export
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
     restart: unless-stopped
 
   # ============================================================================
@@ -167,11 +152,6 @@ services:
       retries: 5
     networks:
       - coffee-export
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
     restart: unless-stopped
 
   # ============================================================================
@@ -207,11 +187,6 @@ services:
       retries: 5
     networks:
       - coffee-export
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
     restart: unless-stopped
 
   # ============================================================================
@@ -246,11 +221,6 @@ services:
       retries: 5
     networks:
       - coffee-export
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
     restart: unless-stopped
 
   # ============================================================================
@@ -286,11 +256,41 @@ services:
       retries: 5
     networks:
       - coffee-export
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+    restart: unless-stopped
+
+  # ============================================================================
+  # ESW API (Port 3008)
+  # ============================================================================
+  esw:
+    build:
+      context: .
+      dockerfile: api/esw/Dockerfile
+    container_name: cbc-esw
+    env_file:
+      - ./api/esw/.env
+    environment:
+      NODE_ENV: development
+      ESW_API_PORT: 3008
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: coffee_export_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_SSL: "false"
+      CORS_ORIGIN: "http://localhost:5173"
+      WEBSOCKET_ENABLED: "true"
+      LOG_LEVEL: info
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    ports:
+      - "3008:3008"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3008/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - coffee-export
     restart: unless-stopped
 
 ################################################################################
@@ -298,8 +298,4 @@ services:
 ################################################################################
 networks:
   coffee-export:
-<<<<<<< HEAD
-=======
-    external: true
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     name: coffee-export-network

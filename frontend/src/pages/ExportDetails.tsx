@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Package,
@@ -37,10 +37,7 @@ import ExporterSubmissionActions from '../components/ExporterSubmissionActions';
 import DocumentChecklist from '../components/DocumentChecklist';
 import RejectionHandler from '../components/RejectionHandler';
 import WorkflowProgressTracker from '../components/WorkflowProgressTracker';
-<<<<<<< HEAD
 import WorkflowTimeline from '../components/WorkflowTimeline';
-=======
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
 interface ExportDetailsProps {
   user: any;
@@ -185,11 +182,7 @@ const ExportDetails = ({ user, org }: ExportDetailsProps): JSX.Element => {
           </Grid>
 
           {/* Rejection Handler - Shows only if rejected */}
-<<<<<<< HEAD
           <RejectionHandler
-=======
-          <RejectionHandler 
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
             exportData={exportData}
             onResubmit={() => navigate(`/exports/${id}/edit`)}
           />
@@ -452,7 +445,6 @@ const ExportDetails = ({ user, org }: ExportDetailsProps): JSX.Element => {
               {(exportData.transportIdentifier ||
                 exportData.departureDate ||
                 exportData.arrivalDate) && (
-<<<<<<< HEAD
                   <Grid item xs={12} md={6}>
                     <Card>
                       <CardContent>
@@ -507,72 +499,12 @@ const ExportDetails = ({ user, org }: ExportDetailsProps): JSX.Element => {
                     </Card>
                   </Grid>
                 )}
-=======
-                <Grid item xs={12} md={6}>
-                  <Card>
-                    <CardContent>
-                      <Typography variant="h6" sx={{ mb: 2 }}>
-                        Shipment Information
-                      </Typography>
-                      <List>
-                        <ListItem>
-                          <ListItemText primary="Shipment ID" secondary={exportData.shipmentId} />
-                        </ListItem>
-                        <Divider />
-                        <ListItem>
-                          <ListItemText
-                            primary="Transport Identifier"
-                            secondary={exportData.transportIdentifier || '-'}
-                          />
-                        </ListItem>
-                        <Divider />
-                        <ListItem>
-                          <ListItemText
-                            primary="Transport Mode"
-                            secondary={exportData.transportMode || '-'}
-                          />
-                        </ListItem>
-                        <Divider />
-                        <ListItem>
-                          <ListItemText
-                            primary="Departure Date"
-                            secondary={new Date(exportData.departureDate).toLocaleDateString()}
-                          />
-                        </ListItem>
-                        <Divider />
-                        <ListItem>
-                          <ListItemText
-                            primary="Arrival Date"
-                            secondary={new Date(exportData.arrivalDate).toLocaleDateString()}
-                          />
-                        </ListItem>
-                        {exportData.shippedAt && (
-                          <>
-                            <Divider />
-                            <ListItem>
-                              <ListItemText
-                                primary="Shipped At"
-                                secondary={new Date(exportData.shippedAt).toLocaleString()}
-                              />
-                            </ListItem>
-                          </>
-                        )}
-                      </List>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              )}
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
             </Grid>
           )}
 
           {activeTab === 1 && (
             <Box>
-<<<<<<< HEAD
               <DocumentChecklist exportId={id} onUpdate={() => { }} />
-=======
-              <DocumentChecklist exportId={id} onUpdate={() => {}} />
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
             </Box>
           )}
 
@@ -608,7 +540,6 @@ const ExportDetails = ({ user, org }: ExportDetailsProps): JSX.Element => {
             {/* Workflow Progress Tracker */}
             <WorkflowProgressTracker exportData={exportData} />
 
-<<<<<<< HEAD
             {/* Workflow Timeline */}
             {history && history.length > 0 && (
               <WorkflowTimeline
@@ -627,8 +558,6 @@ const ExportDetails = ({ user, org }: ExportDetailsProps): JSX.Element => {
               />
             )}
 
-=======
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
             {/* Actions Card */}
             <Card>
               <CardContent>

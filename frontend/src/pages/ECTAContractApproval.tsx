@@ -1,38 +1,59 @@
-import { useState } from 'react';
-import { Box, Grid, Typography, Card, CardContent, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button, Chip, Dialog, DialogContent, DialogTitle, IconButton } from '@mui/material';
-import { FileCheck, Eye, XCircle } from 'lucide-react';
+﻿import { useState } from 'react';
+import { Box, Grid, Typography, Card, CardContent, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button, Chip, Dialog, DialogContent, DialogTitle, IconButton, Snackbar, Alert } from '@mui/material';
+import { FileCheck, Eye, XCircle, Info } from 'lucide-react';
 import { CommonPageProps } from '../types';
-<<<<<<< HEAD
 import { useExports } from '../hooks/useExportManager';
 import ECTAContractForm from '../components/forms/ECTAContractForm';
+import ExportDetailView from '../components/ExportDetailView';
 import apiClient from '../services/api';
 
 interface ECTAContractApprovalProps extends CommonPageProps { }
-=======
-import { useExports } from '../hooks/useExports';
-import ECTAContractForm from '../components/forms/ECTAContractForm';
-import apiClient from '../services/api';
-
-interface ECTAContractApprovalProps extends CommonPageProps {}
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
 const ECTAContractApproval = ({ user, org }: ECTAContractApprovalProps): JSX.Element => {
   const { exports: allExports, refreshExports } = useExports();
-  const exports = allExports.filter((e) => e.status === 'ECTA_CONTRACT_PENDING' || e.status === 'ECTA_CONTRACT_APPROVED' || e.status === 'ECTA_CONTRACT_REJECTED');
+  // Show exports ready for contract approval (ECTA_QUALITY_APPROVED) or already processed
+  const exports = allExports.filter((e) => 
+    e.status === 'ECTA_CONTRACT_PENDING' || 
+    e.status === 'ECTA_QUALITY_APPROVED' || 
+    e.status === 'ECTA_CONTRACT_APPROVED' || 
+    e.status === 'ECTA_CONTRACT_REJECTED'
+  );
   const [selectedExport, setSelectedExport] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDetailViewOpen, setIsDetailViewOpen] = useState(false);
+  const [viewingExport, setViewingExport] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' | 'info' | 'warning' }>({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
+
+  const showNotification = (message: string, severity: 'success' | 'error' | 'info' | 'warning') => {
+    setSnackbar({ open: true, message, severity });
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbar({ ...snackbar, open: false });
+  };
 
   const handleApprove = async (data) => {
     setLoading(true);
     try {
-      await apiClient.post(`/ecta/contract/${selectedExport.exportId}/approve`, data);
+      const response = await apiClient.post(`/ecta/contract/${selectedExport.exportId}/approve`, data);
       setIsModalOpen(false);
       setSelectedExport(null);
+      showNotification(
+        `Contract approved successfully for Export ${selectedExport.exportId}. Origin Certificate issued.`,
+        'success'
+      );
       refreshExports();
     } catch (error) {
       console.error('Approval error:', error);
-      alert('Failed to approve: ' + (error.response?.data?.message || error.message));
+      showNotification(
+        `Failed to approve contract: ${error.response?.data?.message || error.response?.data?.error?.message || error.message}`,
+        'error'
+      );
     } finally {
       setLoading(false);
     }
@@ -41,16 +62,28 @@ const ECTAContractApproval = ({ user, org }: ECTAContractApprovalProps): JSX.Ele
   const handleReject = async ({ category, reason }) => {
     setLoading(true);
     try {
-      await apiClient.post(`/ecta/contract/${selectedExport.exportId}/reject`, { category, reason });
+      const response = await apiClient.post(`/ecta/contract/${selectedExport.exportId}/reject`, { category, reason });
       setIsModalOpen(false);
       setSelectedExport(null);
+      showNotification(
+        `Contract rejected for Export ${selectedExport.exportId}. Reason: ${category}`,
+        'warning'
+      );
       refreshExports();
     } catch (error) {
       console.error('Rejection error:', error);
-      alert('Failed to reject: ' + (error.response?.data?.message || error.message));
+      showNotification(
+        `Failed to reject contract: ${error.response?.data?.message || error.response?.data?.error?.message || error.message}`,
+        'error'
+      );
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleViewDetails = (exp) => {
+    setViewingExport(exp);
+    setIsDetailViewOpen(true);
   };
 
   return (
@@ -95,7 +128,35 @@ const ECTAContractApproval = ({ user, org }: ECTAContractApprovalProps): JSX.Ele
                 <TableCell><Chip label={exp.status.replace(/_/g, ' ')} color={exp.status === 'ECTA_CONTRACT_APPROVED' ? 'success' : exp.status === 'ECTA_CONTRACT_REJECTED' ? 'error' : 'warning'} size="small" /></TableCell>
                 <TableCell>
                   {exp.status === 'ECTA_CONTRACT_PENDING' && (
-                    <Button size="small" variant="contained" startIcon={<Eye />} onClick={() => { setSelectedExport(exp); setIsModalOpen(true); }}>Review Contract</Button>
+                    <>
+                      <Button 
+                        size="small" 
+                        variant="outlined" 
+                        startIcon={<Info />} 
+                        onClick={() => handleViewDetails(exp)}
+                        sx={{ mr: 1 }}
+                      >
+                        View Details
+                      </Button>
+                      <Button 
+                        size="small" 
+                        variant="contained" 
+                        startIcon={<Eye />} 
+                        onClick={() => { setSelectedExport(exp); setIsModalOpen(true); }}
+                      >
+                        Review Contract
+                      </Button>
+                    </>
+                  )}
+                  {(exp.status === 'ECTA_CONTRACT_APPROVED' || exp.status === 'ECTA_CONTRACT_REJECTED') && (
+                    <Button 
+                      size="small" 
+                      variant="outlined" 
+                      startIcon={<Info />} 
+                      onClick={() => handleViewDetails(exp)}
+                    >
+                      View Details
+                    </Button>
                   )}
                 </TableCell>
               </TableRow>
@@ -107,13 +168,26 @@ const ECTAContractApproval = ({ user, org }: ECTAContractApprovalProps): JSX.Ele
       <Dialog open={isModalOpen} onClose={() => !loading && setIsModalOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>ECTA Contract Approval <IconButton onClick={() => !loading && setIsModalOpen(false)} sx={{ position: 'absolute', right: 8, top: 8 }}><XCircle /></IconButton></DialogTitle>
         <DialogContent>
-<<<<<<< HEAD
           {selectedExport && <ECTAContractForm exportData={selectedExport} onApprove={handleApprove} onReject={handleReject} loading={loading} user={user} org={org} />}
-=======
-          {selectedExport && <ECTAContractForm exportData={selectedExport} onApprove={handleApprove} onReject={handleReject} loading={loading} />}
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         </DialogContent>
       </Dialog>
+
+      <Snackbar 
+        open={snackbar.open} 
+        autoHideDuration={6000} 
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+
+      <ExportDetailView
+        open={isDetailViewOpen}
+        onClose={() => setIsDetailViewOpen(false)}
+        exportData={viewingExport}
+      />
     </Box>
   );
 };

@@ -1,9 +1,13 @@
-/**
+﻿/**
  * ECTA Pre-Registration API Service
  * Handles exporter qualification and ECTA approval workflows
+ * 
+ * UPDATED: Now uses shared endpoint constants for consistency
+ * All ECTA endpoints use /ecta proxy prefix to route to ECTA API (port 3003)
  */
 
 import apiClient from './api';
+import { EXPORTER_ENDPOINTS, PREREGISTRATION_ENDPOINTS } from '../../../api/shared/api-endpoints.constants';
 
 const ectaPreRegistrationService = {
   // ============================================================================
@@ -14,7 +18,7 @@ const ectaPreRegistrationService = {
    * Register exporter profile (Exporter Portal)
    */
   registerProfile: async (profileData) => {
-    const response = await apiClient.post('/exporter/profile/register', profileData);
+    const response = await apiClient.post(EXPORTER_ENDPOINTS.PROFILE_REGISTER, profileData);
     return response.data;
   },
 
@@ -22,7 +26,7 @@ const ectaPreRegistrationService = {
    * Get own profile (Exporter Portal)
    */
   getMyProfile: async () => {
-    const response = await apiClient.get('/exporter/profile');
+    const response = await apiClient.get(EXPORTER_ENDPOINTS.PROFILE);
     return response.data;
   },
 
@@ -30,7 +34,7 @@ const ectaPreRegistrationService = {
    * Get all exporters (ECTA)
    */
   getAllExporters: async () => {
-    const response = await apiClient.get('/preregistration/exporters');
+    const response = await apiClient.get('/api/ecta/preregistration/exporters');
     return response.data;
   },
 
@@ -38,7 +42,7 @@ const ectaPreRegistrationService = {
    * Get pending exporter applications (ECTA)
    */
   getPendingApplications: async () => {
-    const response = await apiClient.get('/preregistration/exporters/pending');
+    const response = await apiClient.get('/api/ecta/preregistration/exporters/pending');
     return response.data;
   },
 
@@ -46,7 +50,7 @@ const ectaPreRegistrationService = {
    * Approve exporter profile (ECTA)
    */
   approveExporter: async (exporterId) => {
-    const response = await apiClient.post(`/preregistration/exporters/${exporterId}/approve`);
+    const response = await apiClient.post(`/api/ecta/preregistration/exporters/${exporterId}/approve`);
     return response.data;
   },
 
@@ -54,26 +58,23 @@ const ectaPreRegistrationService = {
    * Reject exporter profile (ECTA)
    */
   rejectExporter: async (exporterId, reason) => {
-    const response = await apiClient.post(`/preregistration/exporters/${exporterId}/reject`, { reason });
+    const response = await apiClient.post(`/api/ecta/preregistration/exporters/${exporterId}/reject`, { reason });
     return response.data;
   },
 
   /**
-<<<<<<< HEAD
    * Resubmit exporter profile after rejection (Exporter Portal)
    */
   resubmitProfile: async (exporterId) => {
-    const response = await apiClient.post(`/preregistration/exporters/${exporterId}/resubmit`);
+    const response = await apiClient.post(`/api/ecta/preregistration/exporters/${exporterId}/resubmit`);
     return response.data;
   },
 
   /**
-=======
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
    * Validate exporter qualification (ECTA)
    */
   validateExporter: async (exporterId) => {
-    const response = await apiClient.get(`/preregistration/exporters/${exporterId}/validate`);
+    const response = await apiClient.get(`/api/ecta/preregistration/exporters/${exporterId}/validate`);
     return response.data;
   },
 
@@ -85,7 +86,7 @@ const ectaPreRegistrationService = {
    * Register laboratory (Exporter Portal)
    */
   registerLaboratory: async (laboratoryData) => {
-    const response = await apiClient.post('/exporter/laboratory/register', laboratoryData);
+    const response = await apiClient.post('/api/exporter/laboratory/register', laboratoryData);
     return response.data;
   },
 
@@ -93,7 +94,15 @@ const ectaPreRegistrationService = {
    * Get pending laboratory certifications (ECTA)
    */
   getPendingLaboratories: async () => {
-    const response = await apiClient.get('/preregistration/laboratories/pending');
+    const response = await apiClient.get('/api/ecta/preregistration/laboratories/pending');
+    return response.data;
+  },
+
+  /**
+   * Get laboratories for a specific exporter (ECTA)
+   */
+  getExporterLaboratories: async (exporterId) => {
+    const response = await apiClient.get(`/api/ecta/preregistration/exporters/${exporterId}/laboratories`);
     return response.data;
   },
 
@@ -101,16 +110,15 @@ const ectaPreRegistrationService = {
    * Certify laboratory (ECTA)
    */
   certifyLaboratory: async (laboratoryId, certificationData) => {
-<<<<<<< HEAD
     // Map frontend field names to backend expected names
     const payload = {
-      certificationNumber: certificationData.certificateNumber, // Map certificateNumber → certificationNumber
+      certificationNumber: certificationData.certificateNumber,
       inspectionPassed: true, // Always true when certifying
       validityYears: certificationData.validityYears || 1,
       issueDate: certificationData.issueDate,
       expiryDate: certificationData.expiryDate,
     };
-    const response = await apiClient.post(`/preregistration/laboratories/${laboratoryId}/certify`, payload);
+    const response = await apiClient.post(`/api/ecta/preregistration/laboratories/${laboratoryId}/certify`, payload);
     return response.data;
   },
 
@@ -118,7 +126,7 @@ const ectaPreRegistrationService = {
    * Reject laboratory certification (ECTA)
    */
   rejectLaboratory: async (laboratoryId, reason) => {
-    const response = await apiClient.post(`/preregistration/laboratories/${laboratoryId}/reject`, { reason });
+    const response = await apiClient.post(`/api/ecta/preregistration/laboratories/${laboratoryId}/reject`, { reason });
     return response.data;
   },
 
@@ -130,7 +138,15 @@ const ectaPreRegistrationService = {
    * Get pending taster verifications (ECTA)
    */
   getPendingTasters: async () => {
-    const response = await apiClient.get('/preregistration/tasters/pending');
+    const response = await apiClient.get('/api/ecta/preregistration/tasters/pending');
+    return response.data;
+  },
+
+  /**
+   * Get tasters for a specific exporter (ECTA)
+   */
+  getExporterTasters: async (exporterId) => {
+    const response = await apiClient.get(`/api/ecta/preregistration/exporters/${exporterId}/tasters`);
     return response.data;
   },
 
@@ -138,7 +154,7 @@ const ectaPreRegistrationService = {
    * Verify taster (ECTA)
    */
   verifyTaster: async (tasterId) => {
-    const response = await apiClient.post(`/preregistration/tasters/${tasterId}/verify`);
+    const response = await apiClient.post(`/api/ecta/preregistration/tasters/${tasterId}/verify`);
     return response.data;
   },
 
@@ -146,7 +162,7 @@ const ectaPreRegistrationService = {
    * Reject taster verification (ECTA)
    */
   rejectTaster: async (tasterId, reason) => {
-    const response = await apiClient.post(`/preregistration/tasters/${tasterId}/reject`, { reason });
+    const response = await apiClient.post(`/api/ecta/preregistration/tasters/${tasterId}/reject`, { reason });
     return response.data;
   },
 
@@ -154,10 +170,7 @@ const ectaPreRegistrationService = {
    * Resubmit laboratory after rejection (Exporter Portal)
    */
   resubmitLaboratory: async (laboratoryId) => {
-    const response = await apiClient.post(`/preregistration/laboratories/${laboratoryId}/resubmit`);
-=======
-    const response = await apiClient.post(`/preregistration/laboratories/${laboratoryId}/certify`, certificationData);
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
+    const response = await apiClient.post(`/api/ecta/preregistration/laboratories/${laboratoryId}/resubmit`);
     return response.data;
   },
 
@@ -169,7 +182,7 @@ const ectaPreRegistrationService = {
    * Register coffee taster (Exporter Portal)
    */
   registerTaster: async (tasterData) => {
-    const response = await apiClient.post('/exporter/taster/register', tasterData);
+    const response = await apiClient.post('/api/exporter/taster/register', tasterData);
     return response.data;
   },
 
@@ -180,8 +193,8 @@ const ectaPreRegistrationService = {
   /**
    * Apply for competence certificate (Exporter Portal)
    */
-  applyForCompetenceCertificate: async () => {
-    const response = await apiClient.post('/exporter/competence/apply');
+  applyForCompetenceCertificate: async (certificateData) => {
+    const response = await apiClient.post('/api/exporter/competence/apply', certificateData);
     return response.data;
   },
 
@@ -189,7 +202,7 @@ const ectaPreRegistrationService = {
    * Get pending competence certificate applications (ECTA)
    */
   getPendingCompetenceCertificates: async () => {
-    const response = await apiClient.get('/preregistration/competence/pending');
+    const response = await apiClient.get('/api/ecta/preregistration/competence/pending');
     return response.data;
   },
 
@@ -197,7 +210,6 @@ const ectaPreRegistrationService = {
    * Issue competence certificate (ECTA)
    */
   issueCompetenceCertificate: async (exporterId, certificateData) => {
-<<<<<<< HEAD
     // Map frontend field names to backend expected names
     const payload = {
       certificateNumber: certificateData.certificateNumber,
@@ -207,7 +219,7 @@ const ectaPreRegistrationService = {
       inspectionReport: certificateData.inspectionReport || '',
       validityYears: certificateData.validityYears || 1,
     };
-    const response = await apiClient.post(`/preregistration/competence/${exporterId}/issue`, payload);
+    const response = await apiClient.post(`/api/ecta/preregistration/competence/${exporterId}/issue`, payload);
     return response.data;
   },
 
@@ -215,10 +227,7 @@ const ectaPreRegistrationService = {
    * Reject competence certificate (ECTA)
    */
   rejectCompetenceCertificate: async (exporterId, reason) => {
-    const response = await apiClient.post(`/preregistration/competence/${exporterId}/reject`, { reason });
-=======
-    const response = await apiClient.post(`/preregistration/competence/${exporterId}/issue`, certificateData);
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
+    const response = await apiClient.post(`/api/ecta/preregistration/competence/${exporterId}/reject`, { reason });
     return response.data;
   },
 
@@ -230,15 +239,10 @@ const ectaPreRegistrationService = {
    * Apply for export license (Exporter Portal)
    */
   applyForExportLicense: async (licenseData) => {
-    const response = await apiClient.post('/exporter/license/apply', {
+    const response = await apiClient.post('/api/exporter/license/apply', {
       eicRegistrationNumber: licenseData.eicRegistrationNumber || 'EIC-' + Date.now(),
-<<<<<<< HEAD
       requestedCoffeeTypes: licenseData.requestedCoffeeTypes || ['ARABICA', 'ROBUSTA'],
       requestedOrigins: licenseData.requestedOrigins || ['SIDAMA', 'YIRGACHEFFE', 'HARRAR'],
-=======
-      requestedCoffeeTypes: licenseData.coffeeTypes || ['ARABICA', 'ROBUSTA'],
-      requestedOrigins: licenseData.origins || ['SIDAMA', 'YIRGACHEFFE', 'HARRAR'],
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       licenseType: licenseData.licenseType,
       annualExportVolume: licenseData.annualExportVolume,
       exportDestinations: licenseData.exportDestinations,
@@ -253,7 +257,7 @@ const ectaPreRegistrationService = {
    * Get pending export license applications (ECTA)
    */
   getPendingLicenses: async () => {
-    const response = await apiClient.get('/preregistration/licenses/pending');
+    const response = await apiClient.get('/api/ecta/preregistration/licenses/pending');
     return response.data;
   },
 
@@ -261,7 +265,6 @@ const ectaPreRegistrationService = {
    * Issue export license (ECTA)
    */
   issueExportLicense: async (exporterId, licenseData) => {
-<<<<<<< HEAD
     // Map frontend field names to backend expected names
     const payload = {
       licenseNumber: licenseData.certificateNumber, // Frontend uses certificateNumber for all
@@ -272,7 +275,7 @@ const ectaPreRegistrationService = {
       annualQuota: licenseData.annualQuota || 0,
       validityYears: licenseData.validityYears || 1,
     };
-    const response = await apiClient.post(`/preregistration/licenses/${exporterId}/issue`, payload);
+    const response = await apiClient.post(`/api/ecta/preregistration/licenses/${exporterId}/issue`, payload);
     return response.data;
   },
 
@@ -280,10 +283,7 @@ const ectaPreRegistrationService = {
    * Reject export license (ECTA)
    */
   rejectExportLicense: async (exporterId, reason) => {
-    const response = await apiClient.post(`/preregistration/licenses/${exporterId}/reject`, { reason });
-=======
-    const response = await apiClient.post(`/preregistration/licenses/${exporterId}/issue`, licenseData);
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
+    const response = await apiClient.post(`/api/ecta/preregistration/licenses/${exporterId}/reject`, { reason });
     return response.data;
   },
 
@@ -295,10 +295,9 @@ const ectaPreRegistrationService = {
    * Check qualification status (Exporter Portal)
    */
   checkQualificationStatus: async () => {
-    const response = await apiClient.get('/exporter/qualification-status');
+    const response = await apiClient.get('/api/exporter/qualification-status');
     return response.data;
   },
-<<<<<<< HEAD
 
   // ============================================================================
   // 360-DEGREE DASHBOARD
@@ -308,7 +307,15 @@ const ectaPreRegistrationService = {
    * Get complete exporter dashboard by ID (ECTA)
    */
   getExporterDashboard: async (exporterId) => {
-    const response = await apiClient.get(`/preregistration/dashboard/exporter/${exporterId}`);
+    const response = await apiClient.get(`/ecta/preregistration/dashboard/exporter/${exporterId}`);
+    return response.data;
+  },
+
+  /**
+   * Get own exporter dashboard (Exporter Portal)
+   */
+  getMyDashboard: async () => {
+    const response = await apiClient.get('/api/exporter/dashboard');
     return response.data;
   },
 
@@ -316,7 +323,7 @@ const ectaPreRegistrationService = {
    * Get complete exporter dashboard by TIN (ECTA)
    */
   getExporterDashboardByTin: async (tin) => {
-    const response = await apiClient.get(`/preregistration/dashboard/exporter/tin/${tin}`);
+    const response = await apiClient.get(`/ecta/preregistration/dashboard/exporter/tin/${tin}`);
     return response.data;
   },
 
@@ -324,11 +331,9 @@ const ectaPreRegistrationService = {
    * Get global dashboard statistics (ECTA Official)
    */
   getGlobalStats: async () => {
-    const response = await apiClient.get('/preregistration/dashboard/stats');
+    const response = await apiClient.get('/api/ecta/preregistration/dashboard/stats');
     return response.data;
   },
-=======
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 };
 
 export default ectaPreRegistrationService;

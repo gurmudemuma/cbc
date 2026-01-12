@@ -37,11 +37,7 @@ export class EctaPreRegistrationRepository {
     `;
 
     const values = [
-<<<<<<< HEAD
       String(profile.userId),
-=======
-      profile.userId,
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       profile.businessName,
       profile.tin,
       profile.registrationNumber,
@@ -71,7 +67,6 @@ export class EctaPreRegistrationRepository {
 
   async getExporterProfileByUserId(userId: string): Promise<ExporterProfile | null> {
     const query = 'SELECT * FROM exporter_profiles WHERE user_id = $1';
-<<<<<<< HEAD
     const result = await this.pool.query(query, [String(userId)]);
     return result.rows[0] ? this.mapExporterProfile(result.rows[0]) : null;
   }
@@ -87,26 +82,12 @@ export class EctaPreRegistrationRepository {
     const query = 'SELECT * FROM exporter_profiles ORDER BY created_at DESC';
     const result = await this.pool.query(query);
     return result.rows.map((row: any) => this.mapExporterProfile(row));
-=======
-    const result = await this.pool.query(query, [userId]);
-    return result.rows[0] ? this.mapExporterProfile(result.rows[0]) : null;
-  }
-
-  async getAllExporterProfiles(): Promise<ExporterProfile[]> {
-    const query = 'SELECT * FROM exporter_profiles ORDER BY created_at DESC';
-    const result = await this.pool.query(query);
-    return result.rows.map(row => this.mapExporterProfile(row));
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   }
 
   async getPendingExporterProfiles(): Promise<ExporterProfile[]> {
     const query = 'SELECT * FROM exporter_profiles WHERE status = $1 ORDER BY created_at DESC';
     const result = await this.pool.query(query, ['PENDING_APPROVAL']);
-<<<<<<< HEAD
     return result.rows.map((row: any) => this.mapExporterProfile(row));
-=======
-    return result.rows.map(row => this.mapExporterProfile(row));
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   }
 
   async updateExporterProfileStatus(
@@ -129,6 +110,51 @@ export class EctaPreRegistrationRepository {
     ]);
   }
 
+  async updateExporterProfile(
+    exporterId: string,
+    updates: Partial<Omit<ExporterProfile, 'exporterId' | 'userId' | 'createdAt' | 'updatedAt' | 'status'>>
+  ): Promise<ExporterProfile> {
+    const allowedFields = [
+      'businessName', 'tin', 'registrationNumber', 'businessType',
+      'minimumCapital', 'officeAddress', 'city', 'region',
+      'contactPerson', 'email', 'phone'
+    ];
+
+    const updateFields: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+
+    Object.entries(updates).forEach(([key, value]) => {
+      if (allowedFields.includes(key) && value !== undefined) {
+        updateFields.push(`${this.camelToSnake(key)} = $${paramIndex}`);
+        values.push(value);
+        paramIndex++;
+      }
+    });
+
+    if (updateFields.length === 0) {
+      // No valid fields to update, return current profile
+      const current = await this.getExporterProfileById(exporterId);
+      if (!current) throw new Error('Profile not found');
+      return current;
+    }
+
+    values.push(exporterId);
+    const query = `
+      UPDATE exporter_profiles 
+      SET ${updateFields.join(', ')}, updated_at = CURRENT_TIMESTAMP
+      WHERE exporter_id = $${paramIndex}
+      RETURNING *
+    `;
+
+    const result = await this.pool.query(query, values);
+    return this.mapExporterProfile(result.rows[0]);
+  }
+
+  private camelToSnake(str: string): string {
+    return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+  }
+
   // ============================================================================
   // COFFEE LABORATORIES
   // ============================================================================
@@ -139,7 +165,6 @@ export class EctaPreRegistrationRepository {
         exporter_id, laboratory_name, address, certification_number, certified_date, expiry_date,
         status, equipment, has_roasting_facility, has_cupping_room, has_sample_storage
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-<<<<<<< HEAD
       ON CONFLICT (exporter_id, status) 
       DO UPDATE SET
         laboratory_name = EXCLUDED.laboratory_name,
@@ -149,8 +174,6 @@ export class EctaPreRegistrationRepository {
         has_cupping_room = EXCLUDED.has_cupping_room,
         has_sample_storage = EXCLUDED.has_sample_storage,
         updated_at = CURRENT_TIMESTAMP
-=======
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       RETURNING *
     `;
 
@@ -181,11 +204,7 @@ export class EctaPreRegistrationRepository {
   async getPendingLaboratories(): Promise<CoffeeLaboratory[]> {
     const query = 'SELECT * FROM coffee_laboratories WHERE status = $1 ORDER BY created_at DESC';
     const result = await this.pool.query(query, ['PENDING']);
-<<<<<<< HEAD
     return result.rows.map((row: any) => this.mapLaboratory(row));
-=======
-    return result.rows.map(row => this.mapLaboratory(row));
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   }
 
   async certifyLaboratory(
@@ -224,7 +243,6 @@ export class EctaPreRegistrationRepository {
         certificate_expiry_date, employment_start_date, employment_contract,
         is_exclusive_employee, status
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-<<<<<<< HEAD
       ON CONFLICT (exporter_id, status)
       DO UPDATE SET
         full_name = EXCLUDED.full_name,
@@ -238,8 +256,6 @@ export class EctaPreRegistrationRepository {
         employment_start_date = EXCLUDED.employment_start_date,
         employment_contract = EXCLUDED.employment_contract,
         updated_at = CURRENT_TIMESTAMP
-=======
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       RETURNING *
     `;
 
@@ -319,11 +335,7 @@ export class EctaPreRegistrationRepository {
   async getPendingCompetenceCertificates(): Promise<CompetenceCertificate[]> {
     const query = 'SELECT * FROM competence_certificates WHERE status = $1 ORDER BY created_at DESC';
     const result = await this.pool.query(query, ['PENDING']);
-<<<<<<< HEAD
     return result.rows.map((row: any) => this.mapCompetenceCertificate(row));
-=======
-    return result.rows.map(row => this.mapCompetenceCertificate(row));
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   }
 
   // ============================================================================
@@ -340,11 +352,7 @@ export class EctaPreRegistrationRepository {
     applicantUserId: string;
   }): Promise<any> {
     const query = `
-<<<<<<< HEAD
       INSERT INTO export_licenses (
-=======
-      INSERT INTO license_applications (
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         exporter_id, eic_registration_number, requested_coffee_types,
         requested_origins, status, application_date, applicant_user_id
       ) VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -356,17 +364,12 @@ export class EctaPreRegistrationRepository {
       application.eicRegistrationNumber,
       JSON.stringify(application.requestedCoffeeTypes),
       JSON.stringify(application.requestedOrigins),
-<<<<<<< HEAD
       'PENDING_REVIEW', // Matches check constraint
-=======
-      application.status,
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       application.applicationDate,
       application.applicantUserId,
     ];
 
     const result = await this.pool.query(query, values);
-<<<<<<< HEAD
     const row = result.rows[0];
     return {
       id: row.license_id,
@@ -408,9 +411,6 @@ export class EctaPreRegistrationRepository {
       id: row.certificate_id,
       ...row
     };
-=======
-    return result.rows[0];
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   }
 
   // ============================================================================
@@ -455,11 +455,7 @@ export class EctaPreRegistrationRepository {
   async getPendingExportLicenses(): Promise<ExportLicense[]> {
     const query = 'SELECT * FROM export_licenses WHERE status = $1 ORDER BY created_at DESC';
     const result = await this.pool.query(query, ['PENDING']);
-<<<<<<< HEAD
     return result.rows.map((row: any) => this.mapExportLicense(row));
-=======
-    return result.rows.map(row => this.mapExportLicense(row));
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   }
 
   // ============================================================================
@@ -739,7 +735,6 @@ export class EctaPreRegistrationRepository {
     };
   }
 
-<<<<<<< HEAD
   // Persist failed forwardings for retries
   async storeFailedForwarding(payload: {
     exporterId: string;
@@ -765,8 +760,6 @@ export class EctaPreRegistrationRepository {
     await this.pool.query(query, values);
   }
 
-=======
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
   private mapCoffeeLot(row: any): CoffeeLot {
     return {
       lotId: row.lot_id,

@@ -1,13 +1,7 @@
 import { Request, Response, NextFunction } from "express";
-<<<<<<< HEAD
 import { pool } from "@shared/database/pool";
 import { createLogger } from "@shared/logger";
 import { ErrorCode, AppError } from "@shared/error-codes";
-=======
-import { pool } from "../../../shared/database/pool";
-import { createLogger } from "../../../shared/logger";
-import { ErrorCode, AppError } from "../../../shared/error-codes";
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
 const logger = createLogger('FXController');
 
@@ -35,21 +29,13 @@ export class FXController {
   public getExport = async (req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
     try {
       const { exportId } = req.params;
-      const result = await pool.query('SELECT * FROM exports WHERE id = $1', [exportId]);
-<<<<<<< HEAD
+      const result = await pool.query('SELECT * FROM exports WHERE export_id = $1', [exportId]);
 
-=======
-      
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       if (result.rows.length === 0) {
         res.status(404).json({ success: false, message: 'Export not found' });
         return;
       }
-<<<<<<< HEAD
 
-=======
-      
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       res.json({ success: true, data: result.rows[0] });
     } catch (error: any) {
       logger.error('Failed to fetch export', { error: error.message });
@@ -104,7 +90,7 @@ export class FXController {
       await client.query('BEGIN');
 
       const exportResult = await client.query(
-        'SELECT * FROM exports WHERE id = $1',
+        'SELECT * FROM exports WHERE export_id = $1',
         [exportId]
       );
 
@@ -123,7 +109,7 @@ export class FXController {
       }
 
       await client.query(
-        'UPDATE exports SET status = $1, updated_at = NOW() WHERE id = $2',
+        'UPDATE exports SET status = $1, updated_at = NOW() WHERE export_id = $2',
         ['FX_APPROVED', exportId]
       );
 
@@ -176,7 +162,7 @@ export class FXController {
       await client.query('BEGIN');
 
       const exportResult = await client.query(
-        'SELECT * FROM exports WHERE id = $1',
+        'SELECT * FROM exports WHERE export_id = $1',
         [exportId]
       );
 
@@ -195,7 +181,7 @@ export class FXController {
       }
 
       await client.query(
-        'UPDATE exports SET status = $1, updated_at = NOW() WHERE id = $2',
+        'UPDATE exports SET status = $1, updated_at = NOW() WHERE export_id = $2',
         ['FX_REJECTED', exportId]
       );
 

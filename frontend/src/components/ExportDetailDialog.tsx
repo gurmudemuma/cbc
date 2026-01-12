@@ -214,6 +214,17 @@ const ExportDetailDialog = ({ open, onClose, exportId, onApprove, onReject, user
                   </Grid>
                   <Grid item xs={12} md={6}>
                     <Typography variant="caption" color="text.secondary">
+                      Tax Identification Number (TIN)
+                    </Typography>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <Scale size={16} color="#666" />
+                      <Typography variant="body1" sx={{ fontFamily: 'monospace' }}>
+                        {exportData.exporterTin || exportData.exporter_tin || 'Not Linked'}
+                      </Typography>
+                    </Stack>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="caption" color="text.secondary">
                       Contact
                     </Typography>
                     <Typography variant="body1">{exportData.exporterContact || 'N/A'}</Typography>

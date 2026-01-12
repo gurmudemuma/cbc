@@ -62,6 +62,13 @@ router.get(
   exporterController.getProfile,
 );
 
+// Update own exporter profile
+router.put(
+  '/profile',
+  requireRole(['exporter', 'admin']),
+  exporterController.updateProfile,
+);
+
 // Apply for export license
 router.post(
   '/license/apply',
@@ -88,6 +95,13 @@ router.post(
   '/competence/apply',
   requireRole(['exporter', 'admin']),
   exporterController.applyCompetence,
+);
+
+// Get all applications
+router.get(
+  '/applications',
+  requireRole(['exporter', 'admin']),
+  exporterController.getApplications,
 );
 
 export default router;

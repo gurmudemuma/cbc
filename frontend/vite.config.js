@@ -51,10 +51,16 @@ export default defineConfig({
     open: true,
     proxy: {
       // Exporter Portal API - External exporters (port 3004)
+      '/api/exporter-api': {
+        target: 'http://localhost:3004',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/exporter-api/, '/api')
+      },
+      // Exporter Portal API - Legacy path (keep for backward compatibility)
       '/api/exporter': {
         target: 'http://localhost:3004',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/exporter/, '/api')
+        // Don't rewrite - keep the full path
       },
       // Commercial Bank API - Banking operations (port 3001)
       '/api/banker': {
@@ -69,10 +75,10 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/api\/nb-regulatory/, '/api')
       },
       // ECTA API - Quality assurance (port 3003)
-      '/api/ncat': {
+      '/api/ecta': {
         target: 'http://localhost:3003',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/ncat/, '/api')
+        rewrite: (path) => path.replace(/^\/api\/ecta/, '/api')
       },
       // Shipping Line API (port 3007)
       '/api/shipping': {
@@ -92,6 +98,7 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/ecx/, '/api')
       },
+      // ESW API - Electronic Single Window (port 3008)
       // Legacy support - redirect to commercial bank
       '/api-portal': {
         target: 'http://localhost:3001',

@@ -39,7 +39,7 @@ import { motion } from 'framer-motion';
 import { CommonPageProps } from '../types';
 import lotService from '../services/lotService';
 
-interface LotManagementProps extends CommonPageProps {}
+interface LotManagementProps extends CommonPageProps { }
 
 const LotManagement = ({ user, org }: LotManagementProps): JSX.Element => {
   const [lots, setLots] = useState([]);
@@ -51,6 +51,25 @@ const LotManagement = ({ user, org }: LotManagementProps): JSX.Element => {
     grade: '',
     quality: 5,
     notes: '',
+  });
+  const [filterStatus, setFilterStatus] = useState('all');
+  const location = window.location;
+
+  useEffect(() => {
+    const path = location.pathname;
+    if (path.includes('/pending')) setFilterStatus('pending');
+    else if (path.includes('/verified')) setFilterStatus('verified');
+    else if (path.includes('/rejected')) setFilterStatus('rejected');
+    else setFilterStatus('all');
+  }, [location.pathname]);
+
+  // Derived filtered lots
+  const filteredLots = lots.filter(lot => {
+    if (filterStatus === 'all') return true;
+    if (filterStatus === 'pending') return lot.status === 'PENDING_VERIFICATION';
+    if (filterStatus === 'verified') return lot.status === 'VERIFIED';
+    if (filterStatus === 'rejected') return lot.status === 'REJECTED';
+    return true;
   });
 
   useEffect(() => {
@@ -208,7 +227,7 @@ const LotManagement = ({ user, org }: LotManagementProps): JSX.Element => {
             <Typography variant="h6" gutterBottom>
               Coffee Lots
             </Typography>
-            
+
             {loading && <LinearProgress sx={{ mb: 2 }} />}
 
             <TableContainer component={Paper} variant="outlined">
@@ -227,7 +246,7 @@ const LotManagement = ({ user, org }: LotManagementProps): JSX.Element => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {lots.map((lot) => (
+                  {filteredLots.map((lot) => (
                     <TableRow key={lot.id} hover>
                       <TableCell>
                         <Typography variant="body2" fontWeight="medium">

@@ -38,13 +38,14 @@ const UserManagement = ({ user, org }: UserManagementProps): JSX.Element => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    setApiBaseUrl(API_ENDPOINTS.nationalBank);
+    // setApiBaseUrl(API_ENDPOINTS.nationalBank); // Removed for proxy routing
     fetchUsers();
   }, []);
 
   const fetchUsers = async () => {
     try {
-      const res = await apiClient.get(`/api/users`, {
+      // Use proxy path for National Bank API
+      const res = await apiClient.get(`/api/nb-regulatory/users`, {
         params: { organizationId: DEFAULT_COMMERCIAL_BANK_ORG },
       });
       setUsers(res.data.data || []);
@@ -57,7 +58,7 @@ const UserManagement = ({ user, org }: UserManagementProps): JSX.Element => {
   const createUser = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.post('/api/users', {
+      const response = await apiClient.post('/api/nb-regulatory/users', {
         username: form.username,
         email: form.email,
         password: form.password,
@@ -80,7 +81,7 @@ const UserManagement = ({ user, org }: UserManagementProps): JSX.Element => {
   const toggleActive = async (id: string, isActive: boolean) => {
     try {
       const path = isActive ? 'deactivate' : 'activate';
-      const response = await apiClient.patch(`/api/users/${id}/${path}`);
+      const response = await apiClient.patch(`/api/nb-regulatory/users/${id}/${path}`);
       if (response.data.success) {
         fetchUsers();
       }

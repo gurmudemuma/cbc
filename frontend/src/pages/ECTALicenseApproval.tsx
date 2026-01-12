@@ -1,80 +1,91 @@
-import { useState } from 'react';
-import { Box, Grid, Typography, Card, CardContent, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button, Chip, Dialog, DialogContent, DialogTitle, IconButton } from '@mui/material';
-import { FileCheck, Eye, XCircle } from 'lucide-react';
-<<<<<<< HEAD
+﻿import { useState } from 'react';
+import { Box, Grid, Typography, Card, CardContent, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button, Chip, Dialog, DialogContent, DialogTitle, IconButton, Snackbar, Alert } from '@mui/material';
+import { FileCheck, Eye, XCircle, Info } from 'lucide-react';
 import { CommonPageProps, Export, ECTALicenseFormData } from '../types';
 import { useExports } from '../hooks/useExportManager';
 import ECTALicenseForm from '../components/forms/ECTALicenseForm';
+import ExportDetailView from '../components/ExportDetailView';
 import apiClient from '../services/api';
 
 interface ECTALicenseApprovalProps extends CommonPageProps { }
 
 const ECTALicenseApproval = ({ user, org }: ECTALicenseApprovalProps): JSX.Element => {
   const { exports: allExports, refreshExports } = useExports();
-  const exports = allExports.filter((e: Export) => e.status === 'ECTA_LICENSE_PENDING' || e.status === 'ECTA_LICENSE_APPROVED' || e.status === 'ECTA_LICENSE_REJECTED');
+  // Show exports that are ready for ECTA license approval (ECX_VERIFIED) or already processed
+  const exports = allExports.filter((e: Export) => 
+    e.status === 'ECTA_LICENSE_PENDING' || 
+    e.status === 'ECX_VERIFIED' || 
+    e.status === 'ECTA_LICENSE_APPROVED' || 
+    e.status === 'ECTA_LICENSE_REJECTED'
+  );
   const [selectedExport, setSelectedExport] = useState<Export | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDetailViewOpen, setIsDetailViewOpen] = useState(false);
+  const [viewingExport, setViewingExport] = useState<Export | null>(null);
   const [loading, setLoading] = useState(false);
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' | 'info' | 'warning' }>({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
+
+  const showNotification = (message: string, severity: 'success' | 'error' | 'info' | 'warning') => {
+    setSnackbar({ open: true, message, severity });
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbar({ ...snackbar, open: false });
+  };
 
   const handleApprove = async (data: ECTALicenseFormData) => {
     if (!selectedExport) return;
-=======
-import { CommonPageProps } from '../types';
-import { useExports } from '../hooks/useExports';
-import ECTALicenseForm from '../components/forms/ECTALicenseForm';
-import apiClient from '../services/api';
-
-interface ECTALicenseApprovalProps extends CommonPageProps {}
-
-const ECTALicenseApproval = ({ user, org }: ECTALicenseApprovalProps): JSX.Element => {
-  const { exports: allExports, refreshExports } = useExports();
-  const exports = allExports.filter((e) => e.status === 'ECTA_LICENSE_PENDING' || e.status === 'ECTA_LICENSE_APPROVED' || e.status === 'ECTA_LICENSE_REJECTED');
-  const [selectedExport, setSelectedExport] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  const handleApprove = async (data) => {
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     setLoading(true);
     try {
-      await apiClient.post(`/ecta/license/${selectedExport.exportId}/approve`, data);
+      const response = await apiClient.post(`/ecta/license/${selectedExport.exportId}/approve`, data);
       setIsModalOpen(false);
       setSelectedExport(null);
+      showNotification(
+        `License approved successfully for Export ${selectedExport.exportId}. Status: ${response.data.newStatus || 'ECTA_LICENSE_APPROVED'}`,
+        'success'
+      );
       refreshExports();
-<<<<<<< HEAD
     } catch (error: any) {
-=======
-    } catch (error) {
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       console.error('Approval error:', error);
-      alert('Failed to approve: ' + (error.response?.data?.message || error.message));
+      showNotification(
+        `Failed to approve license: ${error.response?.data?.message || error.response?.data?.error?.message || error.message}`,
+        'error'
+      );
     } finally {
       setLoading(false);
     }
   };
 
-<<<<<<< HEAD
   const handleReject = async ({ category, reason }: { category: string; reason: string }) => {
     if (!selectedExport) return;
-=======
-  const handleReject = async ({ category, reason }) => {
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
     setLoading(true);
     try {
-      await apiClient.post(`/ecta/license/${selectedExport.exportId}/reject`, { category, reason });
+      const response = await apiClient.post(`/ecta/license/${selectedExport.exportId}/reject`, { category, reason });
       setIsModalOpen(false);
       setSelectedExport(null);
+      showNotification(
+        `License rejected for Export ${selectedExport.exportId}. Reason: ${category}`,
+        'warning'
+      );
       refreshExports();
-<<<<<<< HEAD
     } catch (error: any) {
-=======
-    } catch (error) {
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
       console.error('Rejection error:', error);
-      alert('Failed to reject: ' + (error.response?.data?.message || error.message));
+      showNotification(
+        `Failed to reject license: ${error.response?.data?.message || error.response?.data?.error?.message || error.message}`,
+        'error'
+      );
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleViewDetails = (exp: Export) => {
+    setViewingExport(exp);
+    setIsDetailViewOpen(true);
   };
 
   return (
@@ -85,7 +96,7 @@ const ECTALicenseApproval = ({ user, org }: ECTALicenseApprovalProps): JSX.Eleme
 
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12} md={4}>
-          <Card><CardContent><Typography variant="h6">{exports.filter(e => e.status === 'ECTA_LICENSE_PENDING').length}</Typography><Typography variant="body2">Pending Approval</Typography></CardContent></Card>
+          <Card><CardContent><Typography variant="h6">{exports.filter(e => e.status === 'ECTA_LICENSE_PENDING' || e.status === 'ECX_VERIFIED').length}</Typography><Typography variant="body2">Pending Approval</Typography></CardContent></Card>
         </Grid>
         <Grid item xs={12} md={4}>
           <Card><CardContent><Typography variant="h6">{exports.filter(e => e.status === 'ECTA_LICENSE_APPROVED').length}</Typography><Typography variant="body2">Approved</Typography></CardContent></Card>
@@ -118,8 +129,36 @@ const ECTALicenseApproval = ({ user, org }: ECTALicenseApprovalProps): JSX.Eleme
                 <TableCell>{exp.destinationCountry}</TableCell>
                 <TableCell><Chip label={exp.status.replace(/_/g, ' ')} color={exp.status === 'ECTA_LICENSE_APPROVED' ? 'success' : exp.status === 'ECTA_LICENSE_REJECTED' ? 'error' : 'warning'} size="small" /></TableCell>
                 <TableCell>
-                  {exp.status === 'ECTA_LICENSE_PENDING' && (
-                    <Button size="small" variant="contained" startIcon={<Eye />} onClick={() => { setSelectedExport(exp); setIsModalOpen(true); }}>Review License</Button>
+                  {(exp.status === 'ECTA_LICENSE_PENDING' || exp.status === 'ECX_VERIFIED') && (
+                    <>
+                      <Button 
+                        size="small" 
+                        variant="outlined" 
+                        startIcon={<Info />} 
+                        onClick={() => handleViewDetails(exp)}
+                        sx={{ mr: 1 }}
+                      >
+                        View Details
+                      </Button>
+                      <Button 
+                        size="small" 
+                        variant="contained" 
+                        startIcon={<Eye />} 
+                        onClick={() => { setSelectedExport(exp); setIsModalOpen(true); }}
+                      >
+                        Review License
+                      </Button>
+                    </>
+                  )}
+                  {(exp.status === 'ECTA_LICENSE_APPROVED' || exp.status === 'ECTA_LICENSE_REJECTED') && (
+                    <Button 
+                      size="small" 
+                      variant="outlined" 
+                      startIcon={<Info />} 
+                      onClick={() => handleViewDetails(exp)}
+                    >
+                      View Details
+                    </Button>
                   )}
                 </TableCell>
               </TableRow>
@@ -131,9 +170,26 @@ const ECTALicenseApproval = ({ user, org }: ECTALicenseApprovalProps): JSX.Eleme
       <Dialog open={isModalOpen} onClose={() => !loading && setIsModalOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>ECTA License Approval <IconButton onClick={() => !loading && setIsModalOpen(false)} sx={{ position: 'absolute', right: 8, top: 8 }}><XCircle /></IconButton></DialogTitle>
         <DialogContent>
-          {selectedExport && <ECTALicenseForm exportData={selectedExport} onApprove={handleApprove} onReject={handleReject} loading={loading} />}
+          {selectedExport && <ECTALicenseForm exportData={selectedExport} onApprove={handleApprove} onReject={handleReject} loading={loading} user={user} org={org} />}
         </DialogContent>
       </Dialog>
+
+      <Snackbar 
+        open={snackbar.open} 
+        autoHideDuration={6000} 
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+
+      <ExportDetailView
+        open={isDetailViewOpen}
+        onClose={() => setIsDetailViewOpen(false)}
+        exportData={viewingExport}
+      />
     </Box>
   );
 };

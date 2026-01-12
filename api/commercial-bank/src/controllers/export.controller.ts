@@ -1,14 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import { JwtPayload } from 'jsonwebtoken';
-<<<<<<< HEAD
+import { randomUUID } from 'crypto';
 import { pool } from '@shared/database/pool';
 import { createLogger } from '@shared/logger';
 import { ErrorCode, AppError } from '@shared/error-codes';
-=======
-import { pool } from '../../../shared/database/pool';
-import { createLogger } from '../../../shared/logger';
-import { ErrorCode, AppError } from '../../../shared/error-codes';
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
 const logger = createLogger('ExportController');
 
@@ -31,25 +26,59 @@ export class ExportController {
       const exportData = req.body;
 
       // Validate required fields
-      if (!exportData.exporterName || !exportData.coffeeType || !exportData.quantity) {
-        throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Missing required fields', 400);
+      if (!exportData.coffeeType || !exportData.quantity) {
+        throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Missing required fields: coffeeType and quantity are required', 400);
       }
-
-      // Generate export ID
-      const exportId = `EXP-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
       await client.query('BEGIN');
 
+      // Get exporter_id from exporter_profiles table
+      let exporterId = exportData.exporterId;
+      
+      if (!exporterId) {
+        // Try multiple ways to find the exporter profile
+        const profileResult = await client.query(
+          `SELECT exporter_id FROM exporter_profiles 
+           WHERE user_id = $1 OR user_id = $2 
+           ORDER BY created_at DESC LIMIT 1`,
+          [user.id.toString(), user.id]
+        );
+        
+        if (profileResult.rows.length > 0) {
+          exporterId = profileResult.rows[0].exporter_id;
+          logger.info('Found exporter profile', { userId: user.id, exporterId });
+        } else {
+          // Profile doesn't exist - this should not happen after pre-registration
+          throw new AppError(
+            ErrorCode.MISSING_REQUIRED_FIELD,
+            'Exporter profile not found. Please complete pre-registration first.',
+            400
+          );
+        }
+      }
+
+      // Generate export ID (UUID for database)
+      const exportId = randomUUID();
+
       const result = await client.query(
-        `INSERT INTO exports (id, exporter_name, coffee_type, quantity, organization_id, status, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+        `INSERT INTO exports (export_id, exporter_id, coffee_type, quantity, destination_country, buyer_name, estimated_value, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          RETURNING *`,
-        [exportId, exportData.exporterName, exportData.coffeeType, exportData.quantity, user.organizationId, 'PENDING']
+        [
+          exportId,
+          exporterId,
+          exportData.coffeeType,
+          exportData.quantity,
+          exportData.destinationCountry || 'Unknown',
+          exportData.buyerName || exportData.exporterName || 'Unknown',
+          exportData.estimatedValue || 0,
+          'PENDING'
+        ]
       );
 
       await client.query(
-        `INSERT INTO export_status_history (export_id, old_status, new_status, changed_by, changed_at, notes)
-         VALUES ($1, $2, $3, $4, NOW(), $5)`,
+        `INSERT INTO export_status_history (export_id, old_status, new_status, changed_by, reason)
+         VALUES ($1, $2, $3, $4, $5)`,
         [exportId, 'NONE', 'PENDING', user.id, 'Export created']
       );
 
@@ -91,7 +120,7 @@ export class ExportController {
       }
 
       const result = await pool.query(
-        'SELECT * FROM exports WHERE id = $1',
+        'SELECT * FROM exports WHERE export_id = $1',
         [exportId]
       );
 
@@ -103,6 +132,77 @@ export class ExportController {
     } catch (error: any) {
       logger.error('Failed to fetch export', { error: error.message });
       this.handleError(error, res);
+    }
+  };
+
+  /**
+   * Submit export to ECX for verification
+   */
+  public submitToECX = async (req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
+    const client = await pool.connect();
+    try {
+      const { exportId } = req.params;
+      const user = req.user!;
+
+      if (!exportId) {
+        throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Export ID is required', 400);
+      }
+
+      await client.query('BEGIN');
+
+      // Check if export exists
+      const exportResult = await client.query(
+        'SELECT * FROM exports WHERE export_id = $1',
+        [exportId]
+      );
+
+      if (exportResult.rows.length === 0) {
+        throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
+      }
+
+      const exportData = exportResult.rows[0];
+
+      // Verify export is in PENDING status
+      if (exportData.status !== 'PENDING') {
+        throw new AppError(
+          ErrorCode.INVALID_STATUS_TRANSITION,
+          `Export must be in PENDING status. Current status: ${exportData.status}`,
+          400
+        );
+      }
+
+      // Update status to ECX_PENDING
+      await client.query(
+        'UPDATE exports SET status = $1, updated_at = NOW() WHERE export_id = $2',
+        ['ECX_PENDING', exportId]
+      );
+
+      // Add status history
+      await client.query(
+        `INSERT INTO export_status_history (export_id, old_status, new_status, changed_by, reason)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [exportId, 'PENDING', 'ECX_PENDING', user.id, 'Submitted to ECX for verification']
+      );
+
+      await client.query('COMMIT');
+
+      logger.info('Export submitted to ECX', { exportId, userId: user.id });
+
+      res.json({
+        success: true,
+        message: 'Export submitted to ECX for verification',
+        data: {
+          exportId,
+          status: 'ECX_PENDING',
+          submittedAt: new Date().toISOString()
+        }
+      });
+    } catch (error: any) {
+      await client.query('ROLLBACK');
+      logger.error('Failed to submit export to ECX', { error: error.message });
+      this.handleError(error, res);
+    } finally {
+      client.release();
     }
   };
 
@@ -140,7 +240,7 @@ export class ExportController {
       await client.query('BEGIN');
 
       const exportResult = await client.query(
-        'SELECT * FROM exports WHERE id = $1',
+        'SELECT * FROM exports WHERE export_id = $1',
         [exportId]
       );
 
@@ -149,7 +249,7 @@ export class ExportController {
       }
 
       await client.query(
-        'UPDATE exports SET status = $1, updated_at = NOW() WHERE id = $2',
+        'UPDATE exports SET status = $1, updated_at = NOW() WHERE export_id = $2',
         ['BANK_DOCUMENT_VERIFIED', exportId]
       );
 
@@ -194,7 +294,7 @@ export class ExportController {
       await client.query('BEGIN');
 
       const exportResult = await client.query(
-        'SELECT * FROM exports WHERE id = $1',
+        'SELECT * FROM exports WHERE export_id = $1',
         [exportId]
       );
 
@@ -203,7 +303,7 @@ export class ExportController {
       }
 
       await client.query(
-        'UPDATE exports SET status = $1, updated_at = NOW() WHERE id = $2',
+        'UPDATE exports SET status = $1, updated_at = NOW() WHERE export_id = $2',
         ['BANK_DOCUMENT_REJECTED', exportId]
       );
 
@@ -217,13 +317,8 @@ export class ExportController {
 
       logger.info('Documents rejected', { exportId, userId: user.id, reason });
 
-<<<<<<< HEAD
       res.json({
         success: true,
-=======
-      res.json({ 
-        success: true, 
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
         message: 'Documents rejected successfully',
         reason,
         status: 'BANK_DOCUMENT_REJECTED'
@@ -253,7 +348,7 @@ export class ExportController {
       await client.query('BEGIN');
 
       const exportResult = await client.query(
-        'SELECT * FROM exports WHERE id = $1',
+        'SELECT * FROM exports WHERE export_id = $1',
         [exportId]
       );
 
@@ -273,7 +368,7 @@ export class ExportController {
       }
 
       await client.query(
-        'UPDATE exports SET status = $1, updated_at = NOW() WHERE id = $2',
+        'UPDATE exports SET status = $1, updated_at = NOW() WHERE export_id = $2',
         ['FX_APPLICATION_PENDING', exportId]
       );
 
@@ -313,7 +408,7 @@ export class ExportController {
       }
 
       const result = await pool.query(
-        'SELECT * FROM exports WHERE id = $1',
+        'SELECT * FROM exports WHERE export_id = $1',
         [exportId]
       );
 
@@ -351,7 +446,7 @@ export class ExportController {
       }
 
       const result = await pool.query(
-        'SELECT * FROM exports WHERE id = $1',
+        'SELECT * FROM exports WHERE export_id = $1',
         [exportId]
       );
 
@@ -452,7 +547,6 @@ export class ExportController {
       },
     });
   }
-<<<<<<< HEAD
 
 
   /**
@@ -504,6 +598,4 @@ export class ExportController {
       this.handleError(error, res);
     }
   };
-=======
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 }

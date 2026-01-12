@@ -1,15 +1,9 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { JwtPayload } from 'jsonwebtoken';
-<<<<<<< HEAD
 import { getPool } from '@shared/database/pool';
 import { createLogger } from '@shared/logger';
 import { ErrorCode, AppError } from '@shared/error-codes';
-=======
-import { getPool } from '../../../shared/database/pool';
-import { createLogger } from '../../../shared/logger';
-import { ErrorCode, AppError } from '../../../shared/error-codes';
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
 const logger = createLogger('ECTAContractController');
 
@@ -25,9 +19,24 @@ interface RequestWithUser extends Request {
 }
 
 export class ContractController {
-  public getAllExports = async (_req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
+  public getAllExports = async (req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
     try {
-      const result = await getPool().query('SELECT * FROM exports ORDER BY created_at DESC');
+      const user = req.user!;
+      
+      // ECTA can view all coffee/tea exports for contract approval
+      const result = await getPool().query(
+        `SELECT e.*, ep.business_name as exporter_name, ep.tin as tin_number
+         FROM exports e
+         JOIN exporter_profiles ep ON e.exporter_id = ep.exporter_id
+         WHERE e.coffee_type IS NOT NULL
+         ORDER BY e.created_at DESC`
+      );
+      
+      logger.info('Fetched all coffee exports for ECTA contracts', { 
+        userId: user.id, 
+        count: result.rows.length 
+      });
+      
       res.json({ success: true, data: result.rows, count: result.rows.length });
     } catch (error: any) {
       logger.error('Failed to fetch exports', { error: error.message });
@@ -35,12 +44,26 @@ export class ContractController {
     }
   };
 
-  public getPendingContracts = async (_req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
+  public getPendingContracts = async (req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
     try {
+      const user = req.user!;
+      
+      // ECTA can view all coffee exports pending contract approval
       const result = await getPool().query(
-        'SELECT * FROM exports WHERE status = $1 ORDER BY created_at DESC',
-        ['QUALITY_CERTIFIED']
+        `SELECT e.*, ep.business_name as exporter_name, ep.tin as tin_number, ep.registration_number as license_number
+         FROM exports e
+         JOIN exporter_profiles ep ON e.exporter_id = ep.exporter_id
+         WHERE e.status IN ($1, $2, $3)
+         AND e.coffee_type IS NOT NULL
+         ORDER BY e.created_at DESC`,
+        ['ECTA_CONTRACT_PENDING', 'QUALITY_CERTIFIED', 'ECTA_QUALITY_APPROVED']
       );
+      
+      logger.info('Fetched pending contracts for ECTA', { 
+        userId: user.id, 
+        count: result.rows.length 
+      });
+      
       res.json({ success: true, data: result.rows, count: result.rows.length });
     } catch (error: any) {
       logger.error('Failed to fetch pending contracts', { error: error.message });
@@ -61,14 +84,14 @@ export class ContractController {
 
       await client.query('BEGIN');
 
-      const exportResult = await client.query('SELECT * FROM exports WHERE id = $1', [exportId]);
+      const exportResult = await client.query('SELECT * FROM exports WHERE export_id = $1', [exportId]);
       if (exportResult.rows.length === 0) {
         throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
       }
 
       await client.query(
-        `INSERT INTO export_status_history(export_id, old_status, new_status, changed_by, changed_at, notes)
-VALUES($1, $2, $3, $4, NOW(), $5)`,
+        `INSERT INTO export_status_history(export_id, old_status, new_status, changed_by, notes)
+VALUES($1, $2, $3, $4, $5)`,
         [exportId, 'QUALITY_CERTIFIED', 'CONTRACT_REVIEW', user?.id, notes || 'Contract under review']
       );
 
@@ -107,13 +130,13 @@ VALUES($1, $2, $3, $4, NOW(), $5)`,
 
       await client.query('BEGIN');
 
-      const exportResult = await client.query('SELECT * FROM exports WHERE id = $1', [exportId]);
+      const exportResult = await client.query('SELECT * FROM exports WHERE export_id = $1', [exportId]);
       if (exportResult.rows.length === 0) {
         throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
       }
 
       await client.query(
-        'UPDATE exports SET origin_certificate_number = $1, updated_at = NOW() WHERE id = $2',
+        'UPDATE exports SET origin_certificate_number = $1, updated_at = NOW() WHERE export_id = $2',
         [originCertificateNumber, exportId]
       );
 
@@ -141,7 +164,7 @@ VALUES($1, $2, $3, $4, NOW(), $5)`,
     try {
       const { exportId } = req.params;
       const user = req.user;
-      const { notes } = req.body;
+      const { contractNumber, originCertificateNumber, notes } = req.body;
 
       if (!exportId) {
         throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Export ID is required', 400);
@@ -149,20 +172,30 @@ VALUES($1, $2, $3, $4, NOW(), $5)`,
 
       await client.query('BEGIN');
 
-      const exportResult = await client.query('SELECT * FROM exports WHERE id = $1', [exportId]);
+      const exportResult = await client.query('SELECT * FROM exports WHERE export_id = $1', [exportId]);
       if (exportResult.rows.length === 0) {
         throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
       }
 
+      const currentExport = exportResult.rows[0];
+      const oldStatus = currentExport.status;
+
       await client.query(
-        'UPDATE exports SET status = $1, contract_approved_by = $2, updated_at = NOW() WHERE id = $3',
-        ['ECTA_CONTRACT_APPROVED', user?.id, exportId]
+        `UPDATE exports SET 
+          status = $1, 
+          contract_approved_by = $2,
+          contract_approved_at = NOW(),
+          contract_number = $3,
+          origin_certificate_number = $4,
+          updated_at = NOW() 
+        WHERE export_id = $5`,
+        ['ECTA_CONTRACT_APPROVED', user?.id, contractNumber, originCertificateNumber, exportId]
       );
 
       await client.query(
-        `INSERT INTO export_status_history(export_id, old_status, new_status, changed_by, changed_at, notes)
-VALUES($1, $2, $3, $4, NOW(), $5)`,
-        [exportId, 'QUALITY_CERTIFIED', 'ECTA_CONTRACT_APPROVED', user?.id, notes || 'Contract approved']
+        `INSERT INTO export_status_history(export_id, old_status, new_status, changed_by, notes)
+VALUES($1, $2, $3, $4, $5)`,
+        [exportId, oldStatus, 'ECTA_CONTRACT_APPROVED', user?.id, notes || 'Contract approved']
       );
 
       await client.query('COMMIT');
@@ -189,7 +222,7 @@ VALUES($1, $2, $3, $4, NOW(), $5)`,
     try {
       const { exportId } = req.params;
       const user = req.user;
-      const { reason } = req.body;
+      const { reason, category } = req.body;
 
       if (!exportId) {
         throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Export ID is required', 400);
@@ -201,39 +234,37 @@ VALUES($1, $2, $3, $4, NOW(), $5)`,
 
       await client.query('BEGIN');
 
-      const exportResult = await client.query('SELECT * FROM exports WHERE id = $1', [exportId]);
+      const exportResult = await client.query('SELECT * FROM exports WHERE export_id = $1', [exportId]);
       if (exportResult.rows.length === 0) {
         throw new AppError(ErrorCode.NOT_FOUND, 'Export not found', 404);
       }
 
-      await client.query(
-        'UPDATE exports SET status = $1, updated_at = NOW() WHERE id = $2',
-<<<<<<< HEAD
-        ['ECTA_CONTRACT_REJECTED', exportId]
-=======
-        ['CONTRACT_REJECTED', exportId]
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
-      );
+      const currentExport = exportResult.rows[0];
+      const oldStatus = currentExport.status;
 
       await client.query(
-        `INSERT INTO export_status_history(export_id, old_status, new_status, changed_by, changed_at, notes)
-VALUES($1, $2, $3, $4, NOW(), $5)`,
-<<<<<<< HEAD
-        [exportId, 'QUALITY_CERTIFIED', 'ECTA_CONTRACT_REJECTED', user?.id, reason]
-=======
-        [exportId, 'QUALITY_CERTIFIED', 'CONTRACT_REJECTED', user?.id, reason]
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
+        'UPDATE exports SET status = $1, updated_at = NOW() WHERE export_id = $2',
+        ['ECTA_CONTRACT_REJECTED', exportId]
+      );
+
+      const rejectionNote = category ? `[${category}] ${reason}` : reason;
+
+      await client.query(
+        `INSERT INTO export_status_history(export_id, old_status, new_status, changed_by, notes)
+VALUES($1, $2, $3, $4, $5)`,
+        [exportId, oldStatus, 'ECTA_CONTRACT_REJECTED', user?.id, rejectionNote]
       );
 
       await client.query('COMMIT');
 
-      logger.info('Contract rejected', { exportId, reason, userId: user?.id });
+      logger.info('Contract rejected', { exportId, reason, category, userId: user?.id });
 
       res.json({
         success: true,
         message: 'Contract rejected',
         exportId,
-        reason
+        reason,
+        status: 'ECTA_CONTRACT_REJECTED'
       });
     } catch (error: any) {
       await client.query('ROLLBACK');

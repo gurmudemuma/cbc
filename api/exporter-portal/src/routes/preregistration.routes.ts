@@ -53,4 +53,19 @@ router.post('/license/apply', controller.applyForExportLicense);
 // Check qualification status
 router.get('/qualification-status', controller.checkQualificationStatus);
 
+// Get my dashboard (360-degree view)
+router.get('/dashboard', controller.getMyDashboard);
+
+// Get my laboratories
+router.get('/laboratories', controller.getMyLaboratories);
+
+// Get my tasters
+router.get('/tasters', controller.getMyTasters);
+
+// Get my competence certificates
+router.get('/competence-certificates', controller.getMyCompetenceCertificates);
+
+// Get my export licenses
+router.get('/export-licenses', controller.getMyExportLicenses);
+
 export default router;

@@ -87,6 +87,25 @@ export class ExporterController {
   };
 
   /**
+   * Update own exporter profile
+   * Delegates to preregistration controller's updateProfile
+   */
+  public updateProfile = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      await this.preregController.updateProfile(req as any, res, next);
+    } catch (error: unknown) {
+      logger.error("Failed to update profile (exporter controller):", error);
+      const message =
+        error instanceof Error ? error.message : "Failed to update profile";
+      res.status(500).json({ success: false, message, error: message });
+    }
+  };
+
+  /**
    * Apply for export license
    * Delegates to preregistration controller's applyForExportLicense
    */
@@ -177,6 +196,24 @@ export class ExporterController {
         error instanceof Error
           ? error.message
           : "Failed to apply for competence certificate";
+      res.status(500).json({ success: false, message, error: message });
+    }
+  };
+  /**
+   * Get all applications
+   * Delegates to preregistration controller's getMyApplications
+   */
+  public getApplications = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      await this.preregController.getMyApplications(req as any, res, next);
+    } catch (error: unknown) {
+      logger.error("Failed to get applications (exporter controller):", error);
+      const message =
+        error instanceof Error ? error.message : "Failed to get applications";
       res.status(500).json({ success: false, message, error: message });
     }
   };

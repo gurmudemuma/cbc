@@ -39,6 +39,7 @@ declare -A SERVICES=(
     [national-bank]="3005"
     [ecx]="3006"
     [shipping-line]="3007"
+    [esw]="3008"
 )
 
 ################################################################################
@@ -484,6 +485,7 @@ ${BLUE}Services:${NC}
     National Bank API     → http://localhost:3005
     ECX API               → http://localhost:3006
     Shipping Line API     → http://localhost:3007
+    ESW API               → http://localhost:3008
 
 ${BLUE}Examples:${NC}
     # Start all services

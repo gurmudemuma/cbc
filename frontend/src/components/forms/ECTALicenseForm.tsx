@@ -81,6 +81,7 @@ const ECTALicenseForm = ({ exportData, onApprove, onReject, loading = false }: E
 
     onApprove({
       licenseNumber: formData.validatedLicenseNumber.trim(),
+      validUntil: formData.licenseExpiryDate,
       notes: formData.validationNotes.trim(),
     } as ECTALicenseFormData);
   };

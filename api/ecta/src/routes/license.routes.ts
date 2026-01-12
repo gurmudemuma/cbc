@@ -23,6 +23,9 @@ router.get('/approved', controller.getApprovedLicenses);
 // Get rejected licenses (status: LICENSE_REJECTED)
 router.get('/rejected', controller.getRejectedLicenses);
 
+// Get export status history
+router.get('/exports/:exportId/history', controller.getExportHistory);
+
 // Review license application
 router.post('/:exportId/review', controller.reviewLicense);
 

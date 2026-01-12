@@ -5,11 +5,7 @@
 
 import { createLogger } from './logger';
 
-<<<<<<< HEAD
 const _logger = createLogger('EnvValidator');
-=======
-const logger = createLogger('EnvValidator');
->>>>>>> 88f994dfc42661632577ad48da60b507d1284665
 
 export interface Config {
   // Application
