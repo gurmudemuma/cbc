@@ -7,7 +7,7 @@ This document validates the complete coffee export workflow to ensure:
 3. No missing critical steps
 4. Proper status transitions
 
----
+----
 
 ## Complete Workflow Map
 
