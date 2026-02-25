@@ -1,0 +1,1906 @@
+import { Request, Response, NextFunction } from 'express';
+import { JwtPayload } from 'jsonwebtoken';
+import { v4 as uuidv4 } from 'uuid';
+import {
+  ExporterProfile,
+  CoffeeLaboratory,
+  CompetenceCertificate,
+  ExportLicense,
+} from '@shared/models/ecta-preregistration.model';
+import { ectaPreRegistrationService } from '@shared/services/ecta-preregistration.service';
+import { pool } from '@shared/database/pool';
+import { createLogger } from '@shared/logger';
+import certificateDownloadService from '../services/certificate-download.service';
+import pdfGenerationService from '../services/pdf-generation.service';
+
+const logger = createLogger('PreRegistrationController');
+
+interface AuthJWTPayload extends JwtPayload {
+  id: string;
+  username: string;
+  organizationId: string;
+  role: string;
+}
+
+interface RequestWithUser extends Request {
+  user?: AuthJWTPayload;
+}
+
+/**
+ * ECTA Pre-Registration Controller
+ * Handles exporter qualification, licensing, and certification
+ * Based on real-world ECTA processes and Directive 1106/2025
+ */
+export class PreRegistrationController {
+  /**
+   * Get all exporter profiles (ECTA view)
+   */
+  public getAllExporters = async (
+    _req: RequestWithUser,
+    res: Response,
+    _next: NextFunction
+  ): Promise<void> => {
+    try {
+      const result = await pool.query('SELECT * FROM exporter_profiles ORDER BY created_at DESC');
+      
+      // Enrich each exporter with qualification status and certificate IDs
+      const enrichedExporters = await Promise.all(
+        result.rows.map(async (exporter) => {
+          try {
+            // Get validation status
+            const validation = await ectaPreRegistrationService.validateExporter(exporter.exporter_id);
+            
+            // Get competence certificate ID if exists
+            const competenceCertQuery = await pool.query(
+              `SELECT certificate_id, file_path FROM competence_certificates 
+               WHERE exporter_id = $1 AND status = 'ACTIVE' 
+               ORDER BY issued_date DESC LIMIT 1`,
+              [exporter.exporter_id]
+            );
+            
+            // Get export license ID if exists
+            const exportLicenseQuery = await pool.query(
+              `SELECT license_id, file_path FROM export_licenses 
+               WHERE exporter_id = $1 AND status = 'ACTIVE' 
+               ORDER BY issued_date DESC LIMIT 1`,
+              [exporter.exporter_id]
+            );
+            
+            const competenceCert = competenceCertQuery.rows[0];
+            const exportLicense = exportLicenseQuery.rows[0];
+            
+            return {
+              id: exporter.exporter_id,
+              exporterId: exporter.exporter_id,
+              userId: exporter.user_id,
+              businessName: exporter.business_name,
+              tin: exporter.tin,
+              registrationNumber: exporter.registration_number,
+              businessType: exporter.business_type,
+              minimumCapital: exporter.minimum_capital,
+              capitalVerified: exporter.capital_verified,
+              capitalVerificationDate: exporter.capital_verification_date,
+              capitalProofDocument: exporter.capital_proof_document,
+              officeAddress: exporter.office_address,
+              city: exporter.city,
+              region: exporter.region,
+              contactPerson: exporter.contact_person,
+              email: exporter.email,
+              phone: exporter.phone,
+              status: exporter.status,
+              createdAt: exporter.created_at,
+              updatedAt: exporter.updated_at,
+              // Add qualification status fields
+              isQualified: validation.isValid,
+              hasCompetenceCertificate: validation.hasCompetenceCertificate,
+              hasExportLicense: validation.hasExportLicense,
+              laboratoryCertified: validation.hasCertifiedLaboratory,
+              tasterVerified: validation.hasQualifiedTaster,
+              // Add certificate IDs for download functionality
+              competenceCertificateId: competenceCert?.certificate_id || null,
+              competenceCertificateFilePath: competenceCert?.file_path || null,
+              exportLicenseId: exportLicense?.license_id || null,
+              exportLicenseFilePath: exportLicense?.file_path || null,
+            };
+          } catch (err) {
+            // If validation fails, return exporter with false flags
+            logger.warn('Failed to validate exporter', { exporterId: exporter.exporter_id, error: err });
+            return {
+              id: exporter.exporter_id,
+              exporterId: exporter.exporter_id,
+              userId: exporter.user_id,
+              businessName: exporter.business_name,
+              tin: exporter.tin,
+              registrationNumber: exporter.registration_number,
+              businessType: exporter.business_type,
+              minimumCapital: exporter.minimum_capital,
+              capitalVerified: exporter.capital_verified,
+              capitalVerificationDate: exporter.capital_verification_date,
+              capitalProofDocument: exporter.capital_proof_document,
+              officeAddress: exporter.office_address,
+              city: exporter.city,
+              region: exporter.region,
+              contactPerson: exporter.contact_person,
+              email: exporter.email,
+              phone: exporter.phone,
+              status: exporter.status,
+              createdAt: exporter.created_at,
+              updatedAt: exporter.updated_at,
+              isQualified: false,
+              hasCompetenceCertificate: false,
+              hasExportLicense: false,
+              laboratoryCertified: false,
+              tasterVerified: false,
+              competenceCertificateId: null,
+              competenceCertificateFilePath: null,
+              exportLicenseId: null,
+              exportLicenseFilePath: null,
+            };
+          }
+        })
+      );
+      
+      res.json({
+        success: true,
+        data: enrichedExporters,
+        count: enrichedExporters.length,
+      });
+    } catch (error: any) {
+      logger.error('Failed to fetch exporters', { error: error.message });
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch exporters',
+        error: error.message,
+      });
+    }
+  };
+
+  /**
+   * Get pending exporter applications (ECTA view)
+   */
+  public getPendingApplications = async (
+    _req: RequestWithUser,
+    res: Response,
+    _next: NextFunction
+  ): Promise<void> => {
+    try {
+      const result = await pool.query(`
+        SELECT * FROM exporter_profiles 
+        WHERE status = 'PENDING_APPROVAL'
+        ORDER BY created_at DESC
+      `);
+      res.json({
+        success: true,
+        data: result.rows,
+        count: result.rows.length,
+        message: 'Pending exporter applications',
+      });
+    } catch (error: any) {
+      logger.error('Failed to fetch applications', { error: error.message });
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch applications',
+        error: error.message,
+      });
+    }
+  };
+
+  /**
+   * Approve exporter profile
+   */
+  public approveExporter = async (
+    req: RequestWithUser,
+    res: Response,
+    _next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { exporterId } = req.params;
+      const user = req.user!;
+
+      if (!exporterId) {
+        res.status(400).json({
+          success: false,
+          message: 'Exporter ID is required',
+        });
+        return;
+      }
+
+      const now = new Date().toISOString();
+      const result = await pool.query(
+        `UPDATE exporter_profiles 
+         SET status = $1, approved_by = $2, approved_at = $3, updated_at = $4
+         WHERE exporter_id = $5
+         RETURNING *`,
+        ['ACTIVE', user.username, now, now, exporterId]
+      );
+
+      if (result.rows.length === 0) {
+        res.status(404).json({
+          success: false,
+          message: 'Exporter not found',
+        });
+        return;
+      }
+
+      logger.info('Exporter profile approved', { exporterId, approvedBy: user.username });
+
+      res.json({
+        success: true,
+        message: 'Exporter profile approved',
+        data: result.rows[0],
+      });
+    } catch (error: any) {
+      logger.error('Failed to approve exporter', { error: error.message, exporterId: req.params.exporterId });
+      res.status(500).json({
+        success: false,
+        message: 'Failed to approve exporter',
+        error: error.message,
+      });
+    }
+  };
+
+  /**
+   * Reject exporter profile
+   */
+  public rejectExporter = async (
+    req: RequestWithUser,
+    res: Response,
+    _next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { exporterId } = req.params;
+      const { reason } = req.body;
+      const user = req.user!;
+
+      if (!exporterId || !reason) {
+        res.status(400).json({
+          success: false,
+          message: 'Exporter ID and rejection reason are required',
+        });
+        return;
+      }
+
+      const now = new Date().toISOString();
+
+      // Get current profile to append to rejection history
+      const currentProfile = await pool.query(
+        'SELECT rejection_history FROM exporter_profiles WHERE exporter_id = $1',
+        [exporterId]
+      );
+
+      if (currentProfile.rows.length === 0) {
+        res.status(404).json({
+          success: false,
+          message: 'Exporter not found',
+        });
+        return;
+      }
+
+      // Build rejection history entry
+      const rejectionEntry = {
+        rejectedBy: user.username,
+        rejectedAt: now,
+        reason: reason,
+      };
+
+      // Append to existing history
+      const currentHistory = currentProfile.rows[0].rejection_history || [];
+      const updatedHistory = [...currentHistory, rejectionEntry];
+
+      const result = await pool.query(
+        `UPDATE exporter_profiles 
+         SET status = $1, 
+             rejection_reason = $2, 
+             rejected_by = $3, 
+             rejected_at = $4, 
+             rejection_history = $5,
+             updated_at = $6
+         WHERE exporter_id = $7
+         RETURNING *`,
+        ['REJECTED', reason, user.username, now, JSON.stringify(updatedHistory), now, exporterId]
+      );
+
+      logger.info('Exporter profile rejected', { exporterId, rejectedBy: user.username, reason });
+
+      res.json({
+        success: true,
+        message: 'Exporter profile rejected',
+        data: result.rows[0],
+      });
+    } catch (error: any) {
+      logger.error('Failed to reject exporter', { error: error.message, exporterId: req.params.exporterId });
+      res.status(500).json({
+        success: false,
+        message: 'Failed to reject exporter',
+        error: error.message,
+      });
+    }
+  };
+
+  /**
+   * Resubmit exporter profile after rejection
+   */
+  public resubmitProfile = async (
+    req: RequestWithUser,
+    res: Response,
+    _next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { exporterId } = req.params;
+      const user = req.user!;
+
+      if (!exporterId) {
+        res.status(400).json({
+          success: false,
+          message: 'Exporter ID is required',
+        });
+        return;
+      }
+
+      // Verify current status is REJECTED
+      const currentProfile = await pool.query(
+        'SELECT status, resubmission_count FROM exporter_profiles WHERE exporter_id = $1',
+        [exporterId]
+      );
+
+      if (currentProfile.rows.length === 0) {
+        res.status(404).json({
+          success: false,
+          message: 'Exporter not found',
+        });
+        return;
+      }
+
+      if (currentProfile.rows[0].status !== 'REJECTED') {
+        res.status(400).json({
+          success: false,
+          message: 'Only rejected profiles can be resubmitted',
+          currentStatus: currentProfile.rows[0].status,
+        });
+        return;
+      }
+
+      const now = new Date().toISOString();
+      const resubmissionCount = (currentProfile.rows[0].resubmission_count || 0) + 1;
+
+      const result = await pool.query(
+        `UPDATE exporter_profiles 
+         SET status = $1, 
+             rejection_reason = NULL, 
+             rejected_by = NULL, 
+             rejected_at = NULL,
+             resubmission_count = $2,
+             last_resubmitted_at = $3,
+             updated_at = $4
+         WHERE exporter_id = $5
+         RETURNING *`,
+        ['PENDING_APPROVAL', resubmissionCount, now, now, exporterId]
+      );
+
+      logger.info('Exporter profile resubmitted', {
+        exporterId,
+        resubmittedBy: user.username,
+        resubmissionCount
+      });
+
+      res.json({
+        success: true,
+        message: 'Profile resubmitted successfully. Awaiting ECTA review.',
+        data: result.rows[0],
+      });
+    } catch (error: any) {
+      logger.error('Failed to resubmit profile', { error: error.message, exporterId: req.params.exporterId });
+      res.status(500).json({
+        success: false,
+        message: 'Failed to resubmit profile',
+        error: error.message,
+      });
+    }
+  };
+
+  /**
+   * Reject laboratory certification
+   */
+  public rejectLaboratory = async (
+    req: RequestWithUser,
+    res: Response,
+    _next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { laboratoryId } = req.params;
+      const { reason } = req.body;
+      const user = req.user!;
+
+      if (!laboratoryId || !reason) {
+        res.status(400).json({
+          success: false,
+          message: 'Laboratory ID and rejection reason are required',
+        });
+        return;
+      }
+
+      const now = new Date().toISOString();
+
+      // Get current laboratory to append to rejection history
+      const currentLab = await pool.query(
+        'SELECT rejection_history FROM coffee_laboratories WHERE laboratory_id = $1',
+        [laboratoryId]
+      );
+
+      if (currentLab.rows.length === 0) {
+        res.status(404).json({
+          success: false,
+          message: 'Laboratory not found',
+        });
+        return;
+      }
+
+      const rejectionEntry = {
+        rejectedBy: user.username,
+        rejectedAt: now,
+        reason: reason,
+      };
+
+      const currentHistory = currentLab.rows[0].rejection_history || [];
+      const updatedHistory = [...currentHistory, rejectionEntry];
+
+      const result = await pool.query(
+        `UPDATE coffee_laboratories 
+         SET status = $1, 
+             rejection_reason = $2, 
+             rejected_by = $3, 
+             rejected_at = $4, 
+             rejection_history = $5,
+             updated_at = $6
+         WHERE laboratory_id = $7
+         RETURNING *`,
+        ['REJECTED', reason, user.username, now, JSON.stringify(updatedHistory), now, laboratoryId]
+      );
+
+      logger.info('Laboratory rejected', { laboratoryId, rejectedBy: user.username, reason });
+
+      res.json({
+        success: true,
+        message: 'Laboratory certification rejected',
+        data: result.rows[0],
+      });
+    } catch (error: any) {
+      logger.error('Failed to reject laboratory', { error: error.message, laboratoryId: req.params.laboratoryId });
+      res.status(500).json({
+        success: false,
+        message: 'Failed to reject laboratory',
+        error: error.message,
+      });
+    }
+  };
+
+  /**
+   * Resubmit laboratory after rejection
+   */
+  public resubmitLaboratory = async (
+    req: RequestWithUser,
+    res: Response,
+    _next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { laboratoryId } = req.params;
+      const user = req.user!;
+
+      if (!laboratoryId) {
+        res.status(400).json({
+          success: false,
+          message: 'Laboratory ID is required',
+        });
+        return;
+      }
+
+      const currentLab = await pool.query(
+        'SELECT status, resubmission_count FROM coffee_laboratories WHERE laboratory_id = $1',
+        [laboratoryId]
+      );
+
+      if (currentLab.rows.length === 0) {
+        res.status(404).json({
+          success: false,
+          message: 'Laboratory not found',
+        });
+        return;
+      }
+
+      if (currentLab.rows[0].status !== 'REJECTED') {
+        res.status(400).json({
+          success: false,
+          message: 'Only rejected laboratories can be resubmitted',
+          currentStatus: currentLab.rows[0].status,
+        });
+        return;
+      }
+
+      const now = new Date().toISOString();
+      const resubmissionCount = (currentLab.rows[0].resubmission_count || 0) + 1;
+
+      const result = await pool.query(
+        `UPDATE coffee_laboratories 
+         SET status = $1, 
+             rejection_reason = NULL, 
+             rejected_by = NULL, 
+             rejected_at = NULL,
+             resubmission_count = $2,
+             last_resubmitted_at = $3,
+             updated_at = $4
+         WHERE laboratory_id = $5
+         RETURNING *`,
+        ['PENDING', resubmissionCount, now, now, laboratoryId]
+      );
+
+      logger.info('Laboratory resubmitted', {
+        laboratoryId,
+        resubmittedBy: user.username,
+        resubmissionCount
+      });
+
+      res.json({
+        success: true,
+        message: 'Laboratory resubmitted successfully. Awaiting ECTA certification.',
+        data: result.rows[0],
+      });
+    } catch (error: any) {
+      logger.error('Failed to resubmit laboratory', { error: error.message, laboratoryId: req.params.laboratoryId });
+      res.status(500).json({
+        success: false,
+        message: 'Failed to resubmit laboratory',
+        error: error.message,
+      });
+    }
+  };
+  public getPendingLaboratories = async (
+    _req: RequestWithUser,
+    res: Response,
+    _next: NextFunction
+  ): Promise<void> => {
+    try {
+      // Join with exporter_profiles to get exporter name and details
+      // Use COALESCE to provide fallback values for location data
+      const query = `
+        SELECT 
+          cl.*,
+          ep.business_name as exporter_name,
+          ep.tin as exporter_tin,
+          COALESCE(cl.city, ep.city, '') as city,
+          COALESCE(cl.region, ep.region, '') as region,
+          COALESCE(cl.address, ep.office_address, '') as address
+        FROM coffee_laboratories cl
+        LEFT JOIN exporter_profiles ep ON cl.exporter_id = ep.exporter_id
+        WHERE cl.status = 'PENDING'
+        ORDER BY cl.created_at DESC
+      `;
+
+      const result = await pool.query(query);
+
+      // Map to frontend-friendly format with all fields
+      const laboratories = result.rows.map(row => ({
+        id: row.laboratory_id,
+        laboratoryId: row.laboratory_id,
+        exporterId: row.exporter_id,
+        laboratoryName: row.laboratory_name,
+        exporterName: row.exporter_name || 'Unknown',
+        exporterTin: row.exporter_tin || '',
+        address: row.address || '',
+        city: row.city || '',
+        region: row.region || '',
+        hasRoastingFacility: row.has_roasting_facility,
+        hasCuppingRoom: row.has_cupping_room,
+        hasSampleStorage: row.has_sample_storage,
+        equipment: row.equipment || [],
+        status: row.status,
+        certificationNumber: row.certification_number,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      }));
+
+      res.json({
+        success: true,
+        data: laboratories,
+        count: laboratories.length,
+        message: 'Pending laboratory certifications',
+      });
+    } catch (error: any) {
+      logger.error('Failed to fetch laboratories', { error: error.message });
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch laboratories',
+        error: error.message,
+      });
+    }
+  };
+
+  /**
+   * Certify laboratory
+   */
+  public certifyLaboratory = async (
+    req: RequestWithUser,
+    res: Response,
+    _next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { laboratoryId } = req.params;
+      const {
+        certificationNumber,
+        inspectionPassed,
+        validityYears = 1,
+      } = req.body;
+      const user = req.user!;
+
+      if (!laboratoryId || !certificationNumber) {
+        res.status(400).json({
+          success: false,
+          message: 'Laboratory ID and certification number are required',
+        });
+        return;
+      }
+
+      if (!inspectionPassed) {
+        res.status(400).json({
+          success: false,
+          message: 'Laboratory inspection must pass before certification',
+        });
+        return;
+      }
+
+      const now = new Date();
+      const expiryDate = new Date(now);
+      expiryDate.setFullYear(expiryDate.getFullYear() + validityYears);
+
+      // Update laboratory certification in database
+      await pool.query(
+        `UPDATE coffee_laboratories 
+         SET certification_number = $1, certified_date = $2, expiry_date = $3, 
+             status = $4, inspected_by = $5, last_inspection_date = $6
+         WHERE laboratory_id = $7`,
+        [
+          certificationNumber,
+          now.toISOString(),
+          expiryDate.toISOString(),
+          'ACTIVE',
+          user.username,
+          now.toISOString(),
+          laboratoryId,
+        ]
+      );
+
+      res.json({
+        success: true,
+        message: 'Laboratory certified successfully',
+        data: {
+          laboratoryId,
+          certificationNumber,
+          validUntil: expiryDate.toISOString(),
+          certifiedBy: user.username,
+        },
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to certify laboratory',
+        error: error.message,
+      });
+    }
+  };
+
+  /**
+   * Get pending competence certificate applications
+   */
+  public getPendingCompetenceCertificates = async (
+    _req: RequestWithUser,
+    res: Response,
+    _next: NextFunction
+  ): Promise<void> => {
+    try {
+      const result = await pool.query(
+        `SELECT cc.*, ep.business_name, ep.business_type, ep.tin,
+                (SELECT status = 'ACTIVE' FROM coffee_laboratories cl WHERE cl.exporter_id = ep.exporter_id LIMIT 1) as laboratory_certified,
+                (SELECT status = 'ACTIVE' FROM coffee_tasters ct WHERE ct.exporter_id = ep.exporter_id LIMIT 1) as taster_verified
+         FROM competence_certificates cc
+         JOIN exporter_profiles ep ON cc.exporter_id = ep.exporter_id
+         WHERE cc.status = 'PENDING'
+         ORDER BY cc.created_at DESC`
+      );
+
+      const mappedData = result.rows.map(row => ({
+        id: row.certificate_id,
+        exporterId: row.exporter_id,
+        businessName: row.business_name,
+        businessType: row.business_type,
+        tin: row.tin,
+        status: row.status,
+        applicationDate: row.application_date || row.created_at,
+        laboratoryCertified: row.laboratory_certified,
+        tasterVerified: row.taster_verified,
+        applicationReason: row.application_reason
+      }));
+
+      res.json({
+        success: true,
+        data: mappedData,
+        count: mappedData.length,
+        message: 'Pending competence certificate applications',
+      });
+    } catch (error: any) {
+      logger.error('Failed to fetch certificates', { error: error.message });
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch certificates',
+        error: error.message,
+      });
+    }
+  };
+
+  /**
+   * Issue competence certificate
+   */
+  public issueCompetenceCertificate = async (
+    req: RequestWithUser,
+    res: Response,
+    _next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { exporterId } = req.params;
+      const {
+        certificateNumber,
+        laboratoryId,
+        tasterId,
+        facilityInspectionPassed,
+        inspectionReport,
+        validityYears = 1,
+      } = req.body;
+      const user = req.user!;
+
+      if (!exporterId || !certificateNumber || !laboratoryId || !tasterId) {
+        res.status(400).json({
+          success: false,
+          message: 'Missing required fields',
+        });
+        return;
+      }
+
+      if (!facilityInspectionPassed) {
+        res.status(400).json({
+          success: false,
+          message: 'Facility inspection must pass before issuing certificate',
+        });
+        return;
+      }
+
+      // Validate exporter has certified lab and qualified taster
+      const validation = await ectaPreRegistrationService.validateExporter(exporterId);
+
+      if (!validation.hasCertifiedLaboratory) {
+        res.status(400).json({
+          success: false,
+          message: 'Exporter must have ECTA-certified laboratory',
+        });
+        return;
+      }
+
+      if (!validation.hasQualifiedTaster) {
+        res.status(400).json({
+          success: false,
+          message: 'Exporter must have qualified taster',
+        });
+        return;
+      }
+
+      const now = new Date();
+      const expiryDate = new Date(now);
+      expiryDate.setFullYear(expiryDate.getFullYear() + validityYears);
+
+      // Update the most recent pending competence certificate application to ACTIVE status
+      const result = await pool.query(
+        `UPDATE competence_certificates 
+         SET certificate_number = $1,
+             issued_date = $2,
+             expiry_date = $3,
+             status = $4,
+             laboratory_id = $5,
+             taster_id = $6,
+             facility_inspection_date = $7,
+             inspection_report = $8,
+             inspected_by = $9,
+             inspection_passed = $10,
+             has_quality_management_system = $11,
+             approved_by = $12,
+             approved_at = $13,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE certificate_id = (
+           SELECT certificate_id 
+           FROM competence_certificates 
+           WHERE exporter_id = $14 AND status = 'PENDING'
+           ORDER BY created_at DESC
+           LIMIT 1
+         )
+         RETURNING *`,
+        [
+          certificateNumber,
+          now.toISOString(),
+          expiryDate.toISOString(),
+          'ACTIVE',
+          laboratoryId,
+          tasterId,
+          now.toISOString(),
+          inspectionReport || '',
+          user.username,
+          true,
+          true,
+          user.username,
+          now.toISOString(),
+          exporterId,
+        ]
+      );
+
+      if (result.rows.length === 0) {
+        res.status(404).json({
+          success: false,
+          message: 'No pending competence certificate application found for this exporter',
+        });
+        return;
+      }
+
+      const certificate = result.rows[0];
+
+      // Generate PDF for the certificate
+      try {
+        // Get exporter and related info for PDF with complete data
+        const exporterInfo = await pool.query(
+          `SELECT 
+            ep.business_name,
+            ep.business_type,
+            ep.tin,
+            ep.registration_number,
+            ep.city as exporter_city,
+            ep.region as exporter_region,
+            ep.office_address,
+            ep.contact_person,
+            ep.email,
+            ep.phone,
+            cl.laboratory_name,
+            COALESCE(cl.city, ep.city, '') as laboratory_city,
+            COALESCE(cl.region, ep.region, '') as laboratory_region,
+            COALESCE(cl.address, ep.office_address, '') as laboratory_address,
+            cl.certification_number as laboratory_cert_number,
+            ct.full_name as taster_name,
+            ct.proficiency_certificate_number as taster_cert_number,
+            ct.qualification_level as taster_qualification
+           FROM exporter_profiles ep
+           LEFT JOIN coffee_laboratories cl ON cl.laboratory_id = $1
+           LEFT JOIN coffee_tasters ct ON ct.taster_id = $2
+           WHERE ep.exporter_id = $3`,
+          [laboratoryId, tasterId, exporterId]
+        );
+
+        if (exporterInfo.rows.length > 0) {
+          const info = exporterInfo.rows[0];
+          
+          const pdfResult = await pdfGenerationService.generateCompetenceCertificatePDF(
+            certificate.certificate_id,
+            {
+              certificateNumber: certificateNumber,
+              issuedDate: now,
+              expiryDate: expiryDate,
+              businessName: info.business_name,
+              businessType: info.business_type,
+              tin: info.tin,
+              registrationNumber: info.registration_number,
+              exporterCity: info.exporter_city,
+              exporterRegion: info.exporter_region,
+              officeAddress: info.office_address,
+              contactPerson: info.contact_person,
+              email: info.email,
+              phone: info.phone,
+              laboratoryName: info.laboratory_name,
+              laboratoryCity: info.laboratory_city,
+              laboratoryRegion: info.laboratory_region,
+              laboratoryAddress: info.laboratory_address,
+              laboratoryCertNumber: info.laboratory_cert_number,
+              tasterName: info.taster_name,
+              tasterCertNumber: info.taster_cert_number,
+              tasterQualification: info.taster_qualification,
+              approvedBy: user.username,
+              approvedAt: now
+            }
+          );
+
+          // Update certificate with PDF file path
+          await pool.query(
+            `UPDATE competence_certificates 
+             SET file_path = $1, file_size_bytes = $2
+             WHERE certificate_id = $3`,
+            [pdfResult.filePath, pdfResult.fileSizeBytes, certificate.certificate_id]
+          );
+
+          logger.info('PDF generated for competence certificate', {
+            certificateId: certificate.certificate_id,
+            certificateNumber,
+            filePath: pdfResult.filePath
+          });
+        }
+      } catch (pdfError: any) {
+        logger.error('Failed to generate PDF for competence certificate', {
+          certificateId: certificate.certificate_id,
+          error: pdfError.message
+        });
+        // Don't fail the whole operation if PDF generation fails
+      }
+
+      res.json({
+        success: true,
+        message: 'Competence certificate issued successfully',
+        data: certificate,
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to issue competence certificate',
+        error: error.message,
+      });
+    }
+  };
+
+  /**
+   * Receive license application from Exporter Portal
+   */
+  public receiveLicenseApplication = async (
+    req: RequestWithUser,
+    res: Response,
+    _next: NextFunction
+  ): Promise<void> => {
+    try {
+      const {
+        exporterId,
+        eicRegistrationNumber,
+        requestedCoffeeTypes,
+        requestedOrigins,
+        applicantProfile,
+        submittedAt,
+        submittedBy,
+      } = req.body;
+
+      if (!exporterId || !eicRegistrationNumber) {
+        res.status(400).json({
+          success: false,
+          message: 'Exporter ID and EIC registration number are required',
+        });
+        return;
+      }
+
+      // TODO: Store application in ECTA database
+      const applicationId = uuidv4();
+      const application = {
+        applicationId,
+        exporterId,
+        eicRegistrationNumber,
+        requestedCoffeeTypes: requestedCoffeeTypes || ['ARABICA'],
+        requestedOrigins: requestedOrigins || [],
+        applicantProfile,
+        status: 'PENDING_REVIEW',
+        submittedAt: submittedAt || new Date().toISOString(),
+        submittedBy: submittedBy || 'Unknown',
+        receivedAt: new Date().toISOString(),
+        reviewedBy: null,
+        reviewedAt: null,
+        reviewNotes: null,
+      };
+
+      console.log('License application received from Exporter Portal:', {
+        applicationId,
+        exporterId,
+        eicRegistrationNumber,
+        submittedBy,
+      });
+
+      res.status(201).json({
+        success: true,
+        message: 'License application received and queued for ECTA review',
+        data: {
+          applicationId,
+          status: 'PENDING_REVIEW',
+          receivedAt: application.receivedAt,
+          nextSteps: [
+            'ECTA will review the application',
+            'Exporter will be notified of the decision',
+            'License will be issued if approved',
+          ],
+        },
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to receive license application',
+        error: error.message,
+      });
+    }
+  };
+
+  /**
+   * Get pending export license applications
+   */
+  public getPendingLicenses = async (
+    _req: RequestWithUser,
+    res: Response,
+    _next: NextFunction
+  ): Promise<void> => {
+    try {
+      const result = await pool.query(
+        `SELECT el.*, ep.business_name, ep.business_type, ep.tin, ep.capital_verified,
+                (SELECT status = 'ACTIVE' FROM competence_certificates cc WHERE cc.exporter_id = ep.exporter_id LIMIT 1) as has_competence_certificate
+         FROM export_licenses el
+         JOIN exporter_profiles ep ON el.exporter_id = ep.exporter_id
+         WHERE el.status IN ('PENDING_REVIEW', 'PENDING')
+         ORDER BY 
+           CASE 
+             WHEN el.status = 'PENDING_REVIEW' THEN 0
+             WHEN el.status = 'PENDING' THEN 1
+             ELSE 2
+           END,
+           el.created_at DESC`
+      );
+
+      const mappedData = result.rows.map(row => ({
+        id: row.license_id,
+        exporterId: row.exporter_id,
+        businessName: row.business_name,
+        businessType: row.business_type,
+        tin: row.tin,
+        status: row.status,
+        applicationDate: row.application_date || row.created_at,
+        capitalVerified: row.capital_verified,
+        hasCompetenceCertificate: row.has_competence_certificate,
+        eicRegistrationNumber: row.eic_registration_number,
+        requestedCoffeeTypes: row.requested_coffee_types
+      }));
+
+      res.json({
+        success: true,
+        data: mappedData,
+        count: mappedData.length,
+        message: 'Pending export license applications',
+      });
+    } catch (error: any) {
+      logger.error('Failed to fetch licenses', { error: error.message });
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch licenses',
+        error: error.message,
+      });
+    }
+  };
+
+  /**
+   * Issue export license
+   */
+  public issueExportLicense = async (
+    req: RequestWithUser,
+    res: Response,
+    _next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { exporterId } = req.params;
+      const {
+        licenseNumber,
+        competenceCertificateId,
+        eicRegistrationNumber,
+        authorizedCoffeeTypes,
+        authorizedOrigins,
+        annualQuota,
+        validityYears = 1,
+      } = req.body;
+      const user = req.user!;
+
+      if (!exporterId || !licenseNumber || !competenceCertificateId || !eicRegistrationNumber) {
+        res.status(400).json({
+          success: false,
+          message: 'Missing required fields',
+        });
+        return;
+      }
+
+      // Validate exporter has valid competence certificate
+      const validation = await ectaPreRegistrationService.validateExporter(exporterId);
+
+      if (!validation.hasCompetenceCertificate) {
+        res.status(400).json({
+          success: false,
+          message: 'Exporter must have valid competence certificate',
+          requiredActions: validation.requiredActions,
+        });
+        return;
+      }
+
+      const now = new Date();
+      const expiryDate = new Date(now);
+      expiryDate.setFullYear(expiryDate.getFullYear() + validityYears);
+
+      // Update the most recent pending export license application to ACTIVE status
+      const result = await pool.query(
+        `UPDATE export_licenses 
+         SET license_number = $1,
+             issued_date = $2,
+             expiry_date = $3,
+             status = $4,
+             competence_certificate_id = $5,
+             authorized_coffee_types = $6,
+             authorized_origins = $7,
+             annual_quota = $8,
+             approved_by = $9,
+             approved_at = $10,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE license_id = (
+           SELECT license_id 
+           FROM export_licenses 
+           WHERE exporter_id = $11 AND status IN ('PENDING_REVIEW', 'PENDING')
+           ORDER BY created_at DESC
+           LIMIT 1
+         )
+         RETURNING *`,
+        [
+          licenseNumber,
+          now.toISOString(),
+          expiryDate.toISOString(),
+          'ACTIVE',
+          competenceCertificateId,
+          JSON.stringify(authorizedCoffeeTypes || ['Arabica']),
+          JSON.stringify(authorizedOrigins || []),
+          annualQuota,
+          user.username,
+          now.toISOString(),
+          exporterId,
+        ]
+      );
+
+      if (result.rows.length === 0) {
+        res.status(404).json({
+          success: false,
+          message: 'No pending export license application found for this exporter',
+        });
+        return;
+      }
+
+      const license = result.rows[0];
+
+      // Generate PDF for the license
+      try {
+        // Get exporter and competence certificate info for PDF
+        const licenseInfo = await pool.query(
+          `SELECT ep.business_name, ep.business_type, ep.tin,
+                  cc.certificate_number as competence_cert_number
+           FROM exporter_profiles ep
+           LEFT JOIN competence_certificates cc ON cc.certificate_id = $1
+           WHERE ep.exporter_id = $2`,
+          [competenceCertificateId, exporterId]
+        );
+
+        if (licenseInfo.rows.length > 0) {
+          const info = licenseInfo.rows[0];
+          
+          const pdfResult = await pdfGenerationService.generateExportLicensePDF(
+            license.license_id,
+            {
+              licenseNumber: licenseNumber,
+              issuedDate: now,
+              expiryDate: expiryDate,
+              businessName: info.business_name,
+              businessType: info.business_type,
+              tin: info.tin,
+              competenceCertificateNumber: info.competence_cert_number,
+              eicRegistrationNumber: eicRegistrationNumber,
+              authorizedCoffeeTypes: authorizedCoffeeTypes || ['Arabica'],
+              authorizedOrigins: authorizedOrigins || [],
+              annualQuota: annualQuota,
+              approvedBy: user.username,
+              approvedAt: now
+            }
+          );
+
+          // Update license with PDF file path
+          await pool.query(
+            `UPDATE export_licenses 
+             SET file_path = $1, file_size_bytes = $2
+             WHERE license_id = $3`,
+            [pdfResult.filePath, pdfResult.fileSizeBytes, license.license_id]
+          );
+
+          logger.info('PDF generated for export license', {
+            licenseId: license.license_id,
+            licenseNumber,
+            filePath: pdfResult.filePath
+          });
+        }
+      } catch (pdfError: any) {
+        logger.error('Failed to generate PDF for export license', {
+          licenseId: license.license_id,
+          error: pdfError.message
+        });
+        // Don't fail the whole operation if PDF generation fails
+      }
+
+      res.json({
+        success: true,
+        message: 'Export license issued successfully',
+        data: license,
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to issue export license',
+        error: error.message,
+      });
+    }
+  };
+
+  // ============================================================================
+  // TASTER VERIFICATION
+  // ============================================================================
+
+  /**
+   * Get pending taster verifications
+   */
+  public getPendingTasters = async (
+    _req: RequestWithUser,
+    res: Response,
+    _next: NextFunction
+  ): Promise<void> => {
+    try {
+      const query = `
+        SELECT 
+          ct.*,
+          ep.business_name as exporter_name,
+          ep.tin as exporter_tin
+        FROM coffee_tasters ct
+        LEFT JOIN exporter_profiles ep ON ct.exporter_id = ep.exporter_id
+        WHERE ct.status = 'PENDING'
+        ORDER BY ct.created_at DESC
+      `;
+
+      const result = await pool.query(query);
+
+      const tasters = result.rows.map(row => ({
+        id: row.taster_id,
+        tasterId: row.taster_id,
+        exporterId: row.exporter_id,
+        exporterName: row.exporter_name || 'Unknown',
+        fullName: row.full_name,
+        proficiencyCertificateNumber: row.proficiency_certificate_number,
+        certificateIssueDate: row.certificate_issue_date,
+        certificateExpiryDate: row.certificate_expiry_date,
+        qualificationLevel: row.qualification_level,
+        isExclusiveEmployee: row.is_exclusive_employee,
+        status: row.status,
+        createdAt: row.created_at,
+      }));
+
+      res.json({
+        success: true,
+        data: tasters,
+        count: tasters.length,
+        message: 'Pending taster verifications',
+      });
+    } catch (error: any) {
+      logger.error('Failed to fetch tasters', { error: error.message });
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch tasters',
+        error: error.message,
+      });
+    }
+  };
+
+  /**
+   * Get laboratories for a specific exporter
+   */
+  public getExporterLaboratories = async (
+    req: RequestWithUser,
+    res: Response,
+    _next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { exporterId } = req.params;
+
+      if (!exporterId) {
+        res.status(400).json({
+          success: false,
+          message: 'Exporter ID is required',
+        });
+        return;
+      }
+
+      const result = await pool.query(
+        'SELECT * FROM coffee_laboratories WHERE exporter_id = $1 AND status = $2 ORDER BY created_at DESC',
+        [exporterId, 'ACTIVE']
+      );
+
+      res.json({
+        success: true,
+        data: result.rows,
+        count: result.rows.length,
+      });
+    } catch (error: any) {
+      logger.error('Failed to fetch exporter laboratories', { error: error.message, exporterId: req.params.exporterId });
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch laboratories',
+        error: error.message,
+      });
+    }
+  };
+
+  /**
+   * Get tasters for a specific exporter
+   */
+  public getExporterTasters = async (
+    req: RequestWithUser,
+    res: Response,
+    _next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { exporterId } = req.params;
+
+      if (!exporterId) {
+        res.status(400).json({
+          success: false,
+          message: 'Exporter ID is required',
+        });
+        return;
+      }
+
+      const result = await pool.query(
+        'SELECT * FROM coffee_tasters WHERE exporter_id = $1 AND status = $2 ORDER BY created_at DESC',
+        [exporterId, 'ACTIVE']
+      );
+
+      res.json({
+        success: true,
+        data: result.rows,
+        count: result.rows.length,
+      });
+    } catch (error: any) {
+      logger.error('Failed to fetch exporter tasters', { error: error.message, exporterId: req.params.exporterId });
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch tasters',
+        error: error.message,
+      });
+    }
+  };
+
+  /**
+   * Verify taster credentials
+   */
+  public verifyTaster = async (
+    req: RequestWithUser,
+    res: Response,
+    _next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { tasterId } = req.params;
+      const user = req.user!;
+
+      if (!tasterId) {
+        res.status(400).json({
+          success: false,
+          message: 'Taster ID is required',
+        });
+        return;
+      }
+
+      const now = new Date().toISOString();
+      const result = await pool.query(
+        `UPDATE coffee_tasters 
+         SET status = $1, verified_by = $2, verified_at = $3, updated_at = $4
+         WHERE taster_id = $5
+         RETURNING *`,
+        ['ACTIVE', user.username, now, now, tasterId]
+      );
+
+      if (result.rows.length === 0) {
+        res.status(404).json({
+          success: false,
+          message: 'Taster not found',
+        });
+        return;
+      }
+
+      logger.info('Taster verified', { tasterId, verifiedBy: user.username });
+
+      res.json({
+        success: true,
+        message: 'Taster verified successfully',
+        data: result.rows[0],
+      });
+    } catch (error: any) {
+      logger.error('Failed to verify taster', { error: error.message, tasterId: req.params.tasterId });
+      res.status(500).json({
+        success: false,
+        message: 'Failed to verify taster',
+        error: error.message,
+      });
+    }
+  };
+
+  /**
+   * Reject taster verification
+   */
+  public rejectTaster = async (
+    req: RequestWithUser,
+    res: Response,
+    _next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { tasterId } = req.params;
+      const { reason } = req.body;
+      const user = req.user!;
+
+      if (!tasterId || !reason) {
+        res.status(400).json({
+          success: false,
+          message: 'Taster ID and rejection reason are required',
+        });
+        return;
+      }
+
+      const now = new Date().toISOString();
+      const result = await pool.query(
+        `UPDATE coffee_tasters 
+         SET status = $1, rejection_reason = $2, rejected_by = $3, rejected_at = $4, updated_at = $5
+         WHERE taster_id = $6
+         RETURNING *`,
+        ['REJECTED', reason, user.username, now, now, tasterId]
+      );
+
+      if (result.rows.length === 0) {
+        res.status(404).json({
+          success: false,
+          message: 'Taster not found',
+        });
+        return;
+      }
+
+      logger.info('Taster rejected', { tasterId, rejectedBy: user.username, reason });
+
+      res.json({
+        success: true,
+        message: 'Taster verification rejected',
+        data: result.rows[0],
+      });
+    } catch (error: any) {
+      logger.error('Failed to reject taster', { error: error.message, tasterId: req.params.tasterId });
+      res.status(500).json({
+        success: false,
+        message: 'Failed to reject taster',
+        error: error.message,
+      });
+    }
+  };
+
+  // ============================================================================
+  // COMPETENCE CERTIFICATE REJECTION
+  // ============================================================================
+
+  /**
+   * Reject competence certificate application
+   */
+  public rejectCompetenceCertificate = async (
+    req: RequestWithUser,
+    res: Response,
+    _next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { exporterId } = req.params;
+      const { reason } = req.body;
+      const user = req.user!;
+
+      if (!exporterId || !reason) {
+        res.status(400).json({
+          success: false,
+          message: 'Exporter ID and rejection reason are required',
+        });
+        return;
+      }
+
+      const now = new Date().toISOString();
+      const result = await pool.query(
+        `UPDATE competence_certificates 
+         SET status = $1, rejection_reason = $2, rejected_by = $3, rejected_at = $4, updated_at = $5
+         WHERE exporter_id = $6 AND status = 'PENDING'
+         RETURNING *`,
+        ['REJECTED', reason, user.username, now, now, exporterId]
+      );
+
+      if (result.rows.length === 0) {
+        res.status(404).json({
+          success: false,
+          message: 'Competence certificate application not found or already processed',
+        });
+        return;
+      }
+
+      logger.info('Competence certificate rejected', { exporterId, rejectedBy: user.username, reason });
+
+      res.json({
+        success: true,
+        message: 'Competence certificate application rejected',
+        data: result.rows[0],
+      });
+    } catch (error: any) {
+      logger.error('Failed to reject competence certificate', { error: error.message, exporterId: req.params.exporterId });
+      res.status(500).json({
+        success: false,
+        message: 'Failed to reject competence certificate',
+        error: error.message,
+      });
+    }
+  };
+
+  // ============================================================================
+  // EXPORT LICENSE REJECTION
+  // ============================================================================
+
+  /**
+   * Reject export license application
+   */
+  public rejectExportLicense = async (
+    req: RequestWithUser,
+    res: Response,
+    _next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { exporterId } = req.params;
+      const { reason } = req.body;
+      const user = req.user!;
+
+      if (!exporterId || !reason) {
+        res.status(400).json({
+          success: false,
+          message: 'Exporter ID and rejection reason are required',
+        });
+        return;
+      }
+
+      const now = new Date().toISOString();
+      const result = await pool.query(
+        `UPDATE export_licenses 
+         SET status = $1, rejection_reason = $2, rejected_by = $3, rejected_at = $4, updated_at = $5
+         WHERE exporter_id = $6 AND status IN ('PENDING', 'PENDING_REVIEW')
+         RETURNING *`,
+        ['REJECTED', reason, user.username, now, now, exporterId]
+      );
+
+      if (result.rows.length === 0) {
+        res.status(404).json({
+          success: false,
+          message: 'Export license application not found or already processed',
+        });
+        return;
+      }
+
+      logger.info('Export license rejected', { exporterId, rejectedBy: user.username, reason });
+
+      res.json({
+        success: true,
+        message: 'Export license application rejected',
+        data: result.rows[0],
+      });
+    } catch (error: any) {
+      logger.error('Failed to reject export license', { error: error.message, exporterId: req.params.exporterId });
+      res.status(500).json({
+        success: false,
+        message: 'Failed to reject export license',
+        error: error.message,
+      });
+    }
+  };
+
+  /**
+   * Validate exporter qualification
+   */
+  public validateExporter = async (
+    req: RequestWithUser,
+    res: Response,
+    _next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { exporterId } = req.params;
+
+      if (!exporterId) {
+        res.status(400).json({
+          success: false,
+          message: 'Exporter ID is required',
+        });
+        return;
+      }
+
+      const validation = await ectaPreRegistrationService.validateExporter(exporterId);
+
+      res.json({
+        success: true,
+        data: validation,
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to validate exporter',
+        error: error.message,
+      });
+    }
+  };
+
+  // ============================================================================
+  // CERTIFICATE DOWNLOADS
+  // ============================================================================
+
+  /**
+   * Download competence certificate PDF
+   */
+  public downloadCompetenceCertificate = async (
+    req: RequestWithUser,
+    res: Response,
+    _next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { certificateId } = req.params;
+      const user = req.user!;
+
+      if (!certificateId) {
+        res.status(400).json({
+          success: false,
+          message: 'Certificate ID is required',
+        });
+        return;
+      }
+
+      // Get exporter ID if user is an exporter
+      let exporterId: string | undefined;
+      if (user.role === 'exporter') {
+        const exporterResult = await pool.query(
+          'SELECT exporter_id FROM exporter_profiles WHERE user_id = $1',
+          [user.id]
+        );
+        if (exporterResult.rows.length > 0) {
+          exporterId = exporterResult.rows[0].exporter_id;
+        }
+      }
+
+      // Download certificate
+      console.log('=== CONTROLLER: About to call certificateDownloadService ===');
+      console.log('Certificate ID:', certificateId);
+      console.log('User ID:', user.id);
+      console.log('User Role:', user.role);
+      console.log('Exporter ID:', exporterId);
+      
+      const pdfBuffer = await certificateDownloadService.downloadCompetenceCertificate(
+        certificateId,
+        user.id,
+        user.role,
+        exporterId
+      );
+      
+      console.log('=== CONTROLLER: Service call completed ===');
+
+      // Get certificate metadata for filename
+      const metadata = await certificateDownloadService.getCompetenceCertificateMetadata(
+        certificateId,
+        user.id,
+        user.role,
+        exporterId
+      );
+
+      // Set response headers
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="competence-certificate-${metadata.certificateNumber}.pdf"`
+      );
+      res.setHeader('Content-Length', pdfBuffer.length);
+
+      // Send PDF
+      res.send(pdfBuffer);
+    } catch (error: any) {
+      logger.error('Failed to download competence certificate', {
+        error: error.message,
+        certificateId: req.params.certificateId,
+        userId: req.user?.id
+      });
+      res.status(error.message.includes('not found') ? 404 : 
+                 error.message.includes('Access denied') ? 403 : 500).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  };
+
+  /**
+   * Get competence certificate metadata
+   */
+  public getCompetenceCertificateMetadata = async (
+    req: RequestWithUser,
+    res: Response,
+    _next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { certificateId } = req.params;
+      const user = req.user!;
+
+      if (!certificateId) {
+        res.status(400).json({
+          success: false,
+          message: 'Certificate ID is required',
+        });
+        return;
+      }
+
+      // Get exporter ID if user is an exporter
+      let exporterId: string | undefined;
+      if (user.role === 'exporter') {
+        const exporterResult = await pool.query(
+          'SELECT exporter_id FROM exporter_profiles WHERE user_id = $1',
+          [user.id]
+        );
+        if (exporterResult.rows.length > 0) {
+          exporterId = exporterResult.rows[0].exporter_id;
+        }
+      }
+
+      // Get certificate metadata
+      const metadata = await certificateDownloadService.getCompetenceCertificateMetadata(
+        certificateId,
+        user.id,
+        user.role,
+        exporterId
+      );
+
+      res.json({
+        success: true,
+        data: metadata,
+      });
+    } catch (error: any) {
+      logger.error('Failed to get competence certificate metadata', {
+        error: error.message,
+        certificateId: req.params.certificateId,
+        userId: req.user?.id
+      });
+      res.status(error.message.includes('not found') ? 404 : 
+                 error.message.includes('Access denied') ? 403 : 500).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  };
+
+  /**
+   * Download export license PDF
+   */
+  public downloadExportLicense = async (
+    req: RequestWithUser,
+    res: Response,
+    _next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { licenseId } = req.params;
+      const user = req.user!;
+
+      if (!licenseId) {
+        res.status(400).json({
+          success: false,
+          message: 'License ID is required',
+        });
+        return;
+      }
+
+      // Get exporter ID if user is an exporter
+      let exporterId: string | undefined;
+      if (user.role === 'exporter') {
+        const exporterResult = await pool.query(
+          'SELECT exporter_id FROM exporter_profiles WHERE user_id = $1',
+          [user.id]
+        );
+        if (exporterResult.rows.length > 0) {
+          exporterId = exporterResult.rows[0].exporter_id;
+        }
+      }
+
+      // Download license
+      const pdfBuffer = await certificateDownloadService.downloadExportLicense(
+        licenseId,
+        user.id,
+        user.role,
+        exporterId
+      );
+
+      // Get license metadata for filename
+      const metadata = await certificateDownloadService.getExportLicenseMetadata(
+        licenseId,
+        user.id,
+        user.role,
+        exporterId
+      );
+
+      // Set response headers
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="export-license-${metadata.licenseNumber}.pdf"`
+      );
+      res.setHeader('Content-Length', pdfBuffer.length);
+
+      // Send PDF
+      res.send(pdfBuffer);
+    } catch (error: any) {
+      logger.error('Failed to download export license', {
+        error: error.message,
+        licenseId: req.params.licenseId,
+        userId: req.user?.id
+      });
+      res.status(error.message.includes('not found') ? 404 : 
+                 error.message.includes('Access denied') ? 403 : 500).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  };
+
+  /**
+   * Get export license metadata
+   */
+  public getExportLicenseMetadata = async (
+    req: RequestWithUser,
+    res: Response,
+    _next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { licenseId } = req.params;
+      const user = req.user!;
+
+      if (!licenseId) {
+        res.status(400).json({
+          success: false,
+          message: 'License ID is required',
+        });
+        return;
+      }
+
+      // Get exporter ID if user is an exporter
+      let exporterId: string | undefined;
+      if (user.role === 'exporter') {
+        const exporterResult = await pool.query(
+          'SELECT exporter_id FROM exporter_profiles WHERE user_id = $1',
+          [user.id]
+        );
+        if (exporterResult.rows.length > 0) {
+          exporterId = exporterResult.rows[0].exporter_id;
+        }
+      }
+
+      // Get license metadata
+      const metadata = await certificateDownloadService.getExportLicenseMetadata(
+        licenseId,
+        user.id,
+        user.role,
+        exporterId
+      );
+
+      res.json({
+        success: true,
+        data: metadata,
+      });
+    } catch (error: any) {
+      logger.error('Failed to get export license metadata', {
+        error: error.message,
+        licenseId: req.params.licenseId,
+        userId: req.user?.id
+      });
+      res.status(error.message.includes('not found') ? 404 : 
+                 error.message.includes('Access denied') ? 403 : 500).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  };
+}

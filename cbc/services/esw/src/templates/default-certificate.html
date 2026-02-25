@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESW Agency Approval Certificate</title>
+    <style>
+        /* Removed external Google Fonts for performance - using system fonts instead */
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        @page {
+            size: A4;
+            margin: 0;
+        }
+        
+        body {
+            font-family: Arial, Helvetica, 'Segoe UI', sans-serif;
+            width: 210mm;
+            height: 297mm;
+            margin: 0;
+            padding: 0;
+            background: white;
+            position: relative;
+        }
+        
+        .certificate {
+            width: 100%;
+            height: 100%;
+            padding: 20mm;
+            position: relative;
+            background: linear-gradient(to bottom, #ffffff 0%, #f8f9fa 100%);
+        }
+        
+        /* Watermark */
+        .watermark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            font-size: 120px;
+            color: rgba(0, 0, 0, 0.03);
+            font-weight: bold;
+            z-index: 0;
+            pointer-events: none;
+        }
+        
+        /* Border pattern */
+        .border-pattern {
+            position: absolute;
+            top: 10mm;
+            left: 10mm;
+            right: 10mm;
+            bottom: 10mm;
+            border: 3px solid #1a5490;
+            border-radius: 5px;
+            z-index: 0;
+        }
+        
+        .border-pattern::before {
+            content: '';
+            position: absolute;
+            top: 3mm;
+            left: 3mm;
+            right: 3mm;
+            bottom: 3mm;
+            border: 1px solid #1a5490;
+            border-radius: 3px;
+        }
+        
+        .content {
+            position: relative;
+            z-index: 1;
+        }
+        
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #1a5490;
+        }
+        
+        .emblem {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 10px;
+        }
+        
+        .emblem img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            color: #1a5490;
+            margin-bottom: 5px;
+            font-weight: 700;
+        }
+        
+        .header h2 {
+            font-size: 18px;
+            color: #2c5282;
+            margin-bottom: 10px;
+            font-weight: 400;
+        }
+        
+        .header .agency-name {
+            font-size: 20px;
+            color: #1a5490;
+            font-weight: 700;
+            margin-top: 10px;
+        }
+        
+        /* Certificate Title */
+        .certificate-title {
+            text-align: center;
+            margin: 30px 0;
+            padding: 15px;
+            background: linear-gradient(135deg, #1a5490 0%, #2c5282 100%);
+            color: white;
+            border-radius: 5px;
+        }
+        
+        .certificate-title h3 {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: 2px;
+        }
+        
+        /* Certificate Number */
+        .cert-number {
+            text-align: center;
+            font-size: 16px;
+            color: #1a5490;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+        
+        /* Main Content */
+        .main-content {
+            margin: 20px 0;
+        }
+        
+        .section {
+            margin-bottom: 20px;
+        }
+        
+        .section-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #1a5490;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .info-item {
+            padding: 8px;
+            background: #f7fafc;
+            border-left: 3px solid #1a5490;
+        }
+        
+        .info-label {
+            font-size: 11px;
+            color: #718096;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 3px;
+        }
+        
+        .info-value {
+            font-size: 13px;
+            color: #2d3748;
+            font-weight: 500;
+        }
+        
+        /* Footer */
+        .footer {
+            margin-top: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+        
+        .qr-section {
+            text-align: center;
+        }
+        
+        .qr-code {
+            width: 120px;
+            height: 120px;
+            border: 2px solid #1a5490;
+            padding: 5px;
+            background: white;
+        }
+        
+        .qr-code img {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .qr-label {
+            font-size: 10px;
+            color: #718096;
+            margin-top: 5px;
+        }
+        
+        .signature-section {
+            text-align: center;
+            flex: 1;
+            margin-left: 40px;
+        }
+        
+        .signature-line {
+            width: 200px;
+            border-top: 2px solid #1a5490;
+            margin: 40px auto 10px;
+        }
+        
+        .signature-label {
+            font-size: 12px;
+            color: #2d3748;
+            font-weight: 600;
+        }
+        
+        .signature-name {
+            font-size: 11px;
+            color: #718096;
+            margin-top: 3px;
+        }
+        
+        .issue-date {
+            text-align: right;
+            font-size: 11px;
+            color: #718096;
+            margin-top: 20px;
+        }
+        
+        /* Seal */
+        .seal {
+            position: absolute;
+            bottom: 30mm;
+            right: 30mm;
+            width: 80px;
+            height: 80px;
+            opacity: 0.7;
+        }
+        
+        .seal img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+    </style>
+</head>
+<body>
+    <div class="certificate">
+        <!-- Watermark -->
+        <div class="watermark">OFFICIAL</div>
+        
+        <!-- Border Pattern -->
+        <div class="border-pattern"></div>
+        
+        <!-- Content -->
+        <div class="content">
+            <!-- Header -->
+            <div class="header">
+                <div class="emblem">
+                    <!-- Ethiopian National Emblem Placeholder -->
+                    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="50" cy="50" r="45" fill="#1a5490" stroke="#2c5282" stroke-width="2"/>
+                        <circle cx="50" cy="50" r="35" fill="none" stroke="#ffd700" stroke-width="2"/>
+                        <polygon points="50,20 60,45 85,45 65,60 75,85 50,70 25,85 35,60 15,45 40,45" fill="#ffd700"/>
+                    </svg>
+                </div>
+                <h1>Federal Democratic Republic of Ethiopia</h1>
+                <h2>Electronic Single Window System</h2>
+                <div class="agency-name">{{agencyName}}</div>
+            </div>
+            
+            <!-- Certificate Title -->
+            <div class="certificate-title">
+                <h3>EXPORT APPROVAL CERTIFICATE</h3>
+            </div>
+            
+            <!-- Certificate Number -->
+            <div class="cert-number">
+                Certificate No: {{certificateNumber}}
+            </div>
+            
+            <!-- Main Content -->
+            <div class="main-content">
+                <!-- Exporter Information -->
+                <div class="section">
+                    <div class="section-title">Exporter Information</div>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <div class="info-label">Business Name</div>
+                            <div class="info-value">{{exporterName}}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">TIN Number</div>
+                            <div class="info-value">{{exporterTin}}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Export Details -->
+                <div class="section">
+                    <div class="section-title">Export Details</div>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <div class="info-label">ESW Reference Number</div>
+                            <div class="info-value">{{eswReferenceNumber}}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Coffee Type</div>
+                            <div class="info-value">{{coffeeType}}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Quantity (kg)</div>
+                            <div class="info-value">{{quantity}}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Origin Region</div>
+                            <div class="info-value">{{originRegion}}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Destination Country</div>
+                            <div class="info-value">{{destinationCountry}}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Approval Date</div>
+                            <div class="info-value">{{approvalDate}}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Approval Information -->
+                <div class="section">
+                    <div class="section-title">Approval Information</div>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <div class="info-label">Approved By</div>
+                            <div class="info-value">{{approvedBy}}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Issue Date</div>
+                            <div class="info-value">{{issueDate}}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Footer -->
+            <div class="footer">
+                <div class="qr-section">
+                    <div class="qr-code">
+                        <img src="{{qrCodeData}}" alt="QR Code">
+                    </div>
+                    <div class="qr-label">Scan to verify authenticity</div>
+                </div>
+                
+                <div class="signature-section">
+                    <div class="signature-line"></div>
+                    <div class="signature-label">Authorized Signature</div>
+                    <div class="signature-name">{{approvedBy}}</div>
+                    <div class="issue-date">Issued: {{issueDate}}</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Agency Seal (if available) -->
+        {{#if agencySeal}}
+        <div class="seal">
+            <img src="{{agencySeal}}" alt="Agency Seal">
+        </div>
+        {{/if}}
+    </div>
+</body>
+</html>

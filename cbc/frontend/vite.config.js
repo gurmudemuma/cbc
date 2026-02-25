@@ -1,0 +1,126 @@
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import path from 'path'
+
+export default defineConfig({
+  plugins: [
+    react({
+      jsxImportSource: '@emotion/react',
+      babel: {
+        plugins: [
+          ['@emotion/babel-plugin', { sourceMap: true, autoLabel: 'dev-only' }]
+        ],
+      },
+    })
+  ],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src')
+    }
+  },
+  optimizeDeps: {
+    include: [
+      '@emotion/react',
+      '@emotion/styled',
+      '@mui/material',
+      '@mui/system',
+      '@mui/system/RtlProvider',
+      '@mui/system/createStyled',
+      '@mui/x-date-pickers',
+      'react',
+      'react-dom',
+      'react-router-dom',
+      '@tanstack/react-query'
+    ],
+    force: true
+  },
+  server: {
+    port: 5173,
+    strictPort: false,
+    host: '0.0.0.0',
+    hmr: {
+      protocol: 'ws',
+      host: 'localhost',
+      port: 5173,
+      clientPort: 5173
+    },
+    watch: {
+      usePolling: true,
+      interval: 100
+    },
+    open: true,
+    proxy: {
+      // Exporter Portal API - External exporters (port 3004)
+      '/api/exporter-api': {
+        target: 'http://localhost:3004',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/exporter-api/, '/api')
+      },
+      // Exporter Portal API - Legacy path (keep for backward compatibility)
+      '/api/exporter': {
+        target: 'http://localhost:3004',
+        changeOrigin: true,
+        // Don't rewrite - keep the full path
+      },
+      // Commercial Bank API - Banking operations (port 3001)
+      '/api/banker': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/banker/, '/api')
+      },
+      // National Bank API - Regulatory (port 3005)
+      '/api/nb-regulatory': {
+        target: 'http://localhost:3005',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/nb-regulatory/, '/api')
+      },
+      // ECTA API - Quality assurance (port 3003) - Route to gateway instead
+      '/api/ecta': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        // Don't rewrite - gateway handles /api/ecta/* paths
+      },
+      // Shipping Line API (port 3007)
+      '/api/shipping': {
+        target: 'http://localhost:3007',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/shipping/, '/api')
+      },
+      // Custom Authorities API (port 3002)
+      '/api/customs': {
+        target: 'http://localhost:3002',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/customs/, '/api')
+      },
+      // ECX API (port 3006)
+      '/api/ecx': {
+        target: 'http://localhost:3006',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/ecx/, '/api')
+      },
+      // ESW API - Electronic Single Window (port 3008)
+      '/api/esw': {
+        target: 'http://localhost:3008',
+        changeOrigin: true,
+        // Don't rewrite - ESW API expects /api/esw/* paths
+      },
+      // Auth routes - Coffee Export Gateway (port 3000)
+      '/api/auth': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        // Don't rewrite - keep the full path
+      },
+      // Legacy support - redirect to commercial bank
+      '/api-portal': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api-portal/, '/api')
+      },
+      // Default /api routes to commercial bank (port 3001)
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true
+      }
+    }
+  }
+})

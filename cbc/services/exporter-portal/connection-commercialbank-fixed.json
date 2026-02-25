@@ -1,0 +1,49 @@
+{
+  "name": "CommercialBank-network",
+  "version": "1.0.0",
+  "client": {
+    "organization": "CommercialBank",
+    "connection": {
+      "timeout": {
+        "peer": {
+          "endorser": "300"
+        }
+      }
+    }
+  },
+  "organizations": {
+    "CommercialBank": {
+      "mspid": "CommercialBankMSP",
+      "peers": [
+        "peer0.commercialbank.coffee-export.com"
+      ],
+      "certificateAuthorities": [
+        "ca.commercialbank.coffee-export.com"
+      ]
+    }
+  },
+  "peers": {
+    "peer0.commercialbank.coffee-export.com": {
+      "url": "grpcs://localhost:7051",
+      "tlsCACerts": {
+        "pem": "-----BEGIN CERTIFICATE-----\nMIICmjCCAkCgAwIBAgIRAKoAE1BAbG+Li+Ehx1F4MBowCgYIKoZIzj0EAwIwgZYx\nCzAJBgNVBAYTAlVTMRMwEQYDVQQIEwpDYWxpZm9ybmlhMRYwFAYDVQQHEw1TYW4g\nRnJhbmNpc2NvMSkwJwYDVQQKEyBjb21tZXJjaWFsYmFuay5jb2ZmZWUtZXhwb3J0\nLmNvbTEvMC0GA1UEAxMmdGxzY2EuY29tbWVyY2lhbGJhbmsuY29mZmVlLWV4cG9y\ndC5jb20wHhcNMjUxMTE0MTIzMzAwWhcNMzUxMTEyMTIzMzAwWjCBljELMAkGA1UE\nBhMCVVMxEzARBgNVBAgTCkNhbGlmb3JuaWExFjAUBgNVBAcTDVNhbiBGcmFuY2lz\nY28xKTAnBgNVBAoTIGNvbW1lcmNpYWxiYW5rLmNvZmZlZS1leHBvcnQuY29tMS8w\nLQYDVQQDEyZ0bHNjYS5jb21tZXJjaWFsYmFuay5jb2ZmZWUtZXhwb3J0LmNvbTBZ\nMBMGByqGSM49AgEGCCqGSM49AwEHA0IABFNSJtbcNQiFW8ccolqUA6hJJM8Jc2G7\no4UhXUDEh9iztmyjGslp9ylgNJJxvIzIk8rfRheQQ6lWZxu6q5d8k1qjbTBrMA4G\nA1UdDwEB/wQEAwIBpjAdBgNVHSUEFjAUBggrBgEFBQcDAgYIKwYBBQUHAwEwDwYD\nVR0TAQH/BAUwAwEB/zApBgNVHQ4EIgQgCXs52L5mMMwloO0XU2UhsCBDfe5g2KP8\n1xsei3SyLDEwCgYIKoZIzj0EAwIDSAAwRQIhAMIgTSfT4SQ6+Xeybe4r5IrKuxMI\nm42tvN8px+10JcizAiAbPJLJdPtrAXCx04YhLEOIrxwIMQ/QjkvpX5aNg8ns5A==\n-----END CERTIFICATE-----\n"
+      },
+      "grpcOptions": {
+        "ssl-target-name-override": "peer0.commercialbank.coffee-export.com",
+        "hostnameOverride": "peer0.commercialbank.coffee-export.com"
+      }
+    }
+  },
+  "certificateAuthorities": {
+    "ca.commercialbank.coffee-export.com": {
+      "url": "https://localhost:7054",
+      "caName": "ca.commercialbank",
+      "tlsCACerts": {
+        "pem": "-----BEGIN CERTIFICATE-----\nMIICWjCCAgGgAwIBAgIRAKfW0ZjqYS+HBZhGZp13syswCgYIKoZIzj0EAwIwgZMx\nCzAJBgNVBAYTAlVTMRMwEQYDVQQIEwpDYWxpZm9ybmlhMRYwFAYDVQQHEw1TYW4g\nRnJhbmNpc2NvMSkwJwYDVQQKEyBjb21tZXJjaWFsYmFuay5jb2ZmZWUtZXhwb3J0\nLmNvbTEsMCoGA1UEAxMjY2EuY29tbWVyY2lhbGJhbmsuY29mZmVlLWV4cG9ydC5j\nb20wHhcNMjUxMTE0MTIzMzAwWhcNMzUxMTEyMTIzMzAwWjB7MQswCQYDVQQGEwJV\nUzETMBEGA1UECBMKQ2FsaWZvcm5pYTEWMBQGA1UEBxMNU2FuIEZyYW5jaXNjbzEO\nMAwGA1UECxMFYWRtaW4xLzAtBgNVBAMMJkFkbWluQGNvbW1lcmNpYWxiYW5rLmNv\nZmZlZS1leHBvcnQuY29tMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEnQR0BqpU\nMPHwkU863J/V1dBb9zVA7U75eMMa4r6fAdkg4IUzljQl77+AkcvwzUUww7TkxSr9\nvyeduAw388ZIx6NNMEswDgYDVR0PAQH/BAQDAgeAMAwGA1UdEwEB/wQCMAAwKwYD\nVR0jBCQwIoAgmUHk5sKv1cKYc2IHWrbQTXdBn1Y/VIj2hjXkd6E5hQQwCgYIKoZ\nIzj0EAwIDRwAwRAIgcP1SW3ZLLnpDmmhQi3U1I7bdJXlzwvOEvwezEZKXbBICIC0P\nhz87aYRFS9JaO++1VMhPpLy31U+dlSRmSKJCx1rg\n-----END CERTIFICATE-----\n"
+      },
+      "httpOptions": {
+        "verify": false
+      }
+    }
+  }
+}

@@ -1,0 +1,214 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                    NPM INSTALL TROUBLESHOOTING GUIDE                       ║
+║                    EBUSY / EPERM Errors on Windows                         ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+COMMON ERROR:
+=============
+Error: EBUSY: resource busy or locked
+Error: EPERM: operation not permitted
+
+This happens when:
+- esbuild.exe is locked by a running dev server
+- Node.js processes are still running
+- Antivirus is scanning the files
+- Windows file indexing is accessing the files
+
+═══════════════════════════════════════════════════════════════════════════
+                        QUICK FIX (RECOMMENDED)
+═══════════════════════════════════════════════════════════════════════════
+
+Run: FIX-ESBUILD-LOCK.bat
+
+This script will:
+1. Stop all Node.js processes
+2. Wait for file locks to be released
+3. Clean npm cache
+4. Reinstall dependencies
+
+═══════════════════════════════════════════════════════════════════════════
+                        MANUAL FIX (IF SCRIPT FAILS)
+═══════════════════════════════════════════════════════════════════════════
+
+STEP 1: Stop All Node Processes
+--------------------------------
+Option A: Use Task Manager
+  1. Press Ctrl+Shift+Esc
+  2. Find all "Node.js" processes
+  3. Right-click → End Task
+
+Option B: Use Command Line
+  taskkill /F /IM node.exe
+
+STEP 2: Wait for File Locks to Release
+---------------------------------------
+  Wait 10-15 seconds after killing processes
+
+STEP 3: Clean npm Cache
+------------------------
+  cd coffee-export-gateway\frontend
+  npm cache clean --force
+
+STEP 4: Delete node_modules (if needed)
+----------------------------------------
+  rmdir /s /q coffee-export-gateway\frontend\node_modules
+
+STEP 5: Reinstall
+-----------------
+  npm install
+
+═══════════════════════════════════════════════════════════════════════════
+                        ALTERNATIVE SOLUTIONS
+═══════════════════════════════════════════════════════════════════════════
+
+SOLUTION 1: Restart Computer
+-----------------------------
+Sometimes the simplest solution:
+1. Close all terminals
+2. Restart computer
+3. Run: FIX-ESBUILD-LOCK.bat
+
+SOLUTION 2: Disable Antivirus Temporarily
+------------------------------------------
+If antivirus is locking files:
+1. Temporarily disable antivirus
+2. Run: npm install
+3. Re-enable antivirus
+4. Add node_modules to antivirus exclusions
+
+SOLUTION 3: Use Different Terminal
+-----------------------------------
+Try running as Administrator:
+1. Right-click Command Prompt
+2. Select "Run as Administrator"
+3. Navigate to project folder
+4. Run: FIX-ESBUILD-LOCK.bat
+
+SOLUTION 4: Install in Safe Mode
+---------------------------------
+For persistent issues:
+1. Boot Windows in Safe Mode
+2. Run: npm install
+3. Restart normally
+
+═══════════════════════════════════════════════════════════════════════════
+                        PREVENTION
+═══════════════════════════════════════════════════════════════════════════
+
+To avoid this issue in the future:
+
+1. Always Stop Services Before npm install
+   Run: STOP-ALL.bat
+   Wait: 5 seconds
+   Then: npm install
+
+2. Use START-ALL.bat
+   It automatically kills processes before starting
+
+3. Add Exclusions to Antivirus
+   Exclude these folders:
+   - C:\Users\Gu Da\coffee-export-blockchain\node_modules
+   - C:\Users\Gu Da\coffee-export-blockchain\coffee-export-gateway\node_modules
+   - C:\Users\Gu Da\coffee-export-blockchain\coffee-export-gateway\frontend\node_modules
+
+4. Disable Windows Indexing for node_modules
+   Right-click folder → Properties → Advanced
+   Uncheck "Allow files in this folder to have contents indexed"
+
+═══════════════════════════════════════════════════════════════════════════
+                        SPECIFIC ERROR SOLUTIONS
+═══════════════════════════════════════════════════════════════════════════
+
+ERROR: esbuild.exe EBUSY
+------------------------
+Cause: Dev server (Vite) is still running
+Fix: 
+  1. taskkill /F /IM node.exe
+  2. Wait 10 seconds
+  3. npm install
+
+ERROR: @mui/x-date-pickers EPERM
+---------------------------------
+Cause: Windows file permissions or indexing
+Fix:
+  1. Close all terminals
+  2. Delete node_modules manually in File Explorer
+  3. Run as Administrator: npm install
+
+ERROR: fast-check EPERM
+------------------------
+Cause: File is locked by another process
+Fix:
+  1. Restart computer
+  2. Run: FIX-ESBUILD-LOCK.bat
+
+ERROR: npm warn cleanup Failed to remove
+-----------------------------------------
+Cause: Files are locked during cleanup
+Fix:
+  This is usually just a warning, not an error
+  If install completes, you can ignore it
+  If install fails, run: FIX-ESBUILD-LOCK.bat
+
+═══════════════════════════════════════════════════════════════════════════
+                        VERIFICATION
+═══════════════════════════════════════════════════════════════════════════
+
+After fixing, verify installation:
+
+1. Check if node_modules exists:
+   dir coffee-export-gateway\frontend\node_modules
+
+2. Try starting the dev server:
+   cd coffee-export-gateway\frontend
+   npm run dev
+
+3. If it starts successfully, press Ctrl+C and run:
+   START-ALL.bat
+
+═══════════════════════════════════════════════════════════════════════════
+                        STILL NOT WORKING?
+═══════════════════════════════════════════════════════════════════════════
+
+If none of the above solutions work:
+
+1. Check Node.js Version
+   node --version
+   Should be: v24.12.0 or compatible
+
+2. Check npm Version
+   npm --version
+   Should be: 10.x or higher
+
+3. Try Different Node Version
+   Use nvm (Node Version Manager) to try different versions:
+   nvm install 20
+   nvm use 20
+   npm install
+
+4. Check Disk Space
+   Ensure you have at least 2GB free space
+
+5. Check File Path Length
+   Windows has a 260 character path limit
+   If your path is too long, move project closer to root:
+   C:\coffee-export-blockchain
+
+6. Last Resort: Fresh Clone
+   1. Backup your changes
+   2. Delete entire project folder
+   3. Clone repository again
+   4. Run: npm install in each directory
+
+═══════════════════════════════════════════════════════════════════════════
+                        QUICK REFERENCE
+═══════════════════════════════════════════════════════════════════════════
+
+Quick Fix:           FIX-ESBUILD-LOCK.bat
+Stop All Services:   STOP-ALL.bat
+Kill Node Processes: taskkill /F /IM node.exe
+Clean npm Cache:     npm cache clean --force
+Delete node_modules: rmdir /s /q node_modules
+Fresh Install:       npm install
+
+═══════════════════════════════════════════════════════════════════════════

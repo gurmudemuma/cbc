@@ -1,0 +1,286 @@
+services:
+  # ==================== Infrastructure ====================
+  
+  postgres:
+    image: postgres:14-alpine
+    container_name: coffee-postgres
+    environment:
+      POSTGRES_DB: coffee_export_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./cbc/services/shared/database/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./cbc/services/shared/database/migrations:/docker-entrypoint-initdb.d/migrations
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: coffee-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: coffee-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    volumes:
+      - zookeeper-data:/var/lib/zookeeper/data
+      - zookeeper-logs:/var/lib/zookeeper/log
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: coffee-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ==================== Hyperledger Fabric ====================
+  
+  chaincode-server:
+    build:
+      context: ./chaincode/ecta
+      dockerfile: Dockerfile
+    container_name: coffee-chaincode
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: 3001
+      NODE_ENV: production
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ==================== Gateway Service ====================
+  
+  gateway:
+    build:
+      context: ./coffee-export-gateway
+      dockerfile: Dockerfile
+    container_name: coffee-gateway
+    depends_on:
+      - chaincode-server
+      - postgres
+      - kafka
+      - redis
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      CHAINCODE_URL: http://chaincode-server:3001
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: coffee_export_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      KAFKA_BROKERS: kafka:9092
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ==================== Blockchain Bridge ====================
+  
+  blockchain-bridge:
+    build:
+      context: ./services/blockchain-bridge
+      dockerfile: Dockerfile
+    container_name: coffee-bridge
+    depends_on:
+      - chaincode-server
+      - postgres
+      - kafka
+      - redis
+    ports:
+      - "3008:3008"
+    environment:
+      PORT: 3008
+      CHAINCODE_URL: http://chaincode-server:3001
+      ECTA_API_URL: disabled
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: coffee_export_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      KAFKA_BROKERS: kafka:9092
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      RECONCILIATION_ENABLED: "true"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3008/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ==================== CBC Services ====================
+  
+  ecta-service:
+    build:
+      context: ./cbc
+      dockerfile: services/ecta/Dockerfile
+    container_name: coffee-ecta
+    depends_on:
+      - postgres
+      - kafka
+    ports:
+      - "3003:3003"
+    environment:
+      PORT: 3003
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: coffee_export_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      KAFKA_BROKERS: kafka:9092
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  commercial-bank-service:
+    build:
+      context: ./cbc
+      dockerfile: services/commercial-bank/Dockerfile
+    container_name: coffee-commercial-bank
+    depends_on:
+      - postgres
+      - kafka
+    ports:
+      - "3002:3002"
+    environment:
+      PORT: 3002
+      DB_HOST: postgres
+      KAFKA_BROKERS: kafka:9092
+
+  national-bank-service:
+    build:
+      context: ./cbc
+      dockerfile: services/national-bank/Dockerfile
+    container_name: coffee-national-bank
+    depends_on:
+      - postgres
+      - kafka
+    ports:
+      - "3004:3004"
+    environment:
+      PORT: 3004
+      DB_HOST: postgres
+      KAFKA_BROKERS: kafka:9092
+
+  customs-service:
+    build:
+      context: ./cbc
+      dockerfile: services/custom-authorities/Dockerfile
+    container_name: coffee-customs
+    depends_on:
+      - postgres
+      - kafka
+    ports:
+      - "3005:3005"
+    environment:
+      PORT: 3005
+      DB_HOST: postgres
+      KAFKA_BROKERS: kafka:9092
+
+  ecx-service:
+    build:
+      context: ./cbc
+      dockerfile: services/ecx/Dockerfile
+    container_name: coffee-ecx
+    depends_on:
+      - postgres
+      - kafka
+    ports:
+      - "3006:3006"
+    environment:
+      PORT: 3006
+      DB_HOST: postgres
+      KAFKA_BROKERS: kafka:9092
+
+  shipping-service:
+    build:
+      context: ./cbc
+      dockerfile: services/shipping-line/Dockerfile
+    container_name: coffee-shipping
+    depends_on:
+      - postgres
+      - kafka
+    ports:
+      - "3007:3007"
+    environment:
+      PORT: 3007
+      DB_HOST: postgres
+      KAFKA_BROKERS: kafka:9092
+
+  # ==================== Frontend ====================
+  
+  frontend:
+    build:
+      context: ./cbc
+      dockerfile: frontend/Dockerfile
+    container_name: coffee-frontend
+    depends_on:
+      - gateway
+      - blockchain-bridge
+      - ecta-service
+    ports:
+      - "5173:80"
+    environment:
+      VITE_API_URL: http://localhost:3000
+      VITE_ENV: production
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  postgres-data:
+  redis-data:
+  zookeeper-data:
+  zookeeper-logs:
+  kafka-data:
+
+networks:
+  default:
+    name: coffee-export-network

@@ -1,0 +1,31 @@
+FROM node:20-alpine
+
+# Configure npm for better reliability
+RUN npm config set fetch-retry-mintimeout 20000 && \
+    npm config set fetch-retry-maxtimeout 120000 && \
+    npm config set fetch-retries 5
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies with timeout handling
+RUN npm ci --omit=dev --prefer-offline || npm ci --omit=dev
+
+# Copy application files
+COPY . .
+
+# Create wallets directory
+RUN mkdir -p wallets
+
+# Expose port
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+
+# Start application
+CMD ["node", "src/server.js"]

@@ -1,0 +1,11 @@
+{
+  "username": "testuser456",
+  "password": "test123",
+  "email": "test456@example.com",
+  "companyName": "Test Company Ltd",
+  "tin": "1234567890",
+  "capitalETB": 50000000,
+  "phone": "0911234567",
+  "address": "Addis Ababa, Ethiopia",
+  "contactPerson": "John Doe"
+}

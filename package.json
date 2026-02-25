@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "axios": "^1.13.5"
+  },
+  "devDependencies": {
+    "fast-check": "^4.5.3"
+  }
+}

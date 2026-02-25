@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  gateway:
+    build: .
+    container_name: coffee-export-gateway
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRES_IN=24h
+      - CHANNEL_NAME=coffeechannel
+      - CHAINCODE_NAME=ecta
+      - FABRIC_NETWORK_AS_LOCALHOST=false
+      - CA_ADMIN_USER=admin
+      - CA_ADMIN_PASSWORD=adminpw
+      - ORG_NAME=ECTAOrg
+      - ORG_MSP_ID=ECTAOrgMSP
+    volumes:
+      - ./wallets:/app/wallets
+      - ../../crypto-config:/app/crypto-config:ro
+    networks:
+      - fabric-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  fabric-network:
+    external: true

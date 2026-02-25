@@ -1,0 +1,564 @@
+version: '3.8'
+
+networks:
+  fabric-network:
+    name: fabric-network
+
+volumes:
+  orderer1.orderer.example.com:
+  orderer2.orderer.example.com:
+  orderer3.orderer.example.com:
+  peer0.ecta.example.com:
+  peer1.ecta.example.com:
+  peer0.bank.example.com:
+  peer0.nbe.example.com:
+  peer0.customs.example.com:
+  peer0.shipping.example.com:
+  couchdb0.ecta:
+  couchdb1.ecta:
+  couchdb0.bank:
+  couchdb0.nbe:
+  couchdb0.customs:
+  couchdb0.shipping:
+
+services:
+  # ============================================================================
+  # ORDERER NODES (3 for Raft consensus)
+  # ============================================================================
+  
+  orderer1.orderer.example.com:
+    container_name: orderer1.orderer.example.com
+    image: hyperledger/fabric-orderer:2.5
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - ORDERER_GENERAL_LISTENADDRESS=0.0.0.0
+      - ORDERER_GENERAL_LISTENPORT=7050
+      - ORDERER_GENERAL_LOCALMSPID=OrdererMSP
+      - ORDERER_GENERAL_LOCALMSPDIR=/var/hyperledger/orderer/msp
+      - ORDERER_GENERAL_TLS_ENABLED=true
+      - ORDERER_GENERAL_TLS_PRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_GENERAL_TLS_CERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_GENERAL_TLS_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_GENERAL_CLUSTER_CLIENTCERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_GENERAL_CLUSTER_CLIENTPRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_GENERAL_CLUSTER_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_GENERAL_BOOTSTRAPMETHOD=none
+      - ORDERER_CHANNELPARTICIPATION_ENABLED=true
+      - ORDERER_ADMIN_TLS_ENABLED=true
+      - ORDERER_ADMIN_TLS_CERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_ADMIN_TLS_PRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_ADMIN_TLS_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_ADMIN_TLS_CLIENTROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_ADMIN_LISTENADDRESS=0.0.0.0:7053
+      - ORDERER_OPERATIONS_LISTENADDRESS=orderer1.orderer.example.com:9443
+      - ORDERER_METRICS_PROVIDER=prometheus
+    working_dir: /root
+    command: orderer
+    volumes:
+      - ./crypto-config/ordererOrganizations/orderer.example.com/orderers/orderer1.orderer.example.com/msp:/var/hyperledger/orderer/msp
+      - ./crypto-config/ordererOrganizations/orderer.example.com/orderers/orderer1.orderer.example.com/tls:/var/hyperledger/orderer/tls
+      - orderer1.orderer.example.com:/var/hyperledger/production/orderer
+    ports:
+      - 7050:7050
+      - 7053:7053
+      - 9443:9443
+    networks:
+      - fabric-network
+
+  orderer2.orderer.example.com:
+    container_name: orderer2.orderer.example.com
+    image: hyperledger/fabric-orderer:2.5
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - ORDERER_GENERAL_LISTENADDRESS=0.0.0.0
+      - ORDERER_GENERAL_LISTENPORT=8050
+      - ORDERER_GENERAL_LOCALMSPID=OrdererMSP
+      - ORDERER_GENERAL_LOCALMSPDIR=/var/hyperledger/orderer/msp
+      - ORDERER_GENERAL_TLS_ENABLED=true
+      - ORDERER_GENERAL_TLS_PRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_GENERAL_TLS_CERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_GENERAL_TLS_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_GENERAL_CLUSTER_CLIENTCERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_GENERAL_CLUSTER_CLIENTPRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_GENERAL_CLUSTER_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_GENERAL_BOOTSTRAPMETHOD=none
+      - ORDERER_CHANNELPARTICIPATION_ENABLED=true
+      - ORDERER_ADMIN_TLS_ENABLED=true
+      - ORDERER_ADMIN_TLS_CERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_ADMIN_TLS_PRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_ADMIN_TLS_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_ADMIN_TLS_CLIENTROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_ADMIN_LISTENADDRESS=0.0.0.0:8053
+      - ORDERER_OPERATIONS_LISTENADDRESS=orderer2.orderer.example.com:9444
+      - ORDERER_METRICS_PROVIDER=prometheus
+    working_dir: /root
+    command: orderer
+    volumes:
+      - ./crypto-config/ordererOrganizations/orderer.example.com/orderers/orderer2.orderer.example.com/msp:/var/hyperledger/orderer/msp
+      - ./crypto-config/ordererOrganizations/orderer.example.com/orderers/orderer2.orderer.example.com/tls:/var/hyperledger/orderer/tls
+      - orderer2.orderer.example.com:/var/hyperledger/production/orderer
+    ports:
+      - 8050:8050
+      - 8053:8053
+      - 9444:9444
+    networks:
+      - fabric-network
+
+  orderer3.orderer.example.com:
+    container_name: orderer3.orderer.example.com
+    image: hyperledger/fabric-orderer:2.5
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - ORDERER_GENERAL_LISTENADDRESS=0.0.0.0
+      - ORDERER_GENERAL_LISTENPORT=9050
+      - ORDERER_GENERAL_LOCALMSPID=OrdererMSP
+      - ORDERER_GENERAL_LOCALMSPDIR=/var/hyperledger/orderer/msp
+      - ORDERER_GENERAL_TLS_ENABLED=true
+      - ORDERER_GENERAL_TLS_PRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_GENERAL_TLS_CERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_GENERAL_TLS_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_GENERAL_CLUSTER_CLIENTCERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_GENERAL_CLUSTER_CLIENTPRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_GENERAL_CLUSTER_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_GENERAL_BOOTSTRAPMETHOD=none
+      - ORDERER_CHANNELPARTICIPATION_ENABLED=true
+      - ORDERER_ADMIN_TLS_ENABLED=true
+      - ORDERER_ADMIN_TLS_CERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_ADMIN_TLS_PRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_ADMIN_TLS_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_ADMIN_TLS_CLIENTROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_ADMIN_LISTENADDRESS=0.0.0.0:9053
+      - ORDERER_OPERATIONS_LISTENADDRESS=orderer3.orderer.example.com:9445
+      - ORDERER_METRICS_PROVIDER=prometheus
+    working_dir: /root
+    command: orderer
+    volumes:
+      - ./crypto-config/ordererOrganizations/orderer.example.com/orderers/orderer3.orderer.example.com/msp:/var/hyperledger/orderer/msp
+      - ./crypto-config/ordererOrganizations/orderer.example.com/orderers/orderer3.orderer.example.com/tls:/var/hyperledger/orderer/tls
+      - orderer3.orderer.example.com:/var/hyperledger/production/orderer
+    ports:
+      - 9050:9050
+      - 9053:9053
+      - 9445:9445
+    networks:
+      - fabric-network
+
+  # ============================================================================
+  # COUCHDB STATE DATABASES
+  # ============================================================================
+  
+  couchdb0.ecta:
+    container_name: couchdb0.ecta
+    image: couchdb:3.3
+    environment:
+      - COUCHDB_USER=admin
+      - COUCHDB_PASSWORD=adminpw
+    ports:
+      - 5984:5984
+    volumes:
+      - couchdb0.ecta:/opt/couchdb/data
+    networks:
+      - fabric-network
+
+  couchdb1.ecta:
+    container_name: couchdb1.ecta
+    image: couchdb:3.3
+    environment:
+      - COUCHDB_USER=admin
+      - COUCHDB_PASSWORD=adminpw
+    ports:
+      - 6984:5984
+    volumes:
+      - couchdb1.ecta:/opt/couchdb/data
+    networks:
+      - fabric-network
+
+  couchdb0.bank:
+    container_name: couchdb0.bank
+    image: couchdb:3.3
+    environment:
+      - COUCHDB_USER=admin
+      - COUCHDB_PASSWORD=adminpw
+    ports:
+      - 7984:5984
+    volumes:
+      - couchdb0.bank:/opt/couchdb/data
+    networks:
+      - fabric-network
+
+  couchdb0.nbe:
+    container_name: couchdb0.nbe
+    image: couchdb:3.3
+    environment:
+      - COUCHDB_USER=admin
+      - COUCHDB_PASSWORD=adminpw
+    ports:
+      - 8984:5984
+    volumes:
+      - couchdb0.nbe:/opt/couchdb/data
+    networks:
+      - fabric-network
+
+  couchdb0.customs:
+    container_name: couchdb0.customs
+    image: couchdb:3.3
+    environment:
+      - COUCHDB_USER=admin
+      - COUCHDB_PASSWORD=adminpw
+    ports:
+      - 9984:5984
+    volumes:
+      - couchdb0.customs:/opt/couchdb/data
+    networks:
+      - fabric-network
+
+  couchdb0.shipping:
+    container_name: couchdb0.shipping
+    image: couchdb:3.3
+    environment:
+      - COUCHDB_USER=admin
+      - COUCHDB_PASSWORD=adminpw
+    ports:
+      - 10984:5984
+    volumes:
+      - couchdb0.shipping:/opt/couchdb/data
+    networks:
+      - fabric-network
+
+  # ============================================================================
+  # ECTA ORGANIZATION (2 peers for HA)
+  # ============================================================================
+  
+  peer0.ecta.example.com:
+    container_name: peer0.ecta.example.com
+    image: hyperledger/fabric-peer:2.5
+    labels:
+      service: hyperledger-fabric
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_PROFILE_ENABLED=false
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+      - CORE_PEER_ID=peer0.ecta.example.com
+      - CORE_PEER_ADDRESS=peer0.ecta.example.com:7051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:7051
+      - CORE_PEER_CHAINCODEADDRESS=peer0.ecta.example.com:7052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer1.ecta.example.com:8051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.ecta.example.com:7051
+      - CORE_PEER_LOCALMSPID=ECTAMSP
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/fabric/msp
+      - CORE_OPERATIONS_LISTENADDRESS=peer0.ecta.example.com:9446
+      - CORE_METRICS_PROVIDER=prometheus
+      - CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG={"peername":"peer0ecta"}
+      - CORE_CHAINCODE_EXECUTETIMEOUT=300s
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=fabric-network
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb0.ecta:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
+    volumes:
+      - /var/run/docker.sock:/host/var/run/docker.sock
+      - ./crypto-config/peerOrganizations/ecta.example.com/peers/peer0.ecta.example.com:/etc/hyperledger/fabric
+      - ./config/core.yaml:/etc/hyperledger/fabric/core.yaml
+      - peer0.ecta.example.com:/var/hyperledger/production
+    working_dir: /root
+    command: peer node start
+    ports:
+      - 7051:7051
+      - 9446:9446
+    depends_on:
+      - couchdb0.ecta
+    networks:
+      - fabric-network
+
+  peer1.ecta.example.com:
+    container_name: peer1.ecta.example.com
+    image: hyperledger/fabric-peer:2.5
+    labels:
+      service: hyperledger-fabric
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_PROFILE_ENABLED=false
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+      - CORE_PEER_ID=peer1.ecta.example.com
+      - CORE_PEER_ADDRESS=peer1.ecta.example.com:8051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:8051
+      - CORE_PEER_CHAINCODEADDRESS=peer1.ecta.example.com:8052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:8052
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.ecta.example.com:7051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer1.ecta.example.com:8051
+      - CORE_PEER_LOCALMSPID=ECTAMSP
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/fabric/msp
+      - CORE_OPERATIONS_LISTENADDRESS=peer1.ecta.example.com:9447
+      - CORE_METRICS_PROVIDER=prometheus
+      - CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG={"peername":"peer1ecta"}
+      - CORE_CHAINCODE_EXECUTETIMEOUT=300s
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=fabric-network
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb1.ecta:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
+    volumes:
+      - /var/run/docker.sock:/host/var/run/docker.sock
+      - ./crypto-config/peerOrganizations/ecta.example.com/peers/peer1.ecta.example.com:/etc/hyperledger/fabric
+      - ./config/core.yaml:/etc/hyperledger/fabric/core.yaml
+      - peer1.ecta.example.com:/var/hyperledger/production
+    working_dir: /root
+    command: peer node start
+    ports:
+      - 8051:8051
+      - 9447:9447
+    depends_on:
+      - couchdb1.ecta
+    networks:
+      - fabric-network
+
+  # ============================================================================
+  # BANK ORGANIZATION
+  # ============================================================================
+  
+  peer0.bank.example.com:
+    container_name: peer0.bank.example.com
+    image: hyperledger/fabric-peer:2.5
+    labels:
+      service: hyperledger-fabric
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_PROFILE_ENABLED=false
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+      - CORE_PEER_ID=peer0.bank.example.com
+      - CORE_PEER_ADDRESS=peer0.bank.example.com:9051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:9051
+      - CORE_PEER_CHAINCODEADDRESS=peer0.bank.example.com:9052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:9052
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.bank.example.com:9051
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.bank.example.com:9051
+      - CORE_PEER_LOCALMSPID=BankMSP
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/fabric/msp
+      - CORE_OPERATIONS_LISTENADDRESS=peer0.bank.example.com:9448
+      - CORE_METRICS_PROVIDER=prometheus
+      - CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG={"peername":"peer0bank"}
+      - CORE_CHAINCODE_EXECUTETIMEOUT=300s
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=fabric-network
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb0.bank:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
+    volumes:
+      - /var/run/docker.sock:/host/var/run/docker.sock
+      - ./crypto-config/peerOrganizations/bank.example.com/peers/peer0.bank.example.com:/etc/hyperledger/fabric
+      - ./config/core.yaml:/etc/hyperledger/fabric/core.yaml
+      - peer0.bank.example.com:/var/hyperledger/production
+    working_dir: /root
+    command: peer node start
+    ports:
+      - 9051:9051
+      - 9448:9448
+    depends_on:
+      - couchdb0.bank
+    networks:
+      - fabric-network
+
+  # ============================================================================
+  # NBE ORGANIZATION
+  # ============================================================================
+  
+  peer0.nbe.example.com:
+    container_name: peer0.nbe.example.com
+    image: hyperledger/fabric-peer:2.5
+    labels:
+      service: hyperledger-fabric
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_PROFILE_ENABLED=false
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+      - CORE_PEER_ID=peer0.nbe.example.com
+      - CORE_PEER_ADDRESS=peer0.nbe.example.com:10051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:10051
+      - CORE_PEER_CHAINCODEADDRESS=peer0.nbe.example.com:10052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:10052
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.nbe.example.com:10051
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.nbe.example.com:10051
+      - CORE_PEER_LOCALMSPID=NBEMSP
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/fabric/msp
+      - CORE_OPERATIONS_LISTENADDRESS=peer0.nbe.example.com:9449
+      - CORE_METRICS_PROVIDER=prometheus
+      - CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG={"peername":"peer0nbe"}
+      - CORE_CHAINCODE_EXECUTETIMEOUT=300s
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=fabric-network
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb0.nbe:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
+    volumes:
+      - /var/run/docker.sock:/host/var/run/docker.sock
+      - ./crypto-config/peerOrganizations/nbe.example.com/peers/peer0.nbe.example.com:/etc/hyperledger/fabric
+      - ./config/core.yaml:/etc/hyperledger/fabric/core.yaml
+      - peer0.nbe.example.com:/var/hyperledger/production
+    working_dir: /root
+    command: peer node start
+    ports:
+      - 10051:10051
+      - 9449:9449
+    depends_on:
+      - couchdb0.nbe
+    networks:
+      - fabric-network
+
+  # ============================================================================
+  # CUSTOMS ORGANIZATION
+  # ============================================================================
+  
+  peer0.customs.example.com:
+    container_name: peer0.customs.example.com
+    image: hyperledger/fabric-peer:2.5
+    labels:
+      service: hyperledger-fabric
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_PROFILE_ENABLED=false
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+      - CORE_PEER_ID=peer0.customs.example.com
+      - CORE_PEER_ADDRESS=peer0.customs.example.com:11051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:11051
+      - CORE_PEER_CHAINCODEADDRESS=peer0.customs.example.com:11052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:11052
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.customs.example.com:11051
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.customs.example.com:11051
+      - CORE_PEER_LOCALMSPID=CustomsMSP
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/fabric/msp
+      - CORE_OPERATIONS_LISTENADDRESS=peer0.customs.example.com:9450
+      - CORE_METRICS_PROVIDER=prometheus
+      - CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG={"peername":"peer0customs"}
+      - CORE_CHAINCODE_EXECUTETIMEOUT=300s
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=fabric-network
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb0.customs:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
+    volumes:
+      - /var/run/docker.sock:/host/var/run/docker.sock
+      - ./crypto-config/peerOrganizations/customs.example.com/peers/peer0.customs.example.com:/etc/hyperledger/fabric
+      - ./config/core.yaml:/etc/hyperledger/fabric/core.yaml
+      - peer0.customs.example.com:/var/hyperledger/production
+    working_dir: /root
+    command: peer node start
+    ports:
+      - 11051:11051
+      - 9450:9450
+    depends_on:
+      - couchdb0.customs
+    networks:
+      - fabric-network
+
+  # ============================================================================
+  # SHIPPING ORGANIZATION
+  # ============================================================================
+  
+  peer0.shipping.example.com:
+    container_name: peer0.shipping.example.com
+    image: hyperledger/fabric-peer:2.5
+    labels:
+      service: hyperledger-fabric
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_PROFILE_ENABLED=false
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+      - CORE_PEER_ID=peer0.shipping.example.com
+      - CORE_PEER_ADDRESS=peer0.shipping.example.com:12051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:12051
+      - CORE_PEER_CHAINCODEADDRESS=peer0.shipping.example.com:12052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:12052
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.shipping.example.com:12051
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.shipping.example.com:12051
+      - CORE_PEER_LOCALMSPID=ShippingMSP
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/fabric/msp
+      - CORE_OPERATIONS_LISTENADDRESS=peer0.shipping.example.com:9451
+      - CORE_METRICS_PROVIDER=prometheus
+      - CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG={"peername":"peer0shipping"}
+      - CORE_CHAINCODE_EXECUTETIMEOUT=300s
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=fabric-network
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb0.shipping:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
+    volumes:
+      - /var/run/docker.sock:/host/var/run/docker.sock
+      - ./crypto-config/peerOrganizations/shipping.example.com/peers/peer0.shipping.example.com:/etc/hyperledger/fabric
+      - ./config/core.yaml:/etc/hyperledger/fabric/core.yaml
+      - peer0.shipping.example.com:/var/hyperledger/production
+    working_dir: /root
+    command: peer node start
+    ports:
+      - 12051:12051
+      - 9451:9451
+    depends_on:
+      - couchdb0.shipping
+    networks:
+      - fabric-network
+
+  # ============================================================================
+  # CLI TOOL (for network management)
+  # ============================================================================
+  
+  cli:
+    container_name: cli
+    image: hyperledger/fabric-tools:2.5
+    labels:
+      service: hyperledger-fabric
+    tty: true
+    stdin_open: true
+    environment:
+      - GOPATH=/opt/gopath
+      - FABRIC_LOGGING_SPEC=INFO
+      - FABRIC_CFG_PATH=/etc/hyperledger/configtx
+      - CORE_PEER_ID=cli
+      - CORE_PEER_ADDRESS=peer0.ecta.example.com:7051
+      - CORE_PEER_LOCALMSPID=ECTAMSP
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_CERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/ecta.example.com/peers/peer0.ecta.example.com/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/ecta.example.com/peers/peer0.ecta.example.com/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/ecta.example.com/peers/peer0.ecta.example.com/tls/ca.crt
+      - CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/ecta.example.com/users/Admin@ecta.example.com/msp
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: /bin/bash
+    volumes:
+      - ./crypto-config:/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/
+      - ./chaincode:/opt/gopath/src/github.com/hyperledger/fabric/chaincode
+      - ./config:/etc/hyperledger/configtx
+    depends_on:
+      - orderer1.orderer.example.com
+      - orderer2.orderer.example.com
+      - orderer3.orderer.example.com
+      - peer0.ecta.example.com
+      - peer1.ecta.example.com
+      - peer0.bank.example.com
+      - peer0.nbe.example.com
+      - peer0.customs.example.com
+      - peer0.shipping.example.com
+    networks:
+      - fabric-network

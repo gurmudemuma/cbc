@@ -1,0 +1,41 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "skipLibCheck": true,
+    "noEmitOnError": false,
+    "baseUrl": ".",
+    "paths": {
+      "@shared/*": [
+        "../shared/*"
+      ],
+      "@controllers/*": [
+        "../shared/controllers/*"
+      ],
+      "@middleware/*": [
+        "../shared/middleware/*"
+      ],
+      "@models/*": [
+        "../shared/models/*"
+      ],
+      "@services/*": [
+        "../shared/services/*"
+      ],
+      "@utils/*": [
+        "../shared/utils/*"
+      ],
+      "@types/*": [
+        "../shared/types/*"
+      ]
+    }
+  },
+  "include": [
+    "src/**/*",
+    "../shared/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts"
+  ]
+}
