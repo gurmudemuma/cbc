@@ -37,37 +37,7 @@ echo.
 
 REM Create initial commit
 echo [3/3] Creating initial commit...
-git commit -m "feat: Ethiopian Coffee Export Blockchain System
-
-Complete hybrid blockchain system for coffee export management
-
-Features:
-- Business types registration with dynamic capital requirements
-  * Private Limited Company: 50M ETB
-  * Union/Cooperative: 15M ETB
-  * Individual Exporter: 10M ETB
-  * Farmer Cooperative: 5M ETB
-
-- Hyperledger Fabric blockchain network
-  * 3 Orderers, 6 Peers across 6 organizations
-  * Smart contracts for export workflow
-  * CouchDB state databases
-
-- Application services
-  * Gateway API with business validation
-  * Blockchain Bridge for data synchronization
-  * CBC Services (ECTA, Banks, Customs, ECX, Shipping)
-  * React frontend with Material-UI
-
-- Infrastructure
-  * PostgreSQL database
-  * Redis cache
-  * Kafka message broker
-
-- Single command deployment
-  * START-HYBRID.bat - Start complete system
-  * STOP-HYBRID.bat - Stop all services
-  * REBUILD-FRONTEND.bat - Rebuild frontend only"
+git commit -m "feat: Ethiopian Coffee Export Blockchain System" -m "Complete hybrid blockchain system for coffee export management" -m "Features:" -m "- Business types registration with dynamic capital requirements" -m "- Hyperledger Fabric blockchain network (3 Orderers, 6 Peers)" -m "- Application services (Gateway, Bridge, CBC Services)" -m "- Infrastructure (PostgreSQL, Redis, Kafka)" -m "- Single command deployment (START-HYBRID.bat)"
 
 if errorlevel 1 (
     echo   ✗ Failed to create commit
