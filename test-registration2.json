@@ -1,0 +1,12 @@
+{
+  "username": "testuser456",
+  "password": "test123",
+  "email": "testuser456@test.com",
+  "phone": "+251911222222",
+  "companyName": "Test Coffee Export Ltd",
+  "tin": "TIN_TEST_456",
+  "capitalETB": 50000000,
+  "address": "Addis Ababa",
+  "contactPerson": "Test Manager",
+  "businessType": "PRIVATE_EXPORTER"
+}

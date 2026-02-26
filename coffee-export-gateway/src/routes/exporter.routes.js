@@ -618,17 +618,26 @@ router.post('/taster/register', authenticateToken, async (req, res) => {
       const profileStatus = profile?.preRegistrationStatus?.profile;
       const profileApproved = profileStatus === 'approved' || profileStatus === 'APPROVED';
       
+      console.log('Taster registration - Profile check:', {
+        exporterId,
+        profileStatus,
+        profileApproved,
+        fullProfile: profile
+      });
+      
       if (!profileApproved) {
-        return res.status(403).json({ 
+        return res.status(400).json({ 
           error: 'Profile must be approved before registering taster',
-          requiredStep: 'profile_approval'
+          requiredStep: 'profile_approval',
+          currentStatus: profileStatus
         });
       }
     } catch (error) {
       console.log('Profile check error:', error.message);
-      return res.status(403).json({ 
-        error: 'Profile must be approved before registering taster',
-        requiredStep: 'profile_approval'
+      return res.status(400).json({ 
+        error: 'Profile must be approved before registering taster. Please complete profile registration first.',
+        requiredStep: 'profile_approval',
+        details: error.message
       });
     }
     
@@ -680,28 +689,28 @@ router.post('/competence/apply', authenticateToken, async (req, res) => {
       const tasterApproved = preReg.taster === 'approved' || preReg.taster === 'APPROVED';
       
       if (!profileApproved) {
-        return res.status(403).json({ 
+        return res.status(400).json({ 
           error: 'Profile must be approved before applying for competence certificate',
           requiredStep: 'profile_approval'
         });
       }
       
       if (!labApproved) {
-        return res.status(403).json({ 
+        return res.status(400).json({ 
           error: 'Laboratory must be approved before applying for competence certificate',
           requiredStep: 'laboratory_approval'
         });
       }
       
       if (!tasterApproved) {
-        return res.status(403).json({ 
+        return res.status(400).json({ 
           error: 'Taster must be approved before applying for competence certificate',
           requiredStep: 'taster_approval'
         });
       }
     } catch (error) {
       console.log('Prerequisites check error:', error.message);
-      return res.status(403).json({ 
+      return res.status(400).json({ 
         error: 'Prerequisites not met. Profile, Laboratory, and Taster must be approved.',
         requiredStep: 'prerequisites'
       });

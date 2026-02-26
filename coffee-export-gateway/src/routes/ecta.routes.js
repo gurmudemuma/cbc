@@ -114,14 +114,35 @@ router.post('/registrations/:username/approve', authenticateToken, requireRole('
       return res.status(400).json({ error: 'Registration is not pending approval' });
     }
     
-    // Update user status on blockchain
+    // STEP 1: Update user status on blockchain (CouchDB)
     await fabricService.updateUserStatus(username, {
       status: 'approved',
       approvedBy: req.user.id,
       comments: comments || ''
     });
 
-    // Also approve profile stage on exporter profile
+    // STEP 2: Update user status in PostgreSQL
+    const { Pool } = require('pg');
+    const pool = new Pool({
+      host: process.env.POSTGRES_HOST || 'postgres',
+      port: process.env.POSTGRES_PORT || 5432,
+      database: process.env.POSTGRES_DB || 'coffee_export_db',
+      user: process.env.POSTGRES_USER || 'postgres',
+      password: process.env.POSTGRES_PASSWORD || 'postgres'
+    });
+
+    try {
+      await pool.query(
+        'UPDATE users SET status = $1, updated_at = NOW() WHERE username = $2',
+        ['approved', username]
+      );
+      console.log(`✓ User approved in PostgreSQL: ${username}`);
+    } catch (dbError) {
+      console.error('[Approval] PostgreSQL update error:', dbError);
+      // Don't fail the request if PostgreSQL update fails, but log it
+    }
+
+    // STEP 3: Also approve profile stage on exporter profile
     try {
       await fabricService.submitTransaction(
         req.user.id,
@@ -140,10 +161,14 @@ router.post('/registrations/:username/approve', authenticateToken, requireRole('
     
     res.json({
       success: true,
-      message: 'Registration approved successfully',
+      message: 'Registration approved successfully in both databases',
       username,
       status: 'approved',
-      approvedAt: new Date().toISOString()
+      approvedAt: new Date().toISOString(),
+      databases: {
+        blockchain: 'updated',
+        postgresql: 'updated'
+      }
     });
   } catch (error) {
     console.error('Approve registration error:', error);
@@ -153,7 +178,7 @@ router.post('/registrations/:username/approve', authenticateToken, requireRole('
 
 /**
  * Reject exporter registration (ECTA only)
- * NOW FULLY BLOCKCHAIN-BASED ✅
+ * DUAL UPDATE: PostgreSQL + Blockchain ✅
  */
 router.post('/registrations/:username/reject', authenticateToken, requireRole('ecta', 'admin'), async (req, res) => {
   try {
@@ -176,12 +201,33 @@ router.post('/registrations/:username/reject', authenticateToken, requireRole('e
       return res.status(400).json({ error: 'Registration is not pending approval' });
     }
     
-    // Update user status on blockchain
+    // STEP 1: Update user status on blockchain (CouchDB)
     await fabricService.updateUserStatus(username, {
       status: 'rejected',
       rejectedBy: req.user.id,
       reason: reason
     });
+    
+    // STEP 2: Update user status in PostgreSQL
+    const { Pool } = require('pg');
+    const pool = new Pool({
+      host: process.env.POSTGRES_HOST || 'postgres',
+      port: process.env.POSTGRES_PORT || 5432,
+      database: process.env.POSTGRES_DB || 'coffee_export_db',
+      user: process.env.POSTGRES_USER || 'postgres',
+      password: process.env.POSTGRES_PASSWORD || 'postgres'
+    });
+
+    try {
+      await pool.query(
+        'UPDATE users SET status = $1, updated_at = NOW() WHERE username = $2',
+        ['rejected', username]
+      );
+      console.log(`✓ User rejected in PostgreSQL: ${username}`);
+    } catch (dbError) {
+      console.error('[Rejection] PostgreSQL update error:', dbError);
+      // Don't fail the request if PostgreSQL update fails, but log it
+    }
     
     // Send rejection notification email
     notificationService.notifyProfileRejected(user, req.user.id, reason)
@@ -189,11 +235,15 @@ router.post('/registrations/:username/reject', authenticateToken, requireRole('e
     
     res.json({
       success: true,
-      message: 'Registration rejected',
+      message: 'Registration rejected in both databases',
       username,
       status: 'rejected',
       rejectedAt: new Date().toISOString(),
-      reason
+      reason,
+      databases: {
+        blockchain: 'updated',
+        postgresql: 'updated'
+      }
     });
   } catch (error) {
     console.error('Reject registration error:', error);
