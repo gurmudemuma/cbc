@@ -3,7 +3,7 @@ Organizations:
   - &OrdererOrg
       Name: OrdererOrg
       ID: OrdererMSP
-      MSPDir: /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/orderer.example.com/msp
+      MSPDir: /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/ordererOrganizations/orderer.example.com/msp
       Policies:
         Readers:
           Type: Signature
@@ -19,10 +19,10 @@ Organizations:
         - orderer2.orderer.example.com:8050
         - orderer3.orderer.example.com:9050
 
-  - &ECTAOrg
-      Name: ECTAOrg
+  - &ECTA
+      Name: ECTAMSP
       ID: ECTAMSP
-      MSPDir: /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/ecta.example.com/msp
+      MSPDir: /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/peerOrganizations/ecta.example.com/msp
       Policies:
         Readers:
           Type: Signature
@@ -40,10 +40,10 @@ Organizations:
         - Host: peer0.ecta.example.com
           Port: 7051
 
-  - &BankOrg
-      Name: BankOrg
+  - &Bank
+      Name: BankMSP
       ID: BankMSP
-      MSPDir: /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/bank.example.com/msp
+      MSPDir: /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/peerOrganizations/bank.example.com/msp
       Policies:
         Readers:
           Type: Signature
@@ -61,10 +61,10 @@ Organizations:
         - Host: peer0.bank.example.com
           Port: 9051
 
-  - &NBEOrg
-      Name: NBEOrg
+  - &NBE
+      Name: NBEMSP
       ID: NBEMSP
-      MSPDir: /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/nbe.example.com/msp
+      MSPDir: /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/peerOrganizations/nbe.example.com/msp
       Policies:
         Readers:
           Type: Signature
@@ -82,10 +82,10 @@ Organizations:
         - Host: peer0.nbe.example.com
           Port: 10051
 
-  - &CustomsOrg
-      Name: CustomsOrg
+  - &Customs
+      Name: CustomsMSP
       ID: CustomsMSP
-      MSPDir: /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/customs.example.com/msp
+      MSPDir: /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/peerOrganizations/customs.example.com/msp
       Policies:
         Readers:
           Type: Signature
@@ -103,10 +103,10 @@ Organizations:
         - Host: peer0.customs.example.com
           Port: 11051
 
-  - &ShippingOrg
-      Name: ShippingOrg
+  - &Shipping
+      Name: ShippingMSP
       ID: ShippingMSP
-      MSPDir: /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/shipping.example.com/msp
+      MSPDir: /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/peerOrganizations/shipping.example.com/msp
       Policies:
         Readers:
           Type: Signature
@@ -130,7 +130,7 @@ Capabilities:
   Orderer: &OrdererCapabilities
     V2_0: true
   Application: &ApplicationCapabilities
-    V2_5: true
+    V2_0: true
 
 Application: &ApplicationDefaults
   Organizations:
@@ -163,21 +163,21 @@ Orderer: &OrdererDefaults
     Consenters:
       - Host: orderer1.orderer.example.com
         Port: 7050
-        ClientTLSCert: /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/orderer.example.com/orderers/orderer1.orderer.example.com/tls/server.crt
-        ServerTLSCert: /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/orderer.example.com/orderers/orderer1.orderer.example.com/tls/server.crt
+        ClientTLSCert: /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/ordererOrganizations/orderer.example.com/orderers/orderer1.orderer.example.com/tls/server.crt
+        ServerTLSCert: /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/ordererOrganizations/orderer.example.com/orderers/orderer1.orderer.example.com/tls/server.crt
       - Host: orderer2.orderer.example.com
         Port: 8050
-        ClientTLSCert: /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/orderer.example.com/orderers/orderer2.orderer.example.com/tls/server.crt
-        ServerTLSCert: /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/orderer.example.com/orderers/orderer2.orderer.example.com/tls/server.crt
+        ClientTLSCert: /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/ordererOrganizations/orderer.example.com/orderers/orderer2.orderer.example.com/tls/server.crt
+        ServerTLSCert: /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/ordererOrganizations/orderer.example.com/orderers/orderer2.orderer.example.com/tls/server.crt
       - Host: orderer3.orderer.example.com
         Port: 9050
-        ClientTLSCert: /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/orderer.example.com/orderers/orderer3.orderer.example.com/tls/server.crt
-        ServerTLSCert: /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/orderer.example.com/orderers/orderer3.orderer.example.com/tls/server.crt
+        ClientTLSCert: /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/ordererOrganizations/orderer.example.com/orderers/orderer3.orderer.example.com/tls/server.crt
+        ServerTLSCert: /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/ordererOrganizations/orderer.example.com/orderers/orderer3.orderer.example.com/tls/server.crt
   BatchTimeout: 2s
   BatchSize:
-    MaxMessageCount: 10
-    AbsoluteMaxBytes: 99 MB
-    PreferredMaxBytes: 512 KB
+    MaxMessageCount: 500
+    AbsoluteMaxBytes: 10 MB
+    PreferredMaxBytes: 2 MB
   Organizations:
   Policies:
     Readers:
@@ -219,29 +219,10 @@ Profiles:
     Application:
       <<: *ApplicationDefaults
       Organizations:
-        - *ECTAOrg
-        - *BankOrg
-        - *NBEOrg
-        - *CustomsOrg
-        - *ShippingOrg
+        - *ECTA
+        - *Bank
+        - *NBE
+        - *Customs
+        - *Shipping
       Capabilities:
         <<: *ApplicationCapabilities
-
-  OrdererGenesis:
-    <<: *ChannelDefaults
-    Capabilities:
-      <<: *ChannelCapabilities
-    Orderer:
-      <<: *OrdererDefaults
-      Organizations:
-        - *OrdererOrg
-      Capabilities:
-        <<: *OrdererCapabilities
-    Consortiums:
-      CoffeeConsortium:
-        Organizations:
-          - *ECTAOrg
-          - *BankOrg
-          - *NBEOrg
-          - *CustomsOrg
-          - *ShippingOrg

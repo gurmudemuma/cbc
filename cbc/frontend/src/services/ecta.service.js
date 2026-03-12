@@ -1,7 +1,8 @@
 import axios from 'axios';
-import { API_ENDPOINTS } from '../config/api.config';
 
-const ECTA_API_URL = `${API_ENDPOINTS.ecta}/api/preregistration`;
+// Certificate downloads go through the gateway, not the ECTA service
+// Use relative paths so nginx proxy routes them correctly
+const ECTA_API_URL = `/api/preregistration`;
 
 /**
  * ECTA Service

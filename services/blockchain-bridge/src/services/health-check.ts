@@ -6,7 +6,7 @@ import { logger } from '../utils/logger';
 import { FabricClient } from '../clients/fabric-client';
 import { CBCClient } from '../clients/cbc-client';
 import { RedisClient } from '../clients/redis-client';
-import pool from '../config/database';
+import pool from '../database';
 
 interface HealthStatus {
   status: 'healthy' | 'degraded' | 'unhealthy';

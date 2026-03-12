@@ -19,6 +19,8 @@ const customsRouter = require('./routes/customs.routes');
 const shippingRouter = require('./routes/shipping.routes');
 const containerRouter = require('./routes/container.routes');
 const vesselRouter = require('./routes/vessel.routes');
+// Analytics routes (PostgreSQL optimization)
+const analyticsRouter = require('./routes/analytics.routes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -56,6 +58,7 @@ app.get('/health', (req, res) => {
 // API routes
 app.use('/api/auth', authRouter);
 app.use('/api/exporter', exporterRouter);
+app.use('/api/preregistration', exporterRouter); // Frontend-compatible path for certificate downloads
 app.use('/api/exports', exportsRouter);
 app.use('/api/esw', eswRouter);
 app.use('/api/certificates', certificatesRouter);
@@ -69,6 +72,8 @@ app.use('/api/customs', customsRouter);
 app.use('/api/shipping', shippingRouter);
 app.use('/api/container', containerRouter);
 app.use('/api/vessel', vesselRouter);
+// Analytics routes (PostgreSQL-powered)
+app.use('/api/analytics', analyticsRouter);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

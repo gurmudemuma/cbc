@@ -7,7 +7,7 @@ import { logger } from '../utils/logger';
 import { KafkaConsumer } from './kafka-consumer';
 import { FabricClient } from '../clients/fabric-client';
 import { RedisClient } from '../clients/redis-client';
-import pool from '../config/database';
+import pool from '../database';
 
 interface SyncStatus {
   lastSyncTime: string;

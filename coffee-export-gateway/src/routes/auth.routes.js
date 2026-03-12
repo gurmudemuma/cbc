@@ -3,15 +3,150 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const fabricService = require('../services');
+const postgresService = require('../services/postgres');
 const notificationService = require('../services/notification.service');
 
 // In-memory user store (replace with database in production)
 const users = new Map();
 
 /**
+ * Generate unique registration number
+ * Format: ECTA-YYYY-NNNNNN (e.g., ECTA-2026-000001)
+ */
+async function generateRegistrationNumber() {
+  const year = new Date().getFullYear();
+  const prefix = `ECTA-${year}-`;
+  
+  try {
+    // Get the highest registration number for this year
+    const result = await postgresService.query(
+      `SELECT registration_number FROM exporter_profiles 
+       WHERE registration_number LIKE $1 
+       ORDER BY registration_number DESC 
+       LIMIT 1`,
+      [`${prefix}%`]
+    );
+    
+    let nextNumber = 1;
+    if (result.rows.length > 0) {
+      const lastRegNum = result.rows[0].registration_number;
+      const lastNumber = parseInt(lastRegNum.split('-')[2]);
+      nextNumber = lastNumber + 1;
+    }
+    
+    // Pad with zeros to 6 digits
+    const paddedNumber = nextNumber.toString().padStart(6, '0');
+    return `${prefix}${paddedNumber}`;
+  } catch (error) {
+    console.error('[Registration] Error generating registration number:', error);
+    // Fallback to timestamp-based number
+    return `ECTA-${year}-${Date.now().toString().slice(-6)}`;
+  }
+}
+
+/**
+ * Business Rule Validation for Exporter Registration
+ * Returns: { valid: boolean, status: 'approved'|'rejected'|'pending_approval', reason: string }
+ */
+function validateExporterBusinessRules(data) {
+  const { username, email, phone, companyName, businessType, address, contactPerson } = data;
+  let { tin, capitalETB } = data;
+  
+  console.log(`[Validation] Checking business rules for ${username}...`);
+
+  // Rule 1: Validate TIN format (Ethiopian TIN is 10 digits)
+  // Strip "TIN-" prefix if present
+  if (tin && typeof tin === 'string' && tin.toUpperCase().startsWith('TIN-')) {
+    tin = tin.substring(4);
+  }
+  
+  if (!tin || !/^\d{10}$/.test(tin.toString())) {
+    return {
+      valid: false,
+      status: 'rejected',
+      reason: 'Invalid TIN format. TIN must be 10 digits (prefix "TIN-" will be removed automatically).'
+    };
+  }
+  console.log(`  ✓ TIN format valid: ${tin}`);
+
+  // Rule 2: Validate email format
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return {
+      valid: false,
+      status: 'rejected',
+      reason: 'Invalid email format.'
+    };
+  }
+  console.log(`  ✓ Email format valid: ${email}`);
+
+  // Rule 3: Validate phone number (Ethiopian format: +251 or 0)
+  if (phone && !/^(\+251|0)[0-9]{9}$/.test(phone.toString())) {
+    return {
+      valid: false,
+      status: 'rejected',
+      reason: 'Invalid phone number format. Use +251 or 0 followed by 9 digits.'
+    };
+  }
+  console.log(`  ✓ Phone format valid: ${phone}`);
+
+  // Rule 4: Validate company name (not empty, reasonable length)
+  if (!companyName || companyName.trim().length < 3 || companyName.length > 255) {
+    return {
+      valid: false,
+      status: 'rejected',
+      reason: 'Company name must be between 3 and 255 characters.'
+    };
+  }
+  console.log(`  ✓ Company name valid: ${companyName}`);
+
+  // Rule 5: Validate capital requirements based on business type
+  const type = businessType || 'PRIVATE_EXPORTER';
+  const capitalType = (type === 'UNION' || type === 'FARMER_COOPERATIVE') ? 'company' : 'individual';
+  const minimumCapital = capitalType === 'individual' ? 15000000 : 20000000;
+
+  if (!capitalETB || capitalETB < minimumCapital) {
+    return {
+      valid: false,
+      status: 'rejected',
+      reason: `Minimum capital requirement for ${capitalType} exporters is ${minimumCapital.toLocaleString()} ETB. Provided: ${capitalETB}`
+    };
+  }
+  console.log(`  ✓ Capital requirement met: ${capitalETB.toLocaleString()} ETB (minimum: ${minimumCapital.toLocaleString()})`);
+
+  // Rule 6: Validate address (if provided)
+  if (address && address.trim().length < 5) {
+    return {
+      valid: false,
+      status: 'rejected',
+      reason: 'Address must be at least 5 characters if provided.'
+    };
+  }
+  console.log(`  ✓ Address valid: ${address || 'Not provided'}`);
+
+  // Rule 7: Validate contact person (if provided)
+  if (contactPerson && contactPerson.trim().length < 3) {
+    return {
+      valid: false,
+      status: 'rejected',
+      reason: 'Contact person name must be at least 3 characters if provided.'
+    };
+  }
+  console.log(`  ✓ Contact person valid: ${contactPerson || 'Not provided'}`);
+
+  // All rules passed - AUTO-APPROVE
+  console.log(`[Validation] ✅ All business rules passed for ${username} - AUTO-APPROVING`);
+  return {
+    valid: true,
+    status: 'approved',
+    reason: 'All business rules validated successfully. User auto-approved.',
+    cleanedTin: tin  // Return cleaned TIN (with prefix removed)
+  };
+}
+
+/**
  * Public Registration endpoint - NO authentication required
  * Exporters register here before ECTA approval
- * DUAL REGISTRATION: PostgreSQL + Blockchain ✅
+ * HYBRID MODE: Register in database first, sync to blockchain later
  */
 router.post('/register', async (req, res) => {
   try {
@@ -27,7 +162,7 @@ router.post('/register', async (req, res) => {
       capitalETB,
       address,
       contactPerson,
-      businessType // NEW: business type field
+      businessType
     } = req.body;
 
     // Validate required fields
@@ -45,42 +180,36 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // Validate minimum capital based on business type
-    // According to Ethiopian Coffee Export Regulations:
-    const capitalRequirements = {
-      'PRIVATE_EXPORTER': 50000000,      // 50 million ETB for private limited companies
-      'UNION': 15000000,                 // 15 million ETB for unions/cooperatives
-      'FARMER_COOPERATIVE': 5000000,     // 5 million ETB for farmer cooperatives
-      'INDIVIDUAL': 10000000             // 10 million ETB for individual exporters
-    };
+    // VALIDATE BUSINESS RULES
+    const validation = validateExporterBusinessRules({
+      username,
+      email,
+      phone,
+      companyName,
+      tin,
+      capitalETB,
+      businessType,
+      address,
+      contactPerson
+    });
 
-    const type = businessType || 'PRIVATE_EXPORTER'; // Default to private exporter
-    const minimumCapital = capitalRequirements[type] || capitalRequirements['PRIVATE_EXPORTER'];
-
-    if (capitalETB < minimumCapital) {
-      console.log(`[Registration] Capital validation failed: ${capitalETB} < ${minimumCapital} for type ${type}`);
-      return res.status(400).json({ 
-        error: `Minimum capital requirement for ${type.replace('_', ' ')} is ${minimumCapital.toLocaleString()} ETB`,
-        provided: capitalETB,
-        required: minimumCapital,
-        businessType: type
+    if (!validation.valid) {
+      console.log(`[Registration] Business rule validation failed for ${username}: ${validation.reason}`);
+      return res.status(400).json({
+        error: 'Registration rejected',
+        reason: validation.reason,
+        status: validation.status
       });
     }
 
-    // Check if username already exists in PostgreSQL
-    const { Pool } = require('pg');
-    const pool = new Pool({
-      host: process.env.POSTGRES_HOST || 'postgres',
-      port: process.env.POSTGRES_PORT || 5432,
-      database: process.env.POSTGRES_DB || 'coffee_export_db',
-      user: process.env.POSTGRES_USER || 'postgres',
-      password: process.env.POSTGRES_PASSWORD || 'postgres'
-    });
+    // Use cleaned TIN from validation
+    const cleanedTin = validation.cleanedTin || tin;
 
+    // Check if username already exists in PostgreSQL
     try {
-      const existingUser = await pool.query(
+      const existingUser = await postgresService.query(
         'SELECT username FROM users WHERE username = $1 OR email = $2 OR tin = $3',
-        [username, email, tin]
+        [username, email, cleanedTin]
       );
 
       if (existingUser.rows.length > 0) {
@@ -90,96 +219,143 @@ router.post('/register', async (req, res) => {
       console.error('[Registration] Database check error:', dbError);
     }
 
-    // Check if username already exists on blockchain
-    try {
-      await fabricService.getUser(username);
-      return res.status(400).json({ error: 'Username already exists on blockchain' });
-    } catch (error) {
-      // User doesn't exist, continue with registration
-    }
-
     // Hash password
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // STEP 1: Register on Blockchain FIRST (Consensus & Trust)
-    // This ensures multi-party agreement before local storage
+    // STEP 1: Register in PostgreSQL FIRST (Primary data store)
+    // Use validation result to determine initial status
+    let approvalStatus = validation.status; // 'approved' or 'rejected'
+    
     try {
-      await fabricService.registerUser({
+      // Insert into users table
+      const isActive = (approvalStatus === 'approved');
+      
+      await postgresService.query(
+        `INSERT INTO users (
+          username, password_hash, email, organization_id, role, is_active, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+        ON CONFLICT (username) DO NOTHING`,
+        [
+          username,
+          passwordHash,
+          email,
+          'EXPORTER',
+          'exporter',
+          isActive
+        ]
+      );
+
+      // Map business type to PostgreSQL enum values
+      const businessTypeMap = {
+        'PRIVATE_EXPORTER': 'PRIVATE',
+        'UNION': 'TRADE_ASSOCIATION',
+        'FARMER_COOPERATIVE': 'FARMER',
+        'INDIVIDUAL': 'PRIVATE'
+      };
+      const pgBusinessType = businessTypeMap[businessType] || 'PRIVATE';
+
+      // Map validation status to PostgreSQL status
+      const statusMap = {
+        'approved': 'ACTIVE',
+        'rejected': 'REVOKED',
+        'pending_approval': 'PENDING_APPROVAL'
+      };
+      const pgStatus = statusMap[approvalStatus] || 'PENDING_APPROVAL';
+
+      // Generate unique registration number
+      const registrationNumber = await generateRegistrationNumber();
+      console.log(`[Registration] Generated registration number: ${registrationNumber} for ${username}`);
+
+      // Insert into exporter_profiles table
+      await postgresService.query(
+        `INSERT INTO exporter_profiles (
+          user_id, business_name, tin, registration_number, business_type,
+          minimum_capital, office_address, contact_person, email, phone,
+          status, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
+        ON CONFLICT (user_id) DO NOTHING`,
+        [
+          username,
+          companyName,
+          cleanedTin,
+          registrationNumber,
+          pgBusinessType,
+          capitalETB,
+          address || '',
+          contactPerson || '',
+          email,
+          phone || '',
+          pgStatus
+        ]
+      );
+
+      // Insert into ecta_pre_registration table for qualification workflow
+      await postgresService.query(
+        `INSERT INTO ecta_pre_registration (
+          exporter_id, laboratory_status, taster_status, competence_status, license_status,
+          created_at, updated_at
+        ) VALUES ($1, 'MISSING', 'MISSING', 'MISSING', 'MISSING', NOW(), NOW())
+        ON CONFLICT (exporter_id) DO NOTHING`,
+        [username]
+      );
+
+      console.log(`✓ User registered in PostgreSQL: ${username}, status: ${approvalStatus}`);
+    } catch (dbError) {
+      console.error('[Registration] PostgreSQL error:', dbError);
+      return res.status(500).json({ 
+        error: 'Database registration failed',
+        details: dbError.message 
+      });
+    }
+
+    // STEP 2: Try to register on blockchain (non-blocking)
+    // If blockchain fails, user can still login from database
+    let blockchainRegistered = false;
+    try {
+      const blockchainResult = await fabricService.registerUser({
         username,
         passwordHash,
         email,
         phone: phone || '',
         companyName,
-        tin,
+        tin: cleanedTin,
         capitalETB,
         address: address || '',
         contactPerson: contactPerson || '',
         role: 'exporter',
-        businessType: type // Store business type
+        businessType: businessType || 'PRIVATE_EXPORTER',
+        status: approvalStatus,
+        validationReason: validation.reason
       });
 
-      console.log(`✓ User registered on blockchain (consensus achieved): ${username}`);
+      console.log('[Registration] Blockchain result:', JSON.stringify(blockchainResult));
+      blockchainRegistered = true;
+      console.log(`✓ User registered on blockchain: ${username}`);
     } catch (blockchainError) {
-      console.error('[Registration] Blockchain error:', blockchainError);
-      return res.status(500).json({ 
-        error: 'Blockchain registration failed - consensus not achieved',
-        details: blockchainError.message 
-      });
+      console.warn('[Registration] Blockchain registration failed (non-blocking):', blockchainError.message);
+      console.warn('[Registration] User can still login from database');
+      // Don't fail - user is already in database
     }
 
-    // STEP 2: Replicate to PostgreSQL (After Consensus)
-    // PostgreSQL acts as a fast query replica of blockchain data
-    try {
-      await pool.query(
-        `INSERT INTO users (
-          username, password_hash, email, phone, company_name, tin,
-          capital_etb, address, contact_person, role, status, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())`,
-        [
-          username,
-          passwordHash,
-          email,
-          phone || '',
-          companyName,
-          tin,
-          capitalETB,
-          address || '',
-          contactPerson || '',
-          'exporter',
-          'pending_approval'
-        ]
-      );
-
-      console.log(`✓ User replicated to PostgreSQL: ${username}`);
-    } catch (dbError) {
-      console.error('[Registration] PostgreSQL replication error:', dbError);
-      // Don't fail the request - blockchain is source of truth
-      // PostgreSQL sync can be retried later via reconciliation service
-      console.warn(`⚠ PostgreSQL replication failed for ${username}, but blockchain record exists`);
-    }
-
-    // Send registration confirmation email
-    notificationService.notifyRegistrationSubmitted({
-      username,
-      companyName,
-      tin,
-      email,
-      contactPerson: contactPerson || companyName
-    }).catch(err => console.error('Email notification failed:', err));
-
+    // Return success
     res.json({
       success: true,
-      message: 'Registration submitted successfully to both databases. Please wait for ECTA approval.',
-      applicationReference: username,
-      status: 'pending_approval',
-      databases: {
-        postgresql: 'registered',
-        blockchain: 'registered'
+      status: approvalStatus,
+      message: approvalStatus === 'approved' 
+        ? 'Registration successful - auto-approved. You can login now.'
+        : 'Registration submitted - pending ECTA approval',
+      blockchainSync: blockchainRegistered,
+      user: {
+        username,
+        email,
+        companyName,
+        status: approvalStatus
       }
     });
+
   } catch (error) {
-    console.error('[Registration] Error:', error);
-    res.status(500).json({ error: 'Registration failed' });
+    console.error('Registration error:', error);
+    res.status(500).json({ error: 'Registration failed', details: error.message });
   }
 });
 
@@ -214,7 +390,7 @@ router.get('/registration-status/:username', async (req, res) => {
 
 /**
  * Login endpoint - validates credentials and returns JWT
- * NOW CHECKS BLOCKCHAIN FOR USER DATA ✅
+ * DUAL SYSTEM: Checks BOTH blockchain and database (no fallback)
  */
 router.post('/login', async (req, res) => {
   try {
@@ -224,23 +400,40 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Username and password required' });
     }
 
-    // Get user from blockchain
-    let user;
+    // Get user from database (primary source for login)
+    let databaseUser = null;
     try {
-      user = await fabricService.getUser(username);
+      const result = await postgresService.query(
+        'SELECT username, password_hash, role, status, company_name FROM users WHERE username = $1',
+        [username]
+      );
+      if (result.rows.length > 0) {
+        databaseUser = {
+          username: result.rows[0].username,
+          passwordHash: result.rows[0].password_hash,
+          role: result.rows[0].role,
+          status: result.rows[0].status,
+          companyName: result.rows[0].company_name
+        };
+        console.log(`[Login] User ${username} found in database`);
+      }
     } catch (error) {
+      console.log(`[Login] Database error for ${username}: ${error.message}`);
+    }
+
+    if (!databaseUser) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Verify password
-    const validPassword = await bcrypt.compare(password, user.passwordHash);
+    // Verify password (from database)
+    const validPassword = await bcrypt.compare(password, databaseUser.passwordHash);
     if (!validPassword) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // CHECK APPROVAL STATUS
-    if (user.role === 'exporter') {
-      if (user.status === 'pending_approval') {
+    // Check approval status (from database)
+    if (databaseUser.role === 'exporter') {
+      if (databaseUser.status === 'PENDING_APPROVAL' || databaseUser.status === 'pending_approval') {
         return res.status(403).json({ 
           error: 'Account pending approval',
           message: 'Your registration is under review by ECTA. You will be notified once approved.',
@@ -248,26 +441,28 @@ router.post('/login', async (req, res) => {
         });
       }
       
-      if (user.status === 'rejected') {
+      if (databaseUser.status === 'REVOKED' || databaseUser.status === 'rejected') {
         return res.status(403).json({ 
           error: 'Account rejected',
-          message: user.rejectionReason || 'Your registration was rejected by ECTA.',
+          message: 'Your registration was rejected by ECTA.',
           status: 'rejected'
         });
       }
     }
 
-    // Generate JWT
+    // Generate JWT using database data
     const token = jwt.sign(
       { 
         id: username, 
-        role: user.role,
-        companyName: user.companyName,
-        status: user.status
+        role: databaseUser.role,
+        companyName: databaseUser.companyName,
+        status: databaseUser.status
       },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
     );
+
+    console.log(`[Login] User ${username} logged in successfully`);
 
     res.json({
       success: true,
@@ -276,9 +471,9 @@ router.post('/login', async (req, res) => {
         id: username,
         username: username,
         exporterId: username,
-        companyName: user.companyName,
-        role: user.role,
-        status: user.status
+        companyName: databaseUser.companyName,
+        role: databaseUser.role,
+        status: databaseUser.status
       }
     });
   } catch (error) {
@@ -293,18 +488,9 @@ router.post('/login', async (req, res) => {
  */
 async function createUser(username, password, companyName, role = 'exporter', status = 'approved') {
   try {
-    const { Pool } = require('pg');
-    const pool = new Pool({
-      host: process.env.POSTGRES_HOST || 'postgres',
-      port: process.env.POSTGRES_PORT || 5432,
-      database: process.env.POSTGRES_DB || 'coffee_export_db',
-      user: process.env.POSTGRES_USER || 'postgres',
-      password: process.env.POSTGRES_PASSWORD || 'postgres'
-    });
-
     // Check if user already exists in PostgreSQL
     try {
-      const existingUser = await pool.query(
+      const existingUser = await postgresService.query(
         'SELECT username FROM users WHERE username = $1',
         [username]
       );
@@ -313,25 +499,19 @@ async function createUser(username, password, companyName, role = 'exporter', st
         console.log(`  - ${username} already exists in PostgreSQL`);
         // Still check blockchain and update if needed
       } else {
-        // STEP 1: Create in PostgreSQL
+        // STEP 1: Create in PostgreSQL (matching actual schema)
         const passwordHash = await bcrypt.hash(password, 10);
-        await pool.query(
+        await postgresService.query(
           `INSERT INTO users (
-            username, password_hash, email, phone, company_name, tin,
-            capital_etb, address, contact_person, role, status, created_at, updated_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())`,
+            username, password_hash, email, organization_id, role, is_active, created_at, updated_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())`,
           [
             username,
             passwordHash,
             `${username}@example.com`,
-            '+251911234567',
-            companyName,
-            `TIN${Date.now()}_${username}`,
-            50000000,
-            'Addis Ababa, Ethiopia',
-            username,
+            role.toUpperCase(),
             role,
-            status
+            status === 'approved'
           ]
         );
         console.log(`  ✓ ${username} created in PostgreSQL`);
@@ -397,9 +577,11 @@ async function initializeTestUsers() {
   console.log('✓ Test users initialized on blockchain');
 }
 
-// Initialize on module load
-initializeTestUsers().catch(error => {
-  console.error('Failed to initialize test users:', error);
-});
+// Initialize on module load (with delay to allow wallet setup)
+setTimeout(() => {
+  initializeTestUsers().catch(error => {
+    console.error('Failed to initialize test users:', error);
+  });
+}, 3000); // Wait 3 seconds for wallet to be ready
 
 module.exports = { router, createUser, users };

@@ -94,20 +94,21 @@ CREATE TABLE IF NOT EXISTS quality_certificates (
 CREATE INDEX IF NOT EXISTS idx_quality_certificates_export_id ON quality_certificates(export_id);
 CREATE INDEX IF NOT EXISTS idx_quality_certificates_number ON quality_certificates(certificate_number);
 
--- Add indexes for ECTA-specific queries
-CREATE INDEX IF NOT EXISTS idx_exports_license_approved_by ON exports(license_approved_by);
+-- Add indexes for existing approval columns
+CREATE INDEX IF NOT EXISTS idx_exports_fx_approved_by ON exports(fx_approved_by);
 CREATE INDEX IF NOT EXISTS idx_exports_quality_approved_by ON exports(quality_approved_by);
-CREATE INDEX IF NOT EXISTS idx_exports_contract_approved_by ON exports(contract_approved_by);
+CREATE INDEX IF NOT EXISTS idx_exports_shipment_scheduled_by ON exports(shipment_scheduled_by);
 
-CREATE INDEX IF NOT EXISTS idx_exports_license_approved_at ON exports(license_approved_at);
+CREATE INDEX IF NOT EXISTS idx_exports_fx_approved_at ON exports(fx_approved_at);
 CREATE INDEX IF NOT EXISTS idx_exports_quality_approved_at ON exports(quality_approved_at);
-CREATE INDEX IF NOT EXISTS idx_exports_contract_approved_at ON exports(contract_approved_at);
+CREATE INDEX IF NOT EXISTS idx_exports_shipment_scheduled_at ON exports(shipment_scheduled_at);
 
 -- Composite index for common queries
 CREATE INDEX IF NOT EXISTS idx_exports_status_created ON exports(status, created_at DESC);
 
 -- Add trigger for quality_certificates updated_at
-CREATE TRIGGER IF NOT EXISTS update_quality_certificates_updated_at 
+DROP TRIGGER IF EXISTS update_quality_certificates_updated_at ON quality_certificates;
+CREATE TRIGGER update_quality_certificates_updated_at 
 BEFORE UPDATE ON quality_certificates 
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 

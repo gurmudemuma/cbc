@@ -5,18 +5,56 @@ const path = require('path');
 
 // Check if running in test/mock mode
 const FABRIC_TEST_MODE = process.env.FABRIC_TEST_MODE === 'true';
+const FABRIC_USE_CLI = process.env.FABRIC_USE_CLI === 'true';
 
 if (FABRIC_TEST_MODE) {
-  console.log('⚠️  Running in MOCK MODE - No Fabric network required');
-  const mockFabric = require('./fabric-mock');
-  module.exports = mockFabric;
-  return;
-}
+  module.exports = require('./fabric-mock');
+} else if (FABRIC_USE_CLI) {
+  module.exports = require('./fabric-cli-final');
+} else {
+  console.log('✅ Using Fabric SDK - Direct network connection');
+  
+  // Enable debug logging
+  process.env.HFC_LOGGING = '{"debug":"console"}';
+  process.env.GRPC_TRACE = 'all';
+  process.env.GRPC_VERBOSITY = 'DEBUG';
 
 const ccpPath = path.resolve(__dirname, '..', 'config', 'connection-profile.json');
-const ccp = JSON.parse(fs.readFileSync(ccpPath, 'utf8'));
+const ccpRaw = JSON.parse(fs.readFileSync(ccpPath, 'utf8'));
+
+// Fix relative paths in connection profile to be absolute
+const ccp = JSON.parse(JSON.stringify(ccpRaw));
+const basePath = process.cwd();
+
+// Fix peer TLS cert paths - verify files exist
+if (ccp.peers) {
+  Object.keys(ccp.peers).forEach(peerName => {
+    if (ccp.peers[peerName].tlsCACerts && ccp.peers[peerName].tlsCACerts.path) {
+      const certPath = path.join(basePath, ccp.peers[peerName].tlsCACerts.path);
+      if (!fs.existsSync(certPath)) {
+        console.warn(`⚠️  Peer TLS cert not found: ${certPath}`);
+      }
+      ccp.peers[peerName].tlsCACerts.path = certPath;
+    }
+  });
+}
+
+// Fix orderer TLS cert paths - verify files exist
+if (ccp.orderers) {
+  Object.keys(ccp.orderers).forEach(ordererName => {
+    if (ccp.orderers[ordererName].tlsCACerts && ccp.orderers[ordererName].tlsCACerts.path) {
+      const certPath = path.join(basePath, ccp.orderers[ordererName].tlsCACerts.path);
+      if (!fs.existsSync(certPath)) {
+        console.warn(`⚠️  Orderer TLS cert not found: ${certPath}`);
+      }
+      ccp.orderers[ordererName].tlsCACerts.path = certPath;
+    }
+  });
+}
 
 const walletPath = path.join(process.cwd(), 'wallets');
+const CHANNEL_NAME = process.env.CHANNEL_NAME || 'coffeechannel';
+const CHAINCODE_NAME = process.env.CHAINCODE_NAME || 'ecta';
 
 /**
  * Get or create wallet for user
@@ -141,10 +179,24 @@ async function getGateway(userId) {
   }
 
   const gateway = new Gateway();
+  
+  // Connect WITHOUT discovery - use static endpoints from connection profile
+  // Use query handler that doesn't require endorsement policy for reads
   await gateway.connect(ccp, {
     wallet,
     identity: userId,
-    discovery: { enabled: true, asLocalhost: process.env.FABRIC_NETWORK_AS_LOCALHOST === 'true' }
+    discovery: { 
+      enabled: true,  // Enable discovery to find available peers
+      asLocalhost: false
+    },
+    eventHandlerOptions: {
+      commitTimeout: 300,
+      strategy: require('fabric-network').DefaultEventHandlerStrategies.MSPID_SCOPE_ANYFORTX
+    },
+    queryHandlerOptions: {
+      timeout: 30,
+      strategy: require('fabric-network').DefaultQueryHandlerStrategies.MSPID_SCOPE_SINGLE
+    }
   });
 
   return gateway;
@@ -156,11 +208,21 @@ async function getGateway(userId) {
 async function submitTransaction(userId, chaincodeName, functionName, ...args) {
   const gateway = await getGateway(userId);
   try {
-    const network = await gateway.getNetwork(process.env.CHANNEL_NAME || 'coffeechannel');
+    const network = await gateway.getNetwork(CHANNEL_NAME);
     const contract = network.getContract(chaincodeName);
 
-    const result = await contract.submitTransaction(functionName, ...args);
+    // Create transaction and explicitly target ECTA peers only
+    const transaction = contract.createTransaction(functionName);
+    
+    // Set endorsing organizations to only ECTA (bypass MAJORITY policy)
+    transaction.setEndorsingOrganizations('ECTAMSP');
+    
+    const result = await transaction.submit(...args);
     return result.toString();
+  } catch (error) {
+    console.error(`[Fabric] Transaction submission failed: ${error.message}`);
+    console.error(`[Fabric] Error details:`, error);
+    throw error;
   } finally {
     gateway.disconnect();
   }
@@ -172,7 +234,7 @@ async function submitTransaction(userId, chaincodeName, functionName, ...args) {
 async function evaluateTransaction(userId, chaincodeName, functionName, ...args) {
   const gateway = await getGateway(userId);
   try {
-    const network = await gateway.getNetwork(process.env.CHANNEL_NAME || 'coffeechannel');
+    const network = await gateway.getNetwork(CHANNEL_NAME);
     const contract = network.getContract(chaincodeName);
 
     const result = await contract.evaluateTransaction(functionName, ...args);
@@ -182,10 +244,89 @@ async function evaluateTransaction(userId, chaincodeName, functionName, ...args)
   }
 }
 
+// ==================== User Management Functions ====================
+
+async function registerUser(userData) {
+  return await submitTransaction('admin', CHAINCODE_NAME, 'RegisterUser', JSON.stringify(userData));
+}
+
+async function getUser(username) {
+  const result = await evaluateTransaction('admin', CHAINCODE_NAME, 'GetUser', username);
+  return JSON.parse(result);
+}
+
+async function updateUserStatus(username, statusData) {
+  return await submitTransaction('admin', CHAINCODE_NAME, 'UpdateUserStatus', username, JSON.stringify(statusData));
+}
+
+async function getUsersByRole(role) {
+  const result = await evaluateTransaction('admin', CHAINCODE_NAME, 'GetUsersByRole', role);
+  return JSON.parse(result);
+}
+
+async function getPendingUsers() {
+  const result = await evaluateTransaction('admin', CHAINCODE_NAME, 'GetPendingUsers');
+  return JSON.parse(result);
+}
+
+async function getUsersByStatus(status) {
+  const result = await evaluateTransaction('admin', CHAINCODE_NAME, 'GetUsersByStatus', status);
+  return JSON.parse(result);
+}
+
+// ==================== Export Functions ====================
+
+async function createShipment(shipmentData) {
+  return await submitTransaction('admin', CHAINCODE_NAME, 'CreateShipment', JSON.stringify(shipmentData));
+}
+
+async function getShipment(shipmentId) {
+  const result = await evaluateTransaction('admin', CHAINCODE_NAME, 'GetShipment', shipmentId);
+  return JSON.parse(result);
+}
+
+async function getShipmentsByExporter(exporterId) {
+  const result = await evaluateTransaction('admin', CHAINCODE_NAME, 'GetShipmentsByExporter', exporterId);
+  return JSON.parse(result);
+}
+
+// ==================== Certificate Functions ====================
+
+async function requestCertificate(certificateRequest) {
+  return await submitTransaction('admin', CHAINCODE_NAME, 'RequestCertificate', JSON.stringify(certificateRequest));
+}
+
+async function getCertificate(certificateId) {
+  const result = await evaluateTransaction('admin', CHAINCODE_NAME, 'GetCertificate', certificateId);
+  return JSON.parse(result);
+}
+
+async function getCertificatesByShipment(shipmentId) {
+  const result = await evaluateTransaction('admin', CHAINCODE_NAME, 'GetCertificatesByShipment', shipmentId);
+  return JSON.parse(result);
+}
+
 module.exports = {
   enrollAdmin,
   registerExporter,
   submitTransaction,
   evaluateTransaction,
-  getWallet
+  getWallet,
+  // User management
+  registerUser,
+  getUser,
+  updateUserStatus,
+  getUsersByRole,
+  getPendingUsers,
+  getUsersByStatus,
+  // Shipment management
+  createShipment,
+  getShipment,
+  getShipmentsByExporter,
+  // Certificate management
+  requestCertificate,
+  getCertificate,
+  getCertificatesByShipment
 };
+
+} // End of else block for SDK mode

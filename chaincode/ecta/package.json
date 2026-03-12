@@ -1,6 +1,6 @@
 {
   "name": "ecta-chaincode",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "Ethiopian Coffee Export Chaincode - Manages the complete coffee export workflow",
   "main": "index.js",
   "scripts": {
@@ -13,7 +13,6 @@
     "npm": ">=8"
   },
   "dependencies": {
-    "express": "^4.22.1",
     "fabric-contract-api": "^2.5.0",
     "fabric-shim": "^2.5.0"
   },

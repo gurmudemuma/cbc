@@ -4,8 +4,9 @@
  */
 
 import axios from 'axios';
-import pool from '../config/database';
+import { Pool } from 'pg';
 import { logger } from '../utils/logger';
+import pool from '../database';
 
 const ECTA_API_URL = process.env.ECTA_API_URL || 'http://localhost:3003';
 

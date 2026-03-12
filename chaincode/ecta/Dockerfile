@@ -8,7 +8,7 @@ RUN npm config set fetch-retry-mintimeout 20000 && \
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm ci --only=production --prefer-offline || npm ci --only=production
+RUN npm install --omit=dev --prefer-offline || npm install --omit=dev
 
 COPY . .
 

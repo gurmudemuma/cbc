@@ -18,7 +18,7 @@ class CoffeeExportContract extends Contract {
      */
     async RegisterUser(ctx, userDataJSON) {
         const userData = JSON.parse(userDataJSON);
-        const { username, passwordHash, email, role, companyName, tin, capitalETB } = userData;
+        const { username, passwordHash, email, role, companyName, tin, capitalETB, businessType, status, validationReason } = userData;
 
         // Validate required fields
         if (!username || !passwordHash || !email || !role) {
@@ -31,58 +31,167 @@ class CoffeeExportContract extends Contract {
             throw new Error(`User ${username} already exists`);
         }
 
+        // Get deterministic timestamp from transaction
+        const txTimestamp = ctx.stub.getTxTimestamp();
+        const timestamp = new Date(txTimestamp.seconds.toNumber() * 1000).toISOString();
+
+        // Use status from gateway validation, or perform smart contract validation
+        let autoApprovalStatus = status || 'pending_approval';
+        let rejectionReasons = [];
+        
+        if (role === 'exporter' && !status) {
+            // If no status provided, perform smart contract validation
+            // 1. Validate minimum capital requirements (Ethiopian Coffee Export Regulations)
+            const type = businessType || 'PRIVATE_EXPORTER';
+            const capitalType = (type === 'UNION' || type === 'FARMER_COOPERATIVE') ? 'company' : 'individual';
+            const minimumCapital = capitalType === 'individual' ? 15000000 : 20000000;
+            
+            if (!capitalETB || capitalETB < minimumCapital) {
+                rejectionReasons.push(`Insufficient capital: ${capitalETB} ETB (minimum: ${minimumCapital} ETB for ${type})`);
+            }
+            
+            // 2. Validate TIN format (Ethiopian TIN: 10 digits)
+            if (!tin || !/^\d{10}$/.test(tin.toString())) {
+                rejectionReasons.push('Invalid TIN format (must be 10 digits)');
+            }
+            
+            // 3. Validate email format
+            if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                rejectionReasons.push('Invalid email format');
+            }
+            
+            // 4. Validate company name
+            if (!companyName || companyName.length < 3) {
+                rejectionReasons.push('Company name must be at least 3 characters');
+            }
+            
+            // Determine final status based on validations
+            if (rejectionReasons.length > 0) {
+                autoApprovalStatus = 'rejected';
+            } else {
+                autoApprovalStatus = 'approved';
+            }
+        }
+
         const user = {
             docType: 'user',
             username,
-            passwordHash, // bcrypt hash
+            passwordHash,
             email,
             phone: userData.phone || '',
-            role, // exporter, ecta, bank, customs, nbe, ecx, shipping, admin
+            role,
             companyName: companyName || '',
             tin: tin || '',
             capitalETB: capitalETB || 0,
+            businessType: businessType || 'PRIVATE_EXPORTER',
             address: userData.address || '',
             contactPerson: userData.contactPerson || '',
-            status: role === 'exporter' ? 'pending_approval' : 'approved',
-            registeredAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
+            status: role === 'exporter' ? autoApprovalStatus : 'approved',
+            registeredAt: timestamp,
+            updatedAt: timestamp,
+            validationResults: role === 'exporter' ? {
+                autoValidated: true,
+                validatedAt: timestamp,
+                validatedBy: status ? 'GATEWAY' : 'SMART_CONTRACT',
+                passed: autoApprovalStatus === 'approved',
+                rejectionReasons: rejectionReasons,
+                validationReason: validationReason || null
+            } : null,
+            approvedAt: autoApprovalStatus === 'approved' ? timestamp : null,
+            approvedBy: autoApprovalStatus === 'approved' ? (status ? 'GATEWAY' : 'SMART_CONTRACT') : null,
+            approvalComments: autoApprovalStatus === 'approved' ? (validationReason || 'Automatically approved - all validation rules passed') : null,
+            rejectedAt: autoApprovalStatus === 'rejected' ? timestamp : null,
+            rejectedBy: autoApprovalStatus === 'rejected' ? (status ? 'GATEWAY' : 'SMART_CONTRACT') : null,
+            rejectionReason: autoApprovalStatus === 'rejected' ? (validationReason || rejectionReasons.join('; ')) : null
         };
 
         await ctx.stub.putState(`USER_${username}`, Buffer.from(JSON.stringify(user)));
         
-        // If exporter, also create exporter profile
-        if (role === 'exporter') {
+        // If exporter and auto-approved, create exporter profile
+        if (role === 'exporter' && autoApprovalStatus === 'approved') {
+            const type = businessType || 'PRIVATE_EXPORTER';
+            const capitalType = (type === 'UNION' || type === 'FARMER_COOPERATIVE') ? 'company' : 'individual';
+            const minimumRequired = capitalType === 'individual' ? 15000000 : 20000000;
+            
+            const preRegistrationStatus = {
+                profile: { 
+                    status: 'approved', 
+                    submittedAt: timestamp,
+                    approvedAt: timestamp,
+                    approvedBy: status ? 'GATEWAY' : 'SMART_CONTRACT',
+                    autoApprovalReason: `Capital ${capitalETB} ETB meets ${capitalType} minimum requirement (${minimumRequired} ETB)`
+                },
+                laboratory: { 
+                    status: 'unlocked',
+                    unlockedAt: timestamp
+                },
+                taster: { 
+                    status: 'not_started'
+                },
+                competenceCertificate: { 
+                    status: 'not_started'
+                },
+                exportLicense: { 
+                    status: 'not_started'
+                }
+            };
+            
             const exporterProfile = {
                 docType: 'exporter',
                 exporterId: username,
                 companyName: companyName || '',
                 tin: tin || '',
                 capitalETB: capitalETB || 0,
+                businessType: businessType || 'PRIVATE_EXPORTER',
                 address: userData.address || '',
                 contactPerson: userData.contactPerson || '',
                 phone: userData.phone || '',
                 email: email || '',
-                status: 'pending_approval',
-                preRegistrationStatus: {
-                    profile: { status: 'submitted', submittedAt: new Date().toISOString() },
-                    laboratory: { status: 'not_started' },
-                    taster: { status: 'not_started' },
-                    competenceCertificate: { status: 'not_started' },
-                    exportLicense: { status: 'not_started' }
-                },
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString()
+                status: 'approved',
+                licenseNumber: null,
+                licenseIssuedDate: null,
+                licenseExpiryDate: null,
+                fullyQualified: false,
+                autoQualificationLevel: 'PROFILE_ONLY',
+                capitalType: capitalType,
+                minimumCapitalRequired: minimumRequired,
+                preRegistrationStatus: preRegistrationStatus,
+                createdAt: timestamp,
+                updatedAt: timestamp
             };
+            
             await ctx.stub.putState(username, Buffer.from(JSON.stringify(exporterProfile)));
+            
+            ctx.stub.setEvent('ExporterProfileCreated', Buffer.from(JSON.stringify({
+                exporterId: username,
+                status: 'approved',
+                fullyQualified: false,
+                autoQualificationLevel: 'PROFILE_ONLY',
+                capitalType: capitalType,
+                capitalETB: capitalETB,
+                minimumRequired: minimumRequired,
+                nextStep: 'laboratory',
+                timestamp: timestamp
+            })));
         }
         
         ctx.stub.setEvent('UserRegistered', Buffer.from(JSON.stringify({
             username,
             role,
-            timestamp: new Date().toISOString()
+            status: user.status,
+            autoValidated: role === 'exporter',
+            validatedBy: status ? 'GATEWAY' : 'SMART_CONTRACT',
+            timestamp: timestamp
         })));
 
-        return JSON.stringify({ success: true, username, status: user.status });
+        return JSON.stringify({ 
+            success: true, 
+            username, 
+            status: user.status,
+            autoValidated: role === 'exporter',
+            validatedBy: status ? 'GATEWAY' : 'SMART_CONTRACT',
+            rejectionReasons: rejectionReasons.length > 0 ? rejectionReasons : null
+        });
     }
 
     /**
@@ -517,7 +626,14 @@ class CoffeeExportContract extends Contract {
     /**
      * Approve exporter pre-registration (ECTA only)
      */
-    async ApprovePreRegistration(ctx, exporterId, stage) {
+    /**
+     * Approve or Reject a specific pre-registration stage
+     * @param {string} exporterId - The exporter ID
+     * @param {string} stage - The stage to approve/reject (profile, laboratory, taster, competenceCertificate, exportLicense)
+     * @param {string} action - 'approve' or 'reject'
+     * @param {string} commentsJSON - Optional comments/reason (required for rejection)
+     */
+    async ApprovePreRegistration(ctx, exporterId, stage, action = 'approve', commentsJSON = '{}') {
         const exporterData = await ctx.stub.getState(exporterId);
         
         if (!exporterData || exporterData.length === 0) {
@@ -525,33 +641,322 @@ class CoffeeExportContract extends Contract {
         }
 
         const exporter = JSON.parse(exporterData.toString());
+        const comments = JSON.parse(commentsJSON);
+        const timestamp = new Date().toISOString();
         
-        // Update stage status
-        if (exporter.preRegistrationStatus[stage]) {
-            exporter.preRegistrationStatus[stage].status = 'approved';
-            exporter.preRegistrationStatus[stage].approvedAt = new Date().toISOString();
+        // Validate stage exists
+        if (!exporter.preRegistrationStatus || !exporter.preRegistrationStatus[stage]) {
+            throw new Error(`Invalid stage: ${stage}`);
         }
 
-        // Check if all stages are complete
+        // Validate action
+        if (action !== 'approve' && action !== 'reject') {
+            throw new Error(`Invalid action: ${action}. Must be 'approve' or 'reject'`);
+        }
+
+        // Check if stage is in correct state for approval/rejection
+        const currentStatus = exporter.preRegistrationStatus[stage].status;
+        if (currentStatus !== 'submitted' && currentStatus !== 'pending_review' && currentStatus !== 'rejected') {
+            throw new Error(`Stage ${stage} cannot be ${action}ed. Current status: ${currentStatus}`);
+        }
+
+        // Update stage based on action
+        if (action === 'approve') {
+            exporter.preRegistrationStatus[stage].status = 'approved';
+            exporter.preRegistrationStatus[stage].approvedAt = timestamp;
+            exporter.preRegistrationStatus[stage].approvedBy = comments.approvedBy || 'ECTA';
+            exporter.preRegistrationStatus[stage].approvalComments = comments.comments || '';
+            
+            // Unlock next stage
+            const stageOrder = ['profile', 'laboratory', 'taster', 'competenceCertificate', 'exportLicense'];
+            const currentIndex = stageOrder.indexOf(stage);
+            if (currentIndex >= 0 && currentIndex < stageOrder.length - 1) {
+                const nextStage = stageOrder[currentIndex + 1];
+                if (exporter.preRegistrationStatus[nextStage].status === 'not_started') {
+                    exporter.preRegistrationStatus[nextStage].status = 'unlocked';
+                    exporter.preRegistrationStatus[nextStage].unlockedAt = timestamp;
+                }
+            }
+        } else {
+            // Rejection
+            if (!comments.reason) {
+                throw new Error('Rejection reason is required');
+            }
+            exporter.preRegistrationStatus[stage].status = 'rejected';
+            exporter.preRegistrationStatus[stage].rejectedAt = timestamp;
+            exporter.preRegistrationStatus[stage].rejectedBy = comments.rejectedBy || 'ECTA';
+            exporter.preRegistrationStatus[stage].rejectionReason = comments.reason;
+        }
+
+        // Check if all stages are approved
         const allApproved = Object.values(exporter.preRegistrationStatus)
             .every(s => s.status === 'approved' || s.status === 'not_applicable');
         
+        // Update exporter status based on workflow state
         if (allApproved) {
+            // All stages approved - activate exporter
+            const oneYearLater = new Date();
+            oneYearLater.setFullYear(oneYearLater.getFullYear() + 1);
+            const oneYearLaterISO = oneYearLater.toISOString();
+            
+            // Generate license number if not exists
+            if (!exporter.licenseNumber) {
+                const licenseNumber = `ECTA-${Date.now()}-${exporterId.substring(0, 8).toUpperCase()}`;
+                exporter.licenseNumber = licenseNumber;
+                exporter.licenseIssuedDate = timestamp;
+                exporter.licenseExpiryDate = oneYearLaterISO;
+            }
+            
+            // Fully activate exporter
             exporter.status = 'active';
-            exporter.qualifiedAt = new Date().toISOString();
+            exporter.qualifiedAt = timestamp;
+            exporter.fullyQualified = true;
+            exporter.autoQualificationLevel = 'MANUAL_APPROVAL';
+            
+            // Ensure all required profile fields exist
+            if (!exporter.companyName) exporter.companyName = '';
+            if (!exporter.tin) exporter.tin = '';
+            if (!exporter.capitalETB) exporter.capitalETB = 0;
+            if (!exporter.businessType) exporter.businessType = 'PRIVATE_EXPORTER';
+            if (!exporter.address) exporter.address = '';
+            if (!exporter.contactPerson) exporter.contactPerson = '';
+            if (!exporter.phone) exporter.phone = '';
+            if (!exporter.email) exporter.email = '';
+            if (!exporter.docType) exporter.docType = 'exporter';
+            if (!exporter.exporterId) exporter.exporterId = exporterId;
+            if (!exporter.createdAt) exporter.createdAt = timestamp;
+        } else if (stage === 'profile' && action === 'approve' && exporter.status === 'pending_approval') {
+            // First stage (profile) approved - change status to 'approved'
+            // This allows user to login and continue with other stages
+            exporter.status = 'approved';
+            exporter.profileApprovedAt = timestamp;
         }
 
-        exporter.updatedAt = new Date().toISOString();
+        exporter.updatedAt = timestamp;
+
+        // Update USER record status as well
+        const userKey = `USER_${exporterId}`;
+        const userData = await ctx.stub.getState(userKey);
+        if (userData && userData.length > 0) {
+            const user = JSON.parse(userData.toString());
+            user.status = exporter.status;
+            user.updatedAt = timestamp;
+            await ctx.stub.putState(userKey, Buffer.from(JSON.stringify(user)));
+        }
 
         await ctx.stub.putState(exporterId, Buffer.from(JSON.stringify(exporter)));
         
-        ctx.stub.setEvent('PreRegistrationApproved', Buffer.from(JSON.stringify({
+        ctx.stub.setEvent('PreRegistrationStageUpdated', Buffer.from(JSON.stringify({
             exporterId,
             stage,
-            timestamp: new Date().toISOString()
+            action,
+            newStatus: exporter.preRegistrationStatus[stage].status,
+            exporterStatus: exporter.status,
+            allStagesComplete: allApproved,
+            timestamp
         })));
 
-        return JSON.stringify({ success: true, exporterId, stage });
+        return JSON.stringify({ 
+            success: true, 
+            exporterId, 
+            stage,
+            action,
+            stageStatus: exporter.preRegistrationStatus[stage].status,
+            exporterStatus: exporter.status,
+            allStagesComplete: allApproved 
+        });
+    }
+
+    /**
+     * Reject a specific pre-registration stage (convenience method)
+     */
+    async RejectPreRegistration(ctx, exporterId, stage, reasonJSON) {
+        return await this.ApprovePreRegistration(ctx, exporterId, stage, 'reject', reasonJSON);
+    }
+
+    /**
+     * Submit a stage for review by exporter
+     * @param {string} exporterId - The exporter ID
+     * @param {string} stage - The stage to submit
+     * @param {string} dataJSON - Stage-specific data
+     */
+    async SubmitPreRegistrationStage(ctx, exporterId, stage, dataJSON) {
+        const exporterData = await ctx.stub.getState(exporterId);
+        
+        if (!exporterData || exporterData.length === 0) {
+            throw new Error(`Exporter ${exporterId} does not exist`);
+        }
+
+        const exporter = JSON.parse(exporterData.toString());
+        const data = JSON.parse(dataJSON);
+        
+        // Use deterministic timestamp from transaction context
+        const txTimestamp = ctx.stub.getTxTimestamp();
+        const timestamp = new Date(txTimestamp.seconds.toNumber() * 1000).toISOString();
+        
+        // Validate stage exists
+        if (!exporter.preRegistrationStatus || !exporter.preRegistrationStatus[stage]) {
+            throw new Error(`Invalid stage: ${stage}`);
+        }
+
+        // Check if stage is unlocked or can be submitted
+        const currentStatus = exporter.preRegistrationStatus[stage].status;
+        if (currentStatus !== 'unlocked' && currentStatus !== 'not_started' && currentStatus !== 'rejected') {
+            throw new Error(`Stage ${stage} cannot be submitted. Current status: ${currentStatus}. Must be 'unlocked', 'not_started', or 'rejected'`);
+        }
+
+        // SMART CONTRACT VALIDATION
+        let validationResult = this._validateStageSubmission(stage, data);
+        
+        // Update stage based on validation
+        exporter.preRegistrationStatus[stage].submittedAt = timestamp;
+        exporter.preRegistrationStatus[stage].submissionData = data;
+        
+        if (validationResult.autoApprove) {
+            // Auto-approve if validation passes
+            exporter.preRegistrationStatus[stage].status = 'approved';
+            exporter.preRegistrationStatus[stage].approvedAt = timestamp;
+            exporter.preRegistrationStatus[stage].approvedBy = 'SMART_CONTRACT';
+            exporter.preRegistrationStatus[stage].autoApprovalReason = validationResult.reason;
+            
+            // Copy certificate data if provided
+            if (data.certificateNumber) exporter.preRegistrationStatus[stage].certificateNumber = data.certificateNumber;
+            if (data.validUntil) exporter.preRegistrationStatus[stage].validUntil = data.validUntil;
+            if (data.issuedBy) exporter.preRegistrationStatus[stage].issuedBy = data.issuedBy;
+            
+            // Unlock next stage
+            const stageOrder = ['profile', 'laboratory', 'taster', 'competenceCertificate', 'exportLicense'];
+            const currentIndex = stageOrder.indexOf(stage);
+            if (currentIndex >= 0 && currentIndex < stageOrder.length - 1) {
+                const nextStage = stageOrder[currentIndex + 1];
+                if (exporter.preRegistrationStatus[nextStage].status === 'not_started') {
+                    exporter.preRegistrationStatus[nextStage].status = 'unlocked';
+                    exporter.preRegistrationStatus[nextStage].unlockedAt = timestamp;
+                }
+            }
+            
+            // Check if all stages are approved
+            const allApproved = Object.values(exporter.preRegistrationStatus)
+                .every(s => s.status === 'approved' || s.status === 'issued' || s.status === 'not_applicable');
+            
+            if (allApproved) {
+                // Issue license and activate exporter
+                const txDate = new Date(txTimestamp.seconds.toNumber() * 1000);
+                const year = txDate.getFullYear();
+                const random = Math.floor(Math.random() * 100000).toString().padStart(5, '0');
+                const licenseNumber = `LIC-${year}-${random}`;
+                const oneYearLater = new Date(txDate);
+                oneYearLater.setFullYear(oneYearLater.getFullYear() + 1);
+                
+                exporter.status = 'active';
+                exporter.fullyQualified = true;
+                exporter.licenseNumber = licenseNumber;
+                exporter.licenseIssuedDate = timestamp;
+                exporter.licenseExpiryDate = oneYearLater.toISOString();
+                
+                exporter.preRegistrationStatus.exportLicense.status = 'issued';
+                exporter.preRegistrationStatus.exportLicense.licenseNumber = licenseNumber;
+                exporter.preRegistrationStatus.exportLicense.issuedAt = timestamp;
+                exporter.preRegistrationStatus.exportLicense.expiryDate = oneYearLater.toISOString();
+            }
+        } else if (validationResult.autoReject) {
+            // Auto-reject if validation fails
+            exporter.preRegistrationStatus[stage].status = 'rejected';
+            exporter.preRegistrationStatus[stage].rejectedAt = timestamp;
+            exporter.preRegistrationStatus[stage].rejectedBy = 'SMART_CONTRACT';
+            exporter.preRegistrationStatus[stage].rejectionReason = validationResult.reason;
+        } else {
+            // Requires manual ECTA review
+            exporter.preRegistrationStatus[stage].status = 'submitted';
+        }
+
+        exporter.updatedAt = timestamp;
+
+        await ctx.stub.putState(exporterId, Buffer.from(JSON.stringify(exporter)));
+        
+        ctx.stub.setEvent('PreRegistrationStageSubmitted', Buffer.from(JSON.stringify({
+            exporterId,
+            stage,
+            status: exporter.preRegistrationStatus[stage].status,
+            autoProcessed: validationResult.autoApprove || validationResult.autoReject,
+            timestamp
+        })));
+
+        return JSON.stringify({ 
+            success: true, 
+            exporterId, 
+            stage,
+            status: exporter.preRegistrationStatus[stage].status,
+            autoProcessed: validationResult.autoApprove || validationResult.autoReject,
+            message: validationResult.autoApprove 
+                ? `Stage ${stage} auto-approved by smart contract` 
+                : validationResult.autoReject
+                ? `Stage ${stage} rejected: ${validationResult.reason}`
+                : `Stage ${stage} submitted successfully and is now pending ECTA review`
+        });
+    }
+    
+    /**
+     * Validate stage submission data
+     * Returns: { autoApprove: boolean, autoReject: boolean, reason: string }
+     */
+    _validateStageSubmission(stage, data) {
+        const currentDate = new Date();
+        
+        switch(stage) {
+            case 'laboratory':
+                // Validate laboratory certificate
+                if (!data.certificateNumber || data.certificateNumber.length < 5) {
+                    return { autoReject: true, reason: 'Invalid certificate number' };
+                }
+                if (!data.validUntil) {
+                    return { autoReject: true, reason: 'Certificate expiry date required' };
+                }
+                const labExpiry = new Date(data.validUntil);
+                if (labExpiry <= currentDate) {
+                    return { autoReject: true, reason: 'Certificate has expired' };
+                }
+                // Auto-approve if valid
+                return { autoApprove: true, reason: 'Laboratory certificate validated successfully' };
+                
+            case 'taster':
+                // Validate taster certificate
+                if (!data.certificateNumber || data.certificateNumber.length < 5) {
+                    return { autoReject: true, reason: 'Invalid taster certificate number' };
+                }
+                if (!data.validUntil) {
+                    return { autoReject: true, reason: 'Taster certificate expiry date required' };
+                }
+                const tasterExpiry = new Date(data.validUntil);
+                if (tasterExpiry <= currentDate) {
+                    return { autoReject: true, reason: 'Taster certificate has expired' };
+                }
+                // Auto-approve if valid
+                return { autoApprove: true, reason: 'Taster certificate validated successfully' };
+                
+            case 'competenceCertificate':
+                // Validate competence certificate
+                if (!data.certificateNumber || data.certificateNumber.length < 5) {
+                    return { autoReject: true, reason: 'Invalid competence certificate number' };
+                }
+                if (!data.validUntil) {
+                    return { autoReject: true, reason: 'Competence certificate expiry date required' };
+                }
+                const compExpiry = new Date(data.validUntil);
+                if (compExpiry <= currentDate) {
+                    return { autoReject: true, reason: 'Competence certificate has expired' };
+                }
+                // Auto-approve if valid
+                return { autoApprove: true, reason: 'Competence certificate validated successfully' };
+                
+            case 'exportLicense':
+                // Export license requires manual ECTA review
+                return { autoApprove: false, autoReject: false, reason: 'Requires ECTA review' };
+                
+            default:
+                // Unknown stage - require manual review
+                return { autoApprove: false, autoReject: false, reason: 'Requires ECTA review' };
+        }
     }
 
     // ============================================================================
@@ -1137,23 +1542,27 @@ class CoffeeExportContract extends Contract {
 
         const exporter = JSON.parse(exporterData.toString());
 
+        // Get deterministic timestamp from transaction context
+        const txTimestamp = ctx.stub.getTxTimestamp();
+        const timestamp = new Date(txTimestamp.seconds.toNumber() * 1000).toISOString();
+
         // Update qualification stage
         if (exporter.preRegistrationStatus[stage]) {
             exporter.preRegistrationStatus[stage] = {
                 status: 'submitted',
-                submittedAt: qualificationData.submittedAt || new Date().toISOString(),
+                submittedAt: qualificationData.submittedAt || timestamp,
                 data: qualificationData
             };
         }
 
-        exporter.updatedAt = new Date().toISOString();
+        exporter.updatedAt = timestamp;
 
         await ctx.stub.putState(exporterId, Buffer.from(JSON.stringify(exporter)));
 
         ctx.stub.setEvent('QualificationDocumentSubmitted', Buffer.from(JSON.stringify({
             exporterId,
             stage,
-            timestamp: new Date().toISOString()
+            timestamp
         })));
 
         return JSON.stringify({ success: true, exporterId, stage });
@@ -3162,6 +3571,403 @@ class CoffeeExportContract extends Contract {
         const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
         return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
     }
+
+    // ============================================================================
+    // SALES CONTRACT ENHANCEMENTS (International Trade Support)
+    // ============================================================================
+
+    /**
+     * Validate Incoterms 2020 - All 11 terms
+     */
+    async ValidateIncoterms(ctx, incoterm) {
+        const INCOTERMS_2020 = {
+            // Any mode of transport
+            'EXW': 'Ex Works',
+            'FCA': 'Free Carrier',
+            'CPT': 'Carriage Paid To',
+            'CIP': 'Carriage and Insurance Paid To',
+            'DAP': 'Delivered At Place',
+            'DPU': 'Delivered at Place Unloaded',
+            'DDP': 'Delivered Duty Paid',
+            
+            // Sea and inland waterway only
+            'FAS': 'Free Alongside Ship',
+            'FOB': 'Free On Board',
+            'CFR': 'Cost and Freight',
+            'CIF': 'Cost, Insurance and Freight'
+        };
+
+        if (!INCOTERMS_2020[incoterm]) {
+            throw new Error(`Invalid Incoterm. Must be one of: ${Object.keys(INCOTERMS_2020).join(', ')}`);
+        }
+        
+        return JSON.stringify({ 
+            valid: true, 
+            incoterm: incoterm,
+            description: INCOTERMS_2020[incoterm] 
+        });
+    }
+
+    /**
+     * Record legal framework for a contract
+     */
+    async RecordLegalFramework(ctx, contractId, legalFrameworkJSON) {
+        const legalFrameworkData = JSON.parse(legalFrameworkJSON);
+        const contractData = await ctx.stub.getState(contractId);
+        
+        if (!contractData || contractData.length === 0) {
+            throw new Error(`Contract ${contractId} does not exist`);
+        }
+
+        const contract = JSON.parse(contractData.toString());
+        
+        contract.legalFramework = {
+            governingLaw: legalFrameworkData.governingLaw, // CISG, ETHIOPIAN_LAW, etc.
+            arbitrationLocation: legalFrameworkData.arbitrationLocation,
+            arbitrationRules: legalFrameworkData.arbitrationRules, // ICC, UNCITRAL, etc.
+            contractLanguage: legalFrameworkData.contractLanguage || 'English',
+            recordedAt: new Date().toISOString()
+        };
+        
+        contract.updatedAt = new Date().toISOString();
+        await ctx.stub.putState(contractId, Buffer.from(JSON.stringify(contract)));
+        
+        ctx.stub.setEvent('LegalFrameworkRecorded', Buffer.from(JSON.stringify({
+            contractId,
+            governingLaw: legalFrameworkData.governingLaw,
+            timestamp: new Date().toISOString()
+        })));
+        
+        return JSON.stringify({ success: true, contractId });
+    }
+
+    /**
+     * Register force majeure event
+     */
+    async RegisterForceMajeureEvent(ctx, contractId, eventDataJSON) {
+        const eventData = JSON.parse(eventDataJSON);
+        const contractData = await ctx.stub.getState(contractId);
+        
+        if (!contractData || contractData.length === 0) {
+            throw new Error(`Contract ${contractId} does not exist`);
+        }
+
+        const contract = JSON.parse(contractData.toString());
+        
+        contract.forceMajeure = {
+            eventType: eventData.eventType, // PANDEMIC, WAR, NATURAL_DISASTER, etc.
+            description: eventData.description,
+            declaredBy: eventData.declaredBy,
+            declaredAt: new Date().toISOString(),
+            notificationDate: eventData.notificationDate,
+            expectedDuration: eventData.expectedDuration,
+            status: 'ACTIVE'
+        };
+        
+        contract.updatedAt = new Date().toISOString();
+        await ctx.stub.putState(contractId, Buffer.from(JSON.stringify(contract)));
+        
+        ctx.stub.setEvent('ForceMajeureRegistered', Buffer.from(JSON.stringify({
+            contractId,
+            eventType: eventData.eventType,
+            timestamp: new Date().toISOString()
+        })));
+        
+        return JSON.stringify({ success: true, contractId, eventType: eventData.eventType });
+    }
+
+    /**
+     * Suspend contract due to force majeure
+     */
+    async SuspendContract(ctx, contractId, suspensionDataJSON) {
+        const suspensionData = JSON.parse(suspensionDataJSON);
+        const contractData = await ctx.stub.getState(contractId);
+        
+        if (!contractData || contractData.length === 0) {
+            throw new Error(`Contract ${contractId} does not exist`);
+        }
+
+        const contract = JSON.parse(contractData.toString());
+        
+        if (!contract.forceMajeure || contract.forceMajeure.status !== 'ACTIVE') {
+            throw new Error('Cannot suspend: No active force majeure event');
+        }
+        
+        contract.status = 'SUSPENDED';
+        contract.suspendedAt = new Date().toISOString();
+        contract.suspensionReason = suspensionData.reason;
+        contract.updatedAt = new Date().toISOString();
+        
+        await ctx.stub.putState(contractId, Buffer.from(JSON.stringify(contract)));
+        
+        ctx.stub.setEvent('ContractSuspended', Buffer.from(JSON.stringify({
+            contractId,
+            reason: suspensionData.reason,
+            timestamp: new Date().toISOString()
+        })));
+        
+        return JSON.stringify({ success: true, contractId, status: 'SUSPENDED' });
+    }
+
+    /**
+     * Resume suspended contract
+     */
+    async ResumeContract(ctx, contractId, resumptionDataJSON) {
+        const resumptionData = JSON.parse(resumptionDataJSON);
+        const contractData = await ctx.stub.getState(contractId);
+        
+        if (!contractData || contractData.length === 0) {
+            throw new Error(`Contract ${contractId} does not exist`);
+        }
+
+        const contract = JSON.parse(contractData.toString());
+        
+        if (contract.status !== 'SUSPENDED') {
+            throw new Error('Contract is not suspended');
+        }
+        
+        contract.status = 'ACTIVE';
+        contract.resumedAt = new Date().toISOString();
+        contract.forceMajeure.status = 'RESOLVED';
+        contract.forceMajeure.resolvedAt = new Date().toISOString();
+        contract.updatedAt = new Date().toISOString();
+        
+        await ctx.stub.putState(contractId, Buffer.from(JSON.stringify(contract)));
+        
+        ctx.stub.setEvent('ContractResumed', Buffer.from(JSON.stringify({
+            contractId,
+            timestamp: new Date().toISOString()
+        })));
+        
+        return JSON.stringify({ success: true, contractId, status: 'ACTIVE' });
+    }
+
+    /**
+     * Record dispute
+     */
+    async RecordDispute(ctx, contractId, disputeDataJSON) {
+        const disputeData = JSON.parse(disputeDataJSON);
+        const disputeId = `DISPUTE-${Date.now()}`;
+        
+        const dispute = {
+            docType: 'dispute',
+            disputeId,
+            contractId,
+            raisedBy: disputeData.raisedBy,
+            raisedByType: disputeData.raisedByType, // EXPORTER, BUYER
+            raisedAgainst: disputeData.raisedAgainst,
+            disputeType: disputeData.disputeType, // QUALITY, PAYMENT, DELIVERY, etc.
+            severity: disputeData.severity, // LOW, MEDIUM, HIGH, CRITICAL
+            description: disputeData.description,
+            claimedAmount: disputeData.claimedAmount || 0,
+            currency: disputeData.currency || 'USD',
+            evidenceDocuments: disputeData.evidenceDocuments || [],
+            status: 'OPEN',
+            createdAt: new Date().toISOString()
+        };
+        
+        await ctx.stub.putState(disputeId, Buffer.from(JSON.stringify(dispute)));
+        
+        ctx.stub.setEvent('DisputeRecorded', Buffer.from(JSON.stringify({
+            disputeId,
+            contractId,
+            disputeType: disputeData.disputeType,
+            timestamp: new Date().toISOString()
+        })));
+        
+        return JSON.stringify({ success: true, disputeId, contractId });
+    }
+
+    /**
+     * Resolve dispute
+     */
+    async ResolveDispute(ctx, disputeId, resolutionDataJSON) {
+        const resolutionData = JSON.parse(resolutionDataJSON);
+        const disputeData = await ctx.stub.getState(disputeId);
+        
+        if (!disputeData || disputeData.length === 0) {
+            throw new Error(`Dispute ${disputeId} not found`);
+        }
+        
+        const dispute = JSON.parse(disputeData.toString());
+        
+        dispute.status = 'RESOLVED';
+        dispute.resolutionMethod = resolutionData.resolutionMethod; // NEGOTIATION, MEDIATION, ARBITRATION
+        dispute.resolutionNotes = resolutionData.resolutionNotes;
+        dispute.awardedAmount = resolutionData.awardedAmount || 0;
+        dispute.awardedTo = resolutionData.awardedTo;
+        dispute.resolvedAt = new Date().toISOString();
+        
+        await ctx.stub.putState(disputeId, Buffer.from(JSON.stringify(dispute)));
+        
+        ctx.stub.setEvent('DisputeResolved', Buffer.from(JSON.stringify({
+            disputeId,
+            resolutionMethod: resolutionData.resolutionMethod,
+            timestamp: new Date().toISOString()
+        })));
+        
+        return JSON.stringify({ success: true, disputeId, status: 'RESOLVED' });
+    }
+
+    /**
+     * Record exchange rate
+     */
+    async RecordExchangeRate(ctx, fromCurrency, toCurrency, rate, effectiveDate) {
+        const rateId = `RATE-${fromCurrency}-${toCurrency}-${Date.now()}`;
+        
+        const exchangeRate = {
+            docType: 'exchangeRate',
+            rateId,
+            fromCurrency,
+            toCurrency,
+            rate: parseFloat(rate),
+            effectiveDate: effectiveDate || new Date().toISOString(),
+            recordedAt: new Date().toISOString()
+        };
+        
+        await ctx.stub.putState(rateId, Buffer.from(JSON.stringify(exchangeRate)));
+        
+        ctx.stub.setEvent('ExchangeRateRecorded', Buffer.from(JSON.stringify({
+            rateId,
+            fromCurrency,
+            toCurrency,
+            rate: parseFloat(rate),
+            timestamp: new Date().toISOString()
+        })));
+        
+        return JSON.stringify({ success: true, rateId });
+    }
+
+    /**
+     * Get exchange rate
+     */
+    async GetExchangeRate(ctx, fromCurrency, toCurrency) {
+        const query = {
+            selector: {
+                docType: 'exchangeRate',
+                fromCurrency,
+                toCurrency
+            },
+            sort: [{ effectiveDate: 'desc' }],
+            limit: 1
+        };
+        
+        const iterator = await ctx.stub.getQueryResult(JSON.stringify(query));
+        const result = await this._getAllResults(iterator);
+        
+        if (result.length === 0) {
+            throw new Error(`No exchange rate found for ${fromCurrency} to ${toCurrency}`);
+        }
+        
+        return JSON.stringify(result[0]);
+    }
+
+    /**
+     * Amend contract
+     */
+    async AmendContract(ctx, contractId, amendmentDataJSON) {
+        const amendmentData = JSON.parse(amendmentDataJSON);
+        const contractData = await ctx.stub.getState(contractId);
+        
+        if (!contractData || contractData.length === 0) {
+            throw new Error(`Contract ${contractId} does not exist`);
+        }
+
+        const contract = JSON.parse(contractData.toString());
+        
+        if (contract.status !== 'ACTIVE') {
+            throw new Error('Can only amend active contracts');
+        }
+        
+        const amendmentId = `AMENDMENT-${Date.now()}`;
+        
+        const amendment = {
+            amendmentId,
+            contractId,
+            amendmentType: amendmentData.amendmentType, // PRICE, QUANTITY, DELIVERY, etc.
+            previousValues: amendmentData.previousValues,
+            newValues: amendmentData.newValues,
+            reason: amendmentData.reason,
+            approvedBy: amendmentData.approvedBy,
+            approvedAt: new Date().toISOString()
+        };
+        
+        // Store amendment history
+        if (!contract.amendments) {
+            contract.amendments = [];
+        }
+        contract.amendments.push(amendment);
+        
+        // Apply changes
+        Object.assign(contract, amendmentData.newValues);
+        contract.updatedAt = new Date().toISOString();
+        
+        await ctx.stub.putState(contractId, Buffer.from(JSON.stringify(contract)));
+        
+        ctx.stub.setEvent('ContractAmended', Buffer.from(JSON.stringify({
+            contractId,
+            amendmentId,
+            amendmentType: amendmentData.amendmentType,
+            timestamp: new Date().toISOString()
+        })));
+        
+        return JSON.stringify({ success: true, contractId, amendmentId });
+    }
+
+    /**
+     * Finalize contract from draft (connects off-chain draft to on-chain contract)
+     */
+    async FinalizeContractFromDraft(ctx, draftId, finalContractDataJSON) {
+        const finalContractData = JSON.parse(finalContractDataJSON);
+        const contractId = `CONTRACT-${Date.now()}`;
+        
+        const contract = {
+            docType: 'finalizedContract',
+            contractId,
+            draftId, // Reference to off-chain draft
+            
+            // Parties
+            exporterId: finalContractData.exporterId,
+            buyerId: finalContractData.buyerId,
+            
+            // Contract terms from draft
+            coffeeType: finalContractData.coffeeType,
+            quantity: finalContractData.quantity,
+            unitPrice: finalContractData.unitPrice,
+            totalValue: finalContractData.totalValue,
+            currency: finalContractData.currency,
+            
+            // Payment & Delivery
+            paymentTerms: finalContractData.paymentTerms,
+            paymentMethod: finalContractData.paymentMethod,
+            incoterms: finalContractData.incoterms,
+            deliveryDate: finalContractData.deliveryDate,
+            
+            // Legal framework
+            governingLaw: finalContractData.governingLaw,
+            arbitrationLocation: finalContractData.arbitrationLocation,
+            arbitrationRules: finalContractData.arbitrationRules,
+            forceMajeureClause: finalContractData.forceMajeureClause,
+            
+            // Status
+            status: 'ACTIVE',
+            finalizedAt: new Date().toISOString(),
+            createdAt: new Date().toISOString()
+        };
+        
+        await ctx.stub.putState(contractId, Buffer.from(JSON.stringify(contract)));
+        
+        ctx.stub.setEvent('ContractFinalized', Buffer.from(JSON.stringify({
+            contractId,
+            draftId,
+            exporterId: finalContractData.exporterId,
+            buyerId: finalContractData.buyerId,
+            timestamp: new Date().toISOString()
+        })));
+        
+        return JSON.stringify({ success: true, contractId, draftId });
+    }
+
 }
 
 module.exports = CoffeeExportContract;

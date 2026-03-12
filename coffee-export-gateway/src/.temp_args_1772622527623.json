@@ -1,0 +1,1 @@
+{"Args":["RegisterUser","{\"username\":\"autotest_bademail\",\"passwordHash\":\"$2b$10$test\",\"email\":\"notanemail\",\"role\":\"exporter\",\"companyName\":\"Bad Email Company\",\"tin\":\"TIN5555555555\",\"capitalETB\":60000000,\"businessType\":\"PRIVATE_EXPORTER\"}"]}

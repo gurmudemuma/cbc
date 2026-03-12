@@ -2,7 +2,7 @@
   "name": "coffee-export-network",
   "version": "1.0.0",
   "client": {
-    "organization": "ECTAOrg",
+    "organization": "ECTA",
     "connection": {
       "timeout": {
         "peer": {
@@ -12,105 +12,44 @@
       }
     }
   },
-  "channels": {
-    "coffeechannel": {
-      "orderers": [
-        "orderer1.orderer.example.com",
-        "orderer2.orderer.example.com",
-        "orderer3.orderer.example.com"
-      ],
-      "peers": {
-        "peer0.ecta.example.com": {
-          "endorsingPeer": true,
-          "chaincodeQuery": true,
-          "ledgerQuery": true,
-          "eventSource": true
-        },
-        "peer1.ecta.example.com": {
-          "endorsingPeer": true,
-          "chaincodeQuery": true,
-          "ledgerQuery": true,
-          "eventSource": true
-        }
-      }
-    }
-  },
   "organizations": {
-    "ECTAOrg": {
+    "ECTA": {
       "mspid": "ECTAMSP",
       "peers": [
         "peer0.ecta.example.com",
         "peer1.ecta.example.com"
-      ],
-      "certificateAuthorities": [
-        "ca.ecta.example.com"
       ]
     }
   },
   "orderers": {
     "orderer1.orderer.example.com": {
-      "url": "grpcs://localhost:7050",
-      "tlsCACerts": {
-        "path": "../../crypto-config/ordererOrganizations/orderer.example.com/orderers/orderer1.orderer.example.com/msp/tlscacerts/tlsca.orderer.example.com-cert.pem"
-      },
+      "url": "grpc://orderer1.orderer.example.com:7050",
       "grpcOptions": {
-        "ssl-target-name-override": "orderer1.orderer.example.com",
-        "hostnameOverride": "orderer1.orderer.example.com"
-      }
-    },
-    "orderer2.orderer.example.com": {
-      "url": "grpcs://localhost:8050",
-      "tlsCACerts": {
-        "path": "../../crypto-config/ordererOrganizations/orderer.example.com/orderers/orderer2.orderer.example.com/msp/tlscacerts/tlsca.orderer.example.com-cert.pem"
-      },
-      "grpcOptions": {
-        "ssl-target-name-override": "orderer2.orderer.example.com",
-        "hostnameOverride": "orderer2.orderer.example.com"
-      }
-    },
-    "orderer3.orderer.example.com": {
-      "url": "grpcs://localhost:9050",
-      "tlsCACerts": {
-        "path": "../../crypto-config/ordererOrganizations/orderer.example.com/orderers/orderer3.orderer.example.com/msp/tlscacerts/tlsca.orderer.example.com-cert.pem"
-      },
-      "grpcOptions": {
-        "ssl-target-name-override": "orderer3.orderer.example.com",
-        "hostnameOverride": "orderer3.orderer.example.com"
+        "grpc.keepalive_time_ms": 120000
       }
     }
   },
   "peers": {
     "peer0.ecta.example.com": {
-      "url": "grpcs://localhost:7051",
-      "tlsCACerts": {
-        "path": "../../crypto-config/peerOrganizations/ecta.example.com/peers/peer0.ecta.example.com/tls/ca.crt"
-      },
+      "url": "grpc://peer0.ecta.example.com:7051",
       "grpcOptions": {
-        "ssl-target-name-override": "peer0.ecta.example.com",
-        "hostnameOverride": "peer0.ecta.example.com"
+        "grpc.keepalive_time_ms": 120000,
+        "grpc.http2.min_time_between_pings_ms": 120000,
+        "grpc.keepalive_timeout_ms": 20000,
+        "grpc.http2.max_pings_without_data": 0,
+        "grpc.keepalive_permit_without_calls": 1
       }
     },
     "peer1.ecta.example.com": {
-      "url": "grpcs://localhost:8051",
-      "tlsCACerts": {
-        "path": "../../crypto-config/peerOrganizations/ecta.example.com/peers/peer1.ecta.example.com/tls/ca.crt"
-      },
+      "url": "grpc://peer1.ecta.example.com:8051",
       "grpcOptions": {
-        "ssl-target-name-override": "peer1.ecta.example.com",
-        "hostnameOverride": "peer1.ecta.example.com"
-      }
-    }
-  },
-  "certificateAuthorities": {
-    "ca.ecta.example.com": {
-      "url": "https://localhost:7054",
-      "caName": "ca-ecta",
-      "tlsCACerts": {
-        "path": "../../crypto-config/peerOrganizations/ecta.example.com/ca/ca.ecta.example.com-cert.pem"
-      },
-      "httpOptions": {
-        "verify": false
+        "grpc.keepalive_time_ms": 120000,
+        "grpc.http2.min_time_between_pings_ms": 120000,
+        "grpc.keepalive_timeout_ms": 20000,
+        "grpc.http2.max_pings_without_data": 0,
+        "grpc.keepalive_permit_without_calls": 1
       }
     }
   }
 }
+

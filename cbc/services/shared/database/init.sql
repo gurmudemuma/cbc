@@ -43,6 +43,9 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- Run migration 009: Add TIN to exports
 \i /docker-entrypoint-initdb.d/migrations/009_add_tin_to_exports.sql
 
+-- Run migration 010: Sales contract enhancements (buyer registry, verification, etc.)
+\i /docker-entrypoint-initdb.d/migrations/010_sales_contract_enhancements.sql
+
 -- Run migration 011: Create universal renewal table
 \i /docker-entrypoint-initdb.d/migrations/011_create_universal_renewal_table.sql
 

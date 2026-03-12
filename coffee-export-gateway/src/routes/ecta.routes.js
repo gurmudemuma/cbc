@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const fabricService = require('../services');
+const postgresService = require('../services/postgres');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 const { users } = require('./auth.routes');
 const notificationService = require('../services/notification.service');
@@ -60,7 +61,7 @@ router.get('/registrations/:username', authenticateToken, requireRole('ecta', 'a
           'GetExporterProfile',
           username
         );
-        exporterProfile = JSON.parse(profileResult);
+        exporterProfile = profileResult; // Already parsed
       } catch (error) {
         console.log('Exporter profile not found for', username);
       }
@@ -122,17 +123,8 @@ router.post('/registrations/:username/approve', authenticateToken, requireRole('
     });
 
     // STEP 2: Update user status in PostgreSQL
-    const { Pool } = require('pg');
-    const pool = new Pool({
-      host: process.env.POSTGRES_HOST || 'postgres',
-      port: process.env.POSTGRES_PORT || 5432,
-      database: process.env.POSTGRES_DB || 'coffee_export_db',
-      user: process.env.POSTGRES_USER || 'postgres',
-      password: process.env.POSTGRES_PASSWORD || 'postgres'
-    });
-
     try {
-      await pool.query(
+      await postgresService.query(
         'UPDATE users SET status = $1, updated_at = NOW() WHERE username = $2',
         ['approved', username]
       );
@@ -142,17 +134,173 @@ router.post('/registrations/:username/approve', authenticateToken, requireRole('
       // Don't fail the request if PostgreSQL update fails, but log it
     }
 
-    // STEP 3: Also approve profile stage on exporter profile
+    // STEP 3: Create/Update full exporter profile with all qualifications
     try {
-      await fabricService.submitTransaction(
-        req.user.id,
-        process.env.CHAINCODE_NAME || 'ecta',
-        'ApprovePreRegistration',
-        username,
-        'profile'
-      );
+      // Check if exporter profile already exists
+      let exporterExists = false;
+      let existingProfile = null;
+      try {
+        const profileResult = await fabricService.evaluateTransaction(
+          req.user.id,
+          process.env.CHAINCODE_NAME || 'ecta',
+          'GetExporterProfile',
+          username
+        );
+        existingProfile = JSON.parse(profileResult);
+        exporterExists = true;
+      } catch (error) {
+        // Profile doesn't exist, will create it
+      }
+
+      if (!exporterExists) {
+        // Create full exporter profile with all qualifications approved
+        const timestamp = new Date().toISOString();
+        const oneYearLater = new Date();
+        oneYearLater.setFullYear(oneYearLater.getFullYear() + 1);
+        const threeYearsLater = new Date();
+        threeYearsLater.setFullYear(threeYearsLater.getFullYear() + 3);
+        
+        const year = new Date().getFullYear();
+        const random = Math.floor(Math.random() * 100000).toString().padStart(5, '0');
+        const licenseNumber = `LIC-${year}-${random}`;
+        
+        const preRegistrationStatus = {
+          profile: { 
+            status: 'approved', 
+            submittedAt: timestamp,
+            approvedAt: timestamp,
+            approvedBy: req.user.id,
+            comments: comments || 'Manually approved by ECTA'
+          },
+          laboratory: { 
+            status: 'approved',
+            submittedAt: timestamp,
+            approvedAt: timestamp,
+            approvedBy: req.user.id,
+            certificateNumber: `LAB-${Date.now()}`,
+            validUntil: oneYearLater.toISOString()
+          },
+          taster: { 
+            status: 'approved',
+            submittedAt: timestamp,
+            approvedAt: timestamp,
+            approvedBy: req.user.id,
+            certificateNumber: `TASTER-${Date.now()}`,
+            validUntil: threeYearsLater.toISOString()
+          },
+          competenceCertificate: { 
+            status: 'approved',
+            submittedAt: timestamp,
+            approvedAt: timestamp,
+            approvedBy: req.user.id,
+            certificateNumber: `COMP-${Date.now()}`,
+            validUntil: oneYearLater.toISOString()
+          },
+          exportLicense: { 
+            status: 'issued',
+            licenseNumber: licenseNumber,
+            issuedAt: timestamp,
+            issuedBy: req.user.id,
+            expiryDate: oneYearLater.toISOString(),
+            licenseType: 'FULL_EXPORT',
+            restrictions: []
+          }
+        };
+
+        const exporterProfileData = {
+          docType: 'exporter',
+          exporterId: username,
+          companyName: user.companyName || '',
+          tin: user.tin || '',
+          capitalETB: user.capitalETB || 0,
+          businessType: user.businessType || 'PRIVATE_EXPORTER',
+          address: user.address || '',
+          contactPerson: user.contactPerson || '',
+          phone: user.phone || '',
+          email: user.email || '',
+          status: 'active',
+          licenseNumber: licenseNumber,
+          licenseIssuedDate: timestamp,
+          licenseExpiryDate: oneYearLater.toISOString(),
+          fullyQualified: true,
+          qualificationLevel: 'FULL',
+          preRegistrationStatus: preRegistrationStatus,
+          createdAt: timestamp,
+          updatedAt: timestamp
+        };
+
+        // Use direct state write via chaincode
+        await fabricService.submitTransaction(
+          req.user.id,
+          process.env.CHAINCODE_NAME || 'ecta',
+          'UpdateExporterProfile',
+          username,
+          JSON.stringify(exporterProfileData)
+        );
+        console.log(`✓ Full exporter profile created for ${username}`);
+      } else {
+        // Profile exists, update it with full qualifications
+        const timestamp = new Date().toISOString();
+        const oneYearLater = new Date();
+        oneYearLater.setFullYear(oneYearLater.getFullYear() + 1);
+        const threeYearsLater = new Date();
+        threeYearsLater.setFullYear(threeYearsLater.getFullYear() + 3);
+        
+        // Update all stages to approved
+        existingProfile.preRegistrationStatus = existingProfile.preRegistrationStatus || {};
+        existingProfile.preRegistrationStatus.profile = {
+          status: 'approved',
+          approvedAt: timestamp,
+          approvedBy: req.user.id,
+          comments: comments || 'Manually approved by ECTA'
+        };
+        existingProfile.preRegistrationStatus.laboratory = {
+          status: 'approved',
+          approvedAt: timestamp,
+          approvedBy: req.user.id,
+          certificateNumber: existingProfile.preRegistrationStatus.laboratory?.certificateNumber || `LAB-${Date.now()}`,
+          validUntil: oneYearLater.toISOString()
+        };
+        existingProfile.preRegistrationStatus.taster = {
+          status: 'approved',
+          approvedAt: timestamp,
+          approvedBy: req.user.id,
+          certificateNumber: existingProfile.preRegistrationStatus.taster?.certificateNumber || `TASTER-${Date.now()}`,
+          validUntil: threeYearsLater.toISOString()
+        };
+        existingProfile.preRegistrationStatus.competenceCertificate = {
+          status: 'approved',
+          approvedAt: timestamp,
+          approvedBy: req.user.id,
+          certificateNumber: existingProfile.preRegistrationStatus.competenceCertificate?.certificateNumber || `COMP-${Date.now()}`,
+          validUntil: oneYearLater.toISOString()
+        };
+        existingProfile.preRegistrationStatus.exportLicense = {
+          status: 'issued',
+          licenseNumber: existingProfile.licenseNumber || `LIC-${new Date().getFullYear()}-${Math.floor(Math.random() * 100000).toString().padStart(5, '0')}`,
+          issuedAt: timestamp,
+          issuedBy: req.user.id,
+          expiryDate: oneYearLater.toISOString(),
+          licenseType: 'FULL_EXPORT',
+          restrictions: []
+        };
+        
+        existingProfile.status = 'active';
+        existingProfile.fullyQualified = true;
+        existingProfile.updatedAt = timestamp;
+
+        await fabricService.submitTransaction(
+          req.user.id,
+          process.env.CHAINCODE_NAME || 'ecta',
+          'UpdateExporterProfile',
+          username,
+          JSON.stringify(existingProfile)
+        );
+        console.log(`✓ All qualification stages approved for ${username}`);
+      }
     } catch (error) {
-      console.log('Profile approval on exporter record:', error.message);
+      console.error('Exporter profile creation/update error:', error.message);
+      // Don't fail the approval if profile update fails
     }
     
     // Send approval notification email
@@ -209,17 +357,8 @@ router.post('/registrations/:username/reject', authenticateToken, requireRole('e
     });
     
     // STEP 2: Update user status in PostgreSQL
-    const { Pool } = require('pg');
-    const pool = new Pool({
-      host: process.env.POSTGRES_HOST || 'postgres',
-      port: process.env.POSTGRES_PORT || 5432,
-      database: process.env.POSTGRES_DB || 'coffee_export_db',
-      user: process.env.POSTGRES_USER || 'postgres',
-      password: process.env.POSTGRES_PASSWORD || 'postgres'
-    });
-
     try {
-      await pool.query(
+      await postgresService.query(
         'UPDATE users SET status = $1, updated_at = NOW() WHERE username = $2',
         ['rejected', username]
       );
@@ -254,6 +393,7 @@ router.post('/registrations/:username/reject', authenticateToken, requireRole('e
 /**
  * Submit qualification document (Exporter only - after approval)
  * NOW CHECKS BLOCKCHAIN FOR USER STATUS ✅
+ * AUTO-GENERATES CERTIFICATE INFO FOR AUTO-APPROVAL ✅
  */
 router.post('/qualifications/:stage', authenticateToken, async (req, res) => {
   try {
@@ -272,10 +412,38 @@ router.post('/qualifications/:stage', authenticateToken, async (req, res) => {
       return res.status(403).json({ error: 'Account must be approved to submit qualifications' });
     }
     
+    // Auto-generate certificate info based on stage
+    const timestamp = Date.now();
+    let certificateNumber, validUntil;
+    
+    switch(stage) {
+      case 'laboratory':
+        certificateNumber = `LAB-${timestamp}`;
+        validUntil = new Date();
+        validUntil.setFullYear(validUntil.getFullYear() + 1); // 1 year validity
+        break;
+      case 'taster':
+        certificateNumber = `TASTER-${timestamp}`;
+        validUntil = new Date();
+        validUntil.setFullYear(validUntil.getFullYear() + 3); // 3 years validity
+        break;
+      case 'competenceCertificate':
+        certificateNumber = `COMP-${timestamp}`;
+        validUntil = new Date();
+        validUntil.setFullYear(validUntil.getFullYear() + 1); // 1 year validity
+        break;
+      default:
+        certificateNumber = `CERT-${timestamp}`;
+        validUntil = new Date();
+        validUntil.setFullYear(validUntil.getFullYear() + 1);
+    }
+    
     const qualificationData = {
       exporterId,
       stage,
       ...req.body,
+      certificateNumber,
+      validUntil: validUntil.toISOString(),
       submittedAt: new Date().toISOString()
     };
     
@@ -290,7 +458,8 @@ router.post('/qualifications/:stage', authenticateToken, async (req, res) => {
     res.json({
       success: true,
       message: `${stage} qualification submitted successfully`,
-      stage
+      stage,
+      certificateNumber
     });
   } catch (error) {
     console.error('Submit qualification error:', error);
@@ -312,7 +481,7 @@ router.get('/qualifications/status', authenticateToken, async (req, res) => {
       exporterId
     );
     
-    const profile = JSON.parse(result);
+    const profile = result; // Already parsed
     
     res.json({
       exporterId,
@@ -327,12 +496,14 @@ router.get('/qualifications/status', authenticateToken, async (req, res) => {
 
 /**
  * Approve qualification stage (ECTA only)
+ * NOW GENERATES PDF CERTIFICATE AUTOMATICALLY
  */
 router.post('/qualifications/:username/:stage/approve', authenticateToken, requireRole('ecta', 'admin'), async (req, res) => {
   try {
     const { username, stage } = req.params;
     const { comments } = req.body;
     
+    // Approve on blockchain
     await fabricService.submitTransaction(
       req.user.id,
       process.env.CHAINCODE_NAME || 'ecta',
@@ -341,20 +512,70 @@ router.post('/qualifications/:username/:stage/approve', authenticateToken, requi
       stage
     );
     
-    // Get user details for notification
+    // Get user details for certificate generation
+    let certificateInfo = null;
     try {
       const user = await fabricService.getUser(username);
-      notificationService.notifyQualificationApproved(user, stage, { comments })
-        .catch(err => console.error('Email notification failed:', err));
+      
+      // Generate PDF certificate based on stage
+      const { generateCompetenceCertificatePDF, generateLaboratoryCertificatePDF, generateTasterCertificatePDF } = require('../utils/certificate-pdf');
+      
+      let pdfResult;
+      switch(stage) {
+        case 'competenceCertificate':
+          pdfResult = await generateCompetenceCertificatePDF(user, { 
+            trainingProgram: req.body.trainingProgram,
+            assessmentScore: req.body.assessmentScore,
+            assessmentDate: new Date().toISOString()
+          });
+          break;
+          
+        case 'laboratory':
+          pdfResult = await generateLaboratoryCertificatePDF(user, {
+            laboratoryName: req.body.laboratoryName,
+            location: user.address,
+            inspectionDate: new Date().toISOString(),
+            inspector: req.user.id
+          });
+          break;
+          
+        case 'taster':
+          pdfResult = await generateTasterCertificatePDF(user, {
+            tasterName: req.body.tasterName,
+            tasterId: req.body.tasterId,
+            certificationLevel: req.body.certificationLevel,
+            assessmentDate: new Date().toISOString()
+          });
+          break;
+      }
+      
+      if (pdfResult) {
+        certificateInfo = {
+          certificateNumber: pdfResult.certificateNumber,
+          filename: pdfResult.filename,
+          filepath: pdfResult.filepath,
+          downloadUrl: `/api/ecta/certificates/${stage}/${username}/download`
+        };
+        
+        console.log(`✓ Certificate generated: ${pdfResult.filename}`);
+      }
+      
+      // Send approval notification email with certificate
+      notificationService.notifyQualificationApproved(user, stage, { 
+        comments,
+        certificateInfo 
+      }).catch(err => console.error('Email notification failed:', err));
+      
     } catch (error) {
-      console.log('Could not send notification:', error.message);
+      console.log('Certificate generation error (non-fatal):', error.message);
     }
     
     res.json({
       success: true,
       message: `${stage} qualification approved`,
       username,
-      stage
+      stage,
+      certificate: certificateInfo
     });
   } catch (error) {
     console.error('Approve qualification error:', error);
@@ -364,6 +585,7 @@ router.post('/qualifications/:username/:stage/approve', authenticateToken, requi
 
 /**
  * Issue export license (ECTA only)
+ * NOW GENERATES PDF LICENSE AUTOMATICALLY
  */
 router.post('/license/issue', authenticateToken, requireRole('ecta', 'admin'), async (req, res) => {
   try {
@@ -371,15 +593,6 @@ router.post('/license/issue', authenticateToken, requireRole('ecta', 'admin'), a
     
     if (!exporterId || !licenseNumber || !expiryDate) {
       return res.status(400).json({ error: 'Missing required fields' });
-    }
-    
-    // Update user status to active
-    const user = users.get(exporterId);
-    if (user) {
-      user.status = 'active';
-      user.licenseNumber = licenseNumber;
-      user.licenseIssuedAt = new Date().toISOString();
-      user.licenseExpiryDate = expiryDate;
     }
     
     // Update blockchain
@@ -404,12 +617,38 @@ router.post('/license/issue', authenticateToken, requireRole('ecta', 'admin'), a
       })
     );
     
+    // Generate PDF license certificate
+    let certificateInfo = null;
+    try {
+      const user = await fabricService.getUser(exporterId);
+      const { generateExportLicensePDF } = require('../utils/certificate-pdf');
+      
+      const pdfResult = await generateExportLicensePDF(user, licenseData);
+      
+      certificateInfo = {
+        certificateNumber: pdfResult.certificateNumber,
+        filename: pdfResult.filename,
+        filepath: pdfResult.filepath,
+        downloadUrl: `/api/ecta/certificates/license/${exporterId}/download`
+      };
+      
+      console.log(`✓ Export license generated: ${pdfResult.filename}`);
+      
+      // Send notification email with license
+      notificationService.notifyLicenseIssued(user, licenseData, certificateInfo)
+        .catch(err => console.error('Email notification failed:', err));
+        
+    } catch (error) {
+      console.error('License PDF generation error (non-fatal):', error.message);
+    }
+    
     res.json({
       success: true,
       message: 'Export license issued successfully',
       exporterId,
       licenseNumber,
-      expiryDate
+      expiryDate,
+      certificate: certificateInfo
     });
   } catch (error) {
     console.error('Issue license error:', error);
@@ -426,15 +665,25 @@ router.post('/license/issue', authenticateToken, requireRole('ecta', 'admin'), a
  */
 router.get('/preregistration/laboratories/pending', authenticateToken, requireRole('ecta', 'admin'), async (req, res) => {
   try {
-    const result = await fabricService.evaluateTransaction(
-      req.user.id,
-      process.env.CHAINCODE_NAME || 'ecta',
-      'GetPendingQualifications',
-      'laboratory'
-    );
+    // Fetch from PostgreSQL
+    const result = await postgresService.query(`
+      SELECT 
+        pr.exporter_id,
+        pr.laboratory_status,
+        pr.laboratory_cert_number,
+        pr.created_at,
+        pr.updated_at,
+        u.email,
+        ep.business_name,
+        ep.tin
+      FROM ecta_pre_registration pr
+      JOIN users u ON pr.exporter_id = u.username
+      LEFT JOIN exporter_profiles ep ON pr.exporter_id = ep.user_id
+      WHERE pr.laboratory_status = 'SUBMITTED'
+      ORDER BY pr.updated_at DESC
+    `);
     
-    const pending = JSON.parse(result);
-    res.json(pending);
+    res.json(result.rows);
   } catch (error) {
     console.error('Get pending laboratories error:', error);
     res.status(500).json({ error: error.message });
@@ -446,15 +695,25 @@ router.get('/preregistration/laboratories/pending', authenticateToken, requireRo
  */
 router.get('/preregistration/tasters/pending', authenticateToken, requireRole('ecta', 'admin'), async (req, res) => {
   try {
-    const result = await fabricService.evaluateTransaction(
-      req.user.id,
-      process.env.CHAINCODE_NAME || 'ecta',
-      'GetPendingQualifications',
-      'taster'
-    );
+    // Fetch from PostgreSQL
+    const result = await postgresService.query(`
+      SELECT 
+        pr.exporter_id,
+        pr.taster_status,
+        pr.taster_cert_number,
+        pr.created_at,
+        pr.updated_at,
+        u.email,
+        ep.business_name,
+        ep.tin
+      FROM ecta_pre_registration pr
+      JOIN users u ON pr.exporter_id = u.username
+      LEFT JOIN exporter_profiles ep ON pr.exporter_id = ep.user_id
+      WHERE pr.taster_status = 'SUBMITTED'
+      ORDER BY pr.updated_at DESC
+    `);
     
-    const pending = JSON.parse(result);
-    res.json(pending);
+    res.json(result.rows);
   } catch (error) {
     console.error('Get pending tasters error:', error);
     res.status(500).json({ error: error.message });
@@ -466,15 +725,26 @@ router.get('/preregistration/tasters/pending', authenticateToken, requireRole('e
  */
 router.get('/preregistration/competence/pending', authenticateToken, requireRole('ecta', 'admin'), async (req, res) => {
   try {
-    const result = await fabricService.evaluateTransaction(
-      req.user.id,
-      process.env.CHAINCODE_NAME || 'ecta',
-      'GetPendingQualifications',
-      'competenceCertificate'
-    );
+    // Fetch from PostgreSQL
+    const result = await postgresService.query(`
+      SELECT 
+        pr.exporter_id,
+        pr.competence_status,
+        pr.competence_cert_number,
+        pr.competence_cert_id,
+        pr.created_at,
+        pr.updated_at,
+        u.email,
+        ep.business_name,
+        ep.tin
+      FROM ecta_pre_registration pr
+      JOIN users u ON pr.exporter_id = u.username
+      LEFT JOIN exporter_profiles ep ON pr.exporter_id = ep.user_id
+      WHERE pr.competence_status = 'SUBMITTED'
+      ORDER BY pr.updated_at DESC
+    `);
     
-    const pending = JSON.parse(result);
-    res.json(pending);
+    res.json(result.rows);
   } catch (error) {
     console.error('Get pending competence certificates error:', error);
     res.status(500).json({ error: error.message });
@@ -493,8 +763,7 @@ router.get('/preregistration/licenses/pending', authenticateToken, requireRole('
       'license'
     );
     
-    const pending = JSON.parse(result);
-    res.json(pending);
+    res.json(result); // Already parsed
   } catch (error) {
     console.error('Get pending licenses error:', error);
     res.status(500).json({ error: error.message });
@@ -799,7 +1068,7 @@ router.post('/capital/verify/:exporterId', authenticateToken, requireRole('ecta'
         'GetExporterProfile',
         exporterId
       );
-      profile = JSON.parse(profileResult);
+      profile = profileResult; // Already parsed
     } catch (error) {
       return res.status(404).json({ error: 'Exporter profile not found' });
     }
@@ -947,7 +1216,7 @@ router.get('/inspections/scheduled', authenticateToken, requireRole('ecta', 'adm
           'GetExporterProfile',
           user.username
         );
-        const profile = JSON.parse(profileResult);
+        const profile = profileResult; // Already parsed
         
         if (profile.inspections && Array.isArray(profile.inspections)) {
           const pending = profile.inspections.filter(ins => ins.status === 'scheduled');
@@ -1058,7 +1327,7 @@ router.get('/capital/status/:exporterId', authenticateToken, async (req, res) =>
       exporterId
     );
 
-    const profile = JSON.parse(profileResult);
+    const profile = profileResult; // Already parsed
 
     res.json({
       exporterId,
@@ -1071,6 +1340,136 @@ router.get('/capital/status/:exporterId', authenticateToken, async (req, res) =>
     });
   } catch (error) {
     console.error('Get capital status error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================================
+// CERTIFICATE DOWNLOAD ENDPOINTS
+// ============================================================================
+
+/**
+ * Download competence certificate PDF
+ * GET /api/ecta/certificates/competenceCertificate/:username/download
+ */
+router.get('/certificates/competenceCertificate/:username/download', authenticateToken, async (req, res) => {
+  try {
+    const { username } = req.params;
+    
+    // Check authorization
+    if (req.user.id !== username && req.user.role !== 'ecta' && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+    
+    const user = await fabricService.getUser(username);
+    const { generateCompetenceCertificatePDF } = require('../utils/certificate-pdf');
+    
+    const { filepath, filename } = await generateCompetenceCertificatePDF(user, {});
+    
+    res.download(filepath, filename, (err) => {
+      if (err) {
+        console.error('PDF download error:', err);
+        res.status(500).json({ error: 'Failed to download certificate' });
+      }
+    });
+  } catch (error) {
+    console.error('Certificate download error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Download laboratory certificate PDF
+ * GET /api/ecta/certificates/laboratory/:username/download
+ */
+router.get('/certificates/laboratory/:username/download', authenticateToken, async (req, res) => {
+  try {
+    const { username } = req.params;
+    
+    // Check authorization
+    if (req.user.id !== username && req.user.role !== 'ecta' && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+    
+    const user = await fabricService.getUser(username);
+    const { generateLaboratoryCertificatePDF } = require('../utils/certificate-pdf');
+    
+    const { filepath, filename } = await generateLaboratoryCertificatePDF(user, {});
+    
+    res.download(filepath, filename, (err) => {
+      if (err) {
+        console.error('PDF download error:', err);
+        res.status(500).json({ error: 'Failed to download certificate' });
+      }
+    });
+  } catch (error) {
+    console.error('Certificate download error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Download taster certificate PDF
+ * GET /api/ecta/certificates/taster/:username/download
+ */
+router.get('/certificates/taster/:username/download', authenticateToken, async (req, res) => {
+  try {
+    const { username } = req.params;
+    
+    // Check authorization
+    if (req.user.id !== username && req.user.role !== 'ecta' && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+    
+    const user = await fabricService.getUser(username);
+    const { generateTasterCertificatePDF } = require('../utils/certificate-pdf');
+    
+    const { filepath, filename } = await generateTasterCertificatePDF(user, {});
+    
+    res.download(filepath, filename, (err) => {
+      if (err) {
+        console.error('PDF download error:', err);
+        res.status(500).json({ error: 'Failed to download certificate' });
+      }
+    });
+  } catch (error) {
+    console.error('Certificate download error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Download export license PDF
+ * GET /api/ecta/certificates/license/:username/download
+ */
+router.get('/certificates/license/:username/download', authenticateToken, async (req, res) => {
+  try {
+    const { username } = req.params;
+    
+    // Check authorization
+    if (req.user.id !== username && req.user.role !== 'ecta' && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+    
+    const user = await fabricService.getUser(username);
+    const { generateExportLicensePDF } = require('../utils/certificate-pdf');
+    
+    const licenseData = {
+      licenseNumber: user.licenseNumber || `LIC-${Date.now()}`,
+      issuedDate: user.licenseIssuedAt || new Date().toISOString(),
+      expiryDate: user.licenseExpiryDate || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
+    };
+    
+    const { filepath, filename } = await generateExportLicensePDF(user, licenseData);
+    
+    res.download(filepath, filename, (err) => {
+      if (err) {
+        console.error('PDF download error:', err);
+        res.status(500).json({ error: 'Failed to download certificate' });
+      }
+    });
+  } catch (error) {
+    console.error('Certificate download error:', error);
     res.status(500).json({ error: error.message });
   }
 });

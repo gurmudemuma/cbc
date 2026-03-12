@@ -32,73 +32,68 @@ async function generateQRCode(data) {
 }
 
 /**
- * Add header to certificate PDF
+ * Add header to certificate PDF (optimized for single page)
  */
 function addCertificateHeader(doc, title, subtitle) {
-    doc.fontSize(24)
+    doc.fontSize(18)
        .font('Helvetica-Bold')
-       .text(title, 50, 50, { align: 'center' });
+       .text(title, 40, 30, { align: 'center' });
     
     if (subtitle) {
-        doc.fontSize(14)
+        doc.fontSize(10)
            .font('Helvetica')
-           .text(subtitle, 50, 85, { align: 'center' });
+           .text(subtitle, 40, 50, { align: 'center' });
     }
     
     // Add horizontal line
-    doc.moveTo(50, 110)
-       .lineTo(550, 110)
+    doc.moveTo(40, 65)
+       .lineTo(560, 65)
        .stroke();
     
-    return 130; // Return Y position for next content
+    return 75; // Return Y position for next content
 }
 
 /**
- * Add footer with QR code and verification info
+ * Add footer with QR code and verification info (optimized for single page)
  */
 async function addCertificateFooter(doc, certificateNumber, verificationUrl) {
-    const footerY = 700;
+    const footerY = 680;
     
-    // Add QR code
+    // Add QR code (smaller)
     const qrCodeData = await generateQRCode(verificationUrl || certificateNumber);
     const qrImage = Buffer.from(qrCodeData.split(',')[1], 'base64');
     
-    doc.image(qrImage, 450, footerY, { width: 100, height: 100 });
+    doc.image(qrImage, 480, footerY - 50, { width: 70, height: 70 });
     
     // Add verification text
-    doc.fontSize(10)
+    doc.fontSize(8)
        .font('Helvetica')
-       .text('Scan QR code to verify', 450, footerY + 105, { width: 100, align: 'center' });
+       .text('Scan to verify', 480, footerY + 25, { width: 70, align: 'center' });
     
-    // Add certificate number
-    doc.fontSize(9)
+    // Add certificate number and timestamp
+    doc.fontSize(7)
        .font('Helvetica-Bold')
-       .text(`Certificate No: ${certificateNumber}`, 50, footerY + 20);
+       .text(`Cert: ${certificateNumber}`, 40, footerY);
     
-    // Add verification URL
-    doc.fontSize(8)
+    doc.fontSize(7)
        .font('Helvetica')
-       .text(`Verify at: ${verificationUrl || 'https://ecta.gov.et/verify'}`, 50, footerY + 35);
-    
-    // Add generation timestamp
-    doc.fontSize(8)
-       .text(`Generated: ${new Date().toLocaleString('en-US', { timeZone: 'Africa/Addis_Ababa' })}`, 50, footerY + 50);
+       .text(`Generated: ${new Date().toLocaleString('en-US', { timeZone: 'Africa/Addis_Ababa' })}`, 40, footerY + 12);
 }
 
 /**
- * Add field to certificate
+ * Add field to certificate (optimized for single page)
  */
 function addField(doc, label, value, y, options = {}) {
-    const x = options.x || 50;
-    const labelWidth = options.labelWidth || 150;
+    const x = options.x || 40;
+    const labelWidth = options.labelWidth || 120;
     
-    doc.fontSize(10)
+    doc.fontSize(8)
        .font('Helvetica-Bold')
        .text(label + ':', x, y, { width: labelWidth, continued: true })
        .font('Helvetica')
        .text(' ' + (value || 'N/A'));
     
-    return y + (options.spacing || 20);
+    return y + (options.spacing || 12);
 }
 
 /**
@@ -885,3 +880,475 @@ module.exports = {
     generateQRCode
 };
 
+
+
+// ============================================================================
+// PRE-REGISTRATION QUALIFICATION CERTIFICATES
+// ============================================================================
+
+/**
+ * Generate Competence Certificate PDF for Exporter
+ */
+async function generateCompetenceCertificatePDF(exporterData, certificateData) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const certificateNumber = `COMP-${Date.now()}`;
+            const filename = `Competence-Certificate-${exporterData.username}.pdf`;
+            const filepath = path.join(CERT_DIR, filename);
+            const doc = new PDFDocument({ margin: 50 });
+            const stream = fs.createWriteStream(filepath);
+            
+            doc.pipe(stream);
+            
+            // Header with official seal
+            let y = addCertificateHeader(
+                doc,
+                'ETHIOPIAN COFFEE & TEA AUTHORITY',
+                'Certificate of Competence for Coffee Export'
+            );
+            
+            // Certificate number and issue date
+            y = addField(doc, 'Certificate Number', certificateNumber, y);
+            y = addField(doc, 'Issue Date', new Date().toLocaleDateString('en-US', { timeZone: 'Africa/Addis_Ababa' }), y);
+            y = addField(doc, 'Valid Until', new Date(Date.now() + 3 * 365 * 24 * 60 * 60 * 1000).toLocaleDateString(), y);
+            y += 15;
+            
+            // Exporter Information
+            doc.fontSize(14).font('Helvetica-Bold').text('EXPORTER INFORMATION', 50, y);
+            y += 30;
+            y = addField(doc, 'Company Name', exporterData.companyName, y);
+            y = addField(doc, 'Exporter ID', exporterData.username, y);
+            y = addField(doc, 'TIN', exporterData.tin, y);
+            y = addField(doc, 'Business Type', exporterData.businessType, y);
+            y += 15;
+            
+            // Qualification Details
+            doc.fontSize(14).font('Helvetica-Bold').text('QUALIFICATION DETAILS', 50, y);
+            y += 30;
+            y = addField(doc, 'Training Program', certificateData.trainingProgram || 'Coffee Export Competence Training', y);
+            y = addField(doc, 'Training Duration', certificateData.trainingDuration || '40 hours', y);
+            y = addField(doc, 'Training Provider', certificateData.trainingProvider || 'ECTA Training Center', y);
+            y = addField(doc, 'Assessment Score', certificateData.assessmentScore || 'Pass', y);
+            y = addField(doc, 'Assessment Date', certificateData.assessmentDate || new Date().toLocaleDateString(), y);
+            y += 15;
+            
+            // Competencies Covered
+            doc.fontSize(14).font('Helvetica-Bold').text('COMPETENCIES COVERED', 50, y);
+            y += 30;
+            const competencies = [
+                'Coffee Quality Standards and Grading',
+                'Ethiopian Coffee Export Regulations',
+                'International Trade Documentation',
+                'Supply Chain Management',
+                'Quality Control and Assurance',
+                'Traceability and Certification Requirements',
+                'EUDR Compliance and GPS Tracking',
+                'Export Procedures and Customs Clearance'
+            ];
+            
+            doc.fontSize(10).font('Helvetica');
+            competencies.forEach((comp, index) => {
+                doc.text(`${index + 1}. ${comp}`, 70, y);
+                y += 18;
+            });
+            
+            y += 15;
+            
+            // Official Declaration
+            doc.fontSize(12).font('Helvetica-Bold').text('OFFICIAL DECLARATION', 50, y, { align: 'center' });
+            y += 30;
+            doc.fontSize(10).font('Helvetica').text(
+                'The Ethiopian Coffee & Tea Authority hereby certifies that the above-named exporter has ' +
+                'successfully completed the required competence training program and has demonstrated adequate ' +
+                'knowledge and understanding of coffee export procedures, quality standards, and regulatory ' +
+                'requirements. This certificate is valid for three (3) years from the date of issue.',
+                50, y, { width: 500, align: 'justify' }
+            );
+            
+            y += 80;
+            
+            // Signature section
+            doc.fontSize(10).font('Helvetica-Bold');
+            doc.text('_____________________________', 80, y);
+            doc.text('_____________________________', 350, y);
+            y += 20;
+            doc.fontSize(9).font('Helvetica');
+            doc.text('Director, ECTA Training Center', 80, y);
+            doc.text('Director General, ECTA', 350, y);
+            y += 15;
+            doc.text(new Date().toLocaleDateString(), 80, y);
+            doc.text(new Date().toLocaleDateString(), 350, y);
+            
+            // Footer with QR code
+            await addCertificateFooter(
+                doc,
+                certificateNumber,
+                `https://ecta.gov.et/verify/competence/${certificateNumber}`
+            );
+            
+            doc.end();
+            
+            stream.on('finish', () => {
+                resolve({ filepath, filename, certificateNumber });
+            });
+            
+            stream.on('error', reject);
+            
+        } catch (error) {
+            reject(error);
+        }
+    });
+}
+
+/**
+ * Generate Laboratory Approval Certificate PDF
+ */
+async function generateLaboratoryCertificatePDF(exporterData, laboratoryData) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const certificateNumber = `LAB-${Date.now()}`;
+            const filename = `Laboratory-Certificate-${exporterData.username}.pdf`;
+            const filepath = path.join(CERT_DIR, filename);
+            const doc = new PDFDocument({ margin: 50 });
+            const stream = fs.createWriteStream(filepath);
+            
+            doc.pipe(stream);
+            
+            // Header
+            let y = addCertificateHeader(
+                doc,
+                'ETHIOPIAN COFFEE & TEA AUTHORITY',
+                'Laboratory Facility Approval Certificate'
+            );
+            
+            // Certificate info
+            y = addField(doc, 'Certificate Number', certificateNumber, y);
+            y = addField(doc, 'Issue Date', new Date().toLocaleDateString(), y);
+            y = addField(doc, 'Valid Until', new Date(Date.now() + 2 * 365 * 24 * 60 * 60 * 1000).toLocaleDateString(), y);
+            y += 15;
+            
+            // Exporter Information
+            doc.fontSize(14).font('Helvetica-Bold').text('EXPORTER INFORMATION', 50, y);
+            y += 30;
+            y = addField(doc, 'Company Name', exporterData.companyName, y);
+            y = addField(doc, 'Exporter ID', exporterData.username, y);
+            y = addField(doc, 'TIN', exporterData.tin, y);
+            y += 15;
+            
+            // Laboratory Details
+            doc.fontSize(14).font('Helvetica-Bold').text('LABORATORY FACILITY DETAILS', 50, y);
+            y += 30;
+            y = addField(doc, 'Laboratory Name', laboratoryData.laboratoryName || exporterData.companyName + ' Lab', y);
+            y = addField(doc, 'Location', laboratoryData.location || exporterData.address, y);
+            y = addField(doc, 'Facility Type', laboratoryData.facilityType || 'Coffee Quality Testing Laboratory', y);
+            y = addField(doc, 'Accreditation', laboratoryData.accreditation || 'ECTA Approved', y);
+            y += 15;
+            
+            // Equipment and Capabilities
+            doc.fontSize(14).font('Helvetica-Bold').text('APPROVED EQUIPMENT & CAPABILITIES', 50, y);
+            y += 30;
+            const equipment = [
+                'Sample Roaster (SCAA Standard)',
+                'Cupping Equipment and Tables',
+                'Moisture Meter (Calibrated)',
+                'Screen Size Grading Equipment',
+                'Defect Counting Tables',
+                'Sample Storage Facility',
+                'Quality Control Documentation System'
+            ];
+            
+            doc.fontSize(10).font('Helvetica');
+            equipment.forEach((item, index) => {
+                doc.text(`✓ ${item}`, 70, y);
+                y += 18;
+            });
+            
+            y += 15;
+            
+            // Inspection Details
+            doc.fontSize(14).font('Helvetica-Bold').text('INSPECTION DETAILS', 50, y);
+            y += 30;
+            y = addField(doc, 'Inspection Date', laboratoryData.inspectionDate || new Date().toLocaleDateString(), y);
+            y = addField(doc, 'Inspector', laboratoryData.inspector || 'ECTA Quality Inspector', y);
+            y = addField(doc, 'Inspection Result', 'APPROVED', y);
+            y += 15;
+            
+            // Declaration
+            doc.fontSize(12).font('Helvetica-Bold').text('APPROVAL DECLARATION', 50, y, { align: 'center' });
+            y += 30;
+            doc.fontSize(10).font('Helvetica').text(
+                'The Ethiopian Coffee & Tea Authority hereby certifies that the laboratory facility operated by ' +
+                'the above-named exporter has been inspected and meets the minimum requirements for coffee quality ' +
+                'testing as specified in ECTA regulations. This approval is valid for two (2) years from the date of issue.',
+                50, y, { width: 500, align: 'justify' }
+            );
+            
+            // Footer with QR code
+            await addCertificateFooter(
+                doc,
+                certificateNumber,
+                `https://ecta.gov.et/verify/laboratory/${certificateNumber}`
+            );
+            
+            doc.end();
+            
+            stream.on('finish', () => {
+                resolve({ filepath, filename, certificateNumber });
+            });
+            
+            stream.on('error', reject);
+            
+        } catch (error) {
+            reject(error);
+        }
+    });
+}
+
+/**
+ * Generate Taster Approval Certificate PDF
+ */
+async function generateTasterCertificatePDF(exporterData, tasterData) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const certificateNumber = `TASTER-${Date.now()}`;
+            const filename = `Taster-Certificate-${exporterData.username}.pdf`;
+            const filepath = path.join(CERT_DIR, filename);
+            const doc = new PDFDocument({ margin: 50 });
+            const stream = fs.createWriteStream(filepath);
+            
+            doc.pipe(stream);
+            
+            // Header
+            let y = addCertificateHeader(
+                doc,
+                'ETHIOPIAN COFFEE & TEA AUTHORITY',
+                'Certified Coffee Taster Approval'
+            );
+            
+            // Certificate info
+            y = addField(doc, 'Certificate Number', certificateNumber, y);
+            y = addField(doc, 'Issue Date', new Date().toLocaleDateString(), y);
+            y = addField(doc, 'Valid Until', new Date(Date.now() + 3 * 365 * 24 * 60 * 60 * 1000).toLocaleDateString(), y);
+            y += 15;
+            
+            // Exporter Information
+            doc.fontSize(14).font('Helvetica-Bold').text('EXPORTER INFORMATION', 50, y);
+            y += 30;
+            y = addField(doc, 'Company Name', exporterData.companyName, y);
+            y = addField(doc, 'Exporter ID', exporterData.username, y);
+            y += 15;
+            
+            // Taster Details
+            doc.fontSize(14).font('Helvetica-Bold').text('CERTIFIED TASTER DETAILS', 50, y);
+            y += 30;
+            y = addField(doc, 'Taster Name', tasterData.tasterName || 'Certified Taster', y);
+            y = addField(doc, 'Taster ID', tasterData.tasterId || 'TASTER-' + Date.now(), y);
+            y = addField(doc, 'Certification Level', tasterData.certificationLevel || 'Q Grader Certified', y);
+            y = addField(doc, 'Years of Experience', tasterData.yearsOfExperience || '5+ years', y);
+            y += 15;
+            
+            // Qualifications
+            doc.fontSize(14).font('Helvetica-Bold').text('QUALIFICATIONS', 50, y);
+            y += 30;
+            const qualifications = [
+                'SCAA/SCA Q Grader Certification',
+                'Ethiopian Coffee Cupping Protocol',
+                'Sensory Analysis Training',
+                'Coffee Defect Identification',
+                'Grading and Classification Standards',
+                'Cupping Form Completion and Scoring'
+            ];
+            
+            doc.fontSize(10).font('Helvetica');
+            qualifications.forEach((qual, index) => {
+                doc.text(`✓ ${qual}`, 70, y);
+                y += 18;
+            });
+            
+            y += 15;
+            
+            // Assessment Details
+            doc.fontSize(14).font('Helvetica-Bold').text('ASSESSMENT DETAILS', 50, y);
+            y += 30;
+            y = addField(doc, 'Assessment Date', tasterData.assessmentDate || new Date().toLocaleDateString(), y);
+            y = addField(doc, 'Assessment Type', 'Practical Cupping Test', y);
+            y = addField(doc, 'Assessment Result', 'PASSED', y);
+            y = addField(doc, 'Assessed By', 'ECTA Chief Q Grader', y);
+            y += 15;
+            
+            // Declaration
+            doc.fontSize(12).font('Helvetica-Bold').text('CERTIFICATION DECLARATION', 50, y, { align: 'center' });
+            y += 30;
+            doc.fontSize(10).font('Helvetica').text(
+                'The Ethiopian Coffee & Tea Authority hereby certifies that the taster employed by the above-named ' +
+                'exporter has been assessed and meets the competency requirements for coffee quality evaluation and ' +
+                'cupping as per ECTA standards. This certification is valid for three (3) years from the date of issue.',
+                50, y, { width: 500, align: 'justify' }
+            );
+            
+            // Footer with QR code
+            await addCertificateFooter(
+                doc,
+                certificateNumber,
+                `https://ecta.gov.et/verify/taster/${certificateNumber}`
+            );
+            
+            doc.end();
+            
+            stream.on('finish', () => {
+                resolve({ filepath, filename, certificateNumber });
+            });
+            
+            stream.on('error', reject);
+            
+        } catch (error) {
+            reject(error);
+        }
+    });
+}
+
+/**
+ * Generate Export License Certificate PDF
+ */
+async function generateExportLicensePDF(exporterData, licenseData) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const certificateNumber = licenseData.licenseNumber || `LIC-${Date.now()}`;
+            const filename = `Export-License-${exporterData.username}.pdf`;
+            const filepath = path.join(CERT_DIR, filename);
+            const doc = new PDFDocument({ margin: 50 });
+            const stream = fs.createWriteStream(filepath);
+            
+            doc.pipe(stream);
+            
+            // Header with official seal
+            let y = addCertificateHeader(
+                doc,
+                'ETHIOPIAN COFFEE & TEA AUTHORITY',
+                'Coffee Export License'
+            );
+            
+            // License info
+            y = addField(doc, 'License Number', certificateNumber, y);
+            y = addField(doc, 'Issue Date', licenseData.issuedDate || new Date().toLocaleDateString(), y);
+            y = addField(doc, 'Expiry Date', licenseData.expiryDate || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toLocaleDateString(), y);
+            y = addField(doc, 'License Type', 'Coffee Export License', y);
+            y += 15;
+            
+            // Licensee Information
+            doc.fontSize(14).font('Helvetica-Bold').text('LICENSEE INFORMATION', 50, y);
+            y += 30;
+            y = addField(doc, 'Company Name', exporterData.companyName, y);
+            y = addField(doc, 'Exporter ID', exporterData.username, y);
+            y = addField(doc, 'TIN', exporterData.tin, y);
+            y = addField(doc, 'Business Type', exporterData.businessType, y);
+            y = addField(doc, 'Registered Capital', `${exporterData.capitalETB?.toLocaleString()} ETB`, y);
+            y = addField(doc, 'Address', exporterData.address || 'Addis Ababa, Ethiopia', y);
+            y += 15;
+            
+            // License Scope
+            doc.fontSize(14).font('Helvetica-Bold').text('LICENSE SCOPE', 50, y);
+            y += 30;
+            doc.fontSize(10).font('Helvetica');
+            doc.text('This license authorizes the holder to:', 70, y);
+            y += 20;
+            const authorizations = [
+                'Export Ethiopian coffee to international markets',
+                'Purchase coffee from ECX or directly from cooperatives',
+                'Operate coffee processing and quality control facilities',
+                'Issue quality certificates for exported coffee',
+                'Engage in international coffee trade transactions'
+            ];
+            
+            authorizations.forEach((auth, index) => {
+                doc.text(`${index + 1}. ${auth}`, 90, y);
+                y += 18;
+            });
+            
+            y += 15;
+            
+            // Conditions
+            doc.fontSize(14).font('Helvetica-Bold').text('LICENSE CONDITIONS', 50, y);
+            y += 30;
+            doc.fontSize(10).font('Helvetica');
+            const conditions = [
+                'Comply with all ECTA regulations and directives',
+                'Maintain minimum capital requirements',
+                'Submit monthly export reports to ECTA',
+                'Ensure coffee quality meets export standards',
+                'Maintain valid competence and facility certifications',
+                'Renew license annually before expiry date'
+            ];
+            
+            conditions.forEach((cond, index) => {
+                doc.text(`• ${cond}`, 70, y);
+                y += 18;
+            });
+            
+            y += 20;
+            
+            // Official Declaration
+            doc.fontSize(12).font('Helvetica-Bold').text('OFFICIAL LICENSE GRANT', 50, y, { align: 'center' });
+            y += 30;
+            doc.fontSize(10).font('Helvetica').text(
+                'The Ethiopian Coffee & Tea Authority, by the powers vested in it under Proclamation No. 1106/2025, ' +
+                'hereby grants this Coffee Export License to the above-named company. This license is valid for one (1) year ' +
+                'from the date of issue and must be renewed annually. The license may be suspended or revoked for ' +
+                'non-compliance with ECTA regulations.',
+                50, y, { width: 500, align: 'justify' }
+            );
+            
+            y += 80;
+            
+            // Signature section
+            doc.fontSize(10).font('Helvetica-Bold');
+            doc.text('_____________________________', 200, y, { align: 'center' });
+            y += 20;
+            doc.fontSize(9).font('Helvetica');
+            doc.text('Director General', 200, y, { align: 'center' });
+            y += 15;
+            doc.text('Ethiopian Coffee & Tea Authority', 200, y, { align: 'center' });
+            y += 15;
+            doc.text(new Date().toLocaleDateString(), 200, y, { align: 'center' });
+            
+            // Official Seal placeholder
+            doc.fontSize(8).font('Helvetica-Oblique');
+            doc.text('[OFFICIAL SEAL]', 250, y + 30, { align: 'center' });
+            
+            // Footer with QR code
+            await addCertificateFooter(
+                doc,
+                certificateNumber,
+                `https://ecta.gov.et/verify/license/${certificateNumber}`
+            );
+            
+            doc.end();
+            
+            stream.on('finish', () => {
+                resolve({ filepath, filename, certificateNumber });
+            });
+            
+            stream.on('error', reject);
+            
+        } catch (error) {
+            reject(error);
+        }
+    });
+}
+
+// Export all functions including new qualification certificates
+module.exports = {
+    generateCertificatePDF,
+    generateCQICPDF,
+    generatePhytosanitaryPDF,
+    generateOriginPDF,
+    generateEUDRPDF,
+    generateICOPDF,
+    generateBundlePDF,
+    generateQRCode,
+    // Pre-registration qualification certificates
+    generateCompetenceCertificatePDF,
+    generateLaboratoryCertificatePDF,
+    generateTasterCertificatePDF,
+    generateExportLicensePDF
+};

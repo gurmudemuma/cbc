@@ -7,7 +7,8 @@
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "enroll-admin": "node src/scripts/enrollAdmin.js",
-    "register-exporter": "node src/scripts/registerExporter.js"
+    "register-exporter": "node src/scripts/registerExporter.js",
+    "sync-users": "node sync-users-to-blockchain.js"
   },
   "dependencies": {
     "@hyperledger/fabric-gateway": "^1.5.0",

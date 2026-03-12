@@ -1,0 +1,2 @@
+Installed chaincodes on peer:
+Package ID: ecta_1.0:60327d797bc9a87828f63c2218022559a79c63c0925e8dddff8c1e034f2f205e, Label: ecta_1.0

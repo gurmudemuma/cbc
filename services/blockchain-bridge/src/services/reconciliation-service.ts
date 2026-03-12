@@ -7,7 +7,7 @@ import cron from 'node-cron';
 import { logger } from '../utils/logger';
 import { FabricClient } from '../clients/fabric-client';
 import { CBCClient } from '../clients/cbc-client';
-import pool from '../config/database';
+import pool from '../database';
 
 interface Mismatch {
   type: string;

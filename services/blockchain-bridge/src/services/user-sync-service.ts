@@ -6,8 +6,8 @@
 import { logger } from '../utils/logger';
 import { FabricClient } from '../clients/fabric-client';
 import { KafkaProducer } from './kafka-producer';
-import pool from '../config/database';
-import bcrypt from 'bcrypt';
+import pool from '../database';
+import crypto from 'crypto';
 
 interface User {
   id?: number;
@@ -193,7 +193,7 @@ export class UserSyncService {
     role: string;
     status: string;
   }): Promise<void> {
-    const passwordHash = await bcrypt.hash(userData.password, 10);
+    const passwordHash = crypto.createHash('sha256').update(userData.password).digest('hex');
 
     // 1. Check if user exists in PostgreSQL
     const existingUser = await pool.query(

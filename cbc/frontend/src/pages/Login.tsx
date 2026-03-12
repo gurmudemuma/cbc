@@ -80,7 +80,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     password: '',
     email: '',
     businessName: '',
-    businessType: 'PRIVATE_EXPORTER',
+    businessType: 'PRIVATE_EXPORTER', // Individual/Private category
     tin: '',
     officeAddress: '',
     city: '',
@@ -145,32 +145,53 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       }
       setRegistrationStep(1);
     } else if (registrationStep === 1) {
+      // Validate business info before submission
+      if (!registrationData.businessName || !registrationData.tin || !registrationData.businessType) {
+        setError('Please fill in all business fields (Company Name, TIN, Business Type)');
+        return;
+      }
+      if (!registrationData.officeAddress || !registrationData.city || !registrationData.region) {
+        setError('Please fill in all address fields');
+        return;
+      }
+      if (!registrationData.contactPerson || !registrationData.phone) {
+        setError('Please fill in contact information');
+        return;
+      }
+      
       // Submit registration
       setLoading(true);
       try {
-        // Calculate minimum capital based on business type
+        // Calculate minimum capital based on business type (ECTA v1.2 Two-Category System)
+        // Category 1: Individual/Private = 15M ETB
+        // Category 2: Company (Union/Cooperative) = 20M ETB
         const capitalRequirements: Record<string, number> = {
-          'PRIVATE_EXPORTER': 50000000,      // 50 million ETB
-          'UNION': 15000000,                 // 15 million ETB
-          'FARMER_COOPERATIVE': 5000000,     // 5 million ETB
-          'INDIVIDUAL': 10000000             // 10 million ETB
+          'PRIVATE_EXPORTER': 15000000,      // 15 million ETB - Individual/Private
+          'INDIVIDUAL': 15000000,            // 15 million ETB - Individual
+          'UNION': 20000000,                 // 20 million ETB - Company (Union)
+          'FARMER_COOPERATIVE': 20000000,    // 20 million ETB - Company (Cooperative)
         };
         
-        const minimumCapital = capitalRequirements[registrationData.businessType] || 50000000;
+        const minimumCapital = capitalRequirements[registrationData.businessType] || 15000000;
 
-        // Create user account with all required fields
-        const userResponse = await ectaPreRegistrationService.registerUserAccount({
+        // Prepare registration data
+        const registrationPayload = {
           username: registrationData.username,
           password: registrationData.password,
           email: registrationData.email,
           companyName: registrationData.businessName,
           businessType: registrationData.businessType,
           tin: registrationData.tin,
-          capitalETB: minimumCapital, // Use minimum capital for the business type
+          capitalETB: minimumCapital,
           phone: registrationData.phone,
           address: `${registrationData.officeAddress}, ${registrationData.city}, ${registrationData.region}`,
           contactPerson: registrationData.contactPerson,
-        });
+        };
+
+        console.log('Sending registration data:', registrationPayload);
+
+        // Create user account with all required fields
+        const userResponse = await ectaPreRegistrationService.registerUserAccount(registrationPayload);
 
         // Registration successful - no token returned, user must wait for approval
         setSuccess('Registration successful! Your account has been created and submitted for ECTA approval. You will be notified once approved.');
@@ -476,9 +497,10 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                         value={registrationData.businessName}
                         onChange={handleChange}
                         required
+                        placeholder="Your company name"
                       />
                     </Grid>
-                    <Grid item xs={12}>
+                    <Grid item xs={12} md={6}>
                       <Typography variant="caption" sx={{ display: 'block', mb: 1, fontWeight: 600 }}>
                         BUSINESS TYPE
                       </Typography>
@@ -489,19 +511,13 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                         onChange={handleChange}
                         required
                       >
-                        <MenuItem value="PRIVATE_EXPORTER">Private Limited Company (Min. 50M ETB)</MenuItem>
-                        <MenuItem value="UNION">Union/Cooperative (Min. 15M ETB)</MenuItem>
-                        <MenuItem value="INDIVIDUAL">Individual Exporter (Min. 10M ETB)</MenuItem>
-                        <MenuItem value="FARMER_COOPERATIVE">Farmer Cooperative (Min. 5M ETB)</MenuItem>
+                        <MenuItem value="PRIVATE_EXPORTER">Private Ltd (15M ETB)</MenuItem>
+                        <MenuItem value="INDIVIDUAL">Individual (15M ETB)</MenuItem>
+                        <MenuItem value="UNION">Union (20M ETB)</MenuItem>
+                        <MenuItem value="FARMER_COOPERATIVE">Cooperative (20M ETB)</MenuItem>
                       </StyledSelect>
-                      <Typography variant="caption" sx={{ display: 'block', mt: 1, color: 'primary.main', fontWeight: 500 }}>
-                        {registrationData.businessType === 'PRIVATE_EXPORTER' && '✓ Minimum Capital: 50,000,000 ETB - For private limited companies'}
-                        {registrationData.businessType === 'UNION' && '✓ Minimum Capital: 15,000,000 ETB - For unions and cooperatives'}
-                        {registrationData.businessType === 'INDIVIDUAL' && '✓ Minimum Capital: 10,000,000 ETB - For individual exporters'}
-                        {registrationData.businessType === 'FARMER_COOPERATIVE' && '✓ Minimum Capital: 5,000,000 ETB - For farmer cooperatives'}
-                      </Typography>
                     </Grid>
-                    <Grid item xs={12}>
+                    <Grid item xs={12} md={6}>
                       <Typography variant="caption" sx={{ display: 'block', mb: 1, fontWeight: 600 }}>
                         TIN NUMBER
                       </Typography>
@@ -511,7 +527,14 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                         value={registrationData.tin}
                         onChange={handleChange}
                         required
+                        placeholder="Tax Identification Number"
                       />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Typography variant="caption" sx={{ display: 'block', mb: 0.5, fontWeight: 600, color: 'primary.main', fontSize: '0.7rem' }}>
+                        {(registrationData.businessType === 'PRIVATE_EXPORTER' || registrationData.businessType === 'INDIVIDUAL') && '✓ Individual/Private: 15M ETB minimum • Full auto-qualification'}
+                        {(registrationData.businessType === 'UNION' || registrationData.businessType === 'FARMER_COOPERATIVE') && '✓ Company: 20M ETB minimum • Full auto-qualification'}
+                      </Typography>
                     </Grid>
                     <Grid item xs={12}>
                       <Typography variant="caption" sx={{ display: 'block', mb: 1, fontWeight: 600 }}>
@@ -523,9 +546,10 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                         value={registrationData.officeAddress}
                         onChange={handleChange}
                         required
+                        placeholder="Street address"
                       />
                     </Grid>
-                    <Grid item xs={6}>
+                    <Grid item xs={12} md={6}>
                       <Typography variant="caption" sx={{ display: 'block', mb: 1, fontWeight: 600 }}>
                         CITY
                       </Typography>
@@ -535,9 +559,10 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                         value={registrationData.city}
                         onChange={handleChange}
                         required
+                        placeholder="e.g. Addis Ababa"
                       />
                     </Grid>
-                    <Grid item xs={6}>
+                    <Grid item xs={12} md={6}>
                       <Typography variant="caption" sx={{ display: 'block', mb: 1, fontWeight: 600 }}>
                         REGION
                       </Typography>
@@ -547,9 +572,10 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                         value={registrationData.region}
                         onChange={handleChange}
                         required
+                        placeholder="e.g. Oromia"
                       />
                     </Grid>
-                    <Grid item xs={12}>
+                    <Grid item xs={12} md={6}>
                       <Typography variant="caption" sx={{ display: 'block', mb: 1, fontWeight: 600 }}>
                         CONTACT PERSON
                       </Typography>
@@ -559,9 +585,10 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                         value={registrationData.contactPerson}
                         onChange={handleChange}
                         required
+                        placeholder="Full name"
                       />
                     </Grid>
-                    <Grid item xs={12}>
+                    <Grid item xs={12} md={6}>
                       <Typography variant="caption" sx={{ display: 'block', mb: 1, fontWeight: 600 }}>
                         PHONE
                       </Typography>
@@ -571,6 +598,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                         value={registrationData.phone}
                         onChange={handleChange}
                         required
+                        placeholder="+251911234567"
                       />
                     </Grid>
                   </Grid>
