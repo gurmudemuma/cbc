@@ -73,6 +73,7 @@ services:
   # ==================== Gateway Service (Fabric SDK) ====================
   
   gateway:
+    image: cbc-gateway:latest
     build:
       context: ./coffee-export-gateway
       dockerfile: Dockerfile
@@ -139,6 +140,7 @@ services:
   # ==================== Blockchain Bridge ====================
   
   blockchain-bridge:
+    image: cbc-blockchain-bridge:latest
     build:
       context: ./services/blockchain-bridge
       dockerfile: Dockerfile
@@ -191,6 +193,7 @@ services:
   # ==================== CBC Services ====================
   
   ecta-service:
+    image: cbc-ecta-service:latest
     build:
       context: ./cbc
       dockerfile: services/ecta/Dockerfile
@@ -250,6 +253,7 @@ services:
       retries: 3
 
   commercial-bank-service:
+    image: cbc-commercial-bank-service:latest
     build:
       context: ./cbc
       dockerfile: services/commercial-bank/Dockerfile
@@ -271,7 +275,7 @@ services:
       # Kafka
       KAFKA_BROKERS: kafka:9092
       # JWT
-      JWT_SECRET: your-secret-key-change-in-production
+      JWT_SECRET: 8f2a9b7c6d5e4f3a2b1c9d8e7f6a5b4c3d2e1f9a8b7c6d5e4f3a2b1c9d8e7f6a5b4c3d2e1f
       JWT_EXPIRES_IN: 24h
       JWT_REFRESH_EXPIRES_IN: 7d
       # Organization
@@ -304,6 +308,7 @@ services:
       - ./crypto-config:/app/crypto-config:ro
 
   national-bank-service:
+    image: cbc-national-bank-service:latest
     build:
       context: ./cbc
       dockerfile: services/national-bank/Dockerfile
@@ -325,7 +330,7 @@ services:
       # Kafka
       KAFKA_BROKERS: kafka:9092
       # JWT
-      JWT_SECRET: your-secret-key-change-in-production
+      JWT_SECRET: 8f2a9b7c6d5e4f3a2b1c9d8e7f6a5b4c3d2e1f9a8b7c6d5e4f3a2b1c9d8e7f6a5b4c3d2e1f
       JWT_EXPIRES_IN: 24h
       JWT_REFRESH_EXPIRES_IN: 7d
       # Organization
@@ -358,6 +363,7 @@ services:
       - ./crypto-config:/app/crypto-config:ro
 
   customs-service:
+    image: cbc-customs-service:latest
     build:
       context: ./cbc
       dockerfile: services/custom-authorities/Dockerfile
@@ -379,7 +385,7 @@ services:
       # Kafka
       KAFKA_BROKERS: kafka:9092
       # JWT
-      JWT_SECRET: your-secret-key-change-in-production
+      JWT_SECRET: 8f2a9b7c6d5e4f3a2b1c9d8e7f6a5b4c3d2e1f9a8b7c6d5e4f3a2b1c9d8e7f6a5b4c3d2e1f
       JWT_EXPIRES_IN: 24h
       JWT_REFRESH_EXPIRES_IN: 7d
       # Organization
@@ -412,6 +418,7 @@ services:
       - ./crypto-config:/app/crypto-config:ro
 
   ecx-service:
+    image: cbc-ecx-service:latest
     build:
       context: ./cbc
       dockerfile: services/ecx/Dockerfile
@@ -433,7 +440,7 @@ services:
       # Kafka
       KAFKA_BROKERS: kafka:9092
       # JWT
-      JWT_SECRET: your-secret-key-change-in-production
+      JWT_SECRET: 8f2a9b7c6d5e4f3a2b1c9d8e7f6a5b4c3d2e1f9a8b7c6d5e4f3a2b1c9d8e7f6a5b4c3d2e1f
       JWT_EXPIRES_IN: 24h
       JWT_REFRESH_EXPIRES_IN: 7d
       # Organization
@@ -466,6 +473,7 @@ services:
       - ./crypto-config:/app/crypto-config:ro
 
   shipping-service:
+    image: cbc-shipping-service:latest
     build:
       context: ./cbc
       dockerfile: services/shipping-line/Dockerfile
@@ -487,7 +495,7 @@ services:
       # Kafka
       KAFKA_BROKERS: kafka:9092
       # JWT
-      JWT_SECRET: your-secret-key-change-in-production
+      JWT_SECRET: 8f2a9b7c6d5e4f3a2b1c9d8e7f6a5b4c3d2e1f9a8b7c6d5e4f3a2b1c9d8e7f6a5b4c3d2e1f
       JWT_EXPIRES_IN: 24h
       JWT_REFRESH_EXPIRES_IN: 7d
       # Organization
@@ -522,6 +530,7 @@ services:
   # ==================== Buyer Verification Service ====================
   
   buyer-verification:
+    image: cbc-buyer-verification:latest
     build:
       context: ./services/buyer-verification
       dockerfile: Dockerfile
@@ -547,6 +556,7 @@ services:
   # ==================== Frontend ====================
   
   frontend:
+    image: cbc-frontend:latest
     build:
       context: ./cbc/frontend
       dockerfile: Dockerfile

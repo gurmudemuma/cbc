@@ -23,10 +23,10 @@ const vesselRouter = require('./routes/vessel.routes');
 const analyticsRouter = require('./routes/analytics.routes');
 // Sales Contract routes
 const buyersRouter = require('./routes/buyers.routes');
-const contractDraftsRouter = require('./routes/contract-drafts.routes');
-const salesContractNetworkRouter = require('./routes/sales-contract-network.routes');
 const marketplaceRouter = require('./routes/marketplace.routes');
+const contractDraftsRouter = require('./routes/contract-drafts.routes');
 const legalRouter = require('./routes/legal.routes');
+const salesContractNetworkRouter = require('./routes/sales-contract-network.routes');
 // Document Issuance routes
 const documentRequestsRouter = require('./routes/document-requests.routes');
 const documentIssuanceRouter = require('./routes/document-issuance.routes');
@@ -85,10 +85,10 @@ app.use('/api/vessel', vesselRouter);
 app.use('/api/analytics', analyticsRouter);
 // Sales Contract routes
 app.use('/api/buyers', buyersRouter);
+app.use('/api/marketplace', marketplaceRouter);
 app.use('/api/contracts/drafts', contractDraftsRouter);
+app.use('/api/legal', legalRouter);
 app.use('/api', salesContractNetworkRouter); // Sales Contract Network Approval routes
-app.use('/api/marketplace', marketplaceRouter); // Buyer-seller marketplace
-app.use('/api/legal', legalRouter); // Legal frameworks and contract clauses
 
 // ESW routes (backward compatibility - redirects to network routes)
 app.use('/api/esw', networkRouter); // ESW endpoints now use network routes

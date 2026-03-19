@@ -209,11 +209,11 @@ CREATE TABLE IF NOT EXISTS contract_drafts (
     insurance_requirements TEXT,
     
     -- Negotiation Tracking
-    proposed_by UUID NOT NULL,
+    proposed_by VARCHAR(255) NOT NULL,
     proposed_by_type VARCHAR(50) CHECK (proposed_by_type IN ('EXPORTER', 'BUYER')),
     proposed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     
-    responded_by UUID,
+    responded_by VARCHAR(255),
     responded_by_type VARCHAR(50) CHECK (responded_by_type IN ('EXPORTER', 'BUYER')),
     responded_at TIMESTAMP,
     response_type VARCHAR(50) CHECK (
@@ -244,7 +244,7 @@ CREATE TABLE IF NOT EXISTS contract_negotiations (
     negotiation_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     draft_id UUID NOT NULL REFERENCES contract_drafts(draft_id) ON DELETE CASCADE,
     
-    actor_id UUID NOT NULL,
+    actor_id VARCHAR(255) NOT NULL,
     actor_type VARCHAR(50) NOT NULL CHECK (actor_type IN ('EXPORTER', 'BUYER', 'SYSTEM')),
     actor_name VARCHAR(255),
     
@@ -564,9 +564,9 @@ CREATE TABLE IF NOT EXISTS contract_disputes (
     contract_number VARCHAR(100),
     
     -- Parties
-    raised_by UUID NOT NULL,
+    raised_by VARCHAR(255) NOT NULL,
     raised_by_type VARCHAR(50) CHECK (raised_by_type IN ('EXPORTER', 'BUYER')),
-    raised_against UUID NOT NULL,
+    raised_against VARCHAR(255) NOT NULL,
     
     -- Dispute Details
     dispute_type VARCHAR(100) NOT NULL CHECK (
@@ -595,9 +595,9 @@ CREATE TABLE IF NOT EXISTS contract_disputes (
                               'LEGAL_PROCEEDINGS', 'SETTLEMENT')
     ),
     
-    mediator_id UUID,
+    mediator_id VARCHAR(255),
     mediator_name VARCHAR(255),
-    arbitrator_id UUID,
+    arbitrator_id VARCHAR(255),
     arbitrator_name VARCHAR(255),
     
     resolution_notes TEXT,
@@ -605,7 +605,7 @@ CREATE TABLE IF NOT EXISTS contract_disputes (
     resolution_documents TEXT[], -- CIDs
     
     awarded_amount DECIMAL(15,2),
-    awarded_to UUID,
+    awarded_to VARCHAR(255),
     
     -- Timeline
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -624,7 +624,7 @@ CREATE TABLE IF NOT EXISTS dispute_activities (
     activity_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     dispute_id UUID NOT NULL REFERENCES contract_disputes(dispute_id) ON DELETE CASCADE,
     
-    actor_id UUID NOT NULL,
+    actor_id VARCHAR(255) NOT NULL,
     actor_type VARCHAR(50),
     actor_name VARCHAR(255),
     

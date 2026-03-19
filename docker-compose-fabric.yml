@@ -556,7 +556,7 @@ services:
       - CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/peerOrganizations/ecta.example.com/peers/peer0.ecta.example.com/tls/ca.crt
       - CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/peerOrganizations/ecta.example.com/users/Admin@ecta.example.com/msp
     working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
-    command: /bin/bash
+    command: sleep infinity
     volumes:
       - ./crypto-config:/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/
       - ./chaincode:/opt/gopath/src/github.com/hyperledger/fabric/chaincode
@@ -564,14 +564,7 @@ services:
       - ./scripts:/opt/gopath/src/github.com/hyperledger/fabric/peer/scripts
       - ./channel-artifacts:/opt/gopath/src/github.com/hyperledger/fabric/peer/channel-artifacts
     depends_on:
-      - orderer1.orderer.example.com
-      - orderer2.orderer.example.com
-      - orderer3.orderer.example.com
       - peer0.ecta.example.com
-      - peer1.ecta.example.com
-      - peer0.bank.example.com
-      - peer0.nbe.example.com
-      - peer0.customs.example.com
-      - peer0.shipping.example.com
+      - orderer1.orderer.example.com
     networks:
       - fabric-network

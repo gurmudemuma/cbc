@@ -91,6 +91,9 @@ import BankingOperations from './pages/BankingOperations';
 import LotManagement from './pages/LotManagement';
 import MonetaryPolicy from './pages/MonetaryPolicy';
 
+// Sales Contract Pages
+import SalesContractDashboard from './pages/SalesContractDashboard';
+
 // Services & Config
 // setApiBaseUrl removed to allow proxy to handle routing
 import { createEnhancedTheme } from './config/theme.config.enhanced';
@@ -433,6 +436,11 @@ function App(): JSX.Element {
           { path: 'contracts/rejected', element: <ECTAContractApproval user={user} org={org} /> },
           { path: 'contracts/origin', element: <ECTAContractApproval user={user} org={org} /> },
 
+          // Sales Contract Routes
+          { path: 'sales-contracts', element: <SalesContractDashboard /> },
+          { path: 'sales-contracts/drafts', element: <SalesContractDashboard /> },
+          { path: 'sales-contracts/details/:id', element: <SalesContractDashboard /> },
+
           // Network Routes (Primary)
           { path: 'network/submission', element: <NetworkSubmission user={user} org={org} /> },
           { path: 'network/submissions', element: <NetworkSubmission user={user} org={org} /> },
@@ -443,6 +451,21 @@ function App(): JSX.Element {
           
           // Exporter Network Submission (alias for exporters)
           { path: 'exporter/network-submission', element: <NetworkSubmission user={user} org={org} /> },
+
+          // ESW Routes (backward compatibility)
+          { path: 'esw/submission', element: <NetworkSubmission user={user} org={org} /> },
+          { path: 'esw/submissions', element: <NetworkSubmission user={user} org={org} /> },
+          { path: 'esw/status', element: <NetworkStatistics user={user} org={org} /> },
+          { path: 'esw/agency-dashboard', element: <NetworkMemberApprovalDashboard /> },
+          { path: 'esw/statistics', element: <NetworkStatistics user={user} org={org} /> },
+          { path: 'esw/verify-certificate', element: <CertificateVerification /> },
+
+          { path: 'regulatory', element: <Dashboard user={user} org={org} /> },
+          { path: 'regulatory/compliance', element: <Dashboard user={user} org={org} /> },
+          { path: 'regulatory/audits', element: <Dashboard user={user} org={org} /> },
+          { path: 'regulatory/updates', element: <Dashboard user={user} org={org} /> },
+
+          // ECX Routes
           { path: 'lot-verification', element: <ECXVerification user={user} org={org} /> },
           { path: 'lots', element: <LotManagement user={user} org={org} /> },
           { path: 'lots/pending', element: <LotManagement user={user} org={org} /> },

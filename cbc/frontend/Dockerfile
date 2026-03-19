@@ -1,7 +1,7 @@
 # Multi-stage build for production
 FROM node:20-alpine AS builder
 
-# Configure npm for better network resilience
+# Configure npm for better network resilience and use multiple registries
 RUN npm config set fetch-retry-mintimeout 60000 && \
     npm config set fetch-retry-maxtimeout 300000 && \
     npm config set fetch-retries 10 && \
@@ -13,14 +13,19 @@ RUN npm config set fetch-retry-mintimeout 60000 && \
 WORKDIR /app
 
 # Copy package files
-COPY package*.json ./
+COPY frontend/package*.json ./
 
-# Install dependencies
-RUN npm install --legacy-peer-deps --prefer-offline --no-audit --maxsockets=1 && \
+# Install dependencies with network-friendly options
+RUN npm cache clean --force && \
+    rm -rf node_modules package-lock.json && \
+    npm install --legacy-peer-deps --no-optional && \
     npm cache clean --force
 
-# Copy source code
-COPY . .
+# Copy shared API endpoints
+COPY services/shared/api-endpoints.constants.ts ./services/shared/api-endpoints.constants.ts
+
+# Copy frontend source code
+COPY frontend/ .
 
 # Build application
 RUN npm run build
@@ -28,11 +33,8 @@ RUN npm run build
 # Production stage with nginx
 FROM nginx:alpine
 
-# Remove default nginx config
-RUN rm -f /etc/nginx/conf.d/default.conf
-
 # Copy custom nginx config
-COPY nginx.conf /etc/nginx/nginx.conf
+COPY frontend/nginx.conf /etc/nginx/nginx.conf
 
 # Copy built application from builder
 COPY --from=builder /app/dist /usr/share/nginx/html

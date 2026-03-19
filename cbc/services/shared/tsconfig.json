@@ -10,7 +10,7 @@
     "strict": false,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": false,
+    "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "declaration": true,
     "declarationMap": true,
@@ -23,6 +23,8 @@
     "noImplicitReturns": false,
     "noFallthroughCasesInSwitch": false,
     "noPropertyAccessFromIndexSignature": false,
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
     "baseUrl": ".",
     "paths": {
       "@shared/*": [

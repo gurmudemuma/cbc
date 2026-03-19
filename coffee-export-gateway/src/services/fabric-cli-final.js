@@ -4,7 +4,7 @@
  * This bypasses SDK endorsement policy issues
  */
 
-const { exec, spawn } = require('child_process');
+const { exec } = require('child_process');
 const util = require('util');
 const execPromise = util.promisify(exec);
 
@@ -15,79 +15,23 @@ console.log('[Fabric CLI] Using CLI-based chaincode invocation');
 console.log(`[Fabric CLI] Channel: ${CHANNEL_NAME}, Chaincode: ${CHAINCODE_NAME}`);
 
 /**
- * Execute peer CLI command via docker exec using spawn (no shell interpretation)
- */
-async function executePeerCommandWithArgs(args) {
-  return new Promise((resolve, reject) => {
-    const dockerArgs = [
-      'exec',
-      '-e', 'CORE_PEER_TLS_ENABLED=true',
-      '-e', 'CORE_PEER_LOCALMSPID=ECTAMSP',
-      '-e', 'CORE_PEER_ADDRESS=peer0.ecta.example.com:7051',
-      '-e', 'CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/peerOrganizations/ecta.example.com/peers/peer0.ecta.example.com/tls/ca.crt',
-      '-e', 'CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/peerOrganizations/ecta.example.com/users/Admin@ecta.example.com/msp',
-      'cli',
-      ...args
-    ];
-    
-    const proc = spawn('docker', dockerArgs, {
-      timeout: 30000,
-      maxBuffer: 10 * 1024 * 1024
-    });
-    
-    let stdout = '';
-    let stderr = '';
-    
-    proc.stdout.on('data', (data) => {
-      stdout += data.toString();
-    });
-    
-    proc.stderr.on('data', (data) => {
-      stderr += data.toString();
-    });
-    
-    proc.on('close', (code) => {
-      if (code !== 0) {
-        const stderrLower = stderr.toLowerCase();
-        if (stderrLower.includes('error') || stderrLower.includes('failed') || stderrLower.includes('fatal')) {
-          console.error('[Fabric CLI] Error in stderr:', stderr);
-        }
-        reject(new Error(`Command failed with code ${code}: ${stderr}`));
-      } else {
-        resolve(stdout.trim());
-      }
-    });
-    
-    proc.on('error', (error) => {
-      reject(error);
-    });
-  });
-}
-
-/**
  * Execute peer CLI command via docker exec
  */
 async function executePeerCommand(command) {
   try {
     // Wrap command to execute in CLI container
+    // CLI container is on fabric-network, so it can resolve peer/orderer hostnames
     const dockerCommand = `docker exec -e CORE_PEER_TLS_ENABLED=true -e CORE_PEER_LOCALMSPID=ECTAMSP -e CORE_PEER_ADDRESS=peer0.ecta.example.com:7051 -e CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/peerOrganizations/ecta.example.com/peers/peer0.ecta.example.com/tls/ca.crt -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/peerOrganizations/ecta.example.com/users/Admin@ecta.example.com/msp cli ${command}`;
     
     const { stdout, stderr } = await execPromise(dockerCommand, {
-      timeout: 30000,
-      maxBuffer: 10 * 1024 * 1024 // 10MB buffer for large responses
+      timeout: 30000
     });
     
-    // Log stderr for debugging but don't treat as error unless it contains actual errors
-    if (stderr && stderr.trim() !== '') {
-      const stderrLower = stderr.toLowerCase();
-      if (stderrLower.includes('error') || stderrLower.includes('failed') || stderrLower.includes('fatal')) {
-        console.error('[Fabric CLI] Error in stderr:', stderr);
-      }
+    if (stderr && !stderr.includes('UTC') && !stderr.includes('INFO')) {
+      console.error('[Fabric CLI] Warning:', stderr);
     }
     
-    // Return only stdout, trimmed
-    const result = stdout.trim();
-    return result;
+    return stdout.trim();
   } catch (error) {
     console.error('[Fabric CLI] Command failed:', error.message);
     throw error;
@@ -96,47 +40,48 @@ async function executePeerCommand(command) {
 
 /**
  * Invoke chaincode (write operation)
- * Uses multiple peer endorsements to satisfy MAJORITY policy (3+ out of 5 orgs)
  */
 async function invokeChaincode(functionName, ...args) {
-  // Create the chaincode args structure
-  const chaincodeArgs = {
-    function: functionName,
-    Args: args
-  };
+  const argsJson = JSON.stringify(args);
+  const CRYPTO_PATH = '/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config';
   
-  const argsJson = JSON.stringify(chaincodeArgs);
+  // Build peer addresses for ECTA only (ECTA-only endorsement policy)
+  const peerAddresses = `--peerAddresses peer0.ecta.example.com:7051 --tlsRootCertFiles ${CRYPTO_PATH}/peerOrganizations/ecta.example.com/peers/peer0.ecta.example.com/tls/ca.crt`;
   
-  // Use spawn to avoid shell escaping issues
-  const peerArgs = [
-    'peer', 'chaincode', 'invoke',
-    '-o', 'orderer1.orderer.example.com:7050',
-    '--ordererTLSHostnameOverride', 'orderer1.orderer.example.com',
-    '--tls',
-    '--cafile', '/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/ordererOrganizations/orderer.example.com/orderers/orderer1.orderer.example.com/msp/tlscacerts/tlsca.orderer.example.com-cert.pem',
-    '-C', CHANNEL_NAME,
-    '-n', CHAINCODE_NAME,
-    '-c', argsJson,
-    '--peerAddresses', 'peer0.ecta.example.com:7051',
-    '--tlsRootCertFiles', '/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/peerOrganizations/ecta.example.com/peers/peer0.ecta.example.com/tls/ca.crt',
-    '--peerAddresses', 'peer0.bank.example.com:9051',
-    '--tlsRootCertFiles', '/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/peerOrganizations/bank.example.com/peers/peer0.bank.example.com/tls/ca.crt',
-    '--peerAddresses', 'peer0.nbe.example.com:10051',
-    '--tlsRootCertFiles', '/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/peerOrganizations/nbe.example.com/peers/peer0.nbe.example.com/tls/ca.crt',
-    '--waitForEvent'
-  ];
+  const command = `peer chaincode invoke \
+    -o orderer1.orderer.example.com:7050 \
+    --ordererTLSHostnameOverride orderer1.orderer.example.com \
+    --tls \
+    --cafile ${CRYPTO_PATH}/ordererOrganizations/orderer.example.com/orderers/orderer1.orderer.example.com/msp/tlscacerts/tlsca.orderer.example.com-cert.pem \
+    -C ${CHANNEL_NAME} \
+    -n ${CHAINCODE_NAME} \
+    -c '{"function":"${functionName}","Args":${argsJson}}' \
+    ${peerAddresses} \
+    --waitForEvent`;
   
-  console.log(`[Fabric CLI] Invoking: ${functionName} (with 3-org endorsement)`);
-  const result = await executePeerCommandWithArgs(peerArgs);
+  console.log(`[Fabric CLI] Invoking: ${functionName}`);
+  console.log(`[Fabric CLI] Args: ${argsJson}`);
+  const result = await executePeerCommand(command);
+  
+  console.log(`[Fabric CLI] Raw result: "${result}"`);
   
   // Extract result from CLI output
-  const lines = result.split('\n');
+  // The CLI output contains the response payload in the last non-empty line
+  const lines = result.split('\n').filter(line => line.trim());
+  
+  if (lines.length === 0) {
+    console.log(`[Fabric CLI] Empty response from ${functionName}`);
+    return { success: true };
+  }
+  
   const lastLine = lines[lines.length - 1];
+  console.log(`[Fabric CLI] Last line: "${lastLine}"`);
   
   // Try to parse as JSON, otherwise return as string
   try {
     return JSON.parse(lastLine);
-  } catch {
+  } catch (e) {
+    console.log(`[Fabric CLI] Could not parse response as JSON: ${lastLine}`);
     return lastLine;
   }
 }
@@ -145,36 +90,20 @@ async function invokeChaincode(functionName, ...args) {
  * Query chaincode (read operation)
  */
 async function queryChaincode(functionName, ...args) {
-  const argsArray = args.map(arg => `"${arg}"`).join(',');
-  const command = `peer chaincode query -C ${CHANNEL_NAME} -n ${CHAINCODE_NAME} -c '{"function":"${functionName}","Args":[${argsArray}]}'`;
+  const argsJson = JSON.stringify(args);
+  const command = `peer chaincode query \
+    -C ${CHANNEL_NAME} \
+    -n ${CHAINCODE_NAME} \
+    -c '{"function":"${functionName}","Args":${argsJson}}'`;
   
-  console.log(`[Fabric CLI] Querying: ${functionName} with args:`, args);
+  console.log(`[Fabric CLI] Querying: ${functionName}`);
+  const result = await executePeerCommand(command);
   
+  // Try to parse as JSON
   try {
-    const result = await executePeerCommand(command);
-    
-    console.log(`[Fabric CLI] ${functionName} raw result length:`, result ? result.length : 0);
-    console.log(`[Fabric CLI] ${functionName} raw result (first 100 chars):`, result ? result.substring(0, 100) : 'null');
-    
-    // Handle empty results
-    if (!result || result.trim() === '') {
-      console.log(`[Fabric CLI] ${functionName} returned empty result`);
-      return [];
-    }
-    
-    // Try to parse as JSON
-    try {
-      const parsed = JSON.parse(result);
-      console.log(`[Fabric CLI] ${functionName} successfully parsed, returned ${Array.isArray(parsed) ? parsed.length : 'non-array'} results`);
-      return parsed;
-    } catch (parseError) {
-      console.error(`[Fabric CLI] ${functionName} JSON parse error:`, parseError.message);
-      console.error(`[Fabric CLI] Raw result (first 500 chars):`, result.substring(0, 500));
-      return result;
-    }
-  } catch (error) {
-    console.error(`[Fabric CLI] ${functionName} query failed:`, error.message);
-    throw error;
+    return JSON.parse(result);
+  } catch {
+    return result;
   }
 }
 
@@ -213,31 +142,7 @@ async function updateUserStatus(username, statusData) {
 async function getUsersByRole(role) {
   try {
     const result = await queryChaincode('GetUsersByRole', role);
-    
-    // If result is already an object/array, return it
-    if (typeof result === 'object') {
-      console.log(`[Fabric CLI] GetUsersByRole returned ${Array.isArray(result) ? result.length : 'object'} results`);
-      return result;
-    }
-    
-    // If result is a string, try to parse it
-    if (typeof result === 'string') {
-      if (!result || result.trim() === '') {
-        console.log('[Fabric CLI] GetUsersByRole returned empty string');
-        return [];
-      }
-      try {
-        const parsed = JSON.parse(result);
-        console.log(`[Fabric CLI] GetUsersByRole parsed ${Array.isArray(parsed) ? parsed.length : 'object'} results`);
-        return parsed;
-      } catch (parseError) {
-        console.error('[Fabric CLI] GetUsersByRole JSON parse error:', parseError.message);
-        console.error('[Fabric CLI] Raw result (first 200 chars):', result.substring(0, 200));
-        return [];
-      }
-    }
-    
-    return [];
+    return typeof result === 'object' ? result : JSON.parse(result);
   } catch (error) {
     console.error('[Fabric CLI] GetUsersByRole failed:', error.message);
     return [];
@@ -335,10 +240,33 @@ async function getWallet() {
   return null; // Not used in CLI mode
 }
 
+/**
+ * Generic submitTransaction function for compatibility
+ */
+async function submitTransaction(userId, chaincodeName, functionName, ...args) {
+  try {
+    const result = await invokeChaincode(functionName, ...args);
+    return typeof result === 'string' ? result : JSON.stringify(result);
+  } catch (error) {
+    console.error(`[Fabric CLI] submitTransaction failed for ${functionName}:`, error.message);
+    throw error;
+  }
+}
+
+/**
+ * Generic evaluateTransaction function for compatibility
+ */
+async function evaluateTransaction(userId, chaincodeName, functionName, ...args) {
+  try {
+    const result = await queryChaincode(functionName, ...args);
+    return typeof result === 'string' ? result : JSON.stringify(result);
+  } catch (error) {
+    console.error(`[Fabric CLI] evaluateTransaction failed for ${functionName}:`, error.message);
+    throw error;
+  }
+}
+
 module.exports = {
-  // CLI-style methods
-  invokeChaincode,
-  queryChaincode,
   registerUser,
   getUser,
   updateUserStatus,
@@ -353,14 +281,6 @@ module.exports = {
   enrollAdmin,
   registerExporter,
   getWallet,
-  
-  // SDK-compatible wrapper methods
-  async evaluateTransaction(userId, chaincodeName, functionName, ...args) {
-    return await queryChaincode(functionName, ...args);
-  },
-  
-  async submitTransaction(userId, chaincodeName, functionName, ...args) {
-    return await invokeChaincode(functionName, ...args);
-  }
+  submitTransaction,
+  evaluateTransaction
 };
-

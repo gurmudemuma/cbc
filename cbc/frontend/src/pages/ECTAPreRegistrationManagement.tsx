@@ -1340,7 +1340,6 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
                 icon={<Business />}
                 color="primary"
                 subtitle="Registered entities"
-                onClick={() => setActiveTab(5)}
               />
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
@@ -1350,27 +1349,6 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
                 icon={<VerifiedUser />}
                 color="warning"
                 subtitle="Awaiting approval"
-                onClick={() => setActiveTab(0)}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <ModernStatCard
-                title="Licenses Issued"
-                value={globalStats.licenses?.active || 0}
-                icon={<Description />}
-                color="success"
-                subtitle="Active export licenses"
-                onClick={() => setActiveTab(4)}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <ModernStatCard
-                title="License Applications"
-                value={globalStats.licenses?.pending || 0}
-                icon={<Description />}
-                color="info"
-                subtitle="Pending issuance"
-                onClick={() => setActiveTab(4)}
               />
             </Grid>
           </Grid>
