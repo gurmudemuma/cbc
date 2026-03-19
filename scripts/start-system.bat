@@ -11,7 +11,7 @@ echo ==========================================
 echo.
 
 REM Configuration
-set COMPOSE_FILE=docker-compose-hybrid.yml
+set COMPOSE_FILE=../docker-compose-hybrid.yml
 set TIMEOUT=300
 set HEALTH_CHECK_INTERVAL=5
 
@@ -28,10 +28,10 @@ echo.
 REM Start infrastructure services
 echo Starting infrastructure services...
 docker-compose -f %COMPOSE_FILE% up -d ^
-    coffee-zookeeper ^
-    coffee-kafka ^
-    coffee-postgres ^
-    coffee-redis
+    zookeeper ^
+    kafka ^
+    postgres ^
+    redis
 
 echo [OK] Infrastructure services started
 echo.
@@ -56,18 +56,8 @@ echo.
 
 REM Start blockchain services
 echo Starting blockchain services...
-docker-compose -f %COMPOSE_FILE% up -d ^
-    peer0.ecta.example.com ^
-    peer1.ecta.example.com ^
-    peer0.customs.example.com ^
-    peer0.shipping.example.com ^
-    peer0.nbe.example.com ^
-    peer0.bank.example.com ^
-    orderer1.orderer.example.com ^
-    orderer2.orderer.example.com ^
-    orderer3.orderer.example.com
-
-echo [OK] Blockchain services started
+REM Note: Blockchain peers and orderers should be started separately via Fabric network
+echo [INFO] Blockchain services should be started separately via fabric network
 echo.
 
 REM Start gateway and core services
@@ -101,11 +91,11 @@ REM Start CBC services
 echo Starting CBC services...
 docker-compose -f %COMPOSE_FILE% up -d ^
     ecta-service ^
-    commercial-bank ^
-    national-bank ^
-    customs ^
-    ecx ^
-    shipping
+    commercial-bank-service ^
+    national-bank-service ^
+    customs-service ^
+    ecx-service ^
+    shipping-service
 
 echo [OK] CBC services started
 echo.

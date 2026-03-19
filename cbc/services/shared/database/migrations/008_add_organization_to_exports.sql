@@ -27,7 +27,7 @@ CREATE INDEX IF NOT EXISTS idx_exports_organization_id ON exports(organization_i
 UPDATE exports e
 SET organization_id = u.organization_id
 FROM exporter_profiles ep
-JOIN users u ON ep.user_id = u.id
+JOIN users u ON ep.user_id = u.id::VARCHAR
 WHERE e.exporter_id = ep.exporter_id
 AND e.organization_id IS NULL;
 

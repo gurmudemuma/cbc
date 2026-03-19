@@ -80,6 +80,7 @@ const ExporterPreRegistration = ({ user, org }: ExporterPreRegistrationProps): J
     phone: '',
   });
 
+ 
   const [downloading, setDownloading] = useState<string | null>(null);
 
   const handleDownloadCompetenceCertificate = async () => {

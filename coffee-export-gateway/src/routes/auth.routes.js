@@ -404,7 +404,7 @@ router.post('/login', async (req, res) => {
     let databaseUser = null;
     try {
       const result = await postgresService.query(
-        'SELECT username, password_hash, role, status, company_name FROM users WHERE username = $1',
+        'SELECT username, password_hash, role, is_active, organization_id FROM users WHERE username = $1',
         [username]
       );
       if (result.rows.length > 0) {
@@ -412,8 +412,8 @@ router.post('/login', async (req, res) => {
           username: result.rows[0].username,
           passwordHash: result.rows[0].password_hash,
           role: result.rows[0].role,
-          status: result.rows[0].status,
-          companyName: result.rows[0].company_name
+          status: result.rows[0].is_active ? 'ACTIVE' : 'INACTIVE',
+          companyName: result.rows[0].organization_id
         };
         console.log(`[Login] User ${username} found in database`);
       }
