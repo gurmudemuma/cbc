@@ -289,15 +289,8 @@ router.post('/register', async (req, res) => {
         ]
       );
 
-      // Insert into ecta_pre_registration table for qualification workflow
-      await postgresService.query(
-        `INSERT INTO ecta_pre_registration (
-          exporter_id, laboratory_status, taster_status, competence_status, license_status,
-          created_at, updated_at
-        ) VALUES ($1, 'MISSING', 'MISSING', 'MISSING', 'MISSING', NOW(), NOW())
-        ON CONFLICT (exporter_id) DO NOTHING`,
-        [username]
-      );
+      // Note: Qualification data (laboratory, taster, competence, license) will be created
+      // when the exporter registers each component through the qualification workflow
 
       console.log(`✓ User registered in PostgreSQL: ${username}, status: ${approvalStatus}`);
     } catch (dbError) {
@@ -320,12 +313,13 @@ router.post('/register', async (req, res) => {
         companyName,
         tin: cleanedTin,
         capitalETB,
-        address: address || '',
-        contactPerson: contactPerson || '',
+        address: address || 'Addis Ababa, Ethiopia',
+        contactPerson: contactPerson || companyName,
         role: 'exporter',
         businessType: businessType || 'PRIVATE_EXPORTER',
         status: approvalStatus,
-        validationReason: validation.reason
+        validationReason: validation.reason,
+        registrationNumber: registrationNumber
       });
 
       console.log('[Registration] Blockchain result:', JSON.stringify(blockchainResult));
@@ -404,7 +398,7 @@ router.post('/login', async (req, res) => {
     let databaseUser = null;
     try {
       const result = await postgresService.query(
-        'SELECT username, password_hash, role, status, company_name FROM users WHERE username = $1',
+        'SELECT username, password_hash, role, is_active FROM users WHERE username = $1',
         [username]
       );
       if (result.rows.length > 0) {
@@ -412,8 +406,7 @@ router.post('/login', async (req, res) => {
           username: result.rows[0].username,
           passwordHash: result.rows[0].password_hash,
           role: result.rows[0].role,
-          status: result.rows[0].status,
-          companyName: result.rows[0].company_name
+          isActive: result.rows[0].is_active
         };
         console.log(`[Login] User ${username} found in database`);
       }
@@ -427,25 +420,19 @@ router.post('/login', async (req, res) => {
 
     // Verify password (from database)
     const validPassword = await bcrypt.compare(password, databaseUser.passwordHash);
+    console.log(`[Login] Password verification for ${username}: ${validPassword}`);
+    console.log(`[Login] Stored hash: ${databaseUser.passwordHash.substring(0, 20)}...`);
     if (!validPassword) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     // Check approval status (from database)
     if (databaseUser.role === 'exporter') {
-      if (databaseUser.status === 'PENDING_APPROVAL' || databaseUser.status === 'pending_approval') {
+      if (!databaseUser.isActive) {
         return res.status(403).json({ 
-          error: 'Account pending approval',
-          message: 'Your registration is under review by ECTA. You will be notified once approved.',
-          status: 'pending_approval'
-        });
-      }
-      
-      if (databaseUser.status === 'REVOKED' || databaseUser.status === 'rejected') {
-        return res.status(403).json({ 
-          error: 'Account rejected',
-          message: 'Your registration was rejected by ECTA.',
-          status: 'rejected'
+          error: 'Account not active',
+          message: 'Your account is not active. Please contact ECTA.',
+          status: 'inactive'
         });
       }
     }
@@ -455,8 +442,7 @@ router.post('/login', async (req, res) => {
       { 
         id: username, 
         role: databaseUser.role,
-        companyName: databaseUser.companyName,
-        status: databaseUser.status
+        isActive: databaseUser.isActive
       },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
@@ -470,10 +456,8 @@ router.post('/login', async (req, res) => {
       user: {
         id: username,
         username: username,
-        exporterId: username,
-        companyName: databaseUser.companyName,
         role: databaseUser.role,
-        status: databaseUser.status
+        isActive: databaseUser.isActive
       }
     });
   } catch (error) {
@@ -487,8 +471,13 @@ router.post('/login', async (req, res) => {
  * DUAL REGISTRATION: PostgreSQL + Blockchain ✅
  */
 async function createUser(username, password, companyName, role = 'exporter', status = 'approved') {
+  let passwordHash = null;
+  
   try {
-    // Check if user already exists in PostgreSQL
+    // STEP 1: Hash password once at the beginning
+    passwordHash = await bcrypt.hash(password, 10);
+
+    // STEP 2: Check if user already exists in PostgreSQL
     try {
       const existingUser = await postgresService.query(
         'SELECT username FROM users WHERE username = $1',
@@ -499,8 +488,7 @@ async function createUser(username, password, companyName, role = 'exporter', st
         console.log(`  - ${username} already exists in PostgreSQL`);
         // Still check blockchain and update if needed
       } else {
-        // STEP 1: Create in PostgreSQL (matching actual schema)
-        const passwordHash = await bcrypt.hash(password, 10);
+        // Create in PostgreSQL (matching actual schema)
         await postgresService.query(
           `INSERT INTO users (
             username, password_hash, email, organization_id, role, is_active, created_at, updated_at
@@ -520,7 +508,7 @@ async function createUser(username, password, companyName, role = 'exporter', st
       console.error(`  ✗ PostgreSQL error for ${username}:`, dbError.message);
     }
 
-    // STEP 2: Check if user already exists on blockchain
+    // STEP 3: Check if user already exists on blockchain
     try {
       await fabricService.getUser(username);
       console.log(`  - ${username} already exists on blockchain`);
@@ -529,8 +517,8 @@ async function createUser(username, password, companyName, role = 'exporter', st
       // User doesn't exist, create it
     }
 
-    // STEP 3: Create on blockchain
-    const passwordHash = await bcrypt.hash(password, 10);
+    // STEP 4: Create on blockchain
+    // Use the passwordHash from STEP 1
     await fabricService.registerUser({
       username,
       passwordHash,
@@ -544,7 +532,7 @@ async function createUser(username, password, companyName, role = 'exporter', st
       role
     });
 
-    // STEP 4: If status should be approved, update it on blockchain
+    // STEP 5: If status should be approved, update it on blockchain
     if (role !== 'exporter' || status === 'approved') {
       await fabricService.updateUserStatus(username, {
         status: 'approved',
@@ -559,28 +547,18 @@ async function createUser(username, password, companyName, role = 'exporter', st
   }
 }
 
-// Initialize test users on blockchain
+// Initialize test users on blockchain (non-blocking, errors are logged but don't crash)
 async function initializeTestUsers() {
-  console.log('Initializing test users on blockchain...');
-  
-  await createUser('admin', 'admin123', 'ECTA', 'admin', 'approved');
-  await createUser('exporter1', 'password123', 'Ethiopian Coffee Exports Ltd', 'exporter', 'approved');
-  await createUser('exporter2', 'password123', 'Addis Coffee Trading', 'exporter', 'approved');
-  await createUser('exporter3', 'password123', 'Sidamo Coffee Traders', 'exporter', 'pending_approval');
-  await createUser('bank1', 'password123', 'Commercial Bank of Ethiopia', 'bank', 'approved');
-  await createUser('ecta1', 'password123', 'ECTA Quality Control', 'ecta', 'approved');
-  await createUser('customs1', 'password123', 'Ethiopian Customs Authority', 'customs', 'approved');
-  await createUser('nbe1', 'password123', 'National Bank of Ethiopia', 'nbe', 'approved');
-  await createUser('ecx1', 'password123', 'Ethiopian Commodity Exchange', 'ecx', 'approved');
-  await createUser('shipping1', 'password123', 'Ethiopian Shipping Lines', 'shipping', 'approved');
-  
-  console.log('✓ Test users initialized on blockchain');
+  console.log('[Init] Test user initialization skipped - users already exist in database');
+  // Users are already in PostgreSQL from previous initialization
+  // Blockchain sync is handled separately via dedicated sync scripts
 }
 
 // Initialize on module load (with delay to allow wallet setup)
+// Non-blocking - errors don't crash the server
 setTimeout(() => {
   initializeTestUsers().catch(error => {
-    console.error('Failed to initialize test users:', error);
+    console.error('[Init] Unhandled error in test user initialization:', error.message);
   });
 }, 3000); // Wait 3 seconds for wallet to be ready
 

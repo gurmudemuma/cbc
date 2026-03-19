@@ -30,14 +30,14 @@ router.post('/register', authenticateToken, async (req, res) => {
     const query = `
       INSERT INTO buyer_registry (
         company_name, country, registration_number, tax_id, address,
-        email, phone, website, created_by
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        email, phone, website
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING buyer_id, company_name, country, verification_status
     `;
     
     const result = await postgresService.query(query, [
       companyName, country, registrationNumber, taxId, address,
-      email, phone, website, req.user.id
+      email, phone, website
     ]);
     
     const buyer = result.rows[0];

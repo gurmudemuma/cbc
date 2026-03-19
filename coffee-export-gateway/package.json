@@ -8,7 +8,11 @@
     "dev": "nodemon src/server.js",
     "enroll-admin": "node src/scripts/enrollAdmin.js",
     "register-exporter": "node src/scripts/registerExporter.js",
-    "sync-users": "node sync-users-to-blockchain.js"
+    "sync-users": "node src/scripts/syncUsersToBlockchain.js",
+    "seed": "node src/scripts/seedUsers.js",
+    "seed-licenses": "node src/scripts/seedLicenses.js",
+    "verify-users": "node src/scripts/verifyUsers.js",
+    "check-db": "node src/scripts/checkDatabase.js"
   },
   "dependencies": {
     "@hyperledger/fabric-gateway": "^1.5.0",

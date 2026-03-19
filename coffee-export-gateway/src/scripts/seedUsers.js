@@ -9,13 +9,22 @@ const bcrypt = require('bcryptjs');
 const { Pool } = require('pg');
 
 // PostgreSQL connection
-const pool = new Pool({
+const dbConfig = {
   host: process.env.POSTGRES_HOST || process.env.DB_HOST || 'localhost',
   port: process.env.POSTGRES_PORT || process.env.DB_PORT || 5432,
   database: process.env.POSTGRES_DB || process.env.DB_NAME || 'coffee_export_db',
   user: process.env.POSTGRES_USER || process.env.DB_USER || 'postgres',
   password: process.env.POSTGRES_PASSWORD || process.env.DB_PASSWORD || 'postgres'
+};
+
+console.log('[Seed] Database config:', {
+  host: dbConfig.host,
+  port: dbConfig.port,
+  database: dbConfig.database,
+  user: dbConfig.user
 });
+
+const pool = new Pool(dbConfig);
 
 // Fabric service (will be loaded after connection check)
 let fabricService;
@@ -43,7 +52,13 @@ const DEFAULT_USERS = [
     role: 'exporter',
     status: 'approved',
     tin: 'TIN0000000002',
-    phone: '+251911000002'
+    phone: '+251911000002',
+    businessType: 'PRIVATE',
+    capitalETB: 15000000,
+    address: 'Addis Ababa, Ethiopia',
+    contactPerson: 'Abebe Kebede',
+    city: 'Addis Ababa',
+    region: 'Addis Ababa'
   },
   {
     username: 'exporter2',
@@ -53,7 +68,13 @@ const DEFAULT_USERS = [
     role: 'exporter',
     status: 'approved',
     tin: 'TIN0000000003',
-    phone: '+251911000003'
+    phone: '+251911000003',
+    businessType: 'JOINT_STOCK',
+    capitalETB: 20000000,
+    address: 'Addis Ababa, Ethiopia',
+    contactPerson: 'Almaz Tadesse',
+    city: 'Addis Ababa',
+    region: 'Addis Ababa'
   },
   {
     username: 'exporter3',
@@ -63,7 +84,13 @@ const DEFAULT_USERS = [
     role: 'exporter',
     status: 'pending_approval',
     tin: 'TIN0000000004',
-    phone: '+251911000004'
+    phone: '+251911000004',
+    businessType: 'LLC',
+    capitalETB: 15000000,
+    address: 'Sidamo, Ethiopia',
+    contactPerson: 'Girma Assefa',
+    city: 'Sidamo',
+    region: 'SNNPR'
   },
   {
     username: 'bank1',
@@ -140,28 +167,93 @@ async function createUserInPostgreSQL(user) {
 
     if (existing.rows.length > 0) {
       console.log(`  - ${user.username} already exists in PostgreSQL`);
-      return { exists: true };
+      // Continue to create exporter profile if needed
+    } else {
+      // Hash password
+      const passwordHash = await bcrypt.hash(user.password, 10);
+
+      // Insert user (matching actual schema)
+      await pool.query(
+        `INSERT INTO users (
+          username, password_hash, email, organization_id, role, is_active, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())`,
+        [
+          user.username,
+          passwordHash,
+          user.email,
+          user.role.toUpperCase(),
+          user.role,
+          user.status === 'approved'
+        ]
+      );
     }
 
-    // Hash password
-    const passwordHash = await bcrypt.hash(user.password, 10);
+    // If exporter, create/update exporter_profile with registration number
+    if (user.role === 'exporter') {
+      // Check if exporter profile already exists
+      const profileExists = await pool.query(
+        'SELECT user_id FROM exporter_profiles WHERE user_id = $1',
+        [user.username]
+      );
 
-    // Insert user (matching actual schema)
-    await pool.query(
-      `INSERT INTO users (
-        username, password_hash, email, organization_id, role, is_active, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())`,
-      [
-        user.username,
-        passwordHash,
-        user.email,
-        user.role.toUpperCase(),
-        user.role,
-        user.status === 'approved'
-      ]
-    );
+      if (profileExists.rows.length > 0) {
+        console.log(`  ✓ ${user.username} profile already exists`);
+      } else {
+        // Generate registration number
+        const year = new Date().getFullYear();
+        const prefix = `ECTA-${year}-`;
+        
+        const result = await pool.query(
+          `SELECT registration_number FROM exporter_profiles 
+           WHERE registration_number LIKE $1 
+           ORDER BY registration_number DESC 
+           LIMIT 1`,
+          [`${prefix}%`]
+        );
+        
+        let nextNumber = 1;
+        if (result.rows.length > 0) {
+          const lastRegNum = result.rows[0].registration_number;
+          const lastNumber = parseInt(lastRegNum.split('-')[2]);
+          nextNumber = lastNumber + 1;
+        }
+        
+        const paddedNumber = nextNumber.toString().padStart(6, '0');
+        const registrationNumber = `${prefix}${paddedNumber}`;
 
-    console.log(`  ✓ ${user.username} created in PostgreSQL`);
+        // Insert exporter profile with all data
+        const insertResult = await pool.query(
+          `INSERT INTO exporter_profiles (
+            user_id, business_name, tin, registration_number, business_type,
+            minimum_capital, office_address, city, region, contact_person, email, phone,
+            status, created_at, updated_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW())
+          RETURNING exporter_id`,
+          [
+            user.username,
+            user.companyName,
+            user.tin,
+            registrationNumber,
+            user.businessType || 'PRIVATE',
+            user.capitalETB || 15000000,
+            user.address || 'Addis Ababa, Ethiopia',
+            user.city || 'Addis Ababa',
+            user.region || 'Addis Ababa',
+            user.contactPerson || user.companyName,
+            user.email,
+            user.phone,
+            user.status === 'approved' ? 'ACTIVE' : 'PENDING_APPROVAL'
+          ]
+        );
+
+        console.log(`  ✓ ${user.username} profile created with registration number: ${registrationNumber}`);
+      }
+    } else if (existing.rows.length > 0) {
+      console.log(`  ✓ ${user.username} already exists in PostgreSQL`);
+    } else {
+      console.log(`  ✓ ${user.username} created in PostgreSQL`);
+    }
+    
     return { created: true };
   } catch (error) {
     console.error(`  ✗ PostgreSQL error for ${user.username}:`, error.message);
@@ -173,56 +265,9 @@ async function createUserInPostgreSQL(user) {
  * Create user on Blockchain
  */
 async function createUserOnBlockchain(user) {
-  try {
-    // First, ensure admin is enrolled
-    if (!adminEnrolled) {
-      console.log(`  ⚠ Skipping blockchain for ${user.username} (admin not enrolled)`);
-      return { skipped: true };
-    }
-
-    // Check if user exists
-    try {
-      const existingUser = await fabricService.getUser(user.username);
-      if (existingUser) {
-        console.log(`  - ${user.username} already exists on blockchain`);
-        return { exists: true };
-      }
-    } catch (error) {
-      // User doesn't exist, continue (this is expected)
-    }
-
-    // Hash password
-    const passwordHash = await bcrypt.hash(user.password, 10);
-
-    // Register user on blockchain
-    await fabricService.registerUser({
-      username: user.username,
-      passwordHash,
-      email: user.email,
-      phone: user.phone,
-      companyName: user.companyName,
-      tin: user.tin,
-      capitalETB: 50000000,
-      address: 'Addis Ababa, Ethiopia',
-      contactPerson: user.username,
-      role: user.role
-    });
-
-    // Update status if approved
-    if (user.status === 'approved') {
-      await fabricService.updateUserStatus(user.username, {
-        status: 'approved',
-        approvedBy: 'system',
-        comments: 'Default user initialization'
-      });
-    }
-
-    console.log(`  ✓ ${user.username} created on blockchain`);
-    return { created: true };
-  } catch (error) {
-    console.error(`  ✗ Blockchain error for ${user.username}:`, error.message);
-    return { error: error.message };
-  }
+  // Blockchain disabled during seeding
+  // Users are created in PostgreSQL only
+  return { skipped: true };
 }
 
 /**
@@ -257,13 +302,7 @@ async function seedUsers() {
   console.log('  SEEDING COMPLETE');
   console.log('========================================\n');
   console.log(`PostgreSQL: ${postgresCount} users created`);
-  if (fabricService && adminEnrolled) {
-    console.log(`Blockchain: ${blockchainCount} users created`);
-  } else if (fabricService && !adminEnrolled) {
-    console.log('Blockchain: Skipped (admin not enrolled yet)');
-  } else {
-    console.log('Blockchain: Skipped (Fabric not available)');
-  }
+  console.log('Blockchain: Skipped (disabled during seeding)');
   if (errors > 0) {
     console.log(`Errors: ${errors}`);
   }
@@ -294,28 +333,11 @@ async function main() {
     await pool.query('SELECT NOW()');
     console.log('✓ PostgreSQL connected\n');
 
-    // Try to load Fabric service (optional)
-    try {
-      fabricService = require('../services');
-      console.log('✓ Fabric service loaded');
-      
-      // Check if admin is enrolled - check wallet directory (works for both SDK and CLI)
-      const fs = require('fs');
-      const path = require('path');
-      const walletPath = path.join(process.cwd(), 'wallets', 'admin.id');
-      console.log(`  Checking wallet at: ${walletPath}`);
-      if (fs.existsSync(walletPath)) {
-        adminEnrolled = true;
-        console.log('✓ Admin identity found in wallet\n');
-      } else {
-        console.log('⚠ Admin wallet file not found\n');
-        console.log('  Run enrollAdminFromCrypto.js first, then run this script again\n');
-      }
-    } catch (error) {
-      console.log('⚠ Error loading Fabric service\n');
-      console.log(`  Error: ${error.message}`);
-      console.log(`  Stack: ${error.stack}\n`);
-    }
+    // Blockchain operations are disabled during seeding
+    // Users are created in PostgreSQL only
+    console.log('⚠ Blockchain operations disabled during seeding');
+    console.log('  Users will be created in PostgreSQL only');
+    console.log('  Blockchain sync can be done separately after system is running\n');
 
     // Seed users
     await seedUsers();

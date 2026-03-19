@@ -18,7 +18,7 @@ class CoffeeExportContract extends Contract {
      */
     async RegisterUser(ctx, userDataJSON) {
         const userData = JSON.parse(userDataJSON);
-        const { username, passwordHash, email, role, companyName, tin, capitalETB, businessType, status, validationReason } = userData;
+        const { username, passwordHash, email, role, companyName, tin, capitalETB, businessType, status, validationReason, registrationNumber } = userData;
 
         // Validate required fields
         if (!username || !passwordHash || !email || !role) {
@@ -82,6 +82,7 @@ class CoffeeExportContract extends Contract {
             role,
             companyName: companyName || '',
             tin: tin || '',
+            registrationNumber: registrationNumber || null,
             capitalETB: capitalETB || 0,
             businessType: businessType || 'PRIVATE_EXPORTER',
             address: userData.address || '',
@@ -342,6 +343,10 @@ class CoffeeExportContract extends Contract {
             throw new Error(`Exporter ${exporterId} already exists`);
         }
 
+        // Use deterministic timestamp from transaction context
+        const txTimestamp = ctx.stub.getTxTimestamp();
+        const timestamp = new Date(txTimestamp.seconds.toNumber() * 1000).toISOString();
+
         const exporter = {
             docType: 'exporter',
             exporterId,
@@ -388,23 +393,22 @@ class CoffeeExportContract extends Contract {
                 }
             },
             preRegistrationStatus: {
-                profile: { status: 'submitted', submittedAt: new Date().toISOString() },
+                profile: { status: 'submitted', submittedAt: timestamp },
                 laboratory: { status: 'not_started' },
                 taster: { status: 'not_started' },
                 competenceCertificate: { status: 'not_started' },
                 exportLicense: { status: 'not_started' }
             },
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
+            createdAt: timestamp,
+            updatedAt: timestamp
         };
 
         await ctx.stub.putState(exporterId, Buffer.from(JSON.stringify(exporter)));
         
-        // Emit event
+        // Emit event without timestamp
         ctx.stub.setEvent('PreRegistrationSubmitted', Buffer.from(JSON.stringify({
             exporterId,
-            companyName,
-            timestamp: new Date().toISOString()
+            companyName
         })));
 
         return JSON.stringify({ success: true, exporterId });
@@ -445,11 +449,23 @@ class CoffeeExportContract extends Contract {
         if (updates.licenseExpiryDate) exporter.licenseExpiryDate = updates.licenseExpiryDate;
         if (updates.licenseRenewalDue) exporter.licenseRenewalDue = updates.licenseRenewalDue;
         
-        exporter.updatedAt = new Date().toISOString();
+        // Replace preRegistrationStatus completely if provided
+        if (updates.preRegistrationStatus) {
+            exporter.preRegistrationStatus = updates.preRegistrationStatus;
+        }
+        
+        if (updates.isQualified !== undefined) exporter.isQualified = updates.isQualified;
+        
+        // CRITICAL: Use the exact updatedAt from input for determinism across all peers
+        // Do NOT generate or modify timestamp - use exactly what was provided
+        if (updates.updatedAt) {
+            exporter.updatedAt = updates.updatedAt;
+        }
 
         await ctx.stub.putState(exporterId, Buffer.from(JSON.stringify(exporter)));
         
-        return JSON.stringify({ success: true, exporterId });
+        // Return only success flag without timestamp to avoid endorsement payload mismatch
+        return JSON.stringify({ success: true, exporterId, updated: true });
     }
 
     /**

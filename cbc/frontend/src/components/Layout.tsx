@@ -38,6 +38,7 @@ import {
   Send,
   BarChart3,
   RefreshCw,
+  FileSignature,
 } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
 import { styled, useTheme } from '@mui/material/styles';
@@ -274,13 +275,14 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
 
     // Define organization checks
     const isCommercialBank = orgLower === 'commercial-bank' || orgLower === 'commercialbank';
+    const isExporter = orgLower === 'exporter-portal' || orgLower === 'exporterportal' || orgLower === 'exporter' || userRole === 'exporter';
 
     // Define permission checks
     const canCreateExports = userRole === 'exporter' || userRole === 'admin' || isCommercialBank;
 
     // ðŸŒ SDK-BASED EXTERNAL ENTITY
     // Exporter Portal - External exporters (SDK-based, non-consortium)
-    if (orgLower === 'exporter-portal' || orgLower === 'exporterportal') {
+    if (isExporter) {
       return [
         {
           name: 'ESW Submission',
@@ -301,6 +303,16 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
           children: [
             { name: 'Application Dashboard', path: '/my-applications', icon: LayoutDashboard },
             { name: 'Application Tracking', path: '/applications', icon: FileText },
+          ]
+        },
+        {
+          name: 'Sales Contracts',
+          path: '/sales-contracts',
+          icon: FileSignature,
+          children: [
+            { name: 'My Drafts', path: '/sales-contracts/drafts', icon: FileText },
+            { name: 'Create New', path: '/sales-contracts', icon: Plus },
+            { name: 'Contract Details', path: '/sales-contracts/details', icon: FileCheck },
           ]
         },
         { name: 'Profile', path: '/profile', icon: User },
@@ -358,28 +370,8 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
         ];
       }
 
-      // Exporter role accessing through Commercial Bank
-      if (userRole === 'exporter') {
-        return [
-          {
-            name: 'My Export Requests',
-            path: '/exports',
-            icon: Package,
-            children: [
-              { name: 'Draft Requests', path: '/exports', icon: Package, filter: 'PENDING', badge: badgeCounts.PENDING },
-              { name: 'Submitted', path: '/exports', icon: Package, filter: 'PENDING', badge: badgeCounts.PENDING },
-              { name: 'In Progress', path: '/exports', icon: Package, filter: 'FX_APPROVED', badge: badgeCounts.FX_APPROVED },
-              { name: 'Completed', path: '/exports', icon: CheckCircle, filter: 'COMPLETED', badge: badgeCounts.COMPLETED },
-            ]
-          },
-          { name: 'Create Export Request', path: '/exports/new', icon: Plus, disabled: !canCreateExports },
-          { name: 'My Documents', path: '/documents', icon: FileText },
-        ];
-      }
-
       // Default fallback for Commercial Bank
       return [
-        { name: 'Export Overview', path: '/exports', icon: Package },
         { name: 'Banking Dashboard', path: '/banking', icon: DollarSign },
       ];
     }

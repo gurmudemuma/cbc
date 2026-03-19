@@ -86,6 +86,9 @@ import BankingOperations from './pages/BankingOperations';
 import LotManagement from './pages/LotManagement';
 import MonetaryPolicy from './pages/MonetaryPolicy';
 
+// Sales Contract Pages
+import SalesContractDashboard from './pages/SalesContractDashboard';
+
 // Services & Config
 // setApiBaseUrl removed to allow proxy to handle routing
 import { createEnhancedTheme } from './config/theme.config.enhanced';
@@ -408,6 +411,11 @@ function App(): JSX.Element {
           { path: 'contracts/approved', element: <ECTAContractApproval user={user} org={org} /> },
           { path: 'contracts/rejected', element: <ECTAContractApproval user={user} org={org} /> },
           { path: 'contracts/origin', element: <ECTAContractApproval user={user} org={org} /> },
+
+          // Sales Contract Routes
+          { path: 'sales-contracts', element: <SalesContractDashboard /> },
+          { path: 'sales-contracts/drafts', element: <SalesContractDashboard /> },
+          { path: 'sales-contracts/details/:id', element: <SalesContractDashboard /> },
 
           // ESW Routes
           { path: 'esw/submission', element: <ESWSubmission user={user} org={org} /> },

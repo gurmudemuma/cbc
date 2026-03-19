@@ -20,6 +20,7 @@ console.log(`[Fabric CLI] Channel: ${CHANNEL_NAME}, Chaincode: ${CHAINCODE_NAME}
 async function executePeerCommand(command) {
   try {
     // Wrap command to execute in CLI container
+    // CLI container is on fabric-network, so it can resolve peer/orderer hostnames
     const dockerCommand = `docker exec -e CORE_PEER_TLS_ENABLED=true -e CORE_PEER_LOCALMSPID=ECTAMSP -e CORE_PEER_ADDRESS=peer0.ecta.example.com:7051 -e CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/peerOrganizations/ecta.example.com/peers/peer0.ecta.example.com/tls/ca.crt -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/peerOrganizations/ecta.example.com/users/Admin@ecta.example.com/msp cli ${command}`;
     
     const { stdout, stderr } = await execPromise(dockerCommand, {
@@ -42,29 +43,45 @@ async function executePeerCommand(command) {
  */
 async function invokeChaincode(functionName, ...args) {
   const argsJson = JSON.stringify(args);
+  const CRYPTO_PATH = '/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config';
+  
+  // Build peer addresses for ECTA only (ECTA-only endorsement policy)
+  const peerAddresses = `--peerAddresses peer0.ecta.example.com:7051 --tlsRootCertFiles ${CRYPTO_PATH}/peerOrganizations/ecta.example.com/peers/peer0.ecta.example.com/tls/ca.crt`;
+  
   const command = `peer chaincode invoke \
     -o orderer1.orderer.example.com:7050 \
     --ordererTLSHostnameOverride orderer1.orderer.example.com \
     --tls \
-    --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/ordererOrganizations/orderer.example.com/orderers/orderer1.orderer.example.com/msp/tlscacerts/tlsca.orderer.example.com-cert.pem \
+    --cafile ${CRYPTO_PATH}/ordererOrganizations/orderer.example.com/orderers/orderer1.orderer.example.com/msp/tlscacerts/tlsca.orderer.example.com-cert.pem \
     -C ${CHANNEL_NAME} \
     -n ${CHAINCODE_NAME} \
     -c '{"function":"${functionName}","Args":${argsJson}}' \
-    --peerAddresses peer0.ecta.example.com:7051 \
-    --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/peerOrganizations/ecta.example.com/peers/peer0.ecta.example.com/tls/ca.crt \
+    ${peerAddresses} \
     --waitForEvent`;
   
   console.log(`[Fabric CLI] Invoking: ${functionName}`);
+  console.log(`[Fabric CLI] Args: ${argsJson}`);
   const result = await executePeerCommand(command);
   
+  console.log(`[Fabric CLI] Raw result: "${result}"`);
+  
   // Extract result from CLI output
-  const lines = result.split('\n');
+  // The CLI output contains the response payload in the last non-empty line
+  const lines = result.split('\n').filter(line => line.trim());
+  
+  if (lines.length === 0) {
+    console.log(`[Fabric CLI] Empty response from ${functionName}`);
+    return { success: true };
+  }
+  
   const lastLine = lines[lines.length - 1];
+  console.log(`[Fabric CLI] Last line: "${lastLine}"`);
   
   // Try to parse as JSON, otherwise return as string
   try {
     return JSON.parse(lastLine);
-  } catch {
+  } catch (e) {
+    console.log(`[Fabric CLI] Could not parse response as JSON: ${lastLine}`);
     return lastLine;
   }
 }
@@ -223,6 +240,32 @@ async function getWallet() {
   return null; // Not used in CLI mode
 }
 
+/**
+ * Generic submitTransaction function for compatibility
+ */
+async function submitTransaction(userId, chaincodeName, functionName, ...args) {
+  try {
+    const result = await invokeChaincode(functionName, ...args);
+    return typeof result === 'string' ? result : JSON.stringify(result);
+  } catch (error) {
+    console.error(`[Fabric CLI] submitTransaction failed for ${functionName}:`, error.message);
+    throw error;
+  }
+}
+
+/**
+ * Generic evaluateTransaction function for compatibility
+ */
+async function evaluateTransaction(userId, chaincodeName, functionName, ...args) {
+  try {
+    const result = await queryChaincode(functionName, ...args);
+    return typeof result === 'string' ? result : JSON.stringify(result);
+  } catch (error) {
+    console.error(`[Fabric CLI] evaluateTransaction failed for ${functionName}:`, error.message);
+    throw error;
+  }
+}
+
 module.exports = {
   registerUser,
   getUser,
@@ -237,5 +280,7 @@ module.exports = {
   getCertificate,
   enrollAdmin,
   registerExporter,
-  getWallet
+  getWallet,
+  submitTransaction,
+  evaluateTransaction
 };

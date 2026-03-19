@@ -5,8 +5,8 @@
 -- Customs Declarations Table
 CREATE TABLE IF NOT EXISTS customs_declarations (
     declaration_id VARCHAR(100) PRIMARY KEY,
-    shipment_id VARCHAR(100) NOT NULL,
-    exporter_id VARCHAR(100) NOT NULL,
+    shipment_id VARCHAR(100),
+    exporter_id UUID,
     declaration_number VARCHAR(50),
     declaration_type VARCHAR(50) NOT NULL,
     customs_office VARCHAR(100),
@@ -30,14 +30,13 @@ CREATE TABLE IF NOT EXISTS customs_declarations (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     
-    FOREIGN KEY (shipment_id) REFERENCES shipments(shipment_id),
     FOREIGN KEY (exporter_id) REFERENCES exporter_profiles(exporter_id)
 );
 
 -- Fumigation Certificates Table
 CREATE TABLE IF NOT EXISTS fumigation_certificates (
     fumigation_id VARCHAR(100) PRIMARY KEY,
-    shipment_id VARCHAR(100) NOT NULL,
+    shipment_id VARCHAR(100),
     certificate_number VARCHAR(50) UNIQUE,
     
     -- Fumigation Details
@@ -60,15 +59,13 @@ CREATE TABLE IF NOT EXISTS fumigation_certificates (
     
     -- Timestamps
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    
-    FOREIGN KEY (shipment_id) REFERENCES shipments(shipment_id)
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Shipping Instructions Table
 CREATE TABLE IF NOT EXISTS shipping_instructions (
     instruction_id VARCHAR(100) PRIMARY KEY,
-    shipment_id VARCHAR(100) NOT NULL,
+    shipment_id VARCHAR(100),
     
     -- Shipper Details
     shipper_name VARCHAR(200) NOT NULL,
@@ -109,16 +106,14 @@ CREATE TABLE IF NOT EXISTS shipping_instructions (
     
     -- Timestamps
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    
-    FOREIGN KEY (shipment_id) REFERENCES shipments(shipment_id)
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Bill of Lading Table
 CREATE TABLE IF NOT EXISTS bills_of_lading (
     bl_id VARCHAR(100) PRIMARY KEY,
     bl_number VARCHAR(50) UNIQUE NOT NULL,
-    shipment_id VARCHAR(100) NOT NULL,
+    shipment_id VARCHAR(100),
     instruction_id VARCHAR(100),
     
     -- BL Type
@@ -158,16 +153,13 @@ CREATE TABLE IF NOT EXISTS bills_of_lading (
     
     -- Timestamps
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    
-    FOREIGN KEY (shipment_id) REFERENCES shipments(shipment_id),
-    FOREIGN KEY (instruction_id) REFERENCES shipping_instructions(instruction_id)
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Containers Table
 CREATE TABLE IF NOT EXISTS containers (
     container_id VARCHAR(100) PRIMARY KEY,
-    shipment_id VARCHAR(100) NOT NULL,
+    shipment_id VARCHAR(100),
     container_number VARCHAR(50) UNIQUE NOT NULL,
     
     -- Container Details
@@ -193,9 +185,7 @@ CREATE TABLE IF NOT EXISTS containers (
     
     -- Timestamps
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    
-    FOREIGN KEY (shipment_id) REFERENCES shipments(shipment_id)
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Container Tracking Table

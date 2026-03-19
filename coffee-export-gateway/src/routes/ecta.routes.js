@@ -665,22 +665,24 @@ router.post('/license/issue', authenticateToken, requireRole('ecta', 'admin'), a
  */
 router.get('/preregistration/laboratories/pending', authenticateToken, requireRole('ecta', 'admin'), async (req, res) => {
   try {
-    // Fetch from PostgreSQL
+    // Fetch from PostgreSQL - get pending laboratories
     const result = await postgresService.query(`
       SELECT 
-        pr.exporter_id,
-        pr.laboratory_status,
-        pr.laboratory_cert_number,
-        pr.created_at,
-        pr.updated_at,
+        cl.laboratory_id,
+        cl.exporter_id,
+        cl.status,
+        cl.certification_number,
+        cl.created_at,
+        cl.updated_at,
         u.email,
         ep.business_name,
-        ep.tin
-      FROM ecta_pre_registration pr
-      JOIN users u ON pr.exporter_id = u.username
-      LEFT JOIN exporter_profiles ep ON pr.exporter_id = ep.user_id
-      WHERE pr.laboratory_status = 'SUBMITTED'
-      ORDER BY pr.updated_at DESC
+        ep.tin,
+        ep.user_id as exporter_username
+      FROM coffee_laboratories cl
+      JOIN exporter_profiles ep ON cl.exporter_id = ep.exporter_id
+      JOIN users u ON ep.user_id = u.username
+      WHERE cl.status = 'PENDING' OR cl.status = 'SUBMITTED'
+      ORDER BY cl.updated_at DESC
     `);
     
     res.json(result.rows);
@@ -695,22 +697,24 @@ router.get('/preregistration/laboratories/pending', authenticateToken, requireRo
  */
 router.get('/preregistration/tasters/pending', authenticateToken, requireRole('ecta', 'admin'), async (req, res) => {
   try {
-    // Fetch from PostgreSQL
+    // Fetch from PostgreSQL - get pending tasters
     const result = await postgresService.query(`
       SELECT 
-        pr.exporter_id,
-        pr.taster_status,
-        pr.taster_cert_number,
-        pr.created_at,
-        pr.updated_at,
+        ct.taster_id,
+        ct.exporter_id,
+        ct.status,
+        ct.proficiency_certificate_number,
+        ct.created_at,
+        ct.updated_at,
         u.email,
         ep.business_name,
-        ep.tin
-      FROM ecta_pre_registration pr
-      JOIN users u ON pr.exporter_id = u.username
-      LEFT JOIN exporter_profiles ep ON pr.exporter_id = ep.user_id
-      WHERE pr.taster_status = 'SUBMITTED'
-      ORDER BY pr.updated_at DESC
+        ep.tin,
+        ep.user_id as exporter_username
+      FROM coffee_tasters ct
+      JOIN exporter_profiles ep ON ct.exporter_id = ep.exporter_id
+      JOIN users u ON ep.user_id = u.username
+      WHERE ct.status = 'PENDING' OR ct.status = 'SUBMITTED'
+      ORDER BY ct.updated_at DESC
     `);
     
     res.json(result.rows);
@@ -725,23 +729,25 @@ router.get('/preregistration/tasters/pending', authenticateToken, requireRole('e
  */
 router.get('/preregistration/competence/pending', authenticateToken, requireRole('ecta', 'admin'), async (req, res) => {
   try {
-    // Fetch from PostgreSQL
+    // Fetch from PostgreSQL - get pending competence certificates
     const result = await postgresService.query(`
       SELECT 
-        pr.exporter_id,
-        pr.competence_status,
-        pr.competence_cert_number,
-        pr.competence_cert_id,
-        pr.created_at,
-        pr.updated_at,
+        cc.certificate_id,
+        cc.exporter_id,
+        cc.status,
+        cc.certificate_number,
+        cc.certificate_id as cert_id,
+        cc.created_at,
+        cc.updated_at,
         u.email,
         ep.business_name,
-        ep.tin
-      FROM ecta_pre_registration pr
-      JOIN users u ON pr.exporter_id = u.username
-      LEFT JOIN exporter_profiles ep ON pr.exporter_id = ep.user_id
-      WHERE pr.competence_status = 'SUBMITTED'
-      ORDER BY pr.updated_at DESC
+        ep.tin,
+        ep.user_id as exporter_username
+      FROM competence_certificates cc
+      JOIN exporter_profiles ep ON cc.exporter_id = ep.exporter_id
+      JOIN users u ON ep.user_id = u.username
+      WHERE cc.status = 'PENDING' OR cc.status = 'SUBMITTED'
+      ORDER BY cc.updated_at DESC
     `);
     
     res.json(result.rows);
@@ -753,17 +759,30 @@ router.get('/preregistration/competence/pending', authenticateToken, requireRole
 
 /**
  * Get pending licenses (ECTA only)
+ * Queries PostgreSQL for pending export licenses
  */
 router.get('/preregistration/licenses/pending', authenticateToken, requireRole('ecta', 'admin'), async (req, res) => {
   try {
-    const result = await fabricService.evaluateTransaction(
-      req.user.id,
-      process.env.CHAINCODE_NAME || 'ecta',
-      'GetPendingQualifications',
-      'license'
-    );
+    const result = await postgresService.query(`
+      SELECT 
+        el.license_id,
+        el.exporter_id,
+        el.status,
+        el.license_number,
+        el.created_at,
+        el.updated_at,
+        u.email,
+        ep.business_name,
+        ep.tin,
+        ep.user_id as exporter_username
+      FROM export_licenses el
+      JOIN exporter_profiles ep ON el.exporter_id = ep.exporter_id
+      JOIN users u ON ep.user_id = u.username
+      WHERE el.status = 'PENDING' OR el.status = 'SUBMITTED'
+      ORDER BY el.updated_at DESC
+    `);
     
-    res.json(result); // Already parsed
+    res.json(result.rows);
   } catch (error) {
     console.error('Get pending licenses error:', error);
     res.status(500).json({ error: error.message });
@@ -772,31 +791,57 @@ router.get('/preregistration/licenses/pending', authenticateToken, requireRole('
 
 /**
  * Get all exporters (ECTA only)
- * NOW FULLY BLOCKCHAIN-BASED ✅
+ * Queries PostgreSQL for all exporter profiles
  */
 router.get('/preregistration/exporters', authenticateToken, requireRole('ecta', 'admin'), async (req, res) => {
   try {
-    // Query blockchain for all exporter users
-    const exporterUsers = await fabricService.getUsersByRole('exporter');
+    // Query PostgreSQL for all exporter profiles with qualification status
+    const result = await postgresService.query(`
+      SELECT 
+        ep.exporter_id,
+        ep.user_id as username,
+        ep.business_name as businessName,
+        ep.business_name as companyName,
+        ep.tin,
+        ep.business_type as businessType,
+        ep.minimum_capital as minimumCapital,
+        ep.status,
+        ep.created_at as registeredAt,
+        ep.approved_at as approvedAt,
+        u.email,
+        u.phone,
+        CASE 
+          WHEN el.license_id IS NOT NULL AND el.status = 'ACTIVE' THEN true
+          ELSE false
+        END as is_qualified,
+        el.license_number,
+        el.issued_date as license_issued_date,
+        el.expiry_date as license_expiry_date
+      FROM exporter_profiles ep
+      JOIN users u ON ep.user_id = u.username
+      LEFT JOIN export_licenses el ON ep.exporter_id = el.exporter_id AND el.status = 'ACTIVE'
+      ORDER BY ep.created_at DESC
+    `);
     
-    const allExporters = exporterUsers.map(item => {
-      const user = item.record;
-      return {
-        exporter_id: user.username,
-        username: user.username,
-        email: user.email,
-        phone: user.phone,
-        businessName: user.companyName,
-        companyName: user.companyName,
-        tin: user.tin || 'N/A',
-        businessType: 'EXPORTER',
-        minimumCapital: user.capitalETB || 50000000,
-        status: user.status.toUpperCase(),
-        registeredAt: user.registeredAt,
-        approvedAt: user.approvedAt,
-        licenseNumber: user.licenseNumber
-      };
-    });
+    const allExporters = result.rows.map(row => ({
+      exporter_id: row.exporter_id,
+      username: row.username,
+      email: row.email,
+      phone: row.phone,
+      businessName: row.businessname,
+      companyName: row.businessname,
+      tin: row.tin || 'N/A',
+      businessType: row.businesstype || 'EXPORTER',
+      minimumCapital: row.minimumcapital || 50000000,
+      status: row.status.toUpperCase(),
+      registeredAt: row.registeredat,
+      approvedAt: row.approvedat,
+      is_qualified: row.is_qualified,
+      isQualified: row.is_qualified,
+      licenseNumber: row.license_number,
+      licenseIssuedDate: row.license_issued_date,
+      licenseExpiryDate: row.license_expiry_date
+    }));
     
     res.json(allExporters);
   } catch (error) {
@@ -807,27 +852,43 @@ router.get('/preregistration/exporters', authenticateToken, requireRole('ecta', 
 
 /**
  * Get global statistics (ECTA only)
- * Returns dashboard statistics
+ * Returns dashboard statistics from PostgreSQL
  */
 router.get('/global-stats', authenticateToken, requireRole('ecta', 'admin'), async (req, res) => {
   try {
-    // Get all exporter users
-    const exporterUsers = await fabricService.getUsersByRole('exporter');
+    // Get exporter statistics from PostgreSQL
+    const exporterStats = await postgresService.query(`
+      SELECT 
+        COUNT(*) as total,
+        SUM(CASE WHEN status = 'PENDING_APPROVAL' THEN 1 ELSE 0 END) as pending,
+        SUM(CASE WHEN status = 'ACTIVE' THEN 1 ELSE 0 END) as approved,
+        SUM(CASE WHEN status = 'REVOKED' THEN 1 ELSE 0 END) as rejected,
+        SUM(CASE WHEN status = 'SUSPENDED' THEN 1 ELSE 0 END) as suspended
+      FROM exporter_profiles
+    `);
     
-    // Calculate statistics
+    const licenseStats = await postgresService.query(`
+      SELECT 
+        COUNT(*) as total,
+        SUM(CASE WHEN status = 'ACTIVE' THEN 1 ELSE 0 END) as active,
+        SUM(CASE WHEN status = 'PENDING' THEN 1 ELSE 0 END) as pending,
+        SUM(CASE WHEN status = 'EXPIRED' THEN 1 ELSE 0 END) as expired
+      FROM export_licenses
+    `);
+    
     const stats = {
       exporters: {
-        total: exporterUsers.length,
-        pending: exporterUsers.filter(u => u.record.status === 'pending_approval').length,
-        approved: exporterUsers.filter(u => u.record.status === 'approved').length,
-        rejected: exporterUsers.filter(u => u.record.status === 'rejected').length,
-        active: exporterUsers.filter(u => u.record.status === 'active').length
+        total: parseInt(exporterStats.rows[0].total) || 0,
+        pending: parseInt(exporterStats.rows[0].pending) || 0,
+        approved: parseInt(exporterStats.rows[0].approved) || 0,
+        rejected: parseInt(exporterStats.rows[0].rejected) || 0,
+        suspended: parseInt(exporterStats.rows[0].suspended) || 0
       },
       licenses: {
-        total: exporterUsers.filter(u => u.record.licenseNumber).length,
-        active: exporterUsers.filter(u => u.record.status === 'active' && u.record.licenseNumber).length,
-        pending: 0, // To be implemented when license application tracking is added
-        expired: 0  // To be implemented when expiry tracking is added
+        total: parseInt(licenseStats.rows[0].total) || 0,
+        active: parseInt(licenseStats.rows[0].active) || 0,
+        pending: parseInt(licenseStats.rows[0].pending) || 0,
+        expired: parseInt(licenseStats.rows[0].expired) || 0
       }
     };
     
@@ -840,53 +901,43 @@ router.get('/global-stats', authenticateToken, requireRole('ecta', 'admin'), asy
 
 /**
  * Get pre-registration dashboard statistics (ECTA only)
+ * Returns statistics from PostgreSQL
  */
 router.get('/preregistration/dashboard/stats', authenticateToken, requireRole('ecta', 'admin'), async (req, res) => {
   try {
-    // Get all exporter users
-    let exporterUsers = [];
-    try {
-      exporterUsers = await fabricService.getUsersByRole('exporter');
-    } catch (error) {
-      console.log('No exporter users found or chaincode function not available:', error.message);
-      // Return default stats if chaincode function doesn't exist yet
-      return res.json({
-        totalExporters: 0,
-        pendingRegistrations: 0,
-        approvedExporters: 0,
-        rejectedApplications: 0,
-        activeLicenses: 0
-      });
-    }
+    // Get statistics from PostgreSQL
+    const stats = await postgresService.query(`
+      SELECT 
+        COUNT(*) as totalExporters,
+        SUM(CASE WHEN status = 'PENDING_APPROVAL' THEN 1 ELSE 0 END) as pendingRegistrations,
+        SUM(CASE WHEN status = 'ACTIVE' THEN 1 ELSE 0 END) as approvedExporters,
+        SUM(CASE WHEN status = 'REVOKED' THEN 1 ELSE 0 END) as rejectedApplications
+      FROM exporter_profiles
+    `);
     
-    // Ensure exporterUsers is an array
-    if (!Array.isArray(exporterUsers)) {
-      console.log('Exporter users is not an array:', exporterUsers);
-      return res.json({
-        totalExporters: 0,
-        pendingRegistrations: 0,
-        approvedExporters: 0,
-        rejectedApplications: 0,
-        activeLicenses: 0
-      });
-    }
+    const licenseStats = await postgresService.query(`
+      SELECT 
+        COUNT(*) as total,
+        SUM(CASE WHEN status = 'ACTIVE' THEN 1 ELSE 0 END) as active,
+        SUM(CASE WHEN status = 'PENDING' THEN 1 ELSE 0 END) as pending
+      FROM export_licenses
+    `);
     
-    // Calculate statistics
-    const stats = {
-      totalExporters: exporterUsers.length,
-      pendingRegistrations: exporterUsers.filter(u => u?.record?.status === 'pending_approval').length,
-      approvedExporters: exporterUsers.filter(u => {
-        const status = u?.record?.status;
-        return status === 'approved' || status === 'active';
-      }).length,
-      rejectedApplications: exporterUsers.filter(u => u?.record?.status === 'rejected').length,
-      activeLicenses: exporterUsers.filter(u => {
-        const record = u?.record;
-        return record?.status === 'active' && record?.licenseNumber;
-      }).length
+    const data = {
+      exporters: {
+        total: parseInt(stats.rows[0].totalexporters) || 0,
+        pending: parseInt(stats.rows[0].pendingregistrations) || 0,
+        approved: parseInt(stats.rows[0].approvedexporters) || 0,
+        rejected: parseInt(stats.rows[0].rejectedapplications) || 0
+      },
+      licenses: {
+        total: parseInt(licenseStats.rows[0].total) || 0,
+        active: parseInt(licenseStats.rows[0].active) || 0,
+        pending: parseInt(licenseStats.rows[0].pending) || 0
+      }
     };
     
-    res.json(stats);
+    res.json({ data });
   } catch (error) {
     console.error('Get dashboard stats error:', error);
     res.status(500).json({ error: error.message });
@@ -895,43 +946,45 @@ router.get('/preregistration/dashboard/stats', authenticateToken, requireRole('e
 
 /**
  * Get pending exporters for pre-registration (ECTA only)
+ * Queries PostgreSQL for pending exporter profiles
  */
 router.get('/preregistration/exporters/pending', authenticateToken, requireRole('ecta', 'admin'), async (req, res) => {
   try {
-    // Query blockchain for pending users
-    let pendingUsers = [];
-    try {
-      pendingUsers = await fabricService.getPendingUsers();
-    } catch (error) {
-      console.log('No pending users found or chaincode function not available:', error.message);
-      // Return empty array if chaincode function doesn't exist yet
-      return res.json([]);
-    }
+    // Query PostgreSQL for pending exporter profiles
+    const result = await postgresService.query(`
+      SELECT 
+        ep.exporter_id,
+        ep.user_id as username,
+        ep.business_name as businessName,
+        ep.business_name as companyName,
+        ep.tin,
+        ep.business_type as businessType,
+        ep.minimum_capital as minimumCapital,
+        ep.status,
+        ep.created_at as registeredAt,
+        ep.approved_at as approvedAt,
+        u.email,
+        u.phone
+      FROM exporter_profiles ep
+      JOIN users u ON ep.user_id = u.username
+      WHERE ep.status = 'PENDING_APPROVAL'
+      ORDER BY ep.created_at DESC
+    `);
     
-    // Ensure pendingUsers is an array
-    if (!Array.isArray(pendingUsers)) {
-      console.log('Pending users is not an array:', pendingUsers);
-      return res.json([]);
-    }
-    
-    // Format data for frontend compatibility
-    const pendingExporters = pendingUsers.map(item => {
-      const user = item?.record || item || {};
-      return {
-        exporter_id: user.username || 'unknown',
-        username: user.username || 'unknown',
-        email: user.email || '',
-        phone: user.phone || '',
-        businessName: user.companyName || user.businessName || 'N/A',
-        companyName: user.companyName || user.businessName || 'N/A',
-        tin: user.tin || 'N/A',
-        businessType: user.businessType || 'EXPORTER',
-        minimumCapital: user.capitalETB || user.minimumCapital || 50000000,
-        status: user.status?.toUpperCase() || 'PENDING',
-        registeredAt: user.registeredAt || new Date().toISOString(),
-        blockchainData: user
-      };
-    }).filter(exporter => exporter.username !== 'unknown'); // Filter out invalid entries
+    const pendingExporters = result.rows.map(row => ({
+      exporter_id: row.exporter_id,
+      username: row.username,
+      email: row.email,
+      phone: row.phone,
+      businessName: row.businessname,
+      companyName: row.businessname,
+      tin: row.tin || 'N/A',
+      businessType: row.businesstype || 'EXPORTER',
+      minimumCapital: row.minimumcapital || 50000000,
+      status: row.status.toUpperCase(),
+      registeredAt: row.registeredat,
+      approvedAt: row.approvedat
+    }));
     
     res.json(pendingExporters);
   } catch (error) {

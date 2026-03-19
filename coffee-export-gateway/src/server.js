@@ -21,6 +21,11 @@ const containerRouter = require('./routes/container.routes');
 const vesselRouter = require('./routes/vessel.routes');
 // Analytics routes (PostgreSQL optimization)
 const analyticsRouter = require('./routes/analytics.routes');
+// Sales Contract routes
+const buyersRouter = require('./routes/buyers.routes');
+const marketplaceRouter = require('./routes/marketplace.routes');
+const contractDraftsRouter = require('./routes/contract-drafts.routes');
+const legalRouter = require('./routes/legal.routes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -74,6 +79,11 @@ app.use('/api/container', containerRouter);
 app.use('/api/vessel', vesselRouter);
 // Analytics routes (PostgreSQL-powered)
 app.use('/api/analytics', analyticsRouter);
+// Sales Contract routes
+app.use('/api/buyers', buyersRouter);
+app.use('/api/marketplace', marketplaceRouter);
+app.use('/api/contracts/drafts', contractDraftsRouter);
+app.use('/api/legal', legalRouter);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

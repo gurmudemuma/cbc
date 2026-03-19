@@ -5,13 +5,13 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-echo -e "${GREEN}Deploying Chaincode v1.9 (Sequence 18)${NC}"
+echo -e "${GREEN}Deploying Chaincode v1.9 (Sequence 1)${NC}"
 
 export CHANNEL_NAME="coffeechannel"
 export CC_NAME="ecta"
 export CC_VERSION="1.9"
-export CC_SEQUENCE="18"
-export PACKAGE_ID="ecta_1.9:7e927dcf7411283d562476cadcb8d033529c0ecabad300f561b0119d9f35b3b4"
+export CC_SEQUENCE="1"
+export PACKAGE_ID="ecta_1.9_complete:e724402cd31807ff04397e154392ae715546b4eccf747356380077749e1863f5"
 export CRYPTO_PATH="/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config"
 
 # Function to approve chaincode

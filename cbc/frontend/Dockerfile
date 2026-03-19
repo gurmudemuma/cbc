@@ -16,7 +16,9 @@ WORKDIR /app
 COPY frontend/package*.json ./
 
 # Install dependencies with network-friendly options
-RUN npm install --legacy-peer-deps --prefer-offline --no-audit --maxsockets=1 && \
+RUN npm cache clean --force && \
+    rm -rf node_modules package-lock.json && \
+    npm install --legacy-peer-deps --no-optional && \
     npm cache clean --force
 
 # Copy shared API endpoints
