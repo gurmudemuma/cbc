@@ -1,7 +1,8 @@
-﻿import { Outlet, useLocation, useNavigate, Link } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getOrganization } from '../config/api.config';
 import NotificationCenter from './NotificationCenter';
+import ContractNotifications from './ContractNotifications';
 import { AccessibilityButton } from './AccessibilityEnhancements';
 import { useAccessibilitySettings } from './AccessibilityEnhancements';
 import { AccessibilitySettingsDialog } from './AccessibilityEnhancements';
@@ -14,6 +15,7 @@ import {
   LogOut,
   Menu as MenuIcon,
   X,
+  XCircle,
   ShieldCheck,
   Users,
   FileCheck,
@@ -38,6 +40,7 @@ import {
   Send,
   BarChart3,
   RefreshCw,
+  FileSignature,
 } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
 import { styled, useTheme } from '@mui/material/styles';
@@ -278,20 +281,20 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
     // Define permission checks
     const canCreateExports = userRole === 'exporter' || userRole === 'admin' || isCommercialBank;
 
-    // ðŸŒ SDK-BASED EXTERNAL ENTITY
+    // � SDK-BASED EXTERNAL ENTITY
     // Exporter Portal - External exporters (SDK-based, non-consortium)
     if (orgLower === 'exporter-portal' || orgLower === 'exporterportal') {
       return [
         {
-          name: 'ESW Submission',
-          path: '/esw/submission',
+          name: 'Network Submission',
+          path: '/network/submission',
           icon: Send,
           children: [
-            { name: 'Submit to ESW', path: '/esw/submission', icon: Send },
-            { name: 'My Submissions', path: '/esw/submissions', icon: FileText },
-            { name: 'Submission Status', path: '/esw/status', icon: FileCheck },
-            { name: 'ESW Statistics', path: '/esw/statistics', icon: BarChart3 },
-            { name: 'Verify Certificate', path: '/esw/verify-certificate', icon: FileCheck },
+            { name: 'Submit to Network', path: '/network/submission', icon: Send },
+            { name: 'My Submissions', path: '/network/submissions', icon: FileText },
+            { name: 'Submission Status', path: '/network/status', icon: FileCheck },
+            { name: 'Network Statistics', path: '/network/statistics', icon: BarChart3 },
+            { name: 'Verify Certificate', path: '/network/verify-certificate', icon: FileCheck },
           ]
         },
         {
@@ -303,56 +306,48 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
             { name: 'Application Tracking', path: '/applications', icon: FileText },
           ]
         },
+        {
+          name: 'Sales Contracts',
+          path: '/sales-contracts',
+          icon: FileSignature,
+          children: [
+            { name: 'My Contracts', path: '/sales-contracts', icon: FileText },
+            { name: 'Draft Contracts', path: '/sales-contracts/drafts', icon: FileText },
+            { name: 'Negotiations', path: '/sales-contracts/negotiations', icon: RefreshCw },
+            { name: 'Finalized', path: '/sales-contracts/finalized', icon: CheckCircle },
+            { name: 'Network Submission', path: '/exporter/network-submission', icon: Send },
+          ]
+        },
+        {
+          name: 'Documents',
+          path: '/documents',
+          icon: FileText,
+          children: [
+            { name: 'All Documents', path: '/documents', icon: FileText },
+            { name: 'Request Documents', path: '/documents?tab=3', icon: Send },
+            { name: 'Document Status', path: '/documents?tab=0', icon: FileCheck },
+          ]
+        },
         { name: 'Profile', path: '/profile', icon: User },
         { name: 'Help & Support', path: '/support', icon: HelpCircle },
       ];
     }
 
-    // ðŸ›ï¸ CONSORTIUM NETWORK MEMBERS
+    // 🏛️ CONSORTIUM NETWORK MEMBERS
     // Commercial Bank - Banking operations & consortium orchestration (consortium member)
     if (isCommercialBank) {
       // Banker role - Banking operations and document verification
       if (userRole === 'bank' || userRole === 'banker' || userRole === 'admin') {
         return [
           {
-            name: 'Banking Operations',
-            path: '/banking',
-            icon: DollarSign,
+            name: 'Network Management',
+            path: '/network/agency-dashboard',
+            icon: Building,
             children: [
-              { name: 'Document Verification', path: '/banking/documents', icon: FileCheck, filter: 'BANKING_PENDING', badge: badgeCounts.BANKING_PENDING },
-              { name: 'Export Financing', path: '/banking/financing', icon: DollarSign },
-              { name: 'Compliance Review', path: '/banking/compliance', icon: ShieldCheck },
-              { name: 'Banking Reports', path: '/banking/reports', icon: FileText },
-            ]
-          },
-          {
-            name: 'Export Management',
-            path: '/exports',
-            icon: Package,
-            children: [
-              { name: 'All Export Requests', path: '/exports', icon: Package, filter: 'ALL' },
-              { name: 'Pending Bank Approval', path: '/exports', icon: FileCheck, filter: 'BANKING_PENDING', badge: badgeCounts.BANKING_PENDING },
-              { name: 'Bank Approved', path: '/exports', icon: CheckCircle, filter: 'BANKING_APPROVED', badge: badgeCounts.BANKING_APPROVED },
-              { name: 'Rejected', path: '/exports', icon: X, filter: 'BANKING_REJECTED', badge: badgeCounts.BANKING_REJECTED },
-            ]
-          },
-          {
-            name: 'Blockchain Operations',
-            path: '/blockchain',
-            icon: Package,
-            children: [
-              { name: 'Transaction History', path: '/blockchain/transactions', icon: FileText },
-              { name: 'Network Status', path: '/blockchain/status', icon: CheckCircle },
-              { name: 'Peer Management', path: '/blockchain/peers', icon: Users },
-            ]
-          },
-          {
-            name: 'External Gateway',
-            path: '/gateway',
-            icon: Users,
-            children: [
-              { name: 'Exporter Portal Requests', path: '/gateway/exporter-requests', icon: FileText, badge: badgeCounts.PENDING },
-              { name: 'API Gateway Logs', path: '/gateway/logs', icon: FileText },
+              { name: 'Network Approval', path: '/network/agency-dashboard', icon: FileCheck, badge: badgeCounts.BANKING_PENDING },
+              { name: 'Document Issuance', path: '/network/agency-dashboard', icon: FileText },
+              { name: 'Network Statistics', path: '/network/statistics', icon: BarChart3 },
+              { name: 'Verify Certificate', path: '/network/verify-certificate', icon: ShieldCheck },
             ]
           },
         ];
@@ -396,54 +391,37 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
       if (userRole === 'governor' || userRole === 'admin') {
         return [
           {
-            name: 'ESW Management',
-            path: '/esw/agency-dashboard',
+            name: 'Network Management',
+            path: '/network/agency-dashboard',
             icon: Building,
             children: [
-              { name: 'Agency Approval Dashboard', path: '/esw/agency-dashboard', icon: FileCheck },
-              { name: 'ESW Statistics', path: '/esw/statistics', icon: BarChart3 },
-              { name: 'Verify Certificate', path: '/esw/verify-certificate', icon: FileCheck },
+              { name: 'Network Approval', path: '/network/agency-dashboard', icon: FileCheck },
+              { name: 'Document Issuance', path: '/network/agency-dashboard', icon: FileText },
+              { name: 'Network Statistics', path: '/network/statistics', icon: BarChart3 },
+              { name: 'Verify Certificate', path: '/network/verify-certificate', icon: ShieldCheck },
             ]
           },
           {
-            name: 'FX Management',
+            name: 'Foreign Exchange Control',
             path: '/fx',
             icon: DollarSign,
             children: [
-              { name: 'Pending FX Approvals', path: '/fx/approvals', icon: DollarSign, filter: 'FX_PENDING', badge: badgeCounts.FX_PENDING },
-              { name: 'Approved FX', path: '/fx/approved', icon: CheckCircle, filter: 'FX_APPROVED', badge: badgeCounts.FX_APPROVED },
-              { name: 'Rejected FX', path: '/fx/rejected', icon: X, filter: 'FX_REJECTED', badge: badgeCounts.FX_REJECTED },
-              { name: 'FX Rate Management', path: '/fx/rates', icon: DollarSign },
+              { name: 'FX Dashboard', path: '/fx', icon: DollarSign },
+              { name: 'Pending FX Approval', path: '/fx/pending', icon: Clock },
+              { name: 'FX Approved', path: '/fx/approved', icon: CheckCircle },
+              { name: 'FX Rejected', path: '/fx/rejected', icon: XCircle },
+              { name: 'FX Rates Management', path: '/fx/rates', icon: RefreshCw },
             ]
           },
           {
-            name: 'Monetary Policy',
-            path: '/monetary',
-            icon: Building,
-            children: [
-              { name: 'Policy Dashboard', path: '/monetary/dashboard', icon: Building },
-              { name: 'Exchange Controls', path: '/monetary/controls', icon: ShieldCheck },
-              { name: 'Compliance Monitoring', path: '/monetary/compliance', icon: FileCheck },
-            ]
-          },
-          {
-            name: 'Export Oversight',
+            name: 'Export Monitoring',
             path: '/exports',
             icon: Package,
             children: [
-              { name: 'Export Transactions', path: '/exports/transactions', icon: Package },
+              { name: 'All Exports', path: '/exports', icon: Package },
+              { name: 'Export Transactions', path: '/exports/transactions', icon: FileText },
               { name: 'Currency Flows', path: '/exports/currency', icon: DollarSign },
-              { name: 'Regulatory Reports', path: '/exports/reports', icon: FileText },
-            ]
-          },
-          {
-            name: 'System Administration',
-            path: '/admin',
-            icon: Settings,
-            children: [
-              { name: 'User Management', path: '/admin/users', icon: Users },
-              { name: 'System Settings', path: '/admin/settings', icon: Settings },
-              { name: 'Audit Logs', path: '/admin/audit', icon: FileText },
+              { name: 'Repatriation Tracking', path: '/exports/repatriation', icon: RefreshCw },
             ]
           },
         ];
@@ -451,10 +429,9 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
 
       // Default fallback for National Bank
       return [
-        { name: 'ESW Management', path: '/esw/agency-dashboard', icon: Building },
+        { name: 'Network Management', path: '/network/agency-dashboard', icon: Building },
         { name: 'FX Dashboard', path: '/fx', icon: DollarSign },
         { name: 'Export Monitoring', path: '/exports', icon: Package },
-        { name: 'Monetary Reports', path: '/reports', icon: FileText },
       ];
     }
 
@@ -462,56 +439,15 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
     if (orgLower === 'ecx') {
       return [
         {
-          name: 'ESW Management',
-          path: '/esw/agency-dashboard',
+          name: 'Network Management',
+          path: '/network/agency-dashboard',
           icon: Building,
           children: [
-            { name: 'Agency Approval Dashboard', path: '/esw/agency-dashboard', icon: FileCheck },
-            { name: 'ESW Statistics', path: '/esw/statistics', icon: BarChart3 },
-            { name: 'Verify Certificate', path: '/esw/verify-certificate', icon: FileCheck },
-          ]
-        },
-        {
-          name: 'Lot Management',
-          path: '/lots',
-          icon: Package,
-          children: [
-            { name: 'Pending Verification', path: '/lots/pending', icon: Package, filter: 'PENDING' },
-            { name: 'Verified Lots', path: '/lots/verified', icon: CheckCircle, filter: 'QUALITY_APPROVED' },
-            { name: 'Rejected Lots', path: '/lots/rejected', icon: X, filter: 'QUALITY_REJECTED' },
-            { name: 'Lot Grading', path: '/lots/grading', icon: Award },
-          ]
-        },
-        {
-          name: 'Trading Operations',
-          path: '/trading',
-          icon: DollarSign,
-          children: [
-            { name: 'Active Trading', path: '/trading/active', icon: DollarSign },
-            { name: 'Price Discovery', path: '/trading/prices', icon: DollarSign },
-            { name: 'Market Reports', path: '/trading/reports', icon: FileText },
-            { name: 'Trading History', path: '/trading/history', icon: FileText },
-          ]
-        },
-        {
-          name: 'Warehouse Management',
-          path: '/warehouse',
-          icon: Building,
-          children: [
-            { name: 'Warehouse Receipts', path: '/warehouse/receipts', icon: FileText },
-            { name: 'Storage Monitoring', path: '/warehouse/storage', icon: Building },
-            { name: 'Quality Control', path: '/warehouse/quality', icon: Award },
-            { name: 'Inventory Reports', path: '/warehouse/inventory', icon: FileText },
-          ]
-        },
-        {
-          name: 'Export Verification',
-          path: '/exports',
-          icon: Package,
-          children: [
-            { name: 'Pending ECX Verification', path: '/exports/pending', icon: Package, filter: 'PENDING', badge: badgeCounts.PENDING },
-            { name: 'ECX Verified', path: '/exports/verified', icon: CheckCircle, filter: 'FX_APPROVED' },
-            { name: 'ECX Rejected', path: '/exports/rejected', icon: X, filter: 'FX_REJECTED' },
+            { name: 'Network Approval', path: '/network/agency-dashboard', icon: FileCheck },
+            { name: 'Document Issuance', path: '/network/agency-dashboard', icon: FileText },
+            { name: 'Lot Verification', path: '/lot-verification', icon: Package },
+            { name: 'Network Statistics', path: '/network/statistics', icon: BarChart3 },
+            { name: 'Verify Certificate', path: '/network/verify-certificate', icon: ShieldCheck },
           ]
         },
       ];
@@ -521,13 +457,23 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
     if (orgLower === 'ecta') {
       return [
         {
-          name: 'ESW Management',
-          path: '/esw/agency-dashboard',
+          name: 'Network Management',
+          path: '/network/agency-dashboard',
           icon: Building,
           children: [
-            { name: 'Agency Approval Dashboard', path: '/esw/agency-dashboard', icon: FileCheck },
-            { name: 'ESW Statistics', path: '/esw/statistics', icon: BarChart3 },
-            { name: 'Verify Certificate', path: '/esw/verify-certificate', icon: FileCheck },
+            { name: 'Network Approval', path: '/network/agency-dashboard', icon: FileCheck },
+            { name: 'Document Issuance', path: '/network/agency-dashboard', icon: FileText },
+            { name: 'Network Statistics', path: '/network/statistics', icon: BarChart3 },
+            { name: 'Verify Certificate', path: '/network/verify-certificate', icon: ShieldCheck },
+          ]
+        },
+        {
+          name: 'Sales Contract Management',
+          path: '/ecta/sales-contracts',
+          icon: FileSignature,
+          children: [
+            { name: 'Contract Registration', path: '/ecta/sales-contracts/registration', icon: FileSignature },
+            { name: 'Registered Contracts', path: '/ecta/sales-contracts/registered', icon: CheckCircle },
           ]
         },
         {
@@ -561,13 +507,14 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
     if (orgLower === 'custom-authorities') {
       return [
         {
-          name: 'ESW Management',
-          path: '/esw/agency-dashboard',
+          name: 'Network Management',
+          path: '/network/agency-dashboard',
           icon: Building,
           children: [
-            { name: 'Agency Approval Dashboard', path: '/esw/agency-dashboard', icon: FileCheck },
-            { name: 'ESW Statistics', path: '/esw/statistics', icon: BarChart3 },
-            { name: 'Verify Certificate', path: '/esw/verify-certificate', icon: FileCheck },
+            { name: 'Network Approval', path: '/network/agency-dashboard', icon: FileCheck },
+            { name: 'Document Issuance', path: '/network/agency-dashboard', icon: FileText },
+            { name: 'Network Statistics', path: '/network/statistics', icon: BarChart3 },
+            { name: 'Verify Certificate', path: '/network/verify-certificate', icon: ShieldCheck },
           ]
         },
         {
@@ -575,42 +522,10 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
           path: '/customs',
           icon: ShieldCheck,
           children: [
-            { name: 'Pending Clearance', path: '/customs/pending', icon: ShieldCheck, filter: 'EXPORT_CUSTOMS_PENDING', badge: badgeCounts.EXPORT_CUSTOMS_PENDING },
-            { name: 'Under Inspection', path: '/customs/inspection', icon: FileCheck, filter: 'EXPORT_CUSTOMS_PENDING' },
-            { name: 'Cleared Exports', path: '/customs/cleared', icon: CheckCircle, filter: 'EXPORT_CUSTOMS_CLEARED', badge: badgeCounts.EXPORT_CUSTOMS_CLEARED },
-            { name: 'Rejected/Held', path: '/customs/rejected', icon: X, filter: 'EXPORT_CUSTOMS_REJECTED', badge: badgeCounts.EXPORT_CUSTOMS_REJECTED },
-          ]
-        },
-        {
-          name: 'Documentation',
-          path: '/documents',
-          icon: FileText,
-          children: [
-            { name: 'Export Documentation', path: '/documents/export', icon: FileText },
-            { name: 'Compliance Certificates', path: '/documents/compliance', icon: Award },
-            { name: 'Customs Declarations', path: '/documents/declarations', icon: FileCheck },
-            { name: 'Document Templates', path: '/documents/templates', icon: FileText },
-          ]
-        },
-        {
-          name: 'Border Control',
-          path: '/border',
-          icon: ShieldCheck,
-          children: [
-            { name: 'Border Checkpoints', path: '/border/checkpoints', icon: ShieldCheck },
-            { name: 'Security Screening', path: '/border/security', icon: ShieldCheck },
-            { name: 'Compliance Monitoring', path: '/border/compliance', icon: FileCheck },
-            { name: 'Border Reports', path: '/border/reports', icon: FileText },
-          ]
-        },
-        {
-          name: 'Administration',
-          path: '/admin',
-          icon: Settings,
-          children: [
-            { name: 'User Management', path: '/admin/users', icon: Users },
-            { name: 'System Settings', path: '/admin/settings', icon: Settings },
-            { name: 'Audit Logs', path: '/admin/audit', icon: FileText },
+            { name: 'Pending Clearance', path: '/customs/pending', icon: Clock },
+            { name: 'Under Inspection', path: '/customs/inspection', icon: FileCheck },
+            { name: 'Cleared Exports', path: '/customs/cleared', icon: CheckCircle },
+            { name: 'Rejected/Held', path: '/customs/rejected', icon: XCircle },
           ]
         },
       ];
@@ -620,13 +535,14 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
     if (orgLower === 'shipping' || orgLower === 'shipping-line' || orgLower === 'shippingline') {
       return [
         {
-          name: 'ESW Management',
-          path: '/esw/agency-dashboard',
+          name: 'Network Management',
+          path: '/network/agency-dashboard',
           icon: Building,
           children: [
-            { name: 'Agency Approval Dashboard', path: '/esw/agency-dashboard', icon: FileCheck },
-            { name: 'ESW Statistics', path: '/esw/statistics', icon: BarChart3 },
-            { name: 'Verify Certificate', path: '/esw/verify-certificate', icon: FileCheck },
+            { name: 'Network Approval', path: '/network/agency-dashboard', icon: FileCheck },
+            { name: 'Document Issuance', path: '/network/agency-dashboard', icon: FileText },
+            { name: 'Network Statistics', path: '/network/statistics', icon: BarChart3 },
+            { name: 'Verify Certificate', path: '/network/verify-certificate', icon: ShieldCheck },
           ]
         },
         {
@@ -634,42 +550,10 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
           path: '/shipments',
           icon: Ship,
           children: [
-            { name: 'Pending Shipments', path: '/shipments/pending', icon: Ship, filter: 'SHIPMENT_PENDING', badge: badgeCounts.SHIPMENT_PENDING },
-            { name: 'Scheduled Shipments', path: '/shipments/scheduled', icon: Ship, filter: 'SHIPMENT_SCHEDULED', badge: badgeCounts.SHIPMENT_SCHEDULED },
-            { name: 'In Transit', path: '/shipments/transit', icon: Ship, filter: 'SHIPPED' },
-            { name: 'Delivered', path: '/shipments/delivered', icon: CheckCircle, filter: 'COMPLETED' },
-          ]
-        },
-        {
-          name: 'Vessel Operations',
-          path: '/vessels',
-          icon: Ship,
-          children: [
-            { name: 'Fleet Management', path: '/vessels/fleet', icon: Ship },
-            { name: 'Vessel Scheduling', path: '/vessels/schedule', icon: Ship },
-            { name: 'Maintenance', path: '/vessels/maintenance', icon: Settings },
-            { name: 'Vessel Reports', path: '/vessels/reports', icon: FileText },
-          ]
-        },
-        {
-          name: 'Logistics Coordination',
-          path: '/logistics',
-          icon: Package,
-          children: [
-            { name: 'Route Planning', path: '/logistics/routes', icon: Package },
-            { name: 'Cargo Tracking', path: '/logistics/tracking', icon: Package },
-            { name: 'Port Operations', path: '/logistics/ports', icon: Building },
-            { name: 'Delivery Confirmation', path: '/logistics/delivery', icon: CheckCircle },
-          ]
-        },
-        {
-          name: 'Administration',
-          path: '/admin',
-          icon: Settings,
-          children: [
-            { name: 'User Management', path: '/admin/users', icon: Users },
-            { name: 'System Settings', path: '/admin/settings', icon: Settings },
-            { name: 'Operational Reports', path: '/admin/reports', icon: FileText },
+            { name: 'Pending Shipments', path: '/shipments/pending', icon: Clock },
+            { name: 'Scheduled Shipments', path: '/shipments/scheduled', icon: Ship },
+            { name: 'In Transit', path: '/shipments/transit', icon: Ship },
+            { name: 'Delivered', path: '/shipments/delivered', icon: CheckCircle },
           ]
         },
       ];
@@ -895,6 +779,13 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            {/* Show ContractNotifications for network members */}
+            {(() => {
+              const orgUpper = (org || '').toUpperCase();
+              const shouldShow = ['BANK', 'NBE', 'ECX', 'ERCA', 'SHIPPING', 'MOA', 'MOH', 'ECTA'].includes(orgUpper);
+              console.log('ContractNotifications check:', { org, orgUpper, shouldShow });
+              return shouldShow ? <ContractNotifications /> : null;
+            })()}
             <NotificationCenter />
             <AccessibilityButton
               settings={settings}
@@ -1037,3 +928,4 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
 };
 
 export default Layout;
+

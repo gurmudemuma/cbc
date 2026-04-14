@@ -195,7 +195,23 @@ npm-debug.log
 .archive-*/
 *-OLD-BACKUP/
 backup-before-cleanup/
+archive/
 
 # Generated files
 CODEBASE-STRUCTURE.md.backup
 *.md.backup
+
+# Test files (root directory only)
+/*.pdf
+/test-*.json
+/temp_*.json
+/*_response.json
+/cert-*.pdf
+/comp_*.pdf
+/lab_*.pdf
+/taster_*.pdf
+/license*.pdf
+
+# Generated certificates (keep folder, ignore PDFs)
+coffee-export-gateway/certificates/*.pdf
+!coffee-export-gateway/certificates/.gitkeep

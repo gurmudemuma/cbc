@@ -1159,7 +1159,7 @@ export class ExporterPreRegistrationController {
 
   /**
    * Get ESW pre-fill data for qualified exporters
-   * Returns all pre-registration data needed to pre-fill ESW submission form
+   * Returns all pre-registration data needed to pre-fill Network Submission form
    */
   public getESWPrefillData = async (
     req: AuthenticatedRequest,

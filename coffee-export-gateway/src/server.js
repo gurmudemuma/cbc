@@ -7,7 +7,7 @@ const rateLimit = require('express-rate-limit');
 const { router: authRouter } = require('./routes/auth.routes');
 const exporterRouter = require('./routes/exporter.routes');
 const exportsRouter = require('./routes/exports.routes');
-const eswRouter = require('./routes/esw.routes');
+const networkRouter = require('./routes/network.routes');
 const certificatesRouter = require('./routes/certificates.routes');
 const ectaRouter = require('./routes/ecta.routes');
 const statutoryRouter = require('./routes/statutory.routes');
@@ -21,6 +21,15 @@ const containerRouter = require('./routes/container.routes');
 const vesselRouter = require('./routes/vessel.routes');
 // Analytics routes (PostgreSQL optimization)
 const analyticsRouter = require('./routes/analytics.routes');
+// Sales Contract routes
+const buyersRouter = require('./routes/buyers.routes');
+const contractDraftsRouter = require('./routes/contract-drafts.routes');
+const salesContractNetworkRouter = require('./routes/sales-contract-network.routes');
+const marketplaceRouter = require('./routes/marketplace.routes');
+const legalRouter = require('./routes/legal.routes');
+// Document Issuance routes
+const documentRequestsRouter = require('./routes/document-requests.routes');
+const documentIssuanceRouter = require('./routes/document-issuance.routes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -60,7 +69,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/exporter', exporterRouter);
 app.use('/api/preregistration', exporterRouter); // Frontend-compatible path for certificate downloads
 app.use('/api/exports', exportsRouter);
-app.use('/api/esw', eswRouter);
+app.use('/api/network', networkRouter);
 app.use('/api/certificates', certificatesRouter);
 app.use('/api/ecta', ectaRouter);
 app.use('/api/statutory', statutoryRouter);
@@ -74,6 +83,21 @@ app.use('/api/container', containerRouter);
 app.use('/api/vessel', vesselRouter);
 // Analytics routes (PostgreSQL-powered)
 app.use('/api/analytics', analyticsRouter);
+// Sales Contract routes
+app.use('/api/buyers', buyersRouter);
+app.use('/api/contracts/drafts', contractDraftsRouter);
+app.use('/api', salesContractNetworkRouter); // Sales Contract Network Approval routes
+app.use('/api/marketplace', marketplaceRouter); // Buyer-seller marketplace
+app.use('/api/legal', legalRouter); // Legal frameworks and contract clauses
+
+// ESW routes (backward compatibility - redirects to network routes)
+app.use('/api/esw', networkRouter); // ESW endpoints now use network routes
+
+// Document Issuance routes
+app.use('/api/document-requests', documentRequestsRouter); // Document requests endpoint
+app.use('/api/exporter/documents', documentRequestsRouter); // Alternative path for backward compatibility
+app.use('/api/document-issuance', documentIssuanceRouter); // Document issuance endpoint
+app.use('/api/network-member', documentIssuanceRouter); // Alternative path for backward compatibility
 
 // Error handling middleware
 app.use((err, req, res, next) => {

@@ -26,7 +26,7 @@ interface CertificateData {
   exporterTin: string;
 
   // Export details
-  eswReferenceNumber: string;
+  networkReferenceNumber: string;
   coffeeType: string;
   quantity: number;
   originRegion: string;
@@ -53,7 +53,7 @@ interface Certificate {
   certificateNumber: string;
   exporterName: string;
   exporterTin: string;
-  eswReferenceNumber: string;
+  networkReferenceNumber: string;
   coffeeType?: string;
   quantity?: number;
   originRegion?: string;
@@ -95,11 +95,11 @@ export class CertificateGenerationService {
         `SELECT 
           aa.approval_id, aa.submission_id, aa.agency_code, aa.agency_name,
           aa.approved_by, aa.approved_at, aa.notes,
-          s.esw_reference_number, s.export_id,
+          s.network_reference_number, s.export_id,
           e.coffee_type, e.quantity, e.origin_region, e.destination_country,
           ep.business_name as exporter_name, ep.tin as exporter_tin
          FROM esw_agency_approvals aa
-         JOIN esw_submissions s ON aa.submission_id = s.submission_id
+         JOIN network_submissions s ON aa.submission_id = s.submission_id
          JOIN exports e ON s.export_id = e.export_id
          LEFT JOIN exporter_profiles ep ON e.exporter_id = ep.exporter_id
          WHERE aa.approval_id = $1 AND aa.status = 'APPROVED'`,
@@ -127,7 +127,7 @@ export class CertificateGenerationService {
         issueDate: new Date(),
         exporterName: approval.exporter_name,
         exporterTin: approval.exporter_tin,
-        eswReferenceNumber: approval.esw_reference_number,
+        networkReferenceNumber: approval.network_reference_number,
         coffeeType: approval.coffee_type || 'N/A',
         quantity: approval.quantity || 0,
         originRegion: approval.origin_region || 'Ethiopia',
@@ -151,7 +151,7 @@ export class CertificateGenerationService {
           certificateNumber,
           exporterName: approval.exporter_name,
           exporterTin: approval.exporter_tin,
-          eswReferenceNumber: approval.esw_reference_number,
+          networkReferenceNumber: approval.network_reference_number,
           coffeeType: approval.coffee_type,
           quantity: approval.quantity,
           originRegion: approval.origin_region,
@@ -188,11 +188,11 @@ export class CertificateGenerationService {
         `SELECT 
           aa.approval_id, aa.submission_id, aa.agency_code, aa.agency_name,
           aa.approved_by, aa.approved_at, aa.notes,
-          s.esw_reference_number, s.export_id,
+          s.network_reference_number, s.export_id,
           e.coffee_type, e.quantity, e.origin_region, e.destination_country,
           ep.business_name as exporter_name, ep.tin as exporter_tin
          FROM esw_agency_approvals aa
-         JOIN esw_submissions s ON aa.submission_id = s.submission_id
+         JOIN network_submissions s ON aa.submission_id = s.submission_id
          JOIN exports e ON s.export_id = e.export_id
          LEFT JOIN exporter_profiles ep ON e.exporter_id = ep.exporter_id
          WHERE aa.approval_id = $1 AND aa.status = 'APPROVED'`,
@@ -220,7 +220,7 @@ export class CertificateGenerationService {
         issueDate: new Date(),
         exporterName: approval.exporter_name,
         exporterTin: approval.exporter_tin,
-        eswReferenceNumber: approval.esw_reference_number,
+        networkReferenceNumber: approval.network_reference_number,
         coffeeType: approval.coffee_type || 'N/A',
         quantity: approval.quantity || 0,
         originRegion: approval.origin_region || 'Ethiopia',
@@ -244,7 +244,7 @@ export class CertificateGenerationService {
           certificateNumber,
           exporterName: approval.exporter_name,
           exporterTin: approval.exporter_tin,
-          eswReferenceNumber: approval.esw_reference_number,
+          networkReferenceNumber: approval.network_reference_number,
           coffeeType: approval.coffee_type,
           quantity: approval.quantity,
           originRegion: approval.origin_region,
@@ -307,7 +307,7 @@ export class CertificateGenerationService {
       certificateNumber: string;
       exporterName: string;
       exporterTin: string;
-      eswReferenceNumber: string;
+      networkReferenceNumber: string;
       coffeeType?: string;
       quantity?: number;
       originRegion?: string;
@@ -342,7 +342,7 @@ export class CertificateGenerationService {
     const result = await client.query(
       `INSERT INTO esw_certificates (
         approval_id, submission_id, agency_code, certificate_number,
-        exporter_name, exporter_tin, esw_reference_number,
+        exporter_name, exporter_tin, network_reference_number,
         coffee_type, quantity, origin_region, destination_country,
         approved_by, approved_at, issued_at,
         file_path, file_size_bytes, status,
@@ -356,7 +356,7 @@ export class CertificateGenerationService {
         metadata.certificateNumber,
         metadata.exporterName,
         metadata.exporterTin,
-        metadata.eswReferenceNumber,
+        metadata.networkReferenceNumber,
         metadata.coffeeType,
         metadata.quantity,
         metadata.originRegion,
@@ -379,7 +379,7 @@ export class CertificateGenerationService {
       certificateNumber: result.rows[0].certificate_number,
       exporterName: result.rows[0].exporter_name,
       exporterTin: result.rows[0].exporter_tin,
-      eswReferenceNumber: result.rows[0].esw_reference_number,
+      networkReferenceNumber: result.rows[0].network_reference_number,
       coffeeType: result.rows[0].coffee_type,
       quantity: result.rows[0].quantity,
       originRegion: result.rows[0].origin_region,
@@ -420,7 +420,7 @@ export class CertificateGenerationService {
       .replace(/{{certificateNumber}}/g, data.certificateNumber)
       .replace(/{{exporterName}}/g, data.exporterName)
       .replace(/{{exporterTin}}/g, data.exporterTin)
-      .replace(/{{eswReferenceNumber}}/g, data.eswReferenceNumber)
+      .replace(/{{networkReferenceNumber}}/g, data.networkReferenceNumber)
       .replace(/{{coffeeType}}/g, data.coffeeType)
       .replace(/{{quantity}}/g, data.quantity.toString())
       .replace(/{{originRegion}}/g, data.originRegion)

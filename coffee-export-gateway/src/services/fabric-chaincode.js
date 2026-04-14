@@ -243,7 +243,7 @@ class FabricChaincodeService {
     // ==================== ESW Functions ====================
 
     async submitESW(eswData) {
-        return await this.invokeChaincode('SubmitESW', [JSON.stringify(eswData)]);
+        return await this.invokeChaincode('SubmitToNetwork', [JSON.stringify(eswData)]);
     }
 
     async getESW(eswId) {

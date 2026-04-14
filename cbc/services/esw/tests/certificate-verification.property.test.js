@@ -90,11 +90,11 @@ async function createTestCertificate(agencyCode, exporterData, exportDetails, ap
        VALUES ($1, $2, $3, $4, $5, 'PENDING')
        RETURNING export_id`, [exporterId, exportDetails.coffeeType, exportDetails.quantity, exportDetails.originRegion, exportDetails.destinationCountry]);
         const exportId = exportResult.rows[0].export_id;
-        // Create ESW submission
-        const eswReferenceNumber = `ESW-${Date.now()}-${Math.random().toString(36).substring(7)}`;
-        const submissionResult = await client.query(`INSERT INTO esw_submissions (export_id, esw_reference_number, status, submitted_by, submitted_at)
+        // Create Network Submission
+        const networkReferenceNumber = `ESW-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+        const submissionResult = await client.query(`INSERT INTO network_submissions (export_id, network_reference_number, status, submitted_by, submitted_at)
        VALUES ($1, $2, 'SUBMITTED', $3, NOW())
-       RETURNING submission_id`, [exportId, eswReferenceNumber, exporterData.exporterName]);
+       RETURNING submission_id`, [exportId, networkReferenceNumber, exporterData.exporterName]);
         const submissionId = submissionResult.rows[0].submission_id;
         // Create agency approval record
         const approvalResult = await client.query(`INSERT INTO esw_agency_approvals (submission_id, agency_code, status, approved_by, approved_at, notes)
@@ -106,13 +106,13 @@ async function createTestCertificate(agencyCode, exporterData, exportDetails, ap
         const filePath = `certificates/${new Date().getFullYear()}/${new Date().getMonth() + 1}/${certificateNumber}.pdf`;
         const certResult = await client.query(`INSERT INTO esw_certificates (
         approval_id, submission_id, agency_code, certificate_number,
-        exporter_name, exporter_tin, esw_reference_number,
+        exporter_name, exporter_tin, network_reference_number,
         coffee_type, quantity, origin_region, destination_country,
         approved_by, approved_at, file_path, status
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), $13, $14)
       RETURNING certificate_id`, [
             approvalId, submissionId, agencyCode, certificateNumber,
-            exporterData.exporterName, exporterData.exporterTin, eswReferenceNumber,
+            exporterData.exporterName, exporterData.exporterTin, networkReferenceNumber,
             exportDetails.coffeeType, exportDetails.quantity, exportDetails.originRegion, exportDetails.destinationCountry,
             approvalData.approvedBy, filePath, status
         ]);
@@ -141,10 +141,10 @@ async function cleanupTestData(submissionId) {
         // Delete agency approvals
         await client.query('DELETE FROM esw_agency_approvals WHERE submission_id = $1', [submissionId]);
         // Get export_id before deleting submission
-        const exportResult = await client.query('SELECT export_id FROM esw_submissions WHERE submission_id = $1', [submissionId]);
+        const exportResult = await client.query('SELECT export_id FROM network_submissions WHERE submission_id = $1', [submissionId]);
         const exportId = exportResult.rows[0]?.export_id;
         // Delete submission
-        await client.query('DELETE FROM esw_submissions WHERE submission_id = $1', [submissionId]);
+        await client.query('DELETE FROM network_submissions WHERE submission_id = $1', [submissionId]);
         // Delete export
         if (exportId) {
             await client.query('DELETE FROM exports WHERE export_id = $1', [exportId]);

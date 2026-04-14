@@ -20,7 +20,7 @@ import {
   CircularProgress,
 } from '@mui/material';
 import apiClient, { setApiBaseUrl } from '../services/api';
-import { ALL_LOGIN_OPTIONS, getApiUrl } from '../config/api.config';
+import { LOGIN_ORGANIZATIONS, getApiUrl } from '../config/api.config';
 import ectaPreRegistrationService from '../services/ectaPreRegistration';
 import {
   LoginPageContainer,
@@ -118,9 +118,9 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
       localStorage.setItem('token', token);
 
-      // For agency users, use 'government-agency' as organization but preserve agency code
+      // For network member users, use 'government-agency' as organization but preserve member code
       let orgToPass = formData.organization;
-      if (user.agencyCode) {
+      if (user.memberCode) {
         orgToPass = 'government-agency';
       }
       
@@ -186,6 +186,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           phone: registrationData.phone,
           address: `${registrationData.officeAddress}, ${registrationData.city}, ${registrationData.region}`,
           contactPerson: registrationData.contactPerson,
+          organization: 'exporter-portal', // Add organization for proper routing
         };
 
         console.log('Sending registration data:', registrationPayload);
@@ -193,8 +194,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         // Create user account with all required fields
         const userResponse = await ectaPreRegistrationService.registerUserAccount(registrationPayload);
 
-        // Registration successful - no token returned, user must wait for approval
-        setSuccess('Registration successful! Your account has been created and submitted for ECTA approval. You will be notified once approved.');
+        // Registration successful - account is active, user can login immediately
+        setSuccess('Registration successful! You can login now and complete your qualification steps.');
 
         // Switch back to login mode after 3 seconds
         setTimeout(() => {
@@ -370,7 +371,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                     variant="outlined"
                     displayEmpty
                   >
-                    {ALL_LOGIN_OPTIONS.map((org) => (
+                    {LOGIN_ORGANIZATIONS.map((org) => (
                       <MenuItem key={org.value} value={org.value}>
                         {org.label}
                       </MenuItem>

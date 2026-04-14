@@ -118,6 +118,7 @@ services:
       # Dual Write Strategy
       DUAL_WRITE_ENABLED: "true"
       BLOCKCHAIN_PRIMARY: "true"
+      BLOCKCHAIN_SYNC: "true"
       # JWT
       JWT_SECRET: 8f2a9b7c6d5e4f3a2b1c9d8e7f6a5b4c3d2e1f9a8b7c6d5e4f3a2b1c9d8e7f6a5b4c3d2e1f
       JWT_EXPIRES_IN: 24h
@@ -547,8 +548,8 @@ services:
   
   frontend:
     build:
-      context: ./cbc
-      dockerfile: frontend/Dockerfile
+      context: ./cbc/frontend
+      dockerfile: Dockerfile
     container_name: coffee-frontend
     depends_on:
       - gateway
@@ -557,7 +558,7 @@ services:
     ports:
       - "5173:80"
     environment:
-      VITE_API_URL: http://localhost:3000
+      # No VITE_API_URL needed - nginx proxies /api/* to gateway container
       VITE_ENV: production
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:80/health"]

@@ -2,7 +2,8 @@
  * Banking Service
  * Handles banking operations, document verification, and compliance
  * 
- * UPDATED: Now uses shared endpoint constants for consistency
+ * NOTE: Commercial Bank primarily manages exports through the network.
+ * This service provides a banking-focused view of export data.
  */
 
 import apiClient from './api';
@@ -14,10 +15,11 @@ const bankingService = {
 
   /**
    * Get documents pending verification
+   * Uses exports data filtered for banking review
    */
   getPendingDocuments: async (filter = null) => {
-    const params = filter ? { status: filter } : {};
-    const response = await apiClient.get(BANKING_ENDPOINTS.DOCUMENTS, { params });
+    const params = filter ? { status: filter } : { status: 'BANKING_PENDING' };
+    const response = await apiClient.get('/api/exports', { params });
     return response.data;
   },
 
@@ -25,7 +27,7 @@ const bankingService = {
    * Get document details
    */
   getDocumentDetails: async (documentId) => {
-    const response = await apiClient.get(BANKING_ENDPOINTS.DOCUMENT_DETAILS(documentId));
+    const response = await apiClient.get(`/api/exports/${documentId}`);
     return response.data;
   },
 
@@ -33,7 +35,7 @@ const bankingService = {
    * Verify document
    */
   verifyDocument: async (documentId, verificationData) => {
-    const response = await apiClient.post(BANKING_ENDPOINTS.DOCUMENT_VERIFY(documentId), verificationData);
+    const response = await apiClient.post(`/api/exports/${documentId}/banking/verify`, verificationData);
     return response.data;
   },
 
@@ -41,7 +43,7 @@ const bankingService = {
    * Reject document
    */
   rejectDocument: async (documentId, rejectionReason) => {
-    const response = await apiClient.post(BANKING_ENDPOINTS.DOCUMENT_REJECT(documentId), { reason: rejectionReason });
+    const response = await apiClient.post(`/api/exports/${documentId}/banking/reject`, { reason: rejectionReason });
     return response.data;
   },
 
@@ -51,10 +53,11 @@ const bankingService = {
 
   /**
    * Get financing requests
+   * Returns exports that need financing approval
    */
   getFinancingRequests: async (filter = null) => {
-    const params = filter ? { status: filter } : {};
-    const response = await apiClient.get(BANKING_ENDPOINTS.FINANCING, { params });
+    const params = filter ? { status: filter } : { status: 'BANKING_PENDING' };
+    const response = await apiClient.get('/api/exports', { params });
     return response.data;
   },
 
@@ -62,7 +65,7 @@ const bankingService = {
    * Get financing details
    */
   getFinancingDetails: async (financingId) => {
-    const response = await apiClient.get(BANKING_ENDPOINTS.FINANCING_DETAILS(financingId));
+    const response = await apiClient.get(`/api/exports/${financingId}`);
     return response.data;
   },
 
@@ -70,7 +73,7 @@ const bankingService = {
    * Approve financing
    */
   approveFinancing: async (financingId, approvalData) => {
-    const response = await apiClient.post(BANKING_ENDPOINTS.FINANCING_APPROVE(financingId), approvalData);
+    const response = await apiClient.post(`/api/exports/${financingId}/banking/approve`, approvalData);
     return response.data;
   },
 
@@ -78,7 +81,7 @@ const bankingService = {
    * Reject financing
    */
   rejectFinancing: async (financingId, rejectionReason) => {
-    const response = await apiClient.post(BANKING_ENDPOINTS.FINANCING_REJECT(financingId), { reason: rejectionReason });
+    const response = await apiClient.post(`/api/exports/${financingId}/banking/reject`, { reason: rejectionReason });
     return response.data;
   },
 
@@ -88,10 +91,11 @@ const bankingService = {
 
   /**
    * Get compliance checks
+   * Returns exports that need compliance review
    */
   getComplianceChecks: async (filter = null) => {
-    const params = filter ? { status: filter } : {};
-    const response = await apiClient.get(BANKING_ENDPOINTS.COMPLIANCE, { params });
+    const params = filter ? { status: filter } : { status: 'BANKING_PENDING' };
+    const response = await apiClient.get('/api/exports', { params });
     return response.data;
   },
 
@@ -99,7 +103,7 @@ const bankingService = {
    * Get compliance details
    */
   getComplianceDetails: async (complianceId) => {
-    const response = await apiClient.get(BANKING_ENDPOINTS.COMPLIANCE_DETAILS(complianceId));
+    const response = await apiClient.get(`/api/exports/${complianceId}`);
     return response.data;
   },
 
@@ -107,7 +111,7 @@ const bankingService = {
    * Run compliance check
    */
   runComplianceCheck: async (exporterId, checkType) => {
-    const response = await apiClient.post(BANKING_ENDPOINTS.COMPLIANCE_RUN, { exporterId, checkType });
+    const response = await apiClient.post('/api/exports/compliance/check', { exporterId, checkType });
     return response.data;
   },
 
@@ -120,7 +124,7 @@ const bankingService = {
    */
   getAllExportRequests: async (filter = null) => {
     const params = filter ? { status: filter } : {};
-    const response = await apiClient.get(BANKING_ENDPOINTS.EXPORTS, { params });
+    const response = await apiClient.get('/api/exports', { params });
     return response.data;
   },
 
@@ -128,7 +132,7 @@ const bankingService = {
    * Approve export request
    */
   approveExportRequest: async (exportId, approvalData) => {
-    const response = await apiClient.post(BANKING_ENDPOINTS.EXPORT_APPROVE(exportId), approvalData);
+    const response = await apiClient.post(`/api/exports/${exportId}/banking/approve`, approvalData);
     return response.data;
   },
 
@@ -136,55 +140,7 @@ const bankingService = {
    * Reject export request
    */
   rejectExportRequest: async (exportId, rejectionReason) => {
-    const response = await apiClient.post(BANKING_ENDPOINTS.EXPORT_REJECT(exportId), { reason: rejectionReason });
-    return response.data;
-  },
-
-  // ============================================================================
-  // BLOCKCHAIN OPERATIONS
-  // ============================================================================
-
-  /**
-   * Get blockchain transaction history
-   */
-  getBlockchainTransactions: async () => {
-    const response = await apiClient.get(BANKING_ENDPOINTS.BLOCKCHAIN_TRANSACTIONS);
-    return response.data;
-  },
-
-  /**
-   * Get blockchain network status
-   */
-  getNetworkStatus: async () => {
-    const response = await apiClient.get(BANKING_ENDPOINTS.BLOCKCHAIN_STATUS);
-    return response.data;
-  },
-
-  /**
-   * Get peer information
-   */
-  getPeerInfo: async () => {
-    const response = await apiClient.get(BANKING_ENDPOINTS.BLOCKCHAIN_PEERS);
-    return response.data;
-  },
-
-  // ============================================================================
-  // EXTERNAL GATEWAY
-  // ============================================================================
-
-  /**
-   * Get exporter portal requests
-   */
-  getExporterPortalRequests: async () => {
-    const response = await apiClient.get(BANKING_ENDPOINTS.GATEWAY_EXPORTER_REQUESTS);
-    return response.data;
-  },
-
-  /**
-   * Get API gateway logs
-   */
-  getGatewayLogs: async () => {
-    const response = await apiClient.get(BANKING_ENDPOINTS.GATEWAY_LOGS);
+    const response = await apiClient.post(`/api/exports/${exportId}/banking/reject`, { reason: rejectionReason });
     return response.data;
   },
 
@@ -196,7 +152,19 @@ const bankingService = {
    * Get banking statistics
    */
   getBankingStatistics: async () => {
-    const response = await apiClient.get(EXPORT_ENDPOINTS.EXPORT_STATISTICS);
+    const response = await apiClient.get('/api/analytics/exports/statistics');
+    return response.data;
+  },
+
+  // ============================================================================
+  // SALES CONTRACT VERIFICATION
+  // ============================================================================
+
+  /**
+   * Verify sales contract by ECTA reference number
+   */
+  verifySalesContract: async (referenceNumber) => {
+    const response = await apiClient.get(`/api/ecta/contracts/verify/${referenceNumber}`);
     return response.data;
   },
 };

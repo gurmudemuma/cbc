@@ -74,7 +74,7 @@ describe('NotificationService - Integration Tests', () => {
       certificateNumber: 'ECTA-CERT-2025-00001',
       exporterName: 'Test Exporter',
       exporterTin: 'TIN123456',
-      eswReferenceNumber: 'ESW-2025-001',
+      networkReferenceNumber: 'ESW-2025-001',
       createdAt: new Date()
     };
 
@@ -197,7 +197,7 @@ describe('NotificationService - Integration Tests', () => {
       certificateNumber: 'ECTA-CERT-2025-00001',
       exporterName: 'Test Exporter',
       exporterTin: 'TIN123456',
-      eswReferenceNumber: 'ESW-2025-001',
+      networkReferenceNumber: 'ESW-2025-001',
       createdAt: new Date()
     };
 
@@ -228,7 +228,7 @@ describe('NotificationService - Integration Tests', () => {
             acknowledged: false,
             acknowledged_at: null,
             title: 'Certificate Generated - Ethiopian Coffee & Tea Authority',
-            message: 'Your certificate ECTA-CERT-2025-00001 has been generated for ESW submission ESW-2025-001. Click to download.',
+            message: 'Your certificate ECTA-CERT-2025-00001 has been generated for Network Submission ESW-2025-001. Click to download.',
             download_url: 'http://localhost:3000/certificates/cert-123/download',
             created_at: new Date()
           }]
@@ -271,7 +271,7 @@ describe('NotificationService - Integration Tests', () => {
             acknowledged: false,
             acknowledged_at: null,
             title: 'Certificate Generated - Ethiopian Coffee & Tea Authority',
-            message: 'Your certificate ECTA-CERT-2025-00001 has been generated for ESW submission ESW-2025-001. Click to download.',
+            message: 'Your certificate ECTA-CERT-2025-00001 has been generated for Network Submission ESW-2025-001. Click to download.',
             download_url: 'http://localhost:3000/certificates/cert-123/download',
             created_at: new Date()
           }]
@@ -385,7 +385,7 @@ describe('NotificationService - Integration Tests', () => {
         certificateNumber: 'ECTA-CERT-2025-00001',
         exporterName: 'Test Exporter',
         exporterTin: 'TIN123456',
-        eswReferenceNumber: 'ESW-2025-001',
+        networkReferenceNumber: 'ESW-2025-001',
         createdAt: new Date()
       };
 

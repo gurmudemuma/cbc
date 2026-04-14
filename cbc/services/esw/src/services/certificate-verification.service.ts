@@ -12,7 +12,7 @@ interface Certificate {
   certificateNumber: string;
   exporterName: string;
   exporterTin: string;
-  eswReferenceNumber: string;
+  networkReferenceNumber: string;
   coffeeType?: string;
   quantity?: number;
   originRegion?: string;
@@ -89,7 +89,7 @@ export class CertificateVerificationService {
         certificateNumber: certRow.certificate_number,
         exporterName: certRow.exporter_name,
         exporterTin: certRow.exporter_tin,
-        eswReferenceNumber: certRow.esw_reference_number,
+        networkReferenceNumber: certRow.network_reference_number,
         coffeeType: certRow.coffee_type,
         quantity: certRow.quantity,
         originRegion: certRow.origin_region,

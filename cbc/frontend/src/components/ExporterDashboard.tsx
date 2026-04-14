@@ -102,7 +102,6 @@ const ExporterDashboard: React.FC<ExporterDashboardProps> = ({ exporterId, tin, 
     const [dashboard, setDashboard] = useState<DashboardData | null>(propDashboardData || null);
     const [loading, setLoading] = useState(!propDashboardData);
     const [error, setError] = useState<string | null>(null);
-    const [navigatingToESW, setNavigatingToESW] = useState(false);
     const [downloading, setDownloading] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
 
@@ -180,40 +179,9 @@ const ExporterDashboard: React.FC<ExporterDashboardProps> = ({ exporterId, tin, 
         }
     };
 
-    const handleNavigateToESW = async () => {
-        try {
-            setNavigatingToESW(true);
-            
-            // Fetch pre-fill data from the API
-            const token = localStorage.getItem('token');
-            const response = await fetch('/api/exporter/esw-prefill', {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to fetch pre-fill data');
-            }
-
-            const result = await response.json();
-
-            if (result.success && result.data.isQualified) {
-                // Navigate to ESW submission with pre-fill data
-                navigate('/esw/submission', {
-                    state: { prefillData: result.data }
-                });
-            } else {
-                alert('You must complete all pre-registration requirements first:\n' + 
-                      (result.data.validation?.requiredActions || []).join('\n'));
-            }
-        } catch (err: any) {
-            console.error('Failed to navigate to ESW:', err);
-            alert('Failed to load your information. Please try again.');
-        } finally {
-            setNavigatingToESW(false);
-        }
+    const handleNavigateToSalesContract = () => {
+        // Navigate to sales contract dashboard
+        navigate('/sales-contracts');
     };
 
     const getStatusIcon = (status: string, approved: boolean) => {
@@ -514,7 +482,6 @@ const ExporterDashboard: React.FC<ExporterDashboardProps> = ({ exporterId, tin, 
                         <Button
                             variant="contained"
                             size="large"
-                            disabled={navigatingToESW}
                             sx={{
                                 bgcolor: 'white',
                                 color: '#667eea',
@@ -523,10 +490,10 @@ const ExporterDashboard: React.FC<ExporterDashboardProps> = ({ exporterId, tin, 
                                     bgcolor: 'rgba(255,255,255,0.9)',
                                 }
                             }}
-                            startIcon={navigatingToESW ? <CircularProgress size={20} /> : <ArrowForward />}
-                            onClick={handleNavigateToESW}
+                            startIcon={<ArrowForward />}
+                            onClick={handleNavigateToSalesContract}
                         >
-                            {navigatingToESW ? 'Loading...' : 'Submit to ESW'}
+                            Start Sales Contract
                         </Button>
                     )}
                 </Box>
@@ -546,6 +513,83 @@ const ExporterDashboard: React.FC<ExporterDashboardProps> = ({ exporterId, tin, 
             )}
 
             <Grid container spacing={3}>
+                {/* Fully Qualified Call-to-Action */}
+                {dashboard.compliance.isFullyQualified && (
+                    <Grid item xs={12}>
+                        <Card 
+                            elevation={4} 
+                            sx={{ 
+                                background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
+                                color: 'white',
+                                border: '3px solid #38ef7d'
+                            }}
+                        >
+                            <CardContent sx={{ p: 4 }}>
+                                <Box display="flex" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={3}>
+                                    <Box flex={1}>
+                                        <Box display="flex" alignItems="center" gap={2} mb={2}>
+                                            <CheckCircle sx={{ fontSize: 48 }} />
+                                            <Typography variant="h4" fontWeight="bold">
+                                                Congratulations! You're Fully Qualified
+                                            </Typography>
+                                        </Box>
+                                        <Typography variant="h6" sx={{ mb: 2, opacity: 0.95 }}>
+                                            You have completed all pre-registration requirements and are now authorized to export coffee.
+                                        </Typography>
+                                        <Typography variant="body1" sx={{ mb: 3, opacity: 0.9 }}>
+                                            Next Step: Create sales contracts with international buyers to start your export business.
+                                        </Typography>
+                                        <Box display="flex" gap={2} flexWrap="wrap">
+                                            <Button
+                                                variant="contained"
+                                                size="large"
+                                                sx={{
+                                                    bgcolor: 'white',
+                                                    color: '#11998e',
+                                                    fontWeight: 'bold',
+                                                    px: 4,
+                                                    py: 1.5,
+                                                    fontSize: '1.1rem',
+                                                    '&:hover': {
+                                                        bgcolor: 'rgba(255,255,255,0.9)',
+                                                        transform: 'scale(1.05)',
+                                                    },
+                                                    transition: 'all 0.3s'
+                                                }}
+                                                startIcon={<ArrowForward />}
+                                                onClick={handleNavigateToSalesContract}
+                                            >
+                                                Start Sales Contract Process
+                                            </Button>
+                                            <Button
+                                                variant="outlined"
+                                                size="large"
+                                                sx={{
+                                                    borderColor: 'white',
+                                                    color: 'white',
+                                                    fontWeight: 'bold',
+                                                    px: 3,
+                                                    '&:hover': {
+                                                        borderColor: 'white',
+                                                        bgcolor: 'rgba(255,255,255,0.1)',
+                                                    }
+                                                }}
+                                                startIcon={<Visibility />}
+                                                onClick={() => navigate('/marketplace/opportunities')}
+                                            >
+                                                Browse Buyer Opportunities
+                                            </Button>
+                                        </Box>
+                                    </Box>
+                                    <Box>
+                                        <Verified sx={{ fontSize: 120, opacity: 0.3 }} />
+                                    </Box>
+                                </Box>
+                            </CardContent>
+                        </Card>
+                    </Grid>
+                )}
+
                 {/* Identity & Contact */}
                 <Grid item xs={12} md={6}>
                     <Card elevation={2}>

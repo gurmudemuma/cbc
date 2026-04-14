@@ -1,6 +1,6 @@
-﻿import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
+﻿﻿import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
 import { useState, useEffect, useMemo, useCallback, createContext, useContext } from 'react';
-import { ThemeProvider, CssBaseline, useMediaQuery, Box, useTheme as useMuiTheme } from '@mui/material';
+import { ThemeProvider, CssBaseline, Box } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -8,6 +8,7 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { SnackbarProvider } from 'notistack';
 import { motion, AnimatePresence } from 'framer-motion';
 
+// NETWORK ROUTES MARKER - DO NOT REMOVE
 // Contexts
 import { NotificationProvider } from './contexts/NotificationContext';
 import { ToastProvider } from './components/ToastProvider';
@@ -65,12 +66,15 @@ import BankDocumentVerification from './pages/BankDocumentVerification';
 import ECTAContractApproval from './pages/ECTAContractApproval';
 import ECTALicenseApproval from './pages/ECTALicenseApproval';
 import ECXVerification from './pages/ECXVerification';
-
-// ESW Pages
-import ESWSubmission from './pages/ESWSubmission';
-import AgencyApprovalDashboard from './pages/AgencyApprovalDashboard';
-import ESWStatistics from './pages/ESWStatistics';
+import SalesContractDashboard from './pages/SalesContractDashboard';
+// Network Pages
+import NetworkSubmission from './pages/NetworkSubmission';
+import NetworkMemberApprovalDashboard from './pages/NetworkMemberApprovalDashboard';
+import NetworkStatistics from './pages/NetworkStatistics';
 import CertificateVerification from './pages/CertificateVerification';
+import SalesContractVerificationPage from './pages/SalesContractVerificationPage';
+import BankingExportApproval from './pages/BankingExportApproval';
+import ECTASalesContractRegistration from './pages/ECTASalesContractRegistration';
 
 // Reports
 import Reports from './pages/Reports';
@@ -80,6 +84,7 @@ import ExporterProfile from './pages/ExporterProfile';
 import ApplicationTracking from './pages/ApplicationTracking';
 import ExportDashboard from './pages/ExportDashboard';
 import HelpSupport from './pages/HelpSupport';
+import ExporterDocumentManager from './components/ExporterDocumentManager';
 
 // Consortium Member Pages
 import BankingOperations from './pages/BankingOperations';
@@ -235,10 +240,10 @@ function App(): JSX.Element {
       return '/my-applications';  // Exporters go to Application Dashboard to track pre-registration progress
     }
 
-    // Commercial Bank - Banking operations (consortium member)
+    // Commercial Bank - Network approval dashboard (consortium member)
     // Note: commercial-bank/commercialbank are the current IDs
     if (orgLower === 'commercial-bank' || orgLower === 'commercialbank') {
-      return '/banking';  // Banking operations dashboard
+      return '/network/agency-dashboard';  // Network approval dashboard
     }
 
     // National Bank - FX approval and compliance
@@ -273,9 +278,9 @@ function App(): JSX.Element {
     }
 
     // Agency Users - Direct to Agency Dashboard
-    // All government agency users route to ESW agency dashboard
+    // All government agency users route to Network agency dashboard
     if (orgLower === 'government-agency') {
-      return '/esw/agency-dashboard';
+      return '/network/agency-dashboard';
     }
 
     return '/dashboard';
@@ -360,10 +365,29 @@ function App(): JSX.Element {
           { path: 'my-applications', element: <ExporterApplicationDashboard user={user} org={org} /> },
           { path: 'ecta/pre-registration', element: <ECTAPreRegistrationManagement user={user} org={org} /> },
 
+          // Sales Contract Routes
+          { path: 'sales-contracts', element: <SalesContractDashboard /> },
+          { path: 'sales-contracts/drafts', element: <SalesContractDashboard /> },
+          { path: 'sales-contracts/create', element: <SalesContractDashboard /> },
+          { path: 'sales-contracts/negotiations', element: <SalesContractDashboard /> },
+          { path: 'sales-contracts/finalized', element: <SalesContractDashboard /> },
+          
+          // ECTA Sales Contract Routes (Network Management submenu)
+          { path: 'ecta/sales-contracts/registration', element: <ECTASalesContractRegistration /> },
+          { path: 'ecta/sales-contracts/registered', element: <ECTASalesContractRegistration /> },
+          
+          // Sales Contract Verification (for all agencies)
+          { path: 'sales-contracts/verify', element: <SalesContractVerificationPage user={user} org={org} /> },
+          { path: 'sales-contracts/verify/:referenceNumber', element: <SalesContractVerificationPage user={user} org={org} /> },
+          
+          // Banking Export Approval (Commercial Bank) - includes sales contract verification
+          { path: 'banking/export-approval', element: <BankingExportApproval /> },
+
           // Exporter Portal Routes
           { path: 'profile', element: <ExporterProfile user={user} org={org} /> },
           { path: 'profile/business', element: <ExporterProfile user={user} org={org} /> },
           { path: 'profile/verification', element: <ExporterProfile user={user} org={org} /> },
+          { path: 'documents', element: <ExporterDocumentManager /> },
           { path: 'applications', element: <ApplicationTracking user={user} org={org} /> },
           { path: 'exports/new', element: <ExportDashboard user={user} org={org} /> },
           { path: 'exports/status', element: <ExportDashboard user={user} org={org} /> },
@@ -409,20 +433,16 @@ function App(): JSX.Element {
           { path: 'contracts/rejected', element: <ECTAContractApproval user={user} org={org} /> },
           { path: 'contracts/origin', element: <ECTAContractApproval user={user} org={org} /> },
 
-          // ESW Routes
-          { path: 'esw/submission', element: <ESWSubmission user={user} org={org} /> },
-          { path: 'esw/submissions', element: <ESWSubmission user={user} org={org} /> },
-          { path: 'esw/status', element: <ESWStatistics user={user} org={org} /> },
-          { path: 'esw/agency-dashboard', element: <AgencyApprovalDashboard user={user} org={org} /> },
-          { path: 'esw/statistics', element: <ESWStatistics user={user} org={org} /> },
-          { path: 'esw/verify-certificate', element: <CertificateVerification /> },
-
-          { path: 'regulatory', element: <Dashboard user={user} org={org} /> },
-          { path: 'regulatory/compliance', element: <Dashboard user={user} org={org} /> },
-          { path: 'regulatory/audits', element: <Dashboard user={user} org={org} /> },
-          { path: 'regulatory/updates', element: <Dashboard user={user} org={org} /> },
-
-          // ECX Routes
+          // Network Routes (Primary)
+          { path: 'network/submission', element: <NetworkSubmission user={user} org={org} /> },
+          { path: 'network/submissions', element: <NetworkSubmission user={user} org={org} /> },
+          { path: 'network/status', element: <NetworkStatistics user={user} org={org} /> },
+          { path: 'network/agency-dashboard', element: <NetworkMemberApprovalDashboard /> },
+          { path: 'network/statistics', element: <NetworkStatistics user={user} org={org} /> },
+          { path: 'network/verify-certificate', element: <CertificateVerification /> },
+          
+          // Exporter Network Submission (alias for exporters)
+          { path: 'exporter/network-submission', element: <NetworkSubmission user={user} org={org} /> },
           { path: 'lot-verification', element: <ECXVerification user={user} org={org} /> },
           { path: 'lots', element: <LotManagement user={user} org={org} /> },
           { path: 'lots/pending', element: <LotManagement user={user} org={org} /> },

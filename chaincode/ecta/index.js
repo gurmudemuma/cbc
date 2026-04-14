@@ -9,6 +9,15 @@ const customsLogistics = require('./customs-logistics');
  */
 class CoffeeExportContract extends Contract {
 
+    /**
+     * Get deterministic timestamp from transaction
+     * This ensures all peers generate the same timestamp
+     */
+    _getTxTimestamp(ctx) {
+        const txTimestamp = ctx.stub.getTxTimestamp();
+        return new Date(txTimestamp.seconds.toNumber() * 1000).toISOString();
+    }
+
     // ============================================================================
     // USER MANAGEMENT (AUTHENTICATION & AUTHORIZATION)
     // ============================================================================
@@ -222,18 +231,18 @@ class CoffeeExportContract extends Contract {
         
         // Update status
         user.status = statusData.status; // approved, rejected, suspended, active
-        user.updatedAt = new Date().toISOString();
+        user.updatedAt = this._getTxTimestamp(ctx);
         
         if (statusData.status === 'approved') {
-            user.approvedAt = new Date().toISOString();
+            user.approvedAt = this._getTxTimestamp(ctx);
             user.approvedBy = statusData.approvedBy || 'ECTA';
             user.approvalComments = statusData.comments || '';
         } else if (statusData.status === 'rejected') {
-            user.rejectedAt = new Date().toISOString();
+            user.rejectedAt = this._getTxTimestamp(ctx);
             user.rejectedBy = statusData.rejectedBy || 'ECTA';
             user.rejectionReason = statusData.reason || '';
         } else if (statusData.status === 'suspended') {
-            user.suspendedAt = new Date().toISOString();
+            user.suspendedAt = this._getTxTimestamp(ctx);
             user.suspendedBy = statusData.suspendedBy || 'ECTA';
             user.suspensionReason = statusData.reason || '';
         }
@@ -246,7 +255,7 @@ class CoffeeExportContract extends Contract {
             if (exporterData && exporterData.length > 0) {
                 const exporter = JSON.parse(exporterData.toString());
                 exporter.status = statusData.status;
-                exporter.updatedAt = new Date().toISOString();
+                exporter.updatedAt = this._getTxTimestamp(ctx);
                 await ctx.stub.putState(username, Buffer.from(JSON.stringify(exporter)));
             }
         }
@@ -254,7 +263,7 @@ class CoffeeExportContract extends Contract {
         ctx.stub.setEvent('UserStatusUpdated', Buffer.from(JSON.stringify({
             username,
             status: statusData.status,
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         })));
 
         return JSON.stringify({ success: true, username, status: statusData.status });
@@ -388,14 +397,14 @@ class CoffeeExportContract extends Contract {
                 }
             },
             preRegistrationStatus: {
-                profile: { status: 'submitted', submittedAt: new Date().toISOString() },
+                profile: { status: 'submitted', submittedAt: this._getTxTimestamp(ctx) },
                 laboratory: { status: 'not_started' },
                 taster: { status: 'not_started' },
                 competenceCertificate: { status: 'not_started' },
                 exportLicense: { status: 'not_started' }
             },
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
+            createdAt: this._getTxTimestamp(ctx),
+            updatedAt: this._getTxTimestamp(ctx)
         };
 
         await ctx.stub.putState(exporterId, Buffer.from(JSON.stringify(exporter)));
@@ -404,7 +413,7 @@ class CoffeeExportContract extends Contract {
         ctx.stub.setEvent('PreRegistrationSubmitted', Buffer.from(JSON.stringify({
             exporterId,
             companyName,
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         })));
 
         return JSON.stringify({ success: true, exporterId });
@@ -445,7 +454,7 @@ class CoffeeExportContract extends Contract {
         if (updates.licenseExpiryDate) exporter.licenseExpiryDate = updates.licenseExpiryDate;
         if (updates.licenseRenewalDue) exporter.licenseRenewalDue = updates.licenseRenewalDue;
         
-        exporter.updatedAt = new Date().toISOString();
+        exporter.updatedAt = this._getTxTimestamp(ctx);
 
         await ctx.stub.putState(exporterId, Buffer.from(JSON.stringify(exporter)));
         
@@ -509,17 +518,17 @@ class CoffeeExportContract extends Contract {
         const exporter = JSON.parse(exporterData.toString());
         
         // Update license dates
-        exporter.licenseIssuedDate = renewalData.issuedDate || new Date().toISOString();
+        exporter.licenseIssuedDate = renewalData.issuedDate || this._getTxTimestamp(ctx);
         exporter.licenseExpiryDate = renewalData.expiryDate;
         exporter.licenseRenewalDue = renewalData.renewalDue || null;
-        exporter.updatedAt = new Date().toISOString();
+        exporter.updatedAt = this._getTxTimestamp(ctx);
 
         await ctx.stub.putState(exporterId, Buffer.from(JSON.stringify(exporter)));
         
         ctx.stub.setEvent('LicenseRenewed', Buffer.from(JSON.stringify({
             exporterId,
             expiryDate: renewalData.expiryDate,
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         })));
 
         return JSON.stringify({ success: true, exporterId, expiryDate: renewalData.expiryDate });
@@ -540,17 +549,17 @@ class CoffeeExportContract extends Contract {
         
         // Revoke license
         exporter.status = 'revoked';
-        exporter.revokedAt = new Date().toISOString();
+        exporter.revokedAt = this._getTxTimestamp(ctx);
         exporter.revokedBy = reason.revokedBy || 'ECTA';
         exporter.revocationReason = reason.reason || '';
-        exporter.updatedAt = new Date().toISOString();
+        exporter.updatedAt = this._getTxTimestamp(ctx);
 
         await ctx.stub.putState(exporterId, Buffer.from(JSON.stringify(exporter)));
         
         ctx.stub.setEvent('LicenseRevoked', Buffer.from(JSON.stringify({
             exporterId,
             reason: reason.reason,
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         })));
 
         return JSON.stringify({ success: true, exporterId, status: 'revoked' });
@@ -571,11 +580,11 @@ class CoffeeExportContract extends Contract {
         
         // Suspend exporter
         exporter.status = 'suspended';
-        exporter.suspendedAt = new Date().toISOString();
+        exporter.suspendedAt = this._getTxTimestamp(ctx);
         exporter.suspendedBy = suspensionData.suspendedBy || 'ECTA';
         exporter.suspensionReason = suspensionData.reason || '';
         exporter.suspensionEndDate = suspensionData.endDate || null;
-        exporter.updatedAt = new Date().toISOString();
+        exporter.updatedAt = this._getTxTimestamp(ctx);
 
         await ctx.stub.putState(exporterId, Buffer.from(JSON.stringify(exporter)));
         
@@ -583,7 +592,7 @@ class CoffeeExportContract extends Contract {
             exporterId,
             reason: suspensionData.reason,
             endDate: suspensionData.endDate,
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         })));
 
         return JSON.stringify({ success: true, exporterId, status: 'suspended' });
@@ -608,16 +617,16 @@ class CoffeeExportContract extends Contract {
         
         // Reactivate exporter
         exporter.status = 'active';
-        exporter.reactivatedAt = new Date().toISOString();
+        exporter.reactivatedAt = this._getTxTimestamp(ctx);
         exporter.reactivatedBy = reactivationData.reactivatedBy || 'ECTA';
         exporter.reactivationNotes = reactivationData.notes || '';
-        exporter.updatedAt = new Date().toISOString();
+        exporter.updatedAt = this._getTxTimestamp(ctx);
 
         await ctx.stub.putState(exporterId, Buffer.from(JSON.stringify(exporter)));
         
         ctx.stub.setEvent('ExporterReactivated', Buffer.from(JSON.stringify({
             exporterId,
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         })));
 
         return JSON.stringify({ success: true, exporterId, status: 'active' });
@@ -642,7 +651,7 @@ class CoffeeExportContract extends Contract {
 
         const exporter = JSON.parse(exporterData.toString());
         const comments = JSON.parse(commentsJSON);
-        const timestamp = new Date().toISOString();
+        const timestamp = this._getTxTimestamp(ctx);
         
         // Validate stage exists
         if (!exporter.preRegistrationStatus || !exporter.preRegistrationStatus[stage]) {
@@ -1028,7 +1037,7 @@ class CoffeeExportContract extends Contract {
             estimatedArrivalDate: exportRequest.estimatedArrivalDate || null,
             status: 'created',
             workflow: {
-                created: { status: 'completed', timestamp: new Date().toISOString() },
+                created: { status: 'completed', timestamp: this._getTxTimestamp(ctx) },
                 ectaContract: { status: 'pending' },
                 ectaQuality: { status: 'pending' },
                 ecxVerification: { status: 'pending' },
@@ -1037,8 +1046,8 @@ class CoffeeExportContract extends Contract {
                 customsClearance: { status: 'pending' },
                 shipmentSchedule: { status: 'pending' }
             },
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
+            createdAt: this._getTxTimestamp(ctx),
+            updatedAt: this._getTxTimestamp(ctx)
         };
 
         await ctx.stub.putState(exportId, Buffer.from(JSON.stringify(exportDoc)));
@@ -1046,7 +1055,7 @@ class CoffeeExportContract extends Contract {
         ctx.stub.setEvent('ExportRequestCreated', Buffer.from(JSON.stringify({
             exportId,
             exporterId,
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         })));
 
         return JSON.stringify({ success: true, exportId });
@@ -1083,7 +1092,7 @@ class CoffeeExportContract extends Contract {
             exportDoc.workflow[stage] = {
                 ...exportDoc.workflow[stage],
                 ...statusData,
-                timestamp: new Date().toISOString()
+                timestamp: this._getTxTimestamp(ctx)
             };
         }
 
@@ -1096,7 +1105,7 @@ class CoffeeExportContract extends Contract {
             exportDoc.rejectionReason = statusData.reason;
         }
 
-        exportDoc.updatedAt = new Date().toISOString();
+        exportDoc.updatedAt = this._getTxTimestamp(ctx);
 
         await ctx.stub.putState(exportId, Buffer.from(JSON.stringify(exportDoc)));
         
@@ -1104,7 +1113,7 @@ class CoffeeExportContract extends Contract {
             exportId,
             stage,
             status: statusData.status,
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         })));
 
         return JSON.stringify({ success: true, exportId, stage });
@@ -1131,7 +1140,7 @@ class CoffeeExportContract extends Contract {
         if (updates.ecxAuctionReference) exportDoc.ecxAuctionReference = updates.ecxAuctionReference;
         if (updates.geographicalDesignation) exportDoc.geographicalDesignation = updates.geographicalDesignation;
         
-        exportDoc.updatedAt = new Date().toISOString();
+        exportDoc.updatedAt = this._getTxTimestamp(ctx);
 
         await ctx.stub.putState(exportId, Buffer.from(JSON.stringify(exportDoc)));
         
@@ -1157,14 +1166,14 @@ class CoffeeExportContract extends Contract {
         if (details.lcAmount) exportDoc.lcAmount = details.lcAmount;
         if (details.lcCurrency) exportDoc.lcCurrency = details.lcCurrency;
         
-        exportDoc.updatedAt = new Date().toISOString();
+        exportDoc.updatedAt = this._getTxTimestamp(ctx);
 
         await ctx.stub.putState(exportId, Buffer.from(JSON.stringify(exportDoc)));
         
         ctx.stub.setEvent('BankingDetailsUpdated', Buffer.from(JSON.stringify({
             exportId,
             lcNumber: details.lcNumber,
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         })));
 
         return JSON.stringify({ success: true, exportId });
@@ -1189,14 +1198,14 @@ class CoffeeExportContract extends Contract {
         if (details.dutyAmount !== undefined) exportDoc.dutyAmount = details.dutyAmount;
         if (details.taxClearanceReference) exportDoc.taxClearanceReference = details.taxClearanceReference;
         
-        exportDoc.updatedAt = new Date().toISOString();
+        exportDoc.updatedAt = this._getTxTimestamp(ctx);
 
         await ctx.stub.putState(exportId, Buffer.from(JSON.stringify(exportDoc)));
         
         ctx.stub.setEvent('CustomsDetailsUpdated', Buffer.from(JSON.stringify({
             exportId,
             sadNumber: details.sadNumber,
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         })));
 
         return JSON.stringify({ success: true, exportId });
@@ -1224,7 +1233,7 @@ class CoffeeExportContract extends Contract {
         if (details.estimatedDepartureDate) exportDoc.estimatedDepartureDate = details.estimatedDepartureDate;
         if (details.estimatedArrivalDate) exportDoc.estimatedArrivalDate = details.estimatedArrivalDate;
         
-        exportDoc.updatedAt = new Date().toISOString();
+        exportDoc.updatedAt = this._getTxTimestamp(ctx);
 
         await ctx.stub.putState(exportId, Buffer.from(JSON.stringify(exportDoc)));
         
@@ -1232,7 +1241,7 @@ class CoffeeExportContract extends Contract {
             exportId,
             billOfLadingNumber: details.billOfLadingNumber,
             vesselName: details.vesselName,
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         })));
 
         return JSON.stringify({ success: true, exportId });
@@ -1280,7 +1289,7 @@ class CoffeeExportContract extends Contract {
             geographicalDesignation: certificate.geographicalDesignation || '',
             labTestResults: certificate.labTestResults || {},
             issuedBy,
-            issuedAt: new Date().toISOString(),
+            issuedAt: this._getTxTimestamp(ctx),
             expiryDate: certificate.expiryDate || null,
             status: 'active'
         };
@@ -1291,7 +1300,7 @@ class CoffeeExportContract extends Contract {
             certificateId,
             exportId,
             type: 'quality',
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         })));
 
         return JSON.stringify({ success: true, certificateId });
@@ -1316,13 +1325,13 @@ class CoffeeExportContract extends Contract {
     }
 
     // ============================================================================
-    // ESW (ELECTRONIC SINGLE WINDOW) MANAGEMENT
+    // Network Submission (ELECTRONIC SINGLE WINDOW) MANAGEMENT
     // ============================================================================
 
     /**
-     * Submit ESW request
+     * Submit Network request
      */
-    async SubmitESWRequest(ctx, eswRequestJSON) {
+    async SubmitToNetworkRequest(ctx, eswRequestJSON) {
         const eswRequest = JSON.parse(eswRequestJSON);
         const { requestId, exportId, exporterId, documents } = eswRequest;
 
@@ -1338,8 +1347,8 @@ class CoffeeExportContract extends Contract {
             documents: documents || [],
             agencyApprovals: [],
             status: 'pending',
-            submittedAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
+            submittedAt: this._getTxTimestamp(ctx),
+            updatedAt: this._getTxTimestamp(ctx)
         };
 
         await ctx.stub.putState(requestId, Buffer.from(JSON.stringify(eswDoc)));
@@ -1347,38 +1356,38 @@ class CoffeeExportContract extends Contract {
         ctx.stub.setEvent('ESWRequestSubmitted', Buffer.from(JSON.stringify({
             requestId,
             exportId,
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         })));
 
         return JSON.stringify({ success: true, requestId });
     }
 
     /**
-     * Add agency approval to ESW request
+     * Add agency approval to Network request
      */
-    async AddESWAgencyApproval(ctx, requestId, approvalJSON) {
+    async AddNetworkAgencyApproval(ctx, requestId, approvalJSON) {
         const approval = JSON.parse(approvalJSON);
         const eswData = await ctx.stub.getState(requestId);
         
         if (!eswData || eswData.length === 0) {
-            throw new Error(`ESW request ${requestId} does not exist`);
+            throw new Error(`Network request ${requestId} does not exist`);
         }
 
         const eswDoc = JSON.parse(eswData.toString());
         
         eswDoc.agencyApprovals.push({
             ...approval,
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         });
 
         // Check if all required agencies have approved
         const allApproved = eswDoc.agencyApprovals.every(a => a.status === 'approved');
         if (allApproved && eswDoc.agencyApprovals.length >= 5) { // Minimum 5 agencies
             eswDoc.status = 'approved';
-            eswDoc.approvedAt = new Date().toISOString();
+            eswDoc.approvedAt = this._getTxTimestamp(ctx);
         }
 
-        eswDoc.updatedAt = new Date().toISOString();
+        eswDoc.updatedAt = this._getTxTimestamp(ctx);
 
         await ctx.stub.putState(requestId, Buffer.from(JSON.stringify(eswDoc)));
         
@@ -1386,13 +1395,13 @@ class CoffeeExportContract extends Contract {
     }
 
     /**
-     * Get ESW request
+     * Get Network request
      */
-    async GetESWRequest(ctx, requestId) {
+    async GetNetworkRequest(ctx, requestId) {
         const eswData = await ctx.stub.getState(requestId);
         
         if (!eswData || eswData.length === 0) {
-            throw new Error(`ESW request ${requestId} does not exist`);
+            throw new Error(`Network request ${requestId} does not exist`);
         }
 
         return eswData.toString();
@@ -1664,7 +1673,7 @@ class CoffeeExportContract extends Contract {
                     issueDate: documentData.issueDate,
                     expiryDate: documentData.expiryDate,
                     documentHash: documentData.documentHash || null,
-                    uploadedAt: new Date().toISOString(),
+                    uploadedAt: this._getTxTimestamp(ctx),
                     status: 'pending_verification'
                 };
                 break;
@@ -1674,7 +1683,7 @@ class CoffeeExportContract extends Contract {
                     tin: documentData.tin || exporter.tin,
                     issueDate: documentData.issueDate,
                     documentHash: documentData.documentHash || null,
-                    uploadedAt: new Date().toISOString(),
+                    uploadedAt: this._getTxTimestamp(ctx),
                     status: 'pending_verification'
                 };
                 break;
@@ -1684,7 +1693,7 @@ class CoffeeExportContract extends Contract {
                     vatNumber: documentData.vatNumber,
                     issueDate: documentData.issueDate,
                     documentHash: documentData.documentHash || null,
-                    uploadedAt: new Date().toISOString(),
+                    uploadedAt: this._getTxTimestamp(ctx),
                     status: 'pending_verification'
                 };
                 break;
@@ -1696,7 +1705,7 @@ class CoffeeExportContract extends Contract {
                     capitalType: documentData.capitalType || 'company',
                     minimumRequired: documentData.capitalType === 'individual' ? 15000000 : 20000000,
                     documentHash: documentData.documentHash || null,
-                    uploadedAt: new Date().toISOString(),
+                    uploadedAt: this._getTxTimestamp(ctx),
                     status: documentData.capitalETB >= (documentData.capitalType === 'individual' ? 15000000 : 20000000) 
                         ? 'adequate' : 'inadequate'
                 };
@@ -1710,13 +1719,13 @@ class CoffeeExportContract extends Contract {
                 throw new Error(`Invalid document type: ${documentType}`);
         }
 
-        exporter.updatedAt = new Date().toISOString();
+        exporter.updatedAt = this._getTxTimestamp(ctx);
         await ctx.stub.putState(exporterId, Buffer.from(JSON.stringify(exporter)));
         
         ctx.stub.setEvent('StatutoryDocumentUploaded', Buffer.from(JSON.stringify({
             exporterId,
             documentType,
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         })));
 
         return JSON.stringify({ success: true, exporterId, documentType });
@@ -1747,7 +1756,7 @@ class CoffeeExportContract extends Contract {
                     issueDate: documentData.issueDate,
                     expiryDate: documentData.expiryDate,
                     documentHash: documentData.documentHash || null,
-                    uploadedAt: new Date().toISOString(),
+                    uploadedAt: this._getTxTimestamp(ctx),
                     status: 'pending_verification'
                 };
                 break;
@@ -1757,7 +1766,7 @@ class CoffeeExportContract extends Contract {
                     tin: documentData.tin || exporter.tin,
                     issueDate: documentData.issueDate,
                     documentHash: documentData.documentHash || null,
-                    uploadedAt: new Date().toISOString(),
+                    uploadedAt: this._getTxTimestamp(ctx),
                     status: 'pending_verification'
                 };
                 break;
@@ -1767,7 +1776,7 @@ class CoffeeExportContract extends Contract {
                     vatNumber: documentData.vatNumber,
                     issueDate: documentData.issueDate,
                     documentHash: documentData.documentHash || null,
-                    uploadedAt: new Date().toISOString(),
+                    uploadedAt: this._getTxTimestamp(ctx),
                     status: 'pending_verification'
                 };
                 break;
@@ -1779,7 +1788,7 @@ class CoffeeExportContract extends Contract {
                     capitalType: documentData.capitalType || 'company',
                     minimumRequired: documentData.capitalType === 'individual' ? 15000000 : 20000000,
                     documentHash: documentData.documentHash || null,
-                    uploadedAt: new Date().toISOString(),
+                    uploadedAt: this._getTxTimestamp(ctx),
                     status: documentData.capitalETB >= (documentData.capitalType === 'individual' ? 15000000 : 20000000) 
                         ? 'adequate' : 'inadequate'
                 };
@@ -1793,13 +1802,13 @@ class CoffeeExportContract extends Contract {
                 throw new Error(`Invalid document type: ${documentType}`);
         }
 
-        exporter.updatedAt = new Date().toISOString();
+        exporter.updatedAt = this._getTxTimestamp(ctx);
         await ctx.stub.putState(exporterId, Buffer.from(JSON.stringify(exporter)));
         
         ctx.stub.setEvent('StatutoryDocumentUploaded', Buffer.from(JSON.stringify({
             exporterId,
             documentType,
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         })));
 
         return JSON.stringify({ success: true, exporterId, documentType });
@@ -1824,7 +1833,7 @@ class CoffeeExportContract extends Contract {
 
         const document = exporter.statutoryDocuments[documentType];
         document.status = verificationData.approved ? 'verified' : 'rejected';
-        document.verifiedAt = new Date().toISOString();
+        document.verifiedAt = this._getTxTimestamp(ctx);
         document.verifiedBy = verificationData.verifiedBy || 'ECTA';
         document.verificationNotes = verificationData.notes || '';
 
@@ -1832,14 +1841,14 @@ class CoffeeExportContract extends Contract {
             document.rejectionReason = verificationData.reason || '';
         }
 
-        exporter.updatedAt = new Date().toISOString();
+        exporter.updatedAt = this._getTxTimestamp(ctx);
         await ctx.stub.putState(exporterId, Buffer.from(JSON.stringify(exporter)));
         
         ctx.stub.setEvent('StatutoryDocumentVerified', Buffer.from(JSON.stringify({
             exporterId,
             documentType,
             approved: verificationData.approved,
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         })));
 
         return JSON.stringify({ success: true, exporterId, documentType, status: document.status });
@@ -1864,20 +1873,20 @@ class CoffeeExportContract extends Contract {
 
         exporter.statutoryDocuments.nbeStatus = {
             delinquentStatus: nbeStatus.delinquentStatus, // 'clear' or 'delinquent'
-            lastChecked: new Date().toISOString(),
+            lastChecked: this._getTxTimestamp(ctx),
             outstandingFX: nbeStatus.outstandingFX || 0,
             clearanceDate: nbeStatus.clearanceDate || null,
             clearanceCertificate: nbeStatus.clearanceCertificate || null,
             checkedBy: nbeStatus.checkedBy || 'NBE'
         };
 
-        exporter.updatedAt = new Date().toISOString();
+        exporter.updatedAt = this._getTxTimestamp(ctx);
         await ctx.stub.putState(exporterId, Buffer.from(JSON.stringify(exporter)));
         
         ctx.stub.setEvent('NBEStatusUpdated', Buffer.from(JSON.stringify({
             exporterId,
             delinquentStatus: nbeStatus.delinquentStatus,
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         })));
 
         return JSON.stringify({ success: true, exporterId, delinquentStatus: nbeStatus.delinquentStatus });
@@ -2020,6 +2029,89 @@ class CoffeeExportContract extends Contract {
     }
 
     // ============================================================================
+    // SALES CONTRACT DRAFT MANAGEMENT
+    // ============================================================================
+
+    /**
+     * Create contract draft
+     */
+    async CreateContractDraft(ctx, contractDataJSON) {
+        const contractData = JSON.parse(contractDataJSON);
+        const { contractNumber, draftId, exporterId, buyerId } = contractData;
+
+        if (!contractNumber || !exporterId || !buyerId) {
+            throw new Error('Missing required fields: contractNumber, exporterId, buyerId');
+        }
+
+        // Verify exporter exists
+        const exporterData = await ctx.stub.getState(exporterId);
+        if (!exporterData || exporterData.length === 0) {
+            throw new Error(`Exporter ${exporterId} does not exist`);
+        }
+
+        const contractDraft = {
+            docType: 'contractDraft',
+            contractNumber,
+            draftId: draftId || contractNumber,
+            exporterId,
+            buyerId,
+            coffeeType: contractData.coffeeType,
+            originRegion: contractData.originRegion,
+            quantity: contractData.quantity,
+            unitPrice: contractData.unitPrice,
+            currency: contractData.currency || 'USD',
+            totalValue: contractData.totalValue,
+            status: contractData.status || 'DRAFT',
+            createdAt: contractData.createdAt || this._getTxTimestamp(ctx),
+            syncedFromPostgres: true
+        };
+
+        await ctx.stub.putState(contractNumber, Buffer.from(JSON.stringify(contractDraft)));
+
+        return JSON.stringify({
+            success: true,
+            contractNumber,
+            message: 'Contract draft created on blockchain'
+        });
+    }
+
+    /**
+     * Get contract draft
+     */
+    async GetContractDraft(ctx, contractNumber) {
+        const draftData = await ctx.stub.getState(contractNumber);
+        
+        if (!draftData || draftData.length === 0) {
+            throw new Error(`Contract draft ${contractNumber} not found`);
+        }
+
+        return draftData.toString();
+    }
+
+    /**
+     * Update contract draft status
+     */
+    async UpdateContractDraftStatus(ctx, contractNumber, newStatus) {
+        const draftData = await ctx.stub.getState(contractNumber);
+        
+        if (!draftData || draftData.length === 0) {
+            throw new Error(`Contract draft ${contractNumber} not found`);
+        }
+
+        const draft = JSON.parse(draftData.toString());
+        draft.status = newStatus;
+        draft.updatedAt = this._getTxTimestamp(ctx);
+
+        await ctx.stub.putState(contractNumber, Buffer.from(JSON.stringify(draft)));
+
+        return JSON.stringify({
+            success: true,
+            contractNumber,
+            status: newStatus
+        });
+    }
+
+    // ============================================================================
     // SHIPMENT MANAGEMENT (Phase 2: Per-Shipment Workflow)
     // ============================================================================
 
@@ -2089,7 +2181,7 @@ class CoffeeExportContract extends Contract {
                 buyerCompanyName: shipmentData.buyerCompanyName || '',
                 buyerCountry: shipmentData.buyerCountry || '',
                 buyerContact: shipmentData.buyerContact || {},
-                contractDate: shipmentData.contractDate || new Date().toISOString(),
+                contractDate: shipmentData.contractDate || this._getTxTimestamp(ctx),
                 deliveryTerms: shipmentData.deliveryTerms || 'FOB', // FOB, CIF, CFR
                 paymentTerms: shipmentData.paymentTerms || 'LC', // LC, CAD, TT
                 ecxAuctionReference: shipmentData.ecxAuctionReference || null,
@@ -2153,15 +2245,15 @@ class CoffeeExportContract extends Contract {
             
             status: 'draft',
             workflow: {
-                created: { status: 'completed', timestamp: new Date().toISOString() },
+                created: { status: 'completed', timestamp: this._getTxTimestamp(ctx) },
                 contractRegistration: { status: 'pending' },
                 priceValidation: { status: 'pending' },
                 contractApproval: { status: 'pending' },
                 invoiceGeneration: { status: 'pending' },
                 paymentVerification: { status: 'pending' }
             },
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
+            createdAt: this._getTxTimestamp(ctx),
+            updatedAt: this._getTxTimestamp(ctx)
         };
 
         await ctx.stub.putState(shipmentId, Buffer.from(JSON.stringify(shipment)));
@@ -2169,7 +2261,7 @@ class CoffeeExportContract extends Contract {
         ctx.stub.setEvent('ShipmentCreated', Buffer.from(JSON.stringify({
             shipmentId,
             exporterId,
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         })));
 
         return JSON.stringify({ success: true, shipmentId });
@@ -2188,20 +2280,20 @@ class CoffeeExportContract extends Contract {
         const shipment = JSON.parse(shipmentData.toString());
         
         shipment.salesContract.registeredWithECTA = true;
-        shipment.salesContract.registrationDate = new Date().toISOString();
+        shipment.salesContract.registrationDate = this._getTxTimestamp(ctx);
         shipment.salesContract.status = 'registered';
         shipment.workflow.contractRegistration = {
             status: 'completed',
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         };
-        shipment.updatedAt = new Date().toISOString();
+        shipment.updatedAt = this._getTxTimestamp(ctx);
 
         await ctx.stub.putState(shipmentId, Buffer.from(JSON.stringify(shipment)));
         
         ctx.stub.setEvent('ContractRegistered', Buffer.from(JSON.stringify({
             shipmentId,
             contractNumber: shipment.salesContract.contractNumber,
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         })));
 
         return JSON.stringify({ success: true, shipmentId });
@@ -2224,7 +2316,7 @@ class CoffeeExportContract extends Contract {
         const unitPrice = shipment.pricing.unitPrice;
         
         shipment.pricing.minimumExportPrice = minimumPrice;
-        shipment.pricing.priceValidationDate = new Date().toISOString();
+        shipment.pricing.priceValidationDate = this._getTxTimestamp(ctx);
         shipment.pricing.priceApproved = unitPrice >= minimumPrice;
         
         shipment.workflow.priceValidation = {
@@ -2232,7 +2324,7 @@ class CoffeeExportContract extends Contract {
             minimumPrice,
             unitPrice,
             validatedBy: minimumPriceData.validatedBy || 'ECTA',
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         };
         
         if (unitPrice < minimumPrice) {
@@ -2240,14 +2332,14 @@ class CoffeeExportContract extends Contract {
             shipment.rejectionReason = `Unit price ${unitPrice} ${shipment.pricing.currency} is below minimum export price ${minimumPrice} ${shipment.pricing.currency}`;
         }
         
-        shipment.updatedAt = new Date().toISOString();
+        shipment.updatedAt = this._getTxTimestamp(ctx);
 
         await ctx.stub.putState(shipmentId, Buffer.from(JSON.stringify(shipment)));
         
         ctx.stub.setEvent('PriceValidated', Buffer.from(JSON.stringify({
             shipmentId,
             approved: unitPrice >= minimumPrice,
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         })));
 
         return JSON.stringify({ 
@@ -2281,16 +2373,16 @@ class CoffeeExportContract extends Contract {
             status: 'approved',
             approvedBy: approvalData.approvedBy || 'ECTA',
             comments: approvalData.comments || '',
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         };
         shipment.status = 'contract_approved';
-        shipment.updatedAt = new Date().toISOString();
+        shipment.updatedAt = this._getTxTimestamp(ctx);
 
         await ctx.stub.putState(shipmentId, Buffer.from(JSON.stringify(shipment)));
         
         ctx.stub.setEvent('ContractApproved', Buffer.from(JSON.stringify({
             shipmentId,
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         })));
 
         return JSON.stringify({ success: true, shipmentId });
@@ -2316,26 +2408,26 @@ class CoffeeExportContract extends Contract {
         
         shipment.commercialInvoice = {
             invoiceNumber,
-            invoiceDate: new Date().toISOString(),
+            invoiceDate: this._getTxTimestamp(ctx),
             invoiceAmount: shipment.pricing.totalValue,
             invoiceCurrency: shipment.pricing.currency,
-            generatedAt: new Date().toISOString(),
+            generatedAt: this._getTxTimestamp(ctx),
             pdfUrl: `/invoices/${invoiceNumber}.pdf` // Placeholder
         };
         
         shipment.workflow.invoiceGeneration = {
             status: 'completed',
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         };
         shipment.status = 'invoice_generated';
-        shipment.updatedAt = new Date().toISOString();
+        shipment.updatedAt = this._getTxTimestamp(ctx);
 
         await ctx.stub.putState(shipmentId, Buffer.from(JSON.stringify(shipment)));
         
         ctx.stub.setEvent('InvoiceGenerated', Buffer.from(JSON.stringify({
             shipmentId,
             invoiceNumber,
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         })));
 
         return JSON.stringify({ 
@@ -2366,21 +2458,21 @@ class CoffeeExportContract extends Contract {
             shipment.payment.lcCurrency = paymentData.lcCurrency || 'USD';
             shipment.payment.lcExpiryDate = paymentData.lcExpiryDate;
         } else if (paymentData.method === 'CAD') {
-            shipment.payment.cadCommitmentDate = new Date().toISOString();
+            shipment.payment.cadCommitmentDate = this._getTxTimestamp(ctx);
             // CAD: 90 days settlement period
             const settlementDate = new Date();
             settlementDate.setDate(settlementDate.getDate() + 90);
             shipment.payment.cadSettlementDue = settlementDate.toISOString();
         }
         
-        shipment.updatedAt = new Date().toISOString();
+        shipment.updatedAt = this._getTxTimestamp(ctx);
 
         await ctx.stub.putState(shipmentId, Buffer.from(JSON.stringify(shipment)));
         
         ctx.stub.setEvent('PaymentDetailsUpdated', Buffer.from(JSON.stringify({
             shipmentId,
             method: paymentData.method,
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         })));
 
         return JSON.stringify({ success: true, shipmentId });
@@ -2404,7 +2496,7 @@ class CoffeeExportContract extends Contract {
             status: verificationData.verified ? 'approved' : 'rejected',
             verifiedBy: verificationData.verifiedBy || 'Bank',
             comments: verificationData.comments || '',
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         };
         
         if (verificationData.verified) {
@@ -2414,14 +2506,14 @@ class CoffeeExportContract extends Contract {
             shipment.rejectionReason = verificationData.reason || 'Payment verification failed';
         }
         
-        shipment.updatedAt = new Date().toISOString();
+        shipment.updatedAt = this._getTxTimestamp(ctx);
 
         await ctx.stub.putState(shipmentId, Buffer.from(JSON.stringify(shipment)));
         
         ctx.stub.setEvent('PaymentVerified', Buffer.from(JSON.stringify({
             shipmentId,
             verified: verificationData.verified,
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         })));
 
         return JSON.stringify({ success: true, shipmentId, verified: verificationData.verified });
@@ -2443,16 +2535,16 @@ class CoffeeExportContract extends Contract {
         shipment.packingList = {
             ...shipment.packingList,
             ...packingData,
-            updatedAt: new Date().toISOString()
+            updatedAt: this._getTxTimestamp(ctx)
         };
         
-        shipment.updatedAt = new Date().toISOString();
+        shipment.updatedAt = this._getTxTimestamp(ctx);
 
         await ctx.stub.putState(shipmentId, Buffer.from(JSON.stringify(shipment)));
         
         ctx.stub.setEvent('PackingListUpdated', Buffer.from(JSON.stringify({
             shipmentId,
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         })));
 
         return JSON.stringify({ success: true, shipmentId });
@@ -2558,7 +2650,7 @@ class CoffeeExportContract extends Contract {
             weekNumber,
             year,
             setBy: priceData.setBy || 'ECTA',
-            setAt: new Date().toISOString()
+            setAt: this._getTxTimestamp(ctx)
         };
 
         await ctx.stub.putState(priceId, Buffer.from(JSON.stringify(minimumPriceDoc)));
@@ -2568,7 +2660,7 @@ class CoffeeExportContract extends Contract {
             grade,
             coffeeType,
             minimumPrice,
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         })));
 
         return JSON.stringify({ success: true, priceId, minimumPrice });
@@ -2681,7 +2773,7 @@ class CoffeeExportContract extends Contract {
             exporterName: shipment.exporterName,
             
             status: 'pending',
-            requestedAt: new Date().toISOString(),
+            requestedAt: this._getTxTimestamp(ctx),
             reviewedAt: null,
             issuedAt: null,
             expiryDate: null,
@@ -2703,12 +2795,12 @@ class CoffeeExportContract extends Contract {
             history: [{
                 action: 'requested',
                 performedBy: exporterId,
-                timestamp: new Date().toISOString(),
+                timestamp: this._getTxTimestamp(ctx),
                 comments: certRequest.comments || ''
             }],
             
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
+            createdAt: this._getTxTimestamp(ctx),
+            updatedAt: this._getTxTimestamp(ctx)
         };
 
         await ctx.stub.putState(certificateId, Buffer.from(JSON.stringify(certificate)));
@@ -2717,7 +2809,7 @@ class CoffeeExportContract extends Contract {
             certificateId,
             certificateType,
             shipmentId,
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         })));
 
         return JSON.stringify({ success: true, certificateId, status: 'pending' });
@@ -2752,11 +2844,11 @@ class CoffeeExportContract extends Contract {
         expiryDate.setDate(expiryDate.getDate() + 30);
 
         certificate.status = 'issued';
-        certificate.issuedAt = new Date().toISOString();
+        certificate.issuedAt = this._getTxTimestamp(ctx);
         certificate.issuedBy = authData.issuedBy || 'CQIC';
         certificate.expiryDate = expiryDate.toISOString();
         certificate.certificateNumber = authNumber;
-        certificate.reviewedAt = new Date().toISOString();
+        certificate.reviewedAt = this._getTxTimestamp(ctx);
         
         certificate.certificateData = {
             ...certificate.certificateData,
@@ -2774,11 +2866,11 @@ class CoffeeExportContract extends Contract {
         certificate.history.push({
             action: 'issued',
             performedBy: authData.issuedBy || 'CQIC',
-            timestamp: new Date().toISOString(),
+            timestamp: this._getTxTimestamp(ctx),
             comments: authData.comments || 'CQIC authorization issued'
         });
         
-        certificate.updatedAt = new Date().toISOString();
+        certificate.updatedAt = this._getTxTimestamp(ctx);
 
         await ctx.stub.putState(certificateId, Buffer.from(JSON.stringify(certificate)));
         
@@ -2786,7 +2878,7 @@ class CoffeeExportContract extends Contract {
             certificateId,
             authorizationNumber: authNumber,
             expiryDate: expiryDate.toISOString(),
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         })));
 
         return JSON.stringify({ success: true, certificateId, certificateNumber: authNumber });
@@ -2821,17 +2913,17 @@ class CoffeeExportContract extends Contract {
         expiryDate.setDate(expiryDate.getDate() + 14);
 
         certificate.status = 'issued';
-        certificate.issuedAt = new Date().toISOString();
+        certificate.issuedAt = this._getTxTimestamp(ctx);
         certificate.issuedBy = inspectionData.inspectorName || 'MOA';
         certificate.expiryDate = expiryDate.toISOString();
         certificate.certificateNumber = ippcNumber;
-        certificate.reviewedAt = new Date().toISOString();
+        certificate.reviewedAt = this._getTxTimestamp(ctx);
         
         certificate.certificateData = {
             ...certificate.certificateData,
             ippcNumber,
             botanicalName: 'Coffea arabica',
-            inspectionDate: inspectionData.inspectionDate || new Date().toISOString(),
+            inspectionDate: inspectionData.inspectionDate || this._getTxTimestamp(ctx),
             inspectorName: inspectionData.inspectorName,
             pestStatus: inspectionData.pestStatus || 'pest-free',
             treatmentDetails: inspectionData.treatmentDetails || 'none',
@@ -2841,11 +2933,11 @@ class CoffeeExportContract extends Contract {
         certificate.history.push({
             action: 'issued',
             performedBy: inspectionData.inspectorName || 'MOA',
-            timestamp: new Date().toISOString(),
+            timestamp: this._getTxTimestamp(ctx),
             comments: inspectionData.comments || 'Phytosanitary certificate issued'
         });
         
-        certificate.updatedAt = new Date().toISOString();
+        certificate.updatedAt = this._getTxTimestamp(ctx);
 
         await ctx.stub.putState(certificateId, Buffer.from(JSON.stringify(certificate)));
         
@@ -2853,7 +2945,7 @@ class CoffeeExportContract extends Contract {
             certificateId,
             ippcNumber,
             expiryDate: expiryDate.toISOString(),
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         })));
 
         return JSON.stringify({ success: true, certificateId, certificateNumber: ippcNumber });
@@ -2884,11 +2976,11 @@ class CoffeeExportContract extends Contract {
         const certNumber = `ET-ORIGIN-${Date.now()}`;
 
         certificate.status = 'issued';
-        certificate.issuedAt = new Date().toISOString();
+        certificate.issuedAt = this._getTxTimestamp(ctx);
         certificate.issuedBy = originData.issuedBy || 'ECTA';
         certificate.expiryDate = null; // No expiry for origin certificates
         certificate.certificateNumber = certNumber;
-        certificate.reviewedAt = new Date().toISOString();
+        certificate.reviewedAt = this._getTxTimestamp(ctx);
         
         certificate.certificateData = {
             ...certificate.certificateData,
@@ -2902,18 +2994,18 @@ class CoffeeExportContract extends Contract {
         certificate.history.push({
             action: 'issued',
             performedBy: originData.issuedBy || 'ECTA',
-            timestamp: new Date().toISOString(),
+            timestamp: this._getTxTimestamp(ctx),
             comments: originData.comments || 'Certificate of origin issued'
         });
         
-        certificate.updatedAt = new Date().toISOString();
+        certificate.updatedAt = this._getTxTimestamp(ctx);
 
         await ctx.stub.putState(certificateId, Buffer.from(JSON.stringify(certificate)));
         
         ctx.stub.setEvent('OriginCertificateIssued', Buffer.from(JSON.stringify({
             certificateId,
             certificateNumber: certNumber,
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         })));
 
         return JSON.stringify({ success: true, certificateId, certificateNumber: certNumber });
@@ -2949,11 +3041,11 @@ class CoffeeExportContract extends Contract {
         const certNumber = `ET-EUDR-${Date.now()}`;
 
         certificate.status = 'issued';
-        certificate.issuedAt = new Date().toISOString();
+        certificate.issuedAt = this._getTxTimestamp(ctx);
         certificate.issuedBy = eudrData.issuedBy || 'ECTA';
         certificate.expiryDate = null; // No expiry for EUDR certificates
         certificate.certificateNumber = certNumber;
-        certificate.reviewedAt = new Date().toISOString();
+        certificate.reviewedAt = this._getTxTimestamp(ctx);
         
         certificate.certificateData = {
             ...certificate.certificateData,
@@ -2966,18 +3058,18 @@ class CoffeeExportContract extends Contract {
         certificate.history.push({
             action: 'issued',
             performedBy: eudrData.issuedBy || 'ECTA',
-            timestamp: new Date().toISOString(),
+            timestamp: this._getTxTimestamp(ctx),
             comments: eudrData.comments || 'EUDR compliance certificate issued'
         });
         
-        certificate.updatedAt = new Date().toISOString();
+        certificate.updatedAt = this._getTxTimestamp(ctx);
 
         await ctx.stub.putState(certificateId, Buffer.from(JSON.stringify(certificate)));
         
         ctx.stub.setEvent('EUDRComplianceIssued', Buffer.from(JSON.stringify({
             certificateId,
             certificateNumber: certNumber,
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         })));
 
         return JSON.stringify({ success: true, certificateId, certificateNumber: certNumber });
@@ -3008,11 +3100,11 @@ class CoffeeExportContract extends Contract {
         const certNumber = `ET-ICO-${Date.now()}`;
 
         certificate.status = 'issued';
-        certificate.issuedAt = new Date().toISOString();
+        certificate.issuedAt = this._getTxTimestamp(ctx);
         certificate.issuedBy = icoData.issuedBy || 'ICO';
         certificate.expiryDate = null; // No expiry for ICO certificates
         certificate.certificateNumber = certNumber;
-        certificate.reviewedAt = new Date().toISOString();
+        certificate.reviewedAt = this._getTxTimestamp(ctx);
         
         certificate.certificateData = {
             ...certificate.certificateData,
@@ -3025,18 +3117,18 @@ class CoffeeExportContract extends Contract {
         certificate.history.push({
             action: 'issued',
             performedBy: icoData.issuedBy || 'ICO',
-            timestamp: new Date().toISOString(),
+            timestamp: this._getTxTimestamp(ctx),
             comments: icoData.comments || 'ICO certificate issued'
         });
         
-        certificate.updatedAt = new Date().toISOString();
+        certificate.updatedAt = this._getTxTimestamp(ctx);
 
         await ctx.stub.putState(certificateId, Buffer.from(JSON.stringify(certificate)));
         
         ctx.stub.setEvent('ICOCertificateIssued', Buffer.from(JSON.stringify({
             certificateId,
             certificateNumber: certNumber,
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         })));
 
         return JSON.stringify({ success: true, certificateId, certificateNumber: certNumber });
@@ -3118,17 +3210,17 @@ class CoffeeExportContract extends Contract {
         certificate.history.push({
             action: 'revoked',
             performedBy: revocationData.revokedBy,
-            timestamp: new Date().toISOString(),
+            timestamp: this._getTxTimestamp(ctx),
             comments: revocationData.reason || 'Certificate revoked'
         });
-        certificate.updatedAt = new Date().toISOString();
+        certificate.updatedAt = this._getTxTimestamp(ctx);
 
         await ctx.stub.putState(certificateId, Buffer.from(JSON.stringify(certificate)));
         
         ctx.stub.setEvent('CertificateRevoked', Buffer.from(JSON.stringify({
             certificateId,
             reason: revocationData.reason,
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         })));
 
         return JSON.stringify({ success: true, certificateId, status: 'revoked' });
@@ -3156,14 +3248,14 @@ class CoffeeExportContract extends Contract {
         
         // Increment verification count
         certificate.verificationCount = (certificate.verificationCount || 0) + 1;
-        certificate.lastVerifiedAt = new Date().toISOString();
+        certificate.lastVerifiedAt = this._getTxTimestamp(ctx);
         
         await ctx.stub.putState(certificate.certificateId, Buffer.from(JSON.stringify(certificate)));
         
         return JSON.stringify({
             valid: certificate.status === 'issued',
             certificate: certificate,
-            verifiedAt: new Date().toISOString()
+            verifiedAt: this._getTxTimestamp(ctx)
         });
     }
 
@@ -3256,8 +3348,8 @@ class CoffeeExportContract extends Contract {
             processingFacility: plotData.processingFacility || null,
             warehouse: plotData.warehouse || null,
             
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
+            createdAt: this._getTxTimestamp(ctx),
+            updatedAt: this._getTxTimestamp(ctx)
         };
 
         await ctx.stub.putState(plotId, Buffer.from(JSON.stringify(gpsPlot)));
@@ -3266,7 +3358,7 @@ class CoffeeExportContract extends Contract {
             plotId,
             shipmentId,
             coordinates: gpsPlot.coordinates,
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         })));
 
         return JSON.stringify({ success: true, plotId });
@@ -3287,7 +3379,7 @@ class CoffeeExportContract extends Contract {
         
         plot.deforestationCheck = {
             status: checkData.status || 'clear',
-            checkedDate: new Date().toISOString(),
+            checkedDate: this._getTxTimestamp(ctx),
             checkMethod: checkData.checkMethod || 'manual',
             riskLevel: checkData.riskLevel || 'low',
             forestCoverDate: '2020-12-31',
@@ -3295,7 +3387,7 @@ class CoffeeExportContract extends Contract {
             notes: checkData.notes || ''
         };
         
-        plot.updatedAt = new Date().toISOString();
+        plot.updatedAt = this._getTxTimestamp(ctx);
 
         await ctx.stub.putState(plotId, Buffer.from(JSON.stringify(plot)));
         
@@ -3303,7 +3395,7 @@ class CoffeeExportContract extends Contract {
             plotId,
             status: plot.deforestationCheck.status,
             riskLevel: plot.deforestationCheck.riskLevel,
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         })));
 
         return JSON.stringify({ success: true, plotId, deforestationCheck: plot.deforestationCheck });
@@ -3341,16 +3433,16 @@ class CoffeeExportContract extends Contract {
         
         plot.verified = true;
         plot.verifiedBy = verificationData.verifiedBy;
-        plot.verifiedDate = new Date().toISOString();
+        plot.verifiedDate = this._getTxTimestamp(ctx);
         plot.verificationMethod = verificationData.verificationMethod || 'document';
-        plot.updatedAt = new Date().toISOString();
+        plot.updatedAt = this._getTxTimestamp(ctx);
 
         await ctx.stub.putState(plotId, Buffer.from(JSON.stringify(plot)));
         
         ctx.stub.setEvent('GPSPlotVerified', Buffer.from(JSON.stringify({
             plotId,
             verifiedBy: plot.verifiedBy,
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         })));
 
         return JSON.stringify({ success: true, plotId, verified: true });
@@ -3422,7 +3514,7 @@ class CoffeeExportContract extends Contract {
             certificates: certificateSummaries,
             
             bundleStatus,
-            completedAt: bundleStatus === 'complete' ? new Date().toISOString() : null,
+            completedAt: bundleStatus === 'complete' ? this._getTxTimestamp(ctx) : null,
             
             pdfUrl: null,
             pdfHash: null,
@@ -3430,8 +3522,8 @@ class CoffeeExportContract extends Contract {
             downloadCount: 0,
             lastDownloadedAt: null,
             
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
+            createdAt: this._getTxTimestamp(ctx),
+            updatedAt: this._getTxTimestamp(ctx)
         };
 
         await ctx.stub.putState(bundleId, Buffer.from(JSON.stringify(bundle)));
@@ -3441,7 +3533,7 @@ class CoffeeExportContract extends Contract {
             shipmentId,
             certificateCount: certificates.length,
             bundleStatus,
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         })));
 
         return JSON.stringify({ success: true, bundleId, bundleStatus, certificateCount: certificates.length });
@@ -3461,7 +3553,7 @@ class CoffeeExportContract extends Contract {
         
         // Increment download count
         bundle.downloadCount = (bundle.downloadCount || 0) + 1;
-        bundle.lastDownloadedAt = new Date().toISOString();
+        bundle.lastDownloadedAt = this._getTxTimestamp(ctx);
         
         await ctx.stub.putState(bundleId, Buffer.from(JSON.stringify(bundle)));
 
@@ -3626,16 +3718,16 @@ class CoffeeExportContract extends Contract {
             arbitrationLocation: legalFrameworkData.arbitrationLocation,
             arbitrationRules: legalFrameworkData.arbitrationRules, // ICC, UNCITRAL, etc.
             contractLanguage: legalFrameworkData.contractLanguage || 'English',
-            recordedAt: new Date().toISOString()
+            recordedAt: this._getTxTimestamp(ctx)
         };
         
-        contract.updatedAt = new Date().toISOString();
+        contract.updatedAt = this._getTxTimestamp(ctx);
         await ctx.stub.putState(contractId, Buffer.from(JSON.stringify(contract)));
         
         ctx.stub.setEvent('LegalFrameworkRecorded', Buffer.from(JSON.stringify({
             contractId,
             governingLaw: legalFrameworkData.governingLaw,
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         })));
         
         return JSON.stringify({ success: true, contractId });
@@ -3658,19 +3750,19 @@ class CoffeeExportContract extends Contract {
             eventType: eventData.eventType, // PANDEMIC, WAR, NATURAL_DISASTER, etc.
             description: eventData.description,
             declaredBy: eventData.declaredBy,
-            declaredAt: new Date().toISOString(),
+            declaredAt: this._getTxTimestamp(ctx),
             notificationDate: eventData.notificationDate,
             expectedDuration: eventData.expectedDuration,
             status: 'ACTIVE'
         };
         
-        contract.updatedAt = new Date().toISOString();
+        contract.updatedAt = this._getTxTimestamp(ctx);
         await ctx.stub.putState(contractId, Buffer.from(JSON.stringify(contract)));
         
         ctx.stub.setEvent('ForceMajeureRegistered', Buffer.from(JSON.stringify({
             contractId,
             eventType: eventData.eventType,
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         })));
         
         return JSON.stringify({ success: true, contractId, eventType: eventData.eventType });
@@ -3694,16 +3786,16 @@ class CoffeeExportContract extends Contract {
         }
         
         contract.status = 'SUSPENDED';
-        contract.suspendedAt = new Date().toISOString();
+        contract.suspendedAt = this._getTxTimestamp(ctx);
         contract.suspensionReason = suspensionData.reason;
-        contract.updatedAt = new Date().toISOString();
+        contract.updatedAt = this._getTxTimestamp(ctx);
         
         await ctx.stub.putState(contractId, Buffer.from(JSON.stringify(contract)));
         
         ctx.stub.setEvent('ContractSuspended', Buffer.from(JSON.stringify({
             contractId,
             reason: suspensionData.reason,
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         })));
         
         return JSON.stringify({ success: true, contractId, status: 'SUSPENDED' });
@@ -3727,16 +3819,16 @@ class CoffeeExportContract extends Contract {
         }
         
         contract.status = 'ACTIVE';
-        contract.resumedAt = new Date().toISOString();
+        contract.resumedAt = this._getTxTimestamp(ctx);
         contract.forceMajeure.status = 'RESOLVED';
-        contract.forceMajeure.resolvedAt = new Date().toISOString();
-        contract.updatedAt = new Date().toISOString();
+        contract.forceMajeure.resolvedAt = this._getTxTimestamp(ctx);
+        contract.updatedAt = this._getTxTimestamp(ctx);
         
         await ctx.stub.putState(contractId, Buffer.from(JSON.stringify(contract)));
         
         ctx.stub.setEvent('ContractResumed', Buffer.from(JSON.stringify({
             contractId,
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         })));
         
         return JSON.stringify({ success: true, contractId, status: 'ACTIVE' });
@@ -3763,7 +3855,7 @@ class CoffeeExportContract extends Contract {
             currency: disputeData.currency || 'USD',
             evidenceDocuments: disputeData.evidenceDocuments || [],
             status: 'OPEN',
-            createdAt: new Date().toISOString()
+            createdAt: this._getTxTimestamp(ctx)
         };
         
         await ctx.stub.putState(disputeId, Buffer.from(JSON.stringify(dispute)));
@@ -3772,7 +3864,7 @@ class CoffeeExportContract extends Contract {
             disputeId,
             contractId,
             disputeType: disputeData.disputeType,
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         })));
         
         return JSON.stringify({ success: true, disputeId, contractId });
@@ -3796,14 +3888,14 @@ class CoffeeExportContract extends Contract {
         dispute.resolutionNotes = resolutionData.resolutionNotes;
         dispute.awardedAmount = resolutionData.awardedAmount || 0;
         dispute.awardedTo = resolutionData.awardedTo;
-        dispute.resolvedAt = new Date().toISOString();
+        dispute.resolvedAt = this._getTxTimestamp(ctx);
         
         await ctx.stub.putState(disputeId, Buffer.from(JSON.stringify(dispute)));
         
         ctx.stub.setEvent('DisputeResolved', Buffer.from(JSON.stringify({
             disputeId,
             resolutionMethod: resolutionData.resolutionMethod,
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         })));
         
         return JSON.stringify({ success: true, disputeId, status: 'RESOLVED' });
@@ -3821,8 +3913,8 @@ class CoffeeExportContract extends Contract {
             fromCurrency,
             toCurrency,
             rate: parseFloat(rate),
-            effectiveDate: effectiveDate || new Date().toISOString(),
-            recordedAt: new Date().toISOString()
+            effectiveDate: effectiveDate || this._getTxTimestamp(ctx),
+            recordedAt: this._getTxTimestamp(ctx)
         };
         
         await ctx.stub.putState(rateId, Buffer.from(JSON.stringify(exchangeRate)));
@@ -3832,7 +3924,7 @@ class CoffeeExportContract extends Contract {
             fromCurrency,
             toCurrency,
             rate: parseFloat(rate),
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         })));
         
         return JSON.stringify({ success: true, rateId });
@@ -3889,7 +3981,7 @@ class CoffeeExportContract extends Contract {
             newValues: amendmentData.newValues,
             reason: amendmentData.reason,
             approvedBy: amendmentData.approvedBy,
-            approvedAt: new Date().toISOString()
+            approvedAt: this._getTxTimestamp(ctx)
         };
         
         // Store amendment history
@@ -3900,7 +3992,7 @@ class CoffeeExportContract extends Contract {
         
         // Apply changes
         Object.assign(contract, amendmentData.newValues);
-        contract.updatedAt = new Date().toISOString();
+        contract.updatedAt = this._getTxTimestamp(ctx);
         
         await ctx.stub.putState(contractId, Buffer.from(JSON.stringify(contract)));
         
@@ -3908,7 +4000,7 @@ class CoffeeExportContract extends Contract {
             contractId,
             amendmentId,
             amendmentType: amendmentData.amendmentType,
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         })));
         
         return JSON.stringify({ success: true, contractId, amendmentId });
@@ -3951,8 +4043,8 @@ class CoffeeExportContract extends Contract {
             
             // Status
             status: 'ACTIVE',
-            finalizedAt: new Date().toISOString(),
-            createdAt: new Date().toISOString()
+            finalizedAt: this._getTxTimestamp(ctx),
+            createdAt: this._getTxTimestamp(ctx)
         };
         
         await ctx.stub.putState(contractId, Buffer.from(JSON.stringify(contract)));
@@ -3962,10 +4054,925 @@ class CoffeeExportContract extends Contract {
             draftId,
             exporterId: finalContractData.exporterId,
             buyerId: finalContractData.buyerId,
-            timestamp: new Date().toISOString()
+            timestamp: this._getTxTimestamp(ctx)
         })));
         
         return JSON.stringify({ success: true, contractId, draftId });
+    }
+
+    // ============================================================================
+    // SALES CONTRACT REGISTRATION & NETWORK APPROVAL
+    // ============================================================================
+
+    /**
+     * Register sales contract with ECTA and generate reference number
+     * This is called after exporter and buyer have agreed on contract terms
+     */
+    async RegisterSalesContractWithReference(ctx, contractJSON) {
+        const contract = JSON.parse(contractJSON);
+        const { draftId, exporterId, buyerId, coffeeType, quantity, totalValue, paymentTerms, incoterms } = contract;
+        
+        // Validate required fields
+        if (!draftId || !exporterId || !buyerId) {
+            throw new Error('Missing required fields: draftId, exporterId, buyerId');
+        }
+        
+        // Verify exporter is qualified
+        const exporterData = await ctx.stub.getState(exporterId);
+        if (!exporterData || exporterData.length === 0) {
+            throw new Error(`Exporter ${exporterId} does not exist`);
+        }
+        
+        const exporter = JSON.parse(exporterData.toString());
+        if (exporter.status !== 'active' && exporter.status !== 'approved') {
+            throw new Error(`Exporter ${exporterId} is not active/qualified (status: ${exporter.status})`);
+        }
+        
+        // Generate ECTA reference number (deterministic)
+        const txTimestamp = ctx.stub.getTxTimestamp();
+        const txDate = new Date(txTimestamp.seconds.toNumber() * 1000);
+        const year = txDate.getFullYear();
+        
+        // Use transaction ID for deterministic uniqueness
+        const txId = ctx.stub.getTxID();
+        const txIdHash = txId.substring(txId.length - 5); // Last 5 chars of tx ID
+        const referenceNumber = `ECTA-SC-${year}-${txIdHash.toUpperCase()}`;
+        
+        // Create registered contract record
+        const registeredContract = {
+            docType: 'registered_sales_contract',
+            referenceNumber,
+            draftId,
+            exporterId,
+            exporterName: exporter.companyName || exporter.businessName,
+            exporterLicense: exporter.licenseNumber,
+            buyerId,
+            buyerName: contract.buyerName || '',
+            buyerCountry: contract.buyerCountry || '',
+            coffeeDetails: {
+                type: coffeeType,
+                origin: contract.originRegion || '',
+                quantity: quantity,
+                unitPrice: contract.unitPrice || 0,
+                totalValue: totalValue,
+                currency: contract.currency || 'USD',
+                qualityGrade: contract.qualityGrade || ''
+            },
+            terms: {
+                paymentMethod: contract.paymentMethod || '',
+                paymentTerms: paymentTerms || '',
+                incoterms: incoterms || '',
+                portOfLoading: contract.portOfLoading || '',
+                portOfDischarge: contract.portOfDischarge || '',
+                deliveryDate: contract.deliveryDate || ''
+            },
+            legalFramework: {
+                governingLaw: contract.governingLaw || 'CISG',
+                arbitrationRules: contract.arbitrationRules || 'ICC',
+                arbitrationLocation: contract.arbitrationLocation || ''
+            },
+            registration: {
+                registeredBy: 'ECTA',
+                registeredAt: this._getTxTimestamp(ctx),
+                ectaOfficer: contract.ectaOfficer || 'ECTA'
+            },
+            approvalStatus: {
+                ecta: { 
+                    status: 'APPROVED', 
+                    approvedAt: this._getTxTimestamp(ctx),
+                    approvedBy: 'ECTA'
+                },
+                bank: { status: 'PENDING' },
+                nbe: { status: 'PENDING' },
+                customs: { status: 'PENDING' },
+                shipping: { status: 'PENDING' }
+            },
+            status: 'REGISTERED',
+            createdAt: this._getTxTimestamp(ctx),
+            updatedAt: this._getTxTimestamp(ctx)
+        };
+        
+        // Store on blockchain with reference number as key
+        await ctx.stub.putState(referenceNumber, Buffer.from(JSON.stringify(registeredContract)));
+        
+        // Also create index by draftId for lookups
+        const draftIndexKey = ctx.stub.createCompositeKey('draft~reference', [draftId, referenceNumber]);
+        await ctx.stub.putState(draftIndexKey, Buffer.from(referenceNumber));
+        
+        ctx.stub.setEvent('ContractRegisteredWithReference', Buffer.from(JSON.stringify({
+            referenceNumber,
+            draftId,
+            exporterId,
+            timestamp: this._getTxTimestamp(ctx)
+        })));
+        
+        return JSON.stringify({ success: true, referenceNumber, draftId });
+    }
+
+    /**
+     * Get registered contract by reference number
+     */
+    async GetContractByReference(ctx, referenceNumber) {
+        const contractData = await ctx.stub.getState(referenceNumber);
+        
+        if (!contractData || contractData.length === 0) {
+            throw new Error(`Contract with reference ${referenceNumber} does not exist`);
+        }
+        
+        return contractData.toString();
+    }
+
+    /**
+     * Get reference number by draft ID
+     */
+    async GetReferenceByDraftId(ctx, draftId) {
+        const iterator = await ctx.stub.getStateByPartialCompositeKey('draft~reference', [draftId]);
+        const result = await iterator.next();
+        
+        if (result.done || !result.value) {
+            throw new Error(`No reference found for draft ${draftId}`);
+        }
+        
+        const referenceNumber = result.value.value.toString();
+        await iterator.close();
+        
+        return JSON.stringify({ draftId, referenceNumber });
+    }
+
+    /**
+     * Submit export to network (ESW) with reference number
+     */
+    async SubmitToNetwork(ctx, submissionJSON) {
+        const submission = JSON.parse(submissionJSON);
+        const { referenceNumber, exporterId, documents } = submission;
+        
+        if (!referenceNumber || !exporterId) {
+            throw new Error('Missing required fields: referenceNumber, exporterId');
+        }
+        
+        // Get registered contract
+        const contractData = await ctx.stub.getState(referenceNumber);
+        if (!contractData || contractData.length === 0) {
+            throw new Error(`Contract with reference ${referenceNumber} does not exist`);
+        }
+        
+        const contract = JSON.parse(contractData.toString());
+        
+        // Verify exporter matches
+        if (contract.exporterId !== exporterId) {
+            throw new Error('Exporter ID does not match contract');
+        }
+        
+        // Update contract with submission
+        contract.networkSubmission = {
+            submittedAt: this._getTxTimestamp(ctx),
+            submittedBy: exporterId,
+            documents: documents || [],
+            status: 'SUBMITTED'
+        };
+        contract.status = 'SUBMITTED_TO_NETWORK';
+        contract.updatedAt = this._getTxTimestamp(ctx);
+        
+        // AUTO-APPROVAL: Automatically validate and approve for all organizations
+        const timestamp = this._getTxTimestamp(ctx);
+        const autoApprovalResults = {
+            ecta: { passed: false, errors: [] },
+            bank: { passed: false, errors: [] },
+            nbe: { passed: false, errors: [] },
+            customs: { passed: false, errors: [] },
+            shipping: { passed: false, errors: [] }
+        };
+        
+        // Validate ECTA requirements
+        const ectaErrors = await this._validateECTARequirements(ctx, contract);
+        autoApprovalResults.ecta.errors = ectaErrors;
+        autoApprovalResults.ecta.passed = ectaErrors.length === 0;
+        
+        // Validate BANK requirements
+        const bankErrors = await this._validateBankRequirements(ctx, contract);
+        autoApprovalResults.bank.errors = bankErrors;
+        autoApprovalResults.bank.passed = bankErrors.length === 0;
+        
+        // Validate NBE requirements
+        const nbeErrors = await this._validateNBERequirements(ctx, contract);
+        autoApprovalResults.nbe.errors = nbeErrors;
+        autoApprovalResults.nbe.passed = nbeErrors.length === 0;
+        
+        // Validate CUSTOMS requirements
+        const customsErrors = await this._validateCustomsRequirements(ctx, contract);
+        autoApprovalResults.customs.errors = customsErrors;
+        autoApprovalResults.customs.passed = customsErrors.length === 0;
+        
+        // Validate SHIPPING requirements
+        const shippingErrors = await this._validateShippingRequirements(ctx, contract);
+        autoApprovalResults.shipping.errors = shippingErrors;
+        autoApprovalResults.shipping.passed = shippingErrors.length === 0;
+        
+        // Initialize approval status for all 5 organizations
+        contract.approvalStatus = {
+            ecta: {
+                status: autoApprovalResults.ecta.passed ? 'APPROVED' : 'REJECTED',
+                approvedAt: timestamp,
+                approvedBy: 'SMART_CONTRACT_AUTO',
+                notes: autoApprovalResults.ecta.passed 
+                    ? 'Automatically approved - all requirements met' 
+                    : `Auto-rejected: ${autoApprovalResults.ecta.errors.join('; ')}`,
+                validatedAt: timestamp,
+                autoApproved: true
+            },
+            bank: {
+                status: autoApprovalResults.bank.passed ? 'APPROVED' : 'REJECTED',
+                approvedAt: timestamp,
+                approvedBy: 'SMART_CONTRACT_AUTO',
+                notes: autoApprovalResults.bank.passed 
+                    ? 'Automatically approved - all requirements met' 
+                    : `Auto-rejected: ${autoApprovalResults.bank.errors.join('; ')}`,
+                validatedAt: timestamp,
+                autoApproved: true
+            },
+            nbe: {
+                status: autoApprovalResults.nbe.passed ? 'APPROVED' : 'REJECTED',
+                approvedAt: timestamp,
+                approvedBy: 'SMART_CONTRACT_AUTO',
+                notes: autoApprovalResults.nbe.passed 
+                    ? 'Automatically approved - all requirements met' 
+                    : `Auto-rejected: ${autoApprovalResults.nbe.errors.join('; ')}`,
+                validatedAt: timestamp,
+                autoApproved: true
+            },
+            customs: {
+                status: autoApprovalResults.customs.passed ? 'APPROVED' : 'REJECTED',
+                approvedAt: timestamp,
+                approvedBy: 'SMART_CONTRACT_AUTO',
+                notes: autoApprovalResults.customs.passed 
+                    ? 'Automatically approved - all requirements met' 
+                    : `Auto-rejected: ${autoApprovalResults.customs.errors.join('; ')}`,
+                validatedAt: timestamp,
+                autoApproved: true
+            },
+            shipping: {
+                status: autoApprovalResults.shipping.passed ? 'APPROVED' : 'REJECTED',
+                approvedAt: timestamp,
+                approvedBy: 'SMART_CONTRACT_AUTO',
+                notes: autoApprovalResults.shipping.passed 
+                    ? 'Automatically approved - all requirements met' 
+                    : `Auto-rejected: ${autoApprovalResults.shipping.errors.join('; ')}`,
+                validatedAt: timestamp,
+                autoApproved: true
+            }
+        };
+        
+        // Check if any organization rejected
+        const anyRejected = Object.values(autoApprovalResults).some(result => !result.passed);
+        
+        if (anyRejected) {
+            contract.status = 'EXPORT_REJECTED';
+            contract.rejectedAt = timestamp;
+            contract.rejectedBy = 'SMART_CONTRACT_AUTO';
+            
+            // Collect all rejection reasons
+            const rejectionReasons = [];
+            Object.entries(autoApprovalResults).forEach(([org, result]) => {
+                if (!result.passed) {
+                    rejectionReasons.push(`${org.toUpperCase()}: ${result.errors.join(', ')}`);
+                }
+            });
+            contract.rejectionReason = rejectionReasons.join(' | ');
+        } else {
+            // All validations passed - automatically approve
+            contract.status = 'EXPORT_APPROVED';
+            contract.completedAt = timestamp;
+            contract.autoApproved = true;
+        }
+        
+        await ctx.stub.putState(referenceNumber, Buffer.from(JSON.stringify(contract)));
+        
+        ctx.stub.setEvent('SubmittedToNetwork', Buffer.from(JSON.stringify({
+            referenceNumber,
+            exporterId,
+            timestamp,
+            autoApproved: !anyRejected,
+            status: contract.status,
+            approvalResults: autoApprovalResults
+        })));
+        
+        return JSON.stringify({ 
+            success: true, 
+            referenceNumber,
+            status: contract.status,
+            autoApproved: !anyRejected,
+            approvalResults: autoApprovalResults
+        });
+    }
+
+    /**
+     * Update organization approval status
+     * Organizations: BANK, NBE, CUSTOMS, SHIPPING
+     */
+    /**
+     * Validate ECTA requirements
+     */
+    async _validateECTARequirements(ctx, contract) {
+        const errors = [];
+        
+        // 1. Verify contract is properly registered
+        if (!contract.registeredAt) {
+            errors.push('Contract must be registered with ECTA');
+        }
+        
+        // 2. Verify exporter has valid license
+        if (!contract.exporterLicense) {
+            errors.push('Exporter must have valid export license');
+        }
+        
+        // 3. Verify coffee type is valid
+        const validCoffeeTypes = ['Arabica', 'Robusta', 'Arabica Grade 1', 'Arabica Grade 2', 'Washed', 'Unwashed'];
+        if (!contract.coffeeType || !validCoffeeTypes.some(type => contract.coffeeType.includes(type))) {
+            errors.push('Invalid coffee type classification');
+        }
+        
+        // 4. Verify quantity is within limits
+        if (!contract.quantity || contract.quantity <= 0) {
+            errors.push('Invalid quantity');
+        }
+        
+        return errors;
+    }
+
+    /**
+     * Validate BANK requirements
+     */
+    async _validateBankRequirements(ctx, contract) {
+        const errors = [];
+        
+        // 1. Verify sales contract is registered
+        if (!contract.registeredAt) {
+            errors.push('Sales contract must be registered with ECTA');
+        }
+        
+        // 2. Check required financial documents
+        const requiredDocs = ['sales_contract', 'proforma_invoice'];
+        const submittedDocs = contract.networkSubmission?.documents || [];
+        const missingDocs = requiredDocs.filter(doc => !submittedDocs.includes(doc));
+        if (missingDocs.length > 0) {
+            errors.push(`Missing required documents: ${missingDocs.join(', ')}`);
+        }
+        
+        // 3. Verify contract value
+        if (!contract.totalValue || contract.totalValue <= 0) {
+            errors.push('Invalid contract value');
+        }
+        
+        return errors;
+    }
+
+    /**
+     * Validate NBE (National Bank of Ethiopia) requirements
+     */
+    async _validateNBERequirements(ctx, contract) {
+        const errors = [];
+        
+        // 1. Verify foreign exchange compliance
+        if (!contract.currency || !['USD', 'EUR', 'GBP'].includes(contract.currency)) {
+            errors.push('Invalid or missing currency');
+        }
+        
+        // 2. Check export value limits
+        if (contract.totalValue > 1000000) {
+            errors.push('Contract value exceeds NBE limit of $1,000,000');
+        }
+        
+        // 3. Verify exporter information
+        if (!contract.exporterId) {
+            errors.push('Exporter information missing');
+        }
+        
+        return errors;
+    }
+
+    /**
+     * Validate CUSTOMS requirements
+     */
+    async _validateCustomsRequirements(ctx, contract) {
+        const errors = [];
+        
+        // 1. Verify export permits
+        const requiredDocs = ['export_permit'];
+        const submittedDocs = contract.networkSubmission?.documents || [];
+        const missingDocs = requiredDocs.filter(doc => !submittedDocs.includes(doc));
+        if (missingDocs.length > 0) {
+            errors.push(`Missing customs documents: ${missingDocs.join(', ')}`);
+        }
+        
+        // 2. Verify commodity classification
+        if (!contract.coffeeType) {
+            errors.push('Coffee type/commodity classification missing');
+        }
+        
+        // 3. Verify quantity
+        if (!contract.quantity || contract.quantity <= 0) {
+            errors.push('Invalid quantity');
+        }
+        
+        return errors;
+    }
+
+    /**
+     * Validate SHIPPING requirements
+     */
+    async _validateShippingRequirements(ctx, contract) {
+        const errors = [];
+        
+        // 1. Verify shipping documents
+        const requiredDocs = ['packing_list'];
+        const submittedDocs = contract.networkSubmission?.documents || [];
+        const missingDocs = requiredDocs.filter(doc => !submittedDocs.includes(doc));
+        if (missingDocs.length > 0) {
+            errors.push(`Missing shipping documents: ${missingDocs.join(', ')}`);
+        }
+        
+        // 2. Verify destination
+        if (!contract.destination) {
+            errors.push('Shipping destination missing');
+        }
+        
+        // 3. Verify delivery terms
+        if (!contract.deliveryTerms) {
+            errors.push('Delivery terms (Incoterms) missing');
+        }
+        
+        return errors;
+    }
+
+    async UpdateOrganizationApproval(ctx, referenceNumber, organization, approvalJSON) {
+        const approval = JSON.parse(approvalJSON);
+        
+        // Validate organization
+        const validOrgs = ['BANK', 'NBE', 'CUSTOMS', 'SHIPPING'];
+        if (!validOrgs.includes(organization.toUpperCase())) {
+            throw new Error(`Invalid organization: ${organization}. Must be one of: ${validOrgs.join(', ')}`);
+        }
+        
+        // Get contract
+        const contractData = await ctx.stub.getState(referenceNumber);
+        if (!contractData || contractData.length === 0) {
+            throw new Error(`Contract with reference ${referenceNumber} does not exist`);
+        }
+        
+        const contract = JSON.parse(contractData.toString());
+        
+        // Verify contract has been submitted to network
+        if (contract.status !== 'SUBMITTED_TO_NETWORK' && contract.status !== 'EXPORT_APPROVED' && contract.status !== 'EXPORT_REJECTED') {
+            throw new Error(`Contract must be submitted to network before approval. Current status: ${contract.status}`);
+        }
+        
+        // Validate organization-specific requirements before approval
+        if (approval.status === 'APPROVED') {
+            let validationErrors = [];
+            const orgUpper = organization.toUpperCase();
+            
+            switch(orgUpper) {
+                case 'BANK':
+                    validationErrors = await this._validateBankRequirements(ctx, contract);
+                    break;
+                case 'NBE':
+                    validationErrors = await this._validateNBERequirements(ctx, contract);
+                    break;
+                case 'CUSTOMS':
+                    validationErrors = await this._validateCustomsRequirements(ctx, contract);
+                    break;
+                case 'SHIPPING':
+                    validationErrors = await this._validateShippingRequirements(ctx, contract);
+                    break;
+            }
+            
+            if (validationErrors.length > 0) {
+                throw new Error(`${orgUpper} validation failed: ${validationErrors.join('; ')}`);
+            }
+        }
+        
+        // Update approval status
+        const orgKey = organization.toLowerCase();
+        contract.approvalStatus[orgKey] = {
+            status: approval.status || 'APPROVED',
+            approvedAt: this._getTxTimestamp(ctx),
+            approvedBy: approval.approvedBy || organization,
+            notes: approval.notes || '',
+            validatedAt: this._getTxTimestamp(ctx),
+            ...approval
+        };
+        
+        // Check if any organization has rejected
+        const anyRejected = Object.values(contract.approvalStatus)
+            .some(a => a.status === 'REJECTED');
+        
+        if (anyRejected) {
+            contract.status = 'EXPORT_REJECTED';
+            contract.rejectedAt = this._getTxTimestamp(ctx);
+            contract.rejectedBy = organization;
+        } else {
+            // Check if all required organizations have approved
+            const requiredOrgs = ['ecta', 'bank', 'nbe', 'customs', 'shipping'];
+            const allApproved = requiredOrgs.every(org => 
+                contract.approvalStatus[org] && 
+                contract.approvalStatus[org].status === 'APPROVED'
+            );
+            
+            if (allApproved) {
+                contract.status = 'EXPORT_APPROVED';
+                contract.completedAt = this._getTxTimestamp(ctx);
+            }
+        }
+        
+        contract.updatedAt = this._getTxTimestamp(ctx);
+        
+        await ctx.stub.putState(referenceNumber, Buffer.from(JSON.stringify(contract)));
+        
+        // Calculate allApproved for event and response
+        const requiredOrgs = ['ecta', 'bank', 'nbe', 'customs', 'shipping'];
+        const allApproved = requiredOrgs.every(org => 
+            contract.approvalStatus[org] && 
+            contract.approvalStatus[org].status === 'APPROVED'
+        );
+        
+        ctx.stub.setEvent('OrganizationApprovalUpdated', Buffer.from(JSON.stringify({
+            referenceNumber,
+            organization,
+            status: approval.status,
+            allApproved,
+            timestamp: this._getTxTimestamp(ctx)
+        })));
+        
+        return JSON.stringify({ 
+            success: true, 
+            referenceNumber, 
+            organization,
+            allApproved 
+        });
+    }
+
+    /**
+     * Get approval status for a contract
+     */
+    async GetApprovalStatus(ctx, referenceNumber) {
+        const contractData = await ctx.stub.getState(referenceNumber);
+        
+        if (!contractData || contractData.length === 0) {
+            throw new Error(`Contract with reference ${referenceNumber} does not exist`);
+        }
+        
+        const contract = JSON.parse(contractData.toString());
+        
+        return JSON.stringify({
+            referenceNumber,
+            status: contract.status,
+            approvalStatus: contract.approvalStatus,
+            completedAt: contract.completedAt || null
+        });
+    }
+
+    /**
+     * Query all contracts by status
+     */
+    async QueryContractsByStatus(ctx, status) {
+        const queryString = {
+            selector: {
+                docType: 'registered_sales_contract',
+                status: status
+            }
+        };
+        
+        const iterator = await ctx.stub.getQueryResult(JSON.stringify(queryString));
+        const results = await this._getAllResults(iterator);
+        
+        return JSON.stringify(results);
+    }
+
+    /**
+     * Query contracts by exporter
+     */
+    async QueryContractsByExporter(ctx, exporterId) {
+        const queryString = {
+            selector: {
+                docType: 'registered_sales_contract',
+                exporterId: exporterId
+            }
+        };
+        
+        const iterator = await ctx.stub.getQueryResult(JSON.stringify(queryString));
+        const results = await this._getAllResults(iterator);
+        
+        return JSON.stringify(results);
+    }
+
+    // ============================================================================
+    // DOCUMENT ISSUANCE & AUTHENTICATION
+    // ============================================================================
+
+    /**
+     * Record document issuance on blockchain
+     * Creates immutable record of document with hash and signature
+     */
+    async RecordDocumentIssuance(ctx, documentDataJSON) {
+        const documentData = JSON.parse(documentDataJSON);
+        const { 
+            documentId, 
+            exporterId, 
+            issuerMemberCode, 
+            documentType, 
+            documentNumber, 
+            documentHash, 
+            issuerSignature, 
+            issuedAt, 
+            expiryDate 
+        } = documentData;
+
+        // Validate required fields
+        if (!documentId || !exporterId || !issuerMemberCode || !documentType || !documentNumber || !documentHash) {
+            throw new Error('Missing required fields for document issuance');
+        }
+
+        // Check if document already exists
+        const existingDoc = await ctx.stub.getState(`DOC_${documentId}`);
+        if (existingDoc && existingDoc.length > 0) {
+            throw new Error(`Document ${documentId} already exists on blockchain`);
+        }
+
+        const timestamp = this._getTxTimestamp(ctx);
+
+        const document = {
+            docType: 'issued_document',
+            documentId,
+            exporterId,
+            issuerMemberCode,
+            documentType,
+            documentNumber,
+            documentHash,
+            issuerSignature: issuerSignature || null,
+            issuedAt: issuedAt || timestamp,
+            expiryDate: expiryDate || null,
+            status: 'ACTIVE',
+            recordedAt: timestamp,
+            revokedAt: null,
+            revocationReason: null
+        };
+
+        await ctx.stub.putState(`DOC_${documentId}`, Buffer.from(JSON.stringify(document)));
+
+        ctx.stub.setEvent('DocumentIssuanceRecorded', Buffer.from(JSON.stringify({
+            documentId,
+            exporterId,
+            issuerMemberCode,
+            documentType,
+            documentNumber,
+            timestamp
+        })));
+
+        return JSON.stringify({ 
+            success: true, 
+            documentId,
+            transactionId: ctx.stub.getTxID(),
+            message: 'Document issuance recorded on blockchain'
+        });
+    }
+
+    /**
+     * Verify document authenticity against blockchain record
+     * Checks if document hash matches blockchain record
+     */
+    async VerifyDocumentAuthenticity(ctx, documentId, documentHash) {
+        const documentData = await ctx.stub.getState(`DOC_${documentId}`);
+        
+        if (!documentData || documentData.length === 0) {
+            return JSON.stringify({
+                isValid: false,
+                error: 'Document not found on blockchain'
+            });
+        }
+
+        const document = JSON.parse(documentData.toString());
+
+        // Check if document is revoked
+        if (document.status === 'REVOKED') {
+            return JSON.stringify({
+                isValid: false,
+                error: 'Document has been revoked',
+                revokedAt: document.revokedAt,
+                revocationReason: document.revocationReason
+            });
+        }
+
+        // Check if document is expired
+        if (document.expiryDate) {
+            const expiryDate = new Date(document.expiryDate);
+            const now = new Date();
+            if (now > expiryDate) {
+                return JSON.stringify({
+                    isValid: false,
+                    error: 'Document has expired',
+                    expiryDate: document.expiryDate
+                });
+            }
+        }
+
+        // Verify hash matches
+        const hashMatch = document.documentHash === documentHash;
+
+        return JSON.stringify({
+            isValid: hashMatch,
+            issuer: document.issuerMemberCode,
+            issuedAt: document.issuedAt,
+            blockchainHash: document.documentHash,
+            hashMatch: hashMatch,
+            documentType: document.documentType,
+            documentNumber: document.documentNumber,
+            expiryDate: document.expiryDate,
+            status: document.status
+        });
+    }
+
+    /**
+     * Record document authentication on blockchain
+     * Records when a network member authenticates a document during Network Submission
+     */
+    async RecordDocumentAuthentication(ctx, authenticationDataJSON) {
+        const authenticationData = JSON.parse(authenticationDataJSON);
+        const { 
+            authenticationId, 
+            submissionId, 
+            documentId, 
+            authenticatorMemberCode, 
+            authenticationStatus, 
+            authenticatedAt 
+        } = authenticationData;
+
+        // Validate required fields
+        if (!authenticationId || !submissionId || !documentId || !authenticatorMemberCode || !authenticationStatus) {
+            throw new Error('Missing required fields for document authentication');
+        }
+
+        // Verify document exists
+        const documentData = await ctx.stub.getState(`DOC_${documentId}`);
+        if (!documentData || documentData.length === 0) {
+            throw new Error(`Document ${documentId} not found on blockchain`);
+        }
+
+        const document = JSON.parse(documentData.toString());
+
+        // Verify authenticator is the issuer
+        if (document.issuerMemberCode !== authenticatorMemberCode) {
+            throw new Error(`Only document issuer (${document.issuerMemberCode}) can authenticate this document`);
+        }
+
+        const timestamp = this._getTxTimestamp(ctx);
+
+        const authentication = {
+            docType: 'document_authentication',
+            authenticationId,
+            submissionId,
+            documentId,
+            authenticatorMemberCode,
+            authenticationStatus,
+            authenticatedAt: authenticatedAt || timestamp,
+            recordedAt: timestamp,
+            documentType: document.documentType,
+            documentNumber: document.documentNumber
+        };
+
+        await ctx.stub.putState(`AUTH_${authenticationId}`, Buffer.from(JSON.stringify(authentication)));
+
+        ctx.stub.setEvent('DocumentAuthenticationRecorded', Buffer.from(JSON.stringify({
+            authenticationId,
+            submissionId,
+            documentId,
+            authenticatorMemberCode,
+            authenticationStatus,
+            timestamp
+        })));
+
+        return JSON.stringify({ 
+            success: true, 
+            authenticationId,
+            transactionId: ctx.stub.getTxID(),
+            message: 'Document authentication recorded on blockchain'
+        });
+    }
+
+    /**
+     * Record document revocation on blockchain
+     * Marks a document as revoked so it cannot be used in future submissions
+     */
+    async RecordDocumentRevocation(ctx, revocationDataJSON) {
+        const revocationData = JSON.parse(revocationDataJSON);
+        const { documentId, revocationReason, revokedBy, revokedAt } = revocationData;
+
+        // Validate required fields
+        if (!documentId || !revocationReason || !revokedBy) {
+            throw new Error('Missing required fields for document revocation');
+        }
+
+        // Get document
+        const documentData = await ctx.stub.getState(`DOC_${documentId}`);
+        if (!documentData || documentData.length === 0) {
+            throw new Error(`Document ${documentId} not found on blockchain`);
+        }
+
+        const document = JSON.parse(documentData.toString());
+
+        // Check if already revoked
+        if (document.status === 'REVOKED') {
+            throw new Error(`Document ${documentId} is already revoked`);
+        }
+
+        const timestamp = this._getTxTimestamp(ctx);
+
+        // Update document status
+        document.status = 'REVOKED';
+        document.revokedAt = revokedAt || timestamp;
+        document.revokedBy = revokedBy;
+        document.revocationReason = revocationReason;
+
+        await ctx.stub.putState(`DOC_${documentId}`, Buffer.from(JSON.stringify(document)));
+
+        ctx.stub.setEvent('DocumentRevoked', Buffer.from(JSON.stringify({
+            documentId,
+            documentNumber: document.documentNumber,
+            issuerMemberCode: document.issuerMemberCode,
+            revokedBy,
+            revocationReason,
+            timestamp
+        })));
+
+        return JSON.stringify({ 
+            success: true, 
+            documentId,
+            transactionId: ctx.stub.getTxID(),
+            message: 'Document revocation recorded on blockchain'
+        });
+    }
+
+    /**
+     * Get document from blockchain
+     */
+    async GetDocument(ctx, documentId) {
+        const documentData = await ctx.stub.getState(`DOC_${documentId}`);
+        
+        if (!documentData || documentData.length === 0) {
+            throw new Error(`Document ${documentId} not found on blockchain`);
+        }
+
+        return documentData.toString();
+    }
+
+    /**
+     * Query documents by exporter
+     */
+    async QueryDocumentsByExporter(ctx, exporterId) {
+        const queryString = {
+            selector: {
+                docType: 'issued_document',
+                exporterId: exporterId
+            }
+        };
+        
+        const iterator = await ctx.stub.getQueryResult(JSON.stringify(queryString));
+        const results = await this._getAllResults(iterator);
+        
+        return JSON.stringify(results);
+    }
+
+    /**
+     * Query documents by issuer
+     */
+    async QueryDocumentsByIssuer(ctx, issuerMemberCode) {
+        const queryString = {
+            selector: {
+                docType: 'issued_document',
+                issuerMemberCode: issuerMemberCode
+            }
+        };
+        
+        const iterator = await ctx.stub.getQueryResult(JSON.stringify(queryString));
+        const results = await this._getAllResults(iterator);
+        
+        return JSON.stringify(results);
+    }
+
+    /**
+     * Query authentications by submission
+     */
+    async QueryAuthenticationsBySubmission(ctx, submissionId) {
+        const queryString = {
+            selector: {
+                docType: 'document_authentication',
+                submissionId: submissionId
+            }
+        };
+        
+        const iterator = await ctx.stub.getQueryResult(JSON.stringify(queryString));
+        const results = await this._getAllResults(iterator);
+        
+        return JSON.stringify(results);
     }
 
 }

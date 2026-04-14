@@ -14,7 +14,7 @@ interface Certificate {
   certificateNumber: string;
   exporterName: string;
   exporterTin: string;
-  eswReferenceNumber: string;
+  networkReferenceNumber: string;
   coffeeType?: string;
   quantity?: number;
   originRegion?: string;
@@ -63,7 +63,7 @@ export class CertificateDownloadService {
       const certResult = await client.query(
         `SELECT c.*, e.exporter_id, aa.approved_by
          FROM esw_certificates c
-         JOIN esw_submissions s ON c.submission_id = s.submission_id
+         JOIN network_submissions s ON c.submission_id = s.submission_id
          JOIN exports e ON s.export_id = e.export_id
          JOIN esw_agency_approvals aa ON c.approval_id = aa.approval_id
          WHERE c.certificate_id = $1`,
@@ -130,7 +130,7 @@ export class CertificateDownloadService {
       const certResult = await client.query(
         `SELECT c.*, e.exporter_id, aa.approved_by
          FROM esw_certificates c
-         JOIN esw_submissions s ON c.submission_id = s.submission_id
+         JOIN network_submissions s ON c.submission_id = s.submission_id
          JOIN exports e ON s.export_id = e.export_id
          JOIN esw_agency_approvals aa ON c.approval_id = aa.approval_id
          WHERE c.certificate_id = $1`,
@@ -164,7 +164,7 @@ export class CertificateDownloadService {
         certificateNumber: certRow.certificate_number,
         exporterName: certRow.exporter_name,
         exporterTin: certRow.exporter_tin,
-        eswReferenceNumber: certRow.esw_reference_number,
+        networkReferenceNumber: certRow.network_reference_number,
         coffeeType: certRow.coffee_type,
         quantity: certRow.quantity,
         originRegion: certRow.origin_region,
@@ -208,7 +208,7 @@ export class CertificateDownloadService {
       // Validate submission access
       const submissionResult = await client.query(
         `SELECT s.*, e.exporter_id
-         FROM esw_submissions s
+         FROM network_submissions s
          JOIN exports e ON s.export_id = e.export_id
          WHERE s.submission_id = $1`,
         [submissionId]
@@ -260,7 +260,7 @@ export class CertificateDownloadService {
         certificateNumber: row.certificate_number,
         exporterName: row.exporter_name,
         exporterTin: row.exporter_tin,
-        eswReferenceNumber: row.esw_reference_number,
+        networkReferenceNumber: row.network_reference_number,
         coffeeType: row.coffee_type,
         quantity: row.quantity,
         originRegion: row.origin_region,

@@ -154,12 +154,12 @@ export class FabricEventListener {
           await this.handleCustomsCleared(eventData);
           break;
         
-        case 'ESWSubmitted':
-          await this.handleESWSubmitted(eventData);
+        case 'NetworkSubmitted':
+          await this.handleNetworkSubmitted(eventData);
           break;
         
-        case 'ESWApproved':
-          await this.handleESWApproved(eventData);
+        case 'NetworkApproved':
+          await this.handleNetworkApproved(eventData);
           break;
         
         default:
@@ -295,10 +295,10 @@ export class FabricEventListener {
     });
   }
 
-  private static async handleESWSubmitted(data: any): Promise<void> {
-    logger.info(`Syncing ESW submission to CBC: ${data.submissionId}`);
+  private static async handleNetworkSubmitted(data: any): Promise<void> {
+    logger.info(`Syncing Network Submission to CBC: ${data.submissionId}`);
     
-    await CBCClient.createESWSubmission({
+    await CBCClient.createNetworkSubmission({
       submissionId: data.submissionId,
       exportId: data.exportId,
       exporterId: data.exporterId,
@@ -307,10 +307,10 @@ export class FabricEventListener {
     });
   }
 
-  private static async handleESWApproved(data: any): Promise<void> {
-    logger.info(`Syncing ESW approval to CBC: ${data.submissionId}`);
+  private static async handleNetworkApproved(data: any): Promise<void> {
+    logger.info(`Syncing Network approval to CBC: ${data.submissionId}`);
     
-    await CBCClient.updateESWStatus(data.submissionId, {
+    await CBCClient.updateNetworkStatus(data.submissionId, {
       status: 'APPROVED',
       approvedBy: data.approvedBy,
       approvedAt: data.timestamp

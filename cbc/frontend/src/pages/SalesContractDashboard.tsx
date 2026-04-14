@@ -4,9 +4,11 @@ import {
   Typography, Divider, Chip, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Paper, Tab, Tabs,
 } from '@mui/material';
-import { Plus, Download, Eye } from 'lucide-react';
+import { Plus, Download, Eye, TrendingUp, FileText, Clock, CheckCircle } from 'lucide-react';
 import SalesContractDraftForm from '../components/forms/SalesContractDraftForm';
 import SalesContractNegotiationForm from '../components/forms/SalesContractNegotiationForm';
+import { ModernStatCard } from '../components/ModernUIKit';
+import apiClient from '../services/api';
 
 interface Draft {
   draft_id: string;
@@ -25,41 +27,77 @@ interface Draft {
   updated_at: string;
 }
 
+interface Buyer {
+  buyer_id: string;
+  company_name: string;
+  country: string;
+  email: string;
+}
+
+interface ContractStats {
+  totalContracts: number;
+  inNegotiation: number;
+  finalized: number;
+  rejected: number;
+  totalValue: number;
+}
+
 const SalesContractDashboard = () => {
   const [tabValue, setTabValue] = useState(0);
   const [drafts, setDrafts] = useState<Draft[]>([]);
+  const [buyers, setBuyers] = useState<Buyer[]>([]);
+  const [selectedBuyer, setSelectedBuyer] = useState<Buyer | null>(null);
   const [selectedDraft, setSelectedDraft] = useState<Draft | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [contractStats, setContractStats] = useState<ContractStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
 
-  const API_BASE = 'http://localhost:3000/api';
-  const token = localStorage.getItem('token');
-  const userStr = localStorage.getItem('user');
-  const user = userStr ? JSON.parse(userStr) : null;
-  const userId = user?.id;
-
-  // Fetch drafts
+  // Fetch drafts and buyers
   useEffect(() => {
-    if (userId && token) {
-      fetchDrafts();
+    fetchDrafts();
+    fetchBuyers();
+    fetchContractStats();
+  }, []);
+
+  const fetchContractStats = async () => {
+    try {
+      setStatsLoading(true);
+      const response = await apiClient.get('/api/contracts/drafts/stats');
+      if (response.data.success) {
+        setContractStats(response.data.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch contract stats:', err);
+    } finally {
+      setStatsLoading(false);
     }
-  }, [userId, token]);
+  };
 
   const fetchDrafts = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE}/contracts/drafts/exporter/${userId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setDrafts(data.drafts || []);
+      const response = await apiClient.get(`/api/contracts/drafts`);
+      if (response.data.success) {
+        setDrafts(response.data.drafts || []);
       }
     } catch (err) {
+      console.error('Failed to fetch drafts:', err);
       setError('Failed to fetch drafts');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchBuyers = async () => {
+    try {
+      const response = await apiClient.get(`/api/buyers`);
+      if (response.data.success) {
+        setBuyers(response.data.buyers || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch buyers:', err);
     }
   };
 
@@ -67,26 +105,18 @@ const SalesContractDashboard = () => {
     try {
       setLoading(true);
       setError('');
-      const response = await fetch(`${API_BASE}/contracts/drafts`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(formData),
-      });
-
-      if (response.ok) {
+      const response = await apiClient.post(`/api/contracts/drafts`, formData);
+      
+      if (response.data.success) {
         setSuccess('Contract draft created successfully');
         fetchDrafts();
         setTabValue(0);
         setTimeout(() => setSuccess(''), 3000);
-      } else {
-        const data = await response.json();
-        setError(data.error || 'Failed to create draft');
       }
-    } catch (err) {
-      setError('Error creating draft');
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.error || 'Failed to create draft';
+      setError(errorMsg);
+      console.error('Error creating draft:', err);
     } finally {
       setLoading(false);
     }
@@ -96,26 +126,18 @@ const SalesContractDashboard = () => {
     if (!selectedDraft) return;
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE}/contracts/drafts/${selectedDraft.draft_id}/accept`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: '{}',
-      });
-
-      if (response.ok) {
+      const response = await apiClient.post(`/api/contracts/drafts/${selectedDraft.draft_id}/accept`, {});
+      
+      if (response.data.success) {
         setSuccess('Contract accepted successfully');
         fetchDrafts();
         setSelectedDraft(null);
         setTimeout(() => setSuccess(''), 3000);
-      } else {
-        const data = await response.json();
-        setError(data.error || 'Failed to accept contract');
       }
-    } catch (err) {
-      setError('Error accepting contract');
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.error || 'Failed to accept contract';
+      setError(errorMsg);
+      console.error('Error accepting contract:', err);
     } finally {
       setLoading(false);
     }
@@ -125,26 +147,18 @@ const SalesContractDashboard = () => {
     if (!selectedDraft) return;
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE}/contracts/drafts/${selectedDraft.draft_id}/reject`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ reason }),
-      });
-
-      if (response.ok) {
+      const response = await apiClient.post(`/api/contracts/drafts/${selectedDraft.draft_id}/reject`, { reason });
+      
+      if (response.data.success) {
         setSuccess('Contract rejected');
         fetchDrafts();
         setSelectedDraft(null);
         setTimeout(() => setSuccess(''), 3000);
-      } else {
-        const data = await response.json();
-        setError(data.error || 'Failed to reject contract');
       }
-    } catch (err) {
-      setError('Error rejecting contract');
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.error || 'Failed to reject contract';
+      setError(errorMsg);
+      console.error('Error rejecting contract:', err);
     } finally {
       setLoading(false);
     }
@@ -154,26 +168,18 @@ const SalesContractDashboard = () => {
     if (!selectedDraft) return;
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE}/contracts/drafts/${selectedDraft.draft_id}/counter`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ updates, notes }),
-      });
-
-      if (response.ok) {
+      const response = await apiClient.post(`/api/contracts/drafts/${selectedDraft.draft_id}/counter`, { updates, notes });
+      
+      if (response.data.success) {
         setSuccess('Counter offer submitted');
         fetchDrafts();
         setSelectedDraft(null);
         setTimeout(() => setSuccess(''), 3000);
-      } else {
-        const data = await response.json();
-        setError(data.error || 'Failed to submit counter offer');
       }
-    } catch (err) {
-      setError('Error submitting counter offer');
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.error || 'Failed to submit counter offer';
+      setError(errorMsg);
+      console.error('Error submitting counter offer:', err);
     } finally {
       setLoading(false);
     }
@@ -183,27 +189,18 @@ const SalesContractDashboard = () => {
     if (!selectedDraft) return;
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE}/contracts/drafts/${selectedDraft.draft_id}/finalize`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: '{}',
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setSuccess(`Contract finalized! Blockchain ID: ${data.blockchainContractId}`);
+      const response = await apiClient.post(`/api/contracts/drafts/${selectedDraft.draft_id}/finalize`, {});
+      
+      if (response.data.success) {
+        setSuccess(`Contract finalized! Blockchain ID: ${response.data.blockchainContractId}`);
         fetchDrafts();
         setSelectedDraft(null);
         setTimeout(() => setSuccess(''), 5000);
-      } else {
-        const data = await response.json();
-        setError(data.error || 'Failed to finalize contract');
       }
-    } catch (err) {
-      setError('Error finalizing contract');
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.error || 'Failed to finalize contract';
+      setError(errorMsg);
+      console.error('Error finalizing contract:', err);
     } finally {
       setLoading(false);
     }
@@ -213,28 +210,25 @@ const SalesContractDashboard = () => {
     if (!selectedDraft) return;
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE}/contracts/drafts/${selectedDraft.draft_id}/certificate`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await apiClient.get(`/api/contracts/drafts/${selectedDraft.draft_id}/certificate`, {
+        responseType: 'blob'
       });
 
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `sales-contract-${selectedDraft.draft_id}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        setSuccess('Certificate downloaded');
-        setTimeout(() => setSuccess(''), 3000);
-      } else {
-        const data = await response.json();
-        setError(data.error || 'Failed to download certificate');
-      }
-    } catch (err) {
-      setError('Error downloading certificate');
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `sales-contract-${selectedDraft.draft_id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      setSuccess('Certificate downloaded');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.error || 'Failed to download certificate';
+      setError(errorMsg);
+      console.error('Error downloading certificate:', err);
     } finally {
       setLoading(false);
     }
@@ -272,6 +266,52 @@ const SalesContractDashboard = () => {
           Create, negotiate, and finalize coffee export contracts
         </Typography>
       </Box>
+
+      {/* Statistics Cards */}
+      {contractStats && !statsLoading && (
+        <Grid container spacing={3} sx={{ mb: 4 }}>
+          <Grid item xs={12} sm={6} md={3}>
+            <ModernStatCard
+              title="Total Contracts"
+              value={contractStats.totalContracts}
+              icon={<FileText size={24} />}
+              color="primary"
+              subtitle="All contracts"
+              onClick={() => setTabValue(0)}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <ModernStatCard
+              title="In Negotiation"
+              value={contractStats.inNegotiation}
+              icon={<Clock size={24} />}
+              color="warning"
+              subtitle="Draft & Countered"
+              onClick={() => setTabValue(0)}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <ModernStatCard
+              title="Finalized"
+              value={contractStats.finalized}
+              icon={<CheckCircle size={24} />}
+              color="success"
+              subtitle="On blockchain"
+              onClick={() => setTabValue(0)}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <ModernStatCard
+              title="Total Value"
+              value={`$${(contractStats.totalValue / 1000).toFixed(1)}K`}
+              icon={<TrendingUp size={24} />}
+              color="info"
+              subtitle="USD"
+              onClick={() => setTabValue(0)}
+            />
+          </Grid>
+        </Grid>
+      )}
 
       <Tabs value={tabValue} onChange={(_, v) => setTabValue(v)} sx={{ mb: 3 }}>
         <Tab label="My Drafts" />
@@ -362,14 +402,73 @@ const SalesContractDashboard = () => {
       {/* Create New Tab */}
       {tabValue === 1 && (
         <Grid container spacing={3}>
-          <Grid item xs={12}>
-            <SalesContractDraftForm
-              buyerId="temp"
-              buyerName="Select Buyer"
-              onSubmit={handleCreateDraft}
-              loading={loading}
-            />
-          </Grid>
+          {!selectedBuyer ? (
+            <Grid item xs={12}>
+              <Card>
+                <CardHeader title="Select Buyer" />
+                <Divider />
+                <CardContent>
+                  <Alert severity="info" sx={{ mb: 3 }}>
+                    Select a verified buyer to create a sales contract draft
+                  </Alert>
+                  {buyers.length === 0 ? (
+                    <Typography color="text.secondary">
+                      No buyers available. Buyers must be registered in the system first.
+                    </Typography>
+                  ) : (
+                    <TableContainer component={Paper}>
+                      <Table>
+                        <TableHead>
+                          <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+                            <TableCell>Company Name</TableCell>
+                            <TableCell>Country</TableCell>
+                            <TableCell>Email</TableCell>
+                            <TableCell align="center">Action</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {buyers.map((buyer) => (
+                            <TableRow key={buyer.buyer_id} hover>
+                              <TableCell>{buyer.company_name}</TableCell>
+                              <TableCell>{buyer.country}</TableCell>
+                              <TableCell>{buyer.email}</TableCell>
+                              <TableCell align="center">
+                                <Button
+                                  variant="contained"
+                                  size="small"
+                                  onClick={() => setSelectedBuyer(buyer)}
+                                >
+                                  Select
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  )}
+                </CardContent>
+              </Card>
+            </Grid>
+          ) : (
+            <Grid item xs={12}>
+              <Box sx={{ mb: 2 }}>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => setSelectedBuyer(null)}
+                >
+                  ← Change Buyer
+                </Button>
+              </Box>
+              <SalesContractDraftForm
+                buyerId={selectedBuyer.buyer_id}
+                buyerName={selectedBuyer.company_name}
+                onSubmit={handleCreateDraft}
+                loading={loading}
+              />
+            </Grid>
+          )}
         </Grid>
       )}
 
@@ -412,29 +511,72 @@ const SalesContractDashboard = () => {
           )}
 
           {selectedDraft.status === 'FINALIZED' && (
-            <Grid item xs={12}>
-              <Card>
-                <CardHeader title="Certificate" />
-                <Divider />
-                <CardContent>
-                  <Alert severity="success" sx={{ mb: 2 }}>
-                    This contract has been finalized on the blockchain. You can now download the
-                    official sales contract certificate.
-                  </Alert>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    startIcon={<Download size={18} />}
-                    onClick={handleDownloadCertificate}
-                    disabled={loading}
-                    fullWidth
-                  >
-                    {loading ? <CircularProgress size={20} sx={{ mr: 1 }} /> : null}
-                    Download Certificate (PDF)
-                  </Button>
-                </CardContent>
-              </Card>
-            </Grid>
+            <>
+              <Grid item xs={12}>
+                <Card>
+                  <CardHeader title="Certificate" />
+                  <Divider />
+                  <CardContent>
+                    <Alert severity="success" sx={{ mb: 2 }}>
+                      This contract has been finalized on the blockchain. You can now download the
+                      official sales contract certificate.
+                    </Alert>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      startIcon={<Download size={18} />}
+                      onClick={handleDownloadCertificate}
+                      disabled={loading}
+                      fullWidth
+                    >
+                      {loading ? <CircularProgress size={20} sx={{ mr: 1 }} /> : null}
+                      Download Certificate (PDF)
+                    </Button>
+                  </CardContent>
+                </Card>
+              </Grid>
+
+              <Grid item xs={12}>
+                <Card sx={{ border: '2px solid #4caf50' }}>
+                  <CardHeader 
+                    title="Next Step: Submit to Network" 
+                    sx={{ bgcolor: '#e8f5e9' }}
+                  />
+                  <Divider />
+                  <CardContent>
+                    <Alert severity="info" sx={{ mb: 2 }}>
+                      <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+                        Ready for Network Submission
+                      </Typography>
+                      <Typography variant="body2">
+                        Your sales contract is finalized. Submit your export to the network for approval by:
+                      </Typography>
+                      <Box component="ul" sx={{ mt: 1, mb: 0 }}>
+                        <li>ECTA (Contract & Quality Verification)</li>
+                        <li>Commercial Bank (Letter of Credit & Payment)</li>
+                        <li>National Bank of Ethiopia (FX Approval)</li>
+                        <li>Customs Authority (Clearance & SAD)</li>
+                        <li>Shipping Line (Booking & Bill of Lading)</li>
+                      </Box>
+                    </Alert>
+                    <Button
+                      variant="contained"
+                      color="success"
+                      size="large"
+                      startIcon={<Plus size={18} />}
+                      onClick={() => {
+                        // Navigate to Network submission with contract data
+                        window.location.href = `/network/submission?contractId=${selectedDraft.draft_id}`;
+                      }}
+                      fullWidth
+                      sx={{ fontWeight: 'bold' }}
+                    >
+                      Submit to Network
+                    </Button>
+                  </CardContent>
+                </Card>
+              </Grid>
+            </>
           )}
         </Grid>
       )}

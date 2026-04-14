@@ -9,6 +9,35 @@ const VERIFICATION_SERVICE_URL = process.env.VERIFICATION_SERVICE_URL || 'http:/
 // ==================== Buyer Registry Endpoints ====================
 
 /**
+ * List all verified buyers
+ * GET /api/buyers
+ */
+router.get('/', authenticateToken, async (req, res) => {
+  try {
+    const query = `
+      SELECT 
+        buyer_id, company_name, country, email, phone,
+        verification_status, risk_score, credit_rating,
+        reputation_score, total_contracts, successful_contracts
+      FROM buyer_registry
+      WHERE verification_status = 'VERIFIED'
+      ORDER BY company_name ASC
+    `;
+    
+    const result = await postgresService.query(query);
+    
+    res.json({
+      success: true,
+      count: result.rows.length,
+      buyers: result.rows
+    });
+  } catch (error) {
+    console.error('Error fetching buyers:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
  * Register new buyer
  * POST /api/buyers/register
  */

@@ -41,7 +41,7 @@
 │  │ • Event Emission         │  │              │  │ • Certificates         │ │
 │  └──────────────────────────┘  │              │  │ • Inspections          │ │
 │                                │              │  │ • Shipments            │ │
-│  ┌──────────────────────────┐  │              │  │ • ESW Submissions      │ │
+│  ┌──────────────────────────┐  │              │  │ • Network Submissions      │ │
 │  │ Fabric Network           │  │              │  └────────────────────────┘ │
 │  │ • Orderer (Raft)         │  │              │                              │
 │  │ • Peers (ECTA, Banks)    │  │              │  ┌────────────────────────┐ │

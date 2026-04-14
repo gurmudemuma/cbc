@@ -28,15 +28,15 @@ import {
   CalendarToday as CalendarTodayIcon,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
-import eswService from '../services/esw.service';
+import networkService from '../services/network.service';
 
 interface Certificate {
   certificateId: string;
   certificateNumber: string;
-  agencyCode: string;
+  memberCode: string;
   exporterName: string;
   exporterTin: string;
-  eswReferenceNumber: string;
+  networkReferenceNumber: string;
   coffeeType?: string;
   quantity?: number;
   originRegion?: string;
@@ -76,7 +76,7 @@ const CertificateVerification: React.FC = () => {
     setVerificationResult(null);
 
     try {
-      const response = await eswService.verifyCertificate(certificateNumber.trim());
+      const response = await networkService.verifyCertificate(certificateNumber.trim());
       
       if (response.success) {
         setVerificationResult(response.data);
@@ -156,7 +156,7 @@ const CertificateVerification: React.FC = () => {
             Certificate Verification
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            Verify the authenticity of ESW agency approval certificates
+            Verify the authenticity of Network member approval certificates
           </Typography>
         </Box>
 
@@ -265,19 +265,19 @@ const CertificateVerification: React.FC = () => {
 
                             <Box>
                               <Typography variant="caption" color="text.secondary">
-                                Agency
+                                Network Member
                               </Typography>
                               <Typography variant="body1" fontWeight="bold">
-                                {verificationResult.certificate.agencyCode}
+                                {verificationResult.certificate.memberCode}
                               </Typography>
                             </Box>
 
                             <Box>
                               <Typography variant="caption" color="text.secondary">
-                                ESW Reference Number
+                                Network Reference Number
                               </Typography>
                               <Typography variant="body1">
-                                {verificationResult.certificate.eswReferenceNumber}
+                                {verificationResult.certificate.networkReferenceNumber}
                               </Typography>
                             </Box>
 
@@ -448,7 +448,7 @@ const CertificateVerification: React.FC = () => {
         <Box sx={{ mt: 4, textAlign: 'center' }}>
           <Typography variant="body2" color="text.secondary">
             This verification system allows customs officers, shipping authorities, and other stakeholders
-            to verify the authenticity of ESW agency approval certificates.
+            to verify the authenticity of Network member approval certificates.
           </Typography>
         </Box>
       </motion.div>

@@ -1,6 +1,6 @@
 /**
- * ESW (Electronic Single Window) Routes
- * Handles ESW submission and agency approval endpoints
+ * Network Submission System Routes
+ * Handles Network Submission and agency approval endpoints
  */
 
 import { Router } from 'express';
@@ -33,7 +33,7 @@ router.get('/certificates/verify/:certificateNumber', controller.verifyCertifica
 router.use(authenticate);
 
 // ============================================================================
-// ESW SUBMISSIONS
+// Network Submission SUBMISSIONS
 // ============================================================================
 
 /**
@@ -41,16 +41,16 @@ router.use(authenticate);
  * POST /api/esw/submissions
  * Body: { exportId, documents: [], certificates: [], notes }
  */
-router.post('/submissions', controller.submitToESW);
+router.post('/submissions', controller.submitToNetwork);
 
 /**
- * Get all ESW submissions (with optional filters)
+ * Get all Network Submissions (with optional filters)
  * GET /api/esw/submissions?status=SUBMITTED&exportId=xxx&fromDate=2025-01-01&toDate=2025-01-31
  */
 router.get('/submissions', controller.getSubmissions);
 
 /**
- * Get ESW submission by ID
+ * Get Network Submission by ID
  * GET /api/esw/submissions/:submissionId
  */
 router.get('/submissions/:submissionId', controller.getSubmission);
@@ -86,7 +86,7 @@ router.post(
 // ============================================================================
 
 /**
- * Get ESW submission by export ID
+ * Get Network Submission by export ID
  * GET /api/esw/exports/:exportId/submission
  */
 router.get('/exports/:exportId/submission', controller.getSubmissionByExportId);

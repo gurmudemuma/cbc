@@ -13,7 +13,7 @@ interface Certificate {
   certificateNumber: string;
   exporterName: string;
   exporterTin: string;
-  eswReferenceNumber: string;
+  networkReferenceNumber: string;
   agencyName?: string;
   createdAt: Date;
 }
@@ -126,7 +126,7 @@ export class NotificationService {
         exporterName: exporter.business_name || certificate.exporterName,
         agencyName,
         certificateNumber: certificate.certificateNumber,
-        eswReferenceNumber: certificate.eswReferenceNumber,
+        networkReferenceNumber: certificate.networkReferenceNumber,
         downloadUrl
       });
 
@@ -189,7 +189,7 @@ export class NotificationService {
       // Prepare notification content
       const downloadUrl = `${process.env.BASE_URL || 'http://localhost:3000'}/certificates/${certificate.certificateId}/download`;
       const title = `Certificate Generated - ${agencyName}`;
-      const message = `Your certificate ${certificate.certificateNumber} has been generated for ESW submission ${certificate.eswReferenceNumber}. Click to download.`;
+      const message = `Your certificate ${certificate.certificateNumber} has been generated for Network Submission ${certificate.networkReferenceNumber}. Click to download.`;
 
       // Create notification record
       const result = await dbClient.query(
@@ -324,7 +324,7 @@ export class NotificationService {
         exporterName: exporter.business_name || certificate.exporterName,
         agencyName,
         certificateNumber: certificate.certificateNumber,
-        eswReferenceNumber: certificate.eswReferenceNumber,
+        networkReferenceNumber: certificate.networkReferenceNumber,
         reason
       });
 
@@ -387,7 +387,7 @@ export class NotificationService {
 
       // Prepare notification content
       const title = `Certificate Revoked - ${agencyName}`;
-      const message = `Your certificate ${certificate.certificateNumber} for ESW submission ${certificate.eswReferenceNumber} has been revoked. Reason: ${reason}`;
+      const message = `Your certificate ${certificate.certificateNumber} for Network Submission ${certificate.networkReferenceNumber} has been revoked. Reason: ${reason}`;
 
       // Create notification record
       const result = await dbClient.query(
@@ -453,7 +453,7 @@ export class NotificationService {
     exporterName: string;
     agencyName: string;
     certificateNumber: string;
-    eswReferenceNumber: string;
+    networkReferenceNumber: string;
     downloadUrl: string;
   }): string {
     return `
@@ -519,7 +519,7 @@ export class NotificationService {
         
         <div class="certificate-info">
             <p><strong>Certificate Number:</strong> ${data.certificateNumber}</p>
-            <p><strong>ESW Reference:</strong> ${data.eswReferenceNumber}</p>
+            <p><strong>Network Reference:</strong> ${data.networkReferenceNumber}</p>
             <p><strong>Agency:</strong> ${data.agencyName}</p>
         </div>
         
@@ -534,7 +534,7 @@ export class NotificationService {
         <p>If you have any questions, please contact the ${data.agencyName} or visit your ESW dashboard.</p>
         
         <p>Best regards,<br>
-        Ethiopian Electronic Single Window System</p>
+        Ethiopian Network Submission System System</p>
     </div>
     <div class="footer">
         <p>This is an automated message. Please do not reply to this email.</p>
@@ -551,7 +551,7 @@ export class NotificationService {
     exporterName: string;
     agencyName: string;
     certificateNumber: string;
-    eswReferenceNumber: string;
+    networkReferenceNumber: string;
     reason: string;
   }): string {
     return `
@@ -615,7 +615,7 @@ export class NotificationService {
         
         <div class="certificate-info">
             <p><strong>Certificate Number:</strong> ${data.certificateNumber}</p>
-            <p><strong>ESW Reference:</strong> ${data.eswReferenceNumber}</p>
+            <p><strong>Network Reference:</strong> ${data.networkReferenceNumber}</p>
             <p><strong>Agency:</strong> ${data.agencyName}</p>
             <p><strong>Revocation Reason:</strong> ${data.reason}</p>
         </div>
@@ -629,7 +629,7 @@ export class NotificationService {
         <p>You may need to resubmit your export application or take corrective action as advised by the agency.</p>
         
         <p>Best regards,<br>
-        Ethiopian Electronic Single Window System</p>
+        Ethiopian Network Submission System System</p>
     </div>
     <div class="footer">
         <p>This is an automated message. Please do not reply to this email.</p>

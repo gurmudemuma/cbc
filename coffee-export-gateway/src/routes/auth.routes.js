@@ -222,14 +222,12 @@ router.post('/register', async (req, res) => {
     // Hash password
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // STEP 1: Register in PostgreSQL FIRST (Primary data store)
-    // Use validation result to determine initial status
-    let approvalStatus = validation.status; // 'approved' or 'rejected'
+    // NEW WORKFLOW: Always approve account immediately so exporter can login
+    // Exporter will then fill qualification steps manually (lab, taster, competence, license)
+    // Each step will be auto-approved based on business logic validation
     
     try {
-      // Insert into users table
-      const isActive = (approvalStatus === 'approved');
-      
+      // Insert into users table - ALWAYS ACTIVE so they can login
       await postgresService.query(
         `INSERT INTO users (
           username, password_hash, email, organization_id, role, is_active, created_at, updated_at
@@ -239,41 +237,40 @@ router.post('/register', async (req, res) => {
           username,
           passwordHash,
           email,
-          'EXPORTER',
+          'exporter-portal',  // Use exporter-portal organization
           'exporter',
-          isActive
+          true  // ALWAYS ACTIVE - allow immediate login
         ]
       );
 
       // Map business type to PostgreSQL enum values
       const businessTypeMap = {
         'PRIVATE_EXPORTER': 'PRIVATE',
+        'PRIVATE': 'PRIVATE',
         'UNION': 'TRADE_ASSOCIATION',
+        'TRADE_ASSOCIATION': 'TRADE_ASSOCIATION',
         'FARMER_COOPERATIVE': 'FARMER',
-        'INDIVIDUAL': 'PRIVATE'
+        'FARMER': 'FARMER',
+        'INDIVIDUAL': 'PRIVATE',
+        'LLC': 'LLC',
+        'JOINT_STOCK': 'JOINT_STOCK'
       };
       const pgBusinessType = businessTypeMap[businessType] || 'PRIVATE';
-
-      // Map validation status to PostgreSQL status
-      const statusMap = {
-        'approved': 'ACTIVE',
-        'rejected': 'REVOKED',
-        'pending_approval': 'PENDING_APPROVAL'
-      };
-      const pgStatus = statusMap[approvalStatus] || 'PENDING_APPROVAL';
 
       // Generate unique registration number
       const registrationNumber = await generateRegistrationNumber();
       console.log(`[Registration] Generated registration number: ${registrationNumber} for ${username}`);
 
       // Insert into exporter_profiles table
-      await postgresService.query(
+      // Status: PENDING_APPROVAL - account active but qualification incomplete
+      const profileResult = await postgresService.query(
         `INSERT INTO exporter_profiles (
           user_id, business_name, tin, registration_number, business_type,
-          minimum_capital, office_address, contact_person, email, phone,
+          minimum_capital, capital_verified, office_address, contact_person, email, phone,
           status, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
-        ON CONFLICT (user_id) DO NOTHING`,
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())
+        ON CONFLICT (user_id) DO NOTHING
+        RETURNING exporter_id`,
         [
           username,
           companyName,
@@ -281,25 +278,28 @@ router.post('/register', async (req, res) => {
           registrationNumber,
           pgBusinessType,
           capitalETB,
+          true, // capital_verified
           address || '',
-          contactPerson || '',
+          contactPerson || username,
           email,
           phone || '',
-          pgStatus
+          'PENDING_APPROVAL'  // Account active, but needs to complete qualification steps
         ]
       );
 
-      // Insert into ecta_pre_registration table for qualification workflow
-      await postgresService.query(
-        `INSERT INTO ecta_pre_registration (
-          exporter_id, laboratory_status, taster_status, competence_status, license_status,
-          created_at, updated_at
-        ) VALUES ($1, 'MISSING', 'MISSING', 'MISSING', 'MISSING', NOW(), NOW())
-        ON CONFLICT (exporter_id) DO NOTHING`,
-        [username]
-      );
+      const exporterProfileId = profileResult.rows[0]?.exporter_id;
+      console.log(`✓ User registered in PostgreSQL: ${username}, account: ACTIVE, profile: PENDING_APPROVAL, profile_id: ${exporterProfileId}`);
 
-      console.log(`✓ User registered in PostgreSQL: ${username}, status: ${approvalStatus}`);
+      // NEW WORKFLOW: Do NOT auto-qualify during registration
+      // Exporter must login and manually fill qualification steps:
+      // 1. Laboratory details (if required for business type)
+      // 2. Taster details (if required for business type)
+      // 3. Competence certificate details
+      // 4. Export license application
+      // Each step will be auto-approved based on business logic validation when submitted
+      
+      console.log(`[Registration] Account created for ${username}. Exporter can now login and complete qualification steps manually.`);
+      
     } catch (dbError) {
       console.error('[Registration] PostgreSQL error:', dbError);
       return res.status(500).json({ 
@@ -308,48 +308,43 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // STEP 2: Try to register on blockchain (non-blocking)
+    // STEP 2: Register on blockchain asynchronously (non-blocking)
     // If blockchain fails, user can still login from database
-    let blockchainRegistered = false;
-    try {
-      const blockchainResult = await fabricService.registerUser({
-        username,
-        passwordHash,
-        email,
-        phone: phone || '',
-        companyName,
-        tin: cleanedTin,
-        capitalETB,
-        address: address || '',
-        contactPerson: contactPerson || '',
-        role: 'exporter',
-        businessType: businessType || 'PRIVATE_EXPORTER',
-        status: approvalStatus,
-        validationReason: validation.reason
-      });
+    setImmediate(async () => {
+      try {
+        await fabricService.registerUser({
+          username,
+          passwordHash,
+          email,
+          phone: phone || '',
+          companyName,
+          tin: cleanedTin,
+          capitalETB,
+          address: address || '',
+          contactPerson: contactPerson || '',
+          role: 'exporter',
+          businessType: businessType || 'PRIVATE_EXPORTER',
+          status: approvalStatus,
+          validationReason: validation.reason
+        });
 
-      console.log('[Registration] Blockchain result:', JSON.stringify(blockchainResult));
-      blockchainRegistered = true;
-      console.log(`✓ User registered on blockchain: ${username}`);
-    } catch (blockchainError) {
-      console.warn('[Registration] Blockchain registration failed (non-blocking):', blockchainError.message);
-      console.warn('[Registration] User can still login from database');
-      // Don't fail - user is already in database
-    }
+        console.log(`✓ User registered on blockchain (async): ${username}`);
+      } catch (blockchainError) {
+        console.warn('[Registration] Blockchain registration failed (non-blocking):', blockchainError.message);
+      }
+    });
 
-    // Return success
+    // Return success immediately (don't wait for blockchain)
     res.json({
       success: true,
-      status: approvalStatus,
-      message: approvalStatus === 'approved' 
-        ? 'Registration successful - auto-approved. You can login now.'
-        : 'Registration submitted - pending ECTA approval',
-      blockchainSync: blockchainRegistered,
+      status: 'PENDING_APPROVAL',
+      message: 'Registration successful! You can login now and complete your qualification steps (Laboratory, Taster, Competence Certificate, Export License).',
+      blockchainSync: 'pending',
       user: {
         username,
         email,
         companyName,
-        status: approvalStatus
+        status: 'PENDING_APPROVAL'
       }
     });
 
@@ -404,7 +399,7 @@ router.post('/login', async (req, res) => {
     let databaseUser = null;
     try {
       const result = await postgresService.query(
-        'SELECT username, password_hash, role, status, company_name FROM users WHERE username = $1',
+        'SELECT u.username, u.password_hash, u.role, u.is_active, u.organization_id, ep.status as exporter_status FROM users u LEFT JOIN exporter_profiles ep ON u.username = ep.user_id WHERE u.username = $1',
         [username]
       );
       if (result.rows.length > 0) {
@@ -412,10 +407,11 @@ router.post('/login', async (req, res) => {
           username: result.rows[0].username,
           passwordHash: result.rows[0].password_hash,
           role: result.rows[0].role,
-          status: result.rows[0].status,
-          companyName: result.rows[0].company_name
+          isActive: result.rows[0].is_active,
+          companyName: result.rows[0].organization_id,
+          exporterStatus: result.rows[0].exporter_status
         };
-        console.log(`[Login] User ${username} found in database`);
+        console.log(`[Login] User ${username} found in database, exporter_status: ${databaseUser.exporterStatus}`);
       }
     } catch (error) {
       console.log(`[Login] Database error for ${username}: ${error.message}`);
@@ -431,23 +427,29 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Check approval status (from database)
+    // Check approval status (from exporter_profiles for exporters)
+    // NEW WORKFLOW: Allow login even with PENDING_APPROVAL status
+    // User can login and complete qualification steps manually
     if (databaseUser.role === 'exporter') {
-      if (databaseUser.status === 'PENDING_APPROVAL' || databaseUser.status === 'pending_approval') {
-        return res.status(403).json({ 
-          error: 'Account pending approval',
-          message: 'Your registration is under review by ECTA. You will be notified once approved.',
-          status: 'pending_approval'
-        });
-      }
-      
-      if (databaseUser.status === 'REVOKED' || databaseUser.status === 'rejected') {
+      if (databaseUser.exporterStatus === 'REVOKED' || databaseUser.exporterStatus === 'rejected') {
         return res.status(403).json({ 
           error: 'Account rejected',
           message: 'Your registration was rejected by ECTA.',
           status: 'rejected'
         });
       }
+      
+      if (databaseUser.exporterStatus === 'SUSPENDED') {
+        return res.status(403).json({ 
+          error: 'Account suspended',
+          message: 'Your account has been suspended by ECTA.',
+          status: 'suspended'
+        });
+      }
+      
+      // PENDING_APPROVAL and ACTIVE are both allowed to login
+      // PENDING_APPROVAL: User can complete qualification steps
+      // ACTIVE: User is fully qualified
     }
 
     // Generate JWT using database data
@@ -456,7 +458,7 @@ router.post('/login', async (req, res) => {
         id: username, 
         role: databaseUser.role,
         companyName: databaseUser.companyName,
-        status: databaseUser.status
+        status: databaseUser.exporterStatus || 'ACTIVE'
       },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
@@ -473,7 +475,7 @@ router.post('/login', async (req, res) => {
         exporterId: username,
         companyName: databaseUser.companyName,
         role: databaseUser.role,
-        status: databaseUser.status
+        status: databaseUser.exporterStatus || 'ACTIVE'
       }
     });
   } catch (error) {

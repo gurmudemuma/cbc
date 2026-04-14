@@ -89,7 +89,7 @@ describe('NotificationService - Verification', () => {
         certificateNumber: 'ECTA-CERT-2025-00001',
         exporterName: 'Test',
         exporterTin: 'TIN123',
-        eswReferenceNumber: 'ESW-001',
+        networkReferenceNumber: 'ESW-001',
         createdAt: new Date()
       };
       
@@ -122,7 +122,7 @@ describe('NotificationService - Verification', () => {
         certificateNumber: 'ECTA-CERT-2025-00001',
         exporterName: 'Test',
         exporterTin: 'TIN123',
-        eswReferenceNumber: 'ESW-001',
+        networkReferenceNumber: 'ESW-001',
         createdAt: new Date()
       };
       

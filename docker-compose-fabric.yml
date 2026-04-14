@@ -1,8 +1,7 @@
-version: '3.8'
-
 networks:
   fabric-network:
     name: fabric-network
+    external: true
 
 volumes:
   orderer1.orderer.example.com:
@@ -253,7 +252,9 @@ services:
       - CORE_OPERATIONS_LISTENADDRESS=peer0.ecta.example.com:9446
       - CORE_METRICS_PROVIDER=prometheus
       - CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG={"peername":"peer0ecta"}
-      - CORE_CHAINCODE_EXECUTETIMEOUT=300s
+      - CORE_CHAINCODE_EXECUTETIMEOUT=900s
+      - CORE_CHAINCODE_STARTUPTIMEOUT=900s
+      - CORE_CHAINCODE_INSTALLTIMEOUT=900s
       - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
       - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=fabric-network
       - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
@@ -299,7 +300,9 @@ services:
       - CORE_OPERATIONS_LISTENADDRESS=peer1.ecta.example.com:9447
       - CORE_METRICS_PROVIDER=prometheus
       - CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG={"peername":"peer1ecta"}
-      - CORE_CHAINCODE_EXECUTETIMEOUT=300s
+      - CORE_CHAINCODE_EXECUTETIMEOUT=900s
+      - CORE_CHAINCODE_STARTUPTIMEOUT=900s
+      - CORE_CHAINCODE_INSTALLTIMEOUT=900s
       - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
       - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=fabric-network
       - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
@@ -349,7 +352,9 @@ services:
       - CORE_OPERATIONS_LISTENADDRESS=peer0.bank.example.com:9448
       - CORE_METRICS_PROVIDER=prometheus
       - CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG={"peername":"peer0bank"}
-      - CORE_CHAINCODE_EXECUTETIMEOUT=300s
+      - CORE_CHAINCODE_EXECUTETIMEOUT=900s
+      - CORE_CHAINCODE_STARTUPTIMEOUT=900s
+      - CORE_CHAINCODE_INSTALLTIMEOUT=900s
       - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
       - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=fabric-network
       - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
@@ -399,7 +404,9 @@ services:
       - CORE_OPERATIONS_LISTENADDRESS=peer0.nbe.example.com:9449
       - CORE_METRICS_PROVIDER=prometheus
       - CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG={"peername":"peer0nbe"}
-      - CORE_CHAINCODE_EXECUTETIMEOUT=300s
+      - CORE_CHAINCODE_EXECUTETIMEOUT=900s
+      - CORE_CHAINCODE_STARTUPTIMEOUT=900s
+      - CORE_CHAINCODE_INSTALLTIMEOUT=900s
       - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
       - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=fabric-network
       - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
@@ -449,7 +456,9 @@ services:
       - CORE_OPERATIONS_LISTENADDRESS=peer0.customs.example.com:9450
       - CORE_METRICS_PROVIDER=prometheus
       - CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG={"peername":"peer0customs"}
-      - CORE_CHAINCODE_EXECUTETIMEOUT=300s
+      - CORE_CHAINCODE_EXECUTETIMEOUT=900s
+      - CORE_CHAINCODE_STARTUPTIMEOUT=900s
+      - CORE_CHAINCODE_INSTALLTIMEOUT=900s
       - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
       - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=fabric-network
       - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
@@ -499,7 +508,9 @@ services:
       - CORE_OPERATIONS_LISTENADDRESS=peer0.shipping.example.com:9451
       - CORE_METRICS_PROVIDER=prometheus
       - CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG={"peername":"peer0shipping"}
-      - CORE_CHAINCODE_EXECUTETIMEOUT=300s
+      - CORE_CHAINCODE_EXECUTETIMEOUT=900s
+      - CORE_CHAINCODE_STARTUPTIMEOUT=900s
+      - CORE_CHAINCODE_INSTALLTIMEOUT=900s
       - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
       - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=fabric-network
       - CORE_LEDGER_STATE_STATEDATABASE=CouchDB

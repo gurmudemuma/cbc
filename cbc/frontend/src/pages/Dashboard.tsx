@@ -75,9 +75,10 @@ const Dashboard = ({ user, org }: DashboardProps): JSX.Element => {
   const [workflowData, setWorkflowData] = useState<any[]>([]);
 
   useEffect(() => {
-    if (user && user.role) {
-      setApiBaseUrl(getApiUrl(user.role));
-    }
+    // setApiBaseUrl removed - nginx proxy handles routing in Docker
+    // if (user && user.role) {
+    //   setApiBaseUrl(getApiUrl(user.role));
+    // }
   }, [user]);
 
   useEffect(() => {

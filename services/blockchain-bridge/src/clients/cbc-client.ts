@@ -106,17 +106,17 @@ export class CBCClient {
     return result.rows;
   }
 
-  static async createESWSubmission(data: any): Promise<void> {
+  static async createNetworkSubmission(data: any): Promise<void> {
     await pool.query(
-      `INSERT INTO esw_submissions (submission_id, export_id, exporter_id, status, submitted_at, created_at)
+      `INSERT INTO network_submissions (submission_id, export_id, exporter_id, status, submitted_at, created_at)
        VALUES ($1, $2, $3, $4, $5, $6)`,
       [data.submissionId, data.exportId, data.exporterId, data.status, data.submittedAt, new Date()]
     );
   }
 
-  static async updateESWStatus(submissionId: string, updates: any): Promise<void> {
+  static async updateNetworkStatus(submissionId: string, updates: any): Promise<void> {
     await pool.query(
-      `UPDATE esw_submissions SET status = $2, approved_by = $3, approved_at = $4, updated_at = $5 WHERE submission_id = $1`,
+      `UPDATE network_submissions SET status = $2, approved_by = $3, approved_at = $4, updated_at = $5 WHERE submission_id = $1`,
       [submissionId, updates.status, updates.approvedBy, updates.approvedAt, new Date()]
     );
   }

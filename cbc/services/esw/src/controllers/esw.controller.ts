@@ -28,7 +28,7 @@ export class ESWController {
    * Submit export to ESW
    * POST /api/esw/submissions
    */
-  public submitToESW = async (req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
+  public submitToNetwork = async (req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
     const client = await pool.connect();
     try {
       const { exportId, exporterInfo, licenseInfo, documents, certificates, notes } = req.body;
@@ -52,7 +52,7 @@ export class ESWController {
 
         const exporterId = exporterResult.rows[0].exporter_id;
 
-        // Create a placeholder export record for ESW submission
+        // Create a placeholder export record for Network Submission
         const exportResult = await client.query(
           `INSERT INTO exports (
             exporter_id, 
@@ -82,7 +82,7 @@ export class ESWController {
         );
 
         finalExportId = exportResult.rows[0].export_id;
-        logger.info('Created placeholder export for ESW submission', { exportId: finalExportId, exporterId });
+        logger.info('Created placeholder export for Network Submission', { exportId: finalExportId, exporterId });
       }
 
       if (!finalExportId) {
@@ -111,9 +111,9 @@ export class ESWController {
 
       // Create Submission
       const submissionResult = await client.query(
-        `INSERT INTO esw_submissions (export_id, esw_reference_number, status, submitted_by, submitted_at, notes)
+        `INSERT INTO network_submissions (export_id, network_reference_number, status, submitted_by, submitted_at, notes)
          VALUES ($1, $2, 'SUBMITTED', $3, NOW(), $4)
-         RETURNING submission_id, esw_reference_number`,
+         RETURNING submission_id, network_reference_number`,
         [finalExportId, refNum, user.id, notes || null]
       );
       const submission = submissionResult.rows[0];
@@ -143,20 +143,20 @@ export class ESWController {
 
       await client.query('COMMIT');
 
-      logger.info('ESW Submission created', {
+      logger.info('Network Submission created', {
         submissionId: submission.submission_id,
         exportId: finalExportId,
         userId: user.id,
-        referenceNumber: submission.esw_reference_number
+        referenceNumber: submission.network_reference_number
       });
 
       res.status(201).json({
         success: true,
-        message: 'Export submitted to ESW successfully',
+        message: 'Export submitted to the network successfully',
         data: {
           submission_id: submission.submission_id,
-          esw_reference_number: submission.esw_reference_number,
-          eswReferenceNumber: submission.esw_reference_number, // Alias for frontend compatibility
+          network_reference_number: submission.network_reference_number,
+          networkReferenceNumber: submission.network_reference_number, // Alias for frontend compatibility
           export_id: finalExportId,
           status: 'SUBMITTED'
         }
@@ -164,7 +164,7 @@ export class ESWController {
 
     } catch (error: any) {
       await client.query('ROLLBACK');
-      logger.error('Failed to submit to ESW', { error: error.message, stack: error.stack });
+      logger.error('Failed to submit to the network', { error: error.message, stack: error.stack });
       this.handleError(error, res);
     } finally {
       client.release();
@@ -172,7 +172,7 @@ export class ESWController {
   };
 
   /**
-   * Get all ESW submissions
+   * Get all Network Submissions
    * GET /api/esw/submissions
    */
   public getSubmissions = async (req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
@@ -184,7 +184,7 @@ export class ESWController {
         SELECT s.*, 
                e.coffee_type, e.origin_region, e.quantity, e.destination_country,
                ep.business_name as exporter_name
-        FROM esw_submissions s
+        FROM network_submissions s
         JOIN exports e ON s.export_id = e.export_id
         JOIN exporter_profiles ep ON e.exporter_id = ep.exporter_id
         WHERE 1=1
@@ -220,7 +220,7 @@ export class ESWController {
         ...row,
         submissionId: row.submission_id,
         exportId: row.export_id,
-        eswReferenceNumber: row.esw_reference_number,
+        networkReferenceNumber: row.network_reference_number,
         submittedBy: row.submitted_by,
         submittedAt: row.submitted_at,
         approvedAt: row.approved_at,
@@ -248,7 +248,7 @@ export class ESWController {
   };
 
   /**
-   * Get ESW submission by ID
+   * Get Network Submission by ID
    * GET /api/esw/submissions/:submissionId
    */
   public getSubmission = async (req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
@@ -260,7 +260,7 @@ export class ESWController {
                 e.export_id, e.coffee_type, e.origin_region, e.quantity, 
                 e.destination_country, e.buyer_name, e.buyer_country,
                 ep.business_name as exporter_name, ep.tin as exporter_tin
-         FROM esw_submissions s
+         FROM network_submissions s
          JOIN exports e ON s.export_id = e.export_id
          LEFT JOIN exporter_profiles ep ON e.exporter_id = ep.exporter_id
          WHERE s.submission_id = $1`,
@@ -402,7 +402,7 @@ export class ESWController {
         if (rejectedCount > 0) {
           // At least one rejection - submission is rejected
           await client.query(
-            `UPDATE esw_submissions 
+            `UPDATE network_submissions 
              SET status = 'REJECTED', rejected_at = NOW() 
              WHERE submission_id = $1`,
             [submissionId]
@@ -410,7 +410,7 @@ export class ESWController {
         } else if (approvedCount === totalAgencies) {
           // All agencies approved - submission is approved
           await client.query(
-            `UPDATE esw_submissions 
+            `UPDATE network_submissions 
              SET status = 'APPROVED', approved_at = NOW() 
              WHERE submission_id = $1`,
             [submissionId]
@@ -426,7 +426,7 @@ export class ESWController {
           // Get exporter_id from the submission
           const exporterResult = await pool.query(
             `SELECT e.exporter_id 
-             FROM esw_submissions s
+             FROM network_submissions s
              JOIN exports e ON s.export_id = e.export_id
              WHERE s.submission_id = $1`,
             [submissionId]
@@ -516,7 +516,7 @@ export class ESWController {
   };
 
   /**
-   * Get ESW submission by export ID
+   * Get Network Submission by export ID
    * GET /api/esw/exports/:exportId/submission
    */
   public getSubmissionByExportId = async (req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
@@ -536,7 +536,7 @@ export class ESWController {
       }
 
       const result = await pool.query(
-        `SELECT * FROM esw_submissions WHERE export_id = $1`,
+        `SELECT * FROM network_submissions WHERE export_id = $1`,
         [exportId]
       );
 
@@ -583,12 +583,12 @@ export class ESWController {
 
       const result = await pool.query(
         `SELECT aa.*, 
-                s.esw_reference_number, 
+                s.network_reference_number, 
                 s.submitted_at,
                 s.export_id,
                 ep.business_name as exporter_name
          FROM esw_agency_approvals aa
-         JOIN esw_submissions s ON aa.submission_id = s.submission_id
+         JOIN network_submissions s ON aa.submission_id = s.submission_id
          LEFT JOIN exports e ON s.export_id = e.export_id
          LEFT JOIN exporter_profiles ep ON e.exporter_id = ep.exporter_id
          WHERE aa.agency_code = $1 AND aa.status = 'PENDING'
@@ -600,7 +600,7 @@ export class ESWController {
       const transformedData = result.rows.map(row => ({
         ...row,
         submissionId: row.submission_id,
-        eswReferenceNumber: row.esw_reference_number,
+        networkReferenceNumber: row.network_reference_number,
         submittedAt: row.submitted_at,
         exportId: row.export_id,
         exporterName: row.exporter_name,
@@ -639,7 +639,7 @@ export class ESWController {
                 SUM(CASE WHEN status = 'APPROVED' THEN 1 ELSE 0 END) as approved,
                 SUM(CASE WHEN status = 'REJECTED' THEN 1 ELSE 0 END) as rejected,
                 SUM(CASE WHEN status = 'SUBMITTED' THEN 1 ELSE 0 END) as pending
-            FROM esw_submissions
+            FROM network_submissions
         `);
 
       const result = stats.rows[0];

@@ -668,19 +668,19 @@ router.get('/preregistration/laboratories/pending', authenticateToken, requireRo
     // Fetch from PostgreSQL
     const result = await postgresService.query(`
       SELECT 
-        pr.exporter_id,
-        pr.laboratory_status,
-        pr.laboratory_cert_number,
-        pr.created_at,
-        pr.updated_at,
+        ep.user_id as exporter_id,
+        cl.status as laboratory_status,
+        cl.certification_number as laboratory_cert_number,
+        cl.created_at,
+        cl.updated_at,
         u.email,
         ep.business_name,
         ep.tin
-      FROM ecta_pre_registration pr
-      JOIN users u ON pr.exporter_id = u.username
-      LEFT JOIN exporter_profiles ep ON pr.exporter_id = ep.user_id
-      WHERE pr.laboratory_status = 'SUBMITTED'
-      ORDER BY pr.updated_at DESC
+      FROM coffee_laboratories cl
+      JOIN exporter_profiles ep ON cl.exporter_id = ep.exporter_id
+      JOIN users u ON ep.user_id = u.username
+      WHERE cl.status = 'PENDING'
+      ORDER BY cl.updated_at DESC
     `);
     
     res.json(result.rows);
@@ -698,19 +698,19 @@ router.get('/preregistration/tasters/pending', authenticateToken, requireRole('e
     // Fetch from PostgreSQL
     const result = await postgresService.query(`
       SELECT 
-        pr.exporter_id,
-        pr.taster_status,
-        pr.taster_cert_number,
-        pr.created_at,
-        pr.updated_at,
+        ep.user_id as exporter_id,
+        ct.status as taster_status,
+        ct.proficiency_certificate_number as taster_cert_number,
+        ct.created_at,
+        ct.updated_at,
         u.email,
         ep.business_name,
         ep.tin
-      FROM ecta_pre_registration pr
-      JOIN users u ON pr.exporter_id = u.username
-      LEFT JOIN exporter_profiles ep ON pr.exporter_id = ep.user_id
-      WHERE pr.taster_status = 'SUBMITTED'
-      ORDER BY pr.updated_at DESC
+      FROM coffee_tasters ct
+      JOIN exporter_profiles ep ON ct.exporter_id = ep.exporter_id
+      JOIN users u ON ep.user_id = u.username
+      WHERE ct.status = 'PENDING'
+      ORDER BY ct.updated_at DESC
     `);
     
     res.json(result.rows);
@@ -728,20 +728,20 @@ router.get('/preregistration/competence/pending', authenticateToken, requireRole
     // Fetch from PostgreSQL
     const result = await postgresService.query(`
       SELECT 
-        pr.exporter_id,
-        pr.competence_status,
-        pr.competence_cert_number,
-        pr.competence_cert_id,
-        pr.created_at,
-        pr.updated_at,
+        ep.user_id as exporter_id,
+        cc.status as competence_status,
+        cc.certificate_number as competence_cert_number,
+        cc.certificate_id as competence_cert_id,
+        cc.created_at,
+        cc.updated_at,
         u.email,
         ep.business_name,
         ep.tin
-      FROM ecta_pre_registration pr
-      JOIN users u ON pr.exporter_id = u.username
-      LEFT JOIN exporter_profiles ep ON pr.exporter_id = ep.user_id
-      WHERE pr.competence_status = 'SUBMITTED'
-      ORDER BY pr.updated_at DESC
+      FROM competence_certificates cc
+      JOIN exporter_profiles ep ON cc.exporter_id = ep.exporter_id
+      JOIN users u ON ep.user_id = u.username
+      WHERE cc.status = 'PENDING'
+      ORDER BY cc.updated_at DESC
     `);
     
     res.json(result.rows);
@@ -776,28 +776,106 @@ router.get('/preregistration/licenses/pending', authenticateToken, requireRole('
  */
 router.get('/preregistration/exporters', authenticateToken, requireRole('ecta', 'admin'), async (req, res) => {
   try {
-    // Query blockchain for all exporter users
-    const exporterUsers = await fabricService.getUsersByRole('exporter');
+    // Query PostgreSQL for all exporter profiles with complete qualification information
+    const query = `
+      SELECT 
+        ep.exporter_id,
+        ep.user_id as username,
+        u.email,
+        ep.phone,
+        ep.business_name as company_name,
+        ep.tin,
+        ep.business_type,
+        ep.minimum_capital,
+        ep.status,
+        ep.created_at as registered_at,
+        ep.updated_at as approved_at,
+        -- License information
+        el.license_number,
+        el.status as license_status,
+        el.issued_date as license_issued_date,
+        el.expiry_date as license_expiry_date,
+        -- Laboratory information
+        cl.laboratory_name,
+        cl.certification_number as lab_cert_number,
+        cl.status as lab_status,
+        cl.certified_date as lab_certified_date,
+        -- Competence certificate information
+        cc.certificate_number as competence_cert_number,
+        cc.status as competence_status,
+        cc.issued_date as competence_issued_date,
+        cc.expiry_date as competence_expiry_date,
+        -- Taster information
+        ct.full_name as taster_name,
+        ct.proficiency_certificate_number as taster_cert_number,
+        ct.status as taster_status,
+        ct.certificate_issue_date as taster_cert_date,
+        -- Qualification status
+        CASE 
+          WHEN el.license_number IS NOT NULL AND el.status = 'ACTIVE' THEN true
+          ELSE false
+        END as is_qualified
+      FROM exporter_profiles ep
+      LEFT JOIN users u ON ep.user_id = u.username
+      LEFT JOIN export_licenses el ON ep.exporter_id = el.exporter_id AND el.status = 'ACTIVE'
+      LEFT JOIN coffee_laboratories cl ON ep.exporter_id = cl.exporter_id AND cl.status = 'ACTIVE'
+      LEFT JOIN competence_certificates cc ON ep.exporter_id = cc.exporter_id AND cc.status = 'ACTIVE'
+      LEFT JOIN coffee_tasters ct ON ep.exporter_id = ct.exporter_id AND ct.status = 'ACTIVE'
+      ORDER BY ep.created_at DESC
+    `;
     
-    const allExporters = exporterUsers.map(item => {
-      const user = item.record;
-      return {
-        exporter_id: user.username,
-        username: user.username,
-        email: user.email,
-        phone: user.phone,
-        businessName: user.companyName,
-        companyName: user.companyName,
-        tin: user.tin || 'N/A',
-        businessType: 'EXPORTER',
-        minimumCapital: user.capitalETB || 50000000,
-        status: user.status.toUpperCase(),
-        registeredAt: user.registeredAt,
-        approvedAt: user.approvedAt,
-        licenseNumber: user.licenseNumber
-      };
-    });
+    const result = await postgresService.query(query);
     
+    const allExporters = result.rows.map(row => ({
+      exporter_id: row.exporter_id,
+      username: row.username,
+      email: row.email || 'N/A',
+      phone: row.phone || 'N/A',
+      businessName: row.company_name,
+      companyName: row.company_name,
+      tin: row.tin || 'N/A',
+      businessType: row.business_type || 'EXPORTER',
+      minimumCapital: row.minimum_capital || 0,
+      status: row.status || 'PENDING_APPROVAL',
+      registeredAt: row.registered_at,
+      approvedAt: row.approved_at,
+      // License details
+      licenseNumber: row.license_number || null,
+      licenseStatus: row.license_status || null,
+      licenseIssuedDate: row.license_issued_date || null,
+      licenseExpiryDate: row.license_expiry_date || null,
+      hasLicense: !!row.license_number,
+      hasExportLicense: !!row.license_number, // Frontend compatibility
+      has_export_license: !!row.license_number, // Snake case compatibility
+      // Laboratory details
+      laboratoryName: row.laboratory_name || null,
+      laboratoryCertNumber: row.lab_cert_number || null,
+      laboratoryStatus: row.lab_status || null,
+      laboratoryCertifiedDate: row.lab_certified_date || null,
+      hasLaboratory: !!row.laboratory_name,
+      laboratoryCertified: !!row.laboratory_name, // Frontend compatibility
+      laboratory_certified: !!row.laboratory_name, // Snake case compatibility
+      // Competence certificate details
+      competenceCertNumber: row.competence_cert_number || null,
+      competenceStatus: row.competence_status || null,
+      competenceIssuedDate: row.competence_issued_date || null,
+      competenceExpiryDate: row.competence_expiry_date || null,
+      hasCompetence: !!row.competence_cert_number,
+      hasCompetenceCertificate: !!row.competence_cert_number, // Frontend compatibility
+      has_competence_certificate: !!row.competence_cert_number, // Snake case compatibility
+      // Taster details
+      tasterName: row.taster_name || null,
+      tasterCertNumber: row.taster_cert_number || null,
+      tasterStatus: row.taster_status || null,
+      tasterCertDate: row.taster_cert_date || null,
+      hasTaster: !!row.taster_name,
+      // Overall qualification
+      isQualified: row.is_qualified || false,
+      is_qualified: row.is_qualified || false, // Snake case compatibility
+      qualificationStatus: row.is_qualified ? 'Qualified' : 'Not Qualified'
+    }));
+    
+    console.log(`[Get Exporters] Found ${allExporters.length} exporters from PostgreSQL with full qualification details`);
     res.json(allExporters);
   } catch (error) {
     console.error('Get all exporters error:', error);
@@ -807,30 +885,56 @@ router.get('/preregistration/exporters', authenticateToken, requireRole('ecta', 
 
 /**
  * Get global statistics (ECTA only)
- * Returns dashboard statistics
+ * Returns dashboard statistics from PostgreSQL (source of truth)
  */
 router.get('/global-stats', authenticateToken, requireRole('ecta', 'admin'), async (req, res) => {
   try {
-    // Get all exporter users
-    const exporterUsers = await fabricService.getUsersByRole('exporter');
+    // Get exporter profiles from PostgreSQL (the actual source of truth)
+    const profilesQuery = `
+      SELECT 
+        COUNT(*) as total_exporters,
+        COUNT(*) FILTER (WHERE status = 'PENDING_APPROVAL') as pending_approval,
+        COUNT(*) FILTER (WHERE status = 'ACTIVE') as active_exporters,
+        COUNT(*) FILTER (WHERE status = 'REJECTED') as rejected_exporters
+      FROM exporter_profiles
+    `;
     
-    // Calculate statistics
+    const licensesQuery = `
+      SELECT 
+        COUNT(*) as total_licenses,
+        COUNT(*) FILTER (WHERE status = 'ACTIVE') as active_licenses,
+        COUNT(*) FILTER (WHERE status = 'PENDING') as pending_licenses,
+        COUNT(*) FILTER (WHERE status = 'EXPIRED') as expired_licenses
+      FROM export_licenses
+    `;
+    
+    const [profilesResult, licensesResult] = await Promise.all([
+      postgresService.query(profilesQuery),
+      postgresService.query(licensesQuery)
+    ]);
+    
+    const profileStats = profilesResult.rows[0];
+    const licenseStats = licensesResult.rows[0];
+    
     const stats = {
       exporters: {
-        total: exporterUsers.length,
-        pending: exporterUsers.filter(u => u.record.status === 'pending_approval').length,
-        approved: exporterUsers.filter(u => u.record.status === 'approved').length,
-        rejected: exporterUsers.filter(u => u.record.status === 'rejected').length,
-        active: exporterUsers.filter(u => u.record.status === 'active').length
+        total: parseInt(profileStats.total_exporters) || 0,
+        pending: parseInt(profileStats.pending_approval) || 0,
+        approved: parseInt(profileStats.active_exporters) || 0,
+        rejected: parseInt(profileStats.rejected_exporters) || 0,
+        active: parseInt(profileStats.active_exporters) || 0
       },
       licenses: {
-        total: exporterUsers.filter(u => u.record.licenseNumber).length,
-        active: exporterUsers.filter(u => u.record.status === 'active' && u.record.licenseNumber).length,
-        pending: 0, // To be implemented when license application tracking is added
-        expired: 0  // To be implemented when expiry tracking is added
-      }
+        total: parseInt(licenseStats.total_licenses) || 0,
+        active: parseInt(licenseStats.active_licenses) || 0,
+        pending: parseInt(licenseStats.pending_licenses) || 0,
+        expired: parseInt(licenseStats.expired_licenses) || 0
+      },
+      source: 'postgresql',
+      timestamp: new Date().toISOString()
     };
     
+    console.log('[Global Stats] PostgreSQL stats:', JSON.stringify(stats, null, 2));
     res.json(stats);
   } catch (error) {
     console.error('Get global stats error:', error);
@@ -840,98 +944,113 @@ router.get('/global-stats', authenticateToken, requireRole('ecta', 'admin'), asy
 
 /**
  * Get pre-registration dashboard statistics (ECTA only)
+ * NOW QUERIES POSTGRESQL FOR ACCURATE COUNTS
  */
 router.get('/preregistration/dashboard/stats', authenticateToken, requireRole('ecta', 'admin'), async (req, res) => {
   try {
-    // Get all exporter users
-    let exporterUsers = [];
-    try {
-      exporterUsers = await fabricService.getUsersByRole('exporter');
-    } catch (error) {
-      console.log('No exporter users found or chaincode function not available:', error.message);
-      // Return default stats if chaincode function doesn't exist yet
-      return res.json({
-        totalExporters: 0,
-        pendingRegistrations: 0,
-        approvedExporters: 0,
-        rejectedApplications: 0,
-        activeLicenses: 0
-      });
-    }
+    // Query PostgreSQL for accurate exporter profile statistics
+    const profilesQuery = `
+      SELECT 
+        COUNT(*) as total_exporters,
+        COUNT(*) FILTER (WHERE status = 'PENDING_APPROVAL') as pending_approval,
+        COUNT(*) FILTER (WHERE status = 'ACTIVE') as active_exporters,
+        COUNT(*) FILTER (WHERE status = 'REJECTED') as rejected_exporters
+      FROM exporter_profiles
+    `;
     
-    // Ensure exporterUsers is an array
-    if (!Array.isArray(exporterUsers)) {
-      console.log('Exporter users is not an array:', exporterUsers);
-      return res.json({
-        totalExporters: 0,
-        pendingRegistrations: 0,
-        approvedExporters: 0,
-        rejectedApplications: 0,
-        activeLicenses: 0
-      });
-    }
+    const licensesQuery = `
+      SELECT 
+        COUNT(*) as total_licenses,
+        COUNT(*) FILTER (WHERE status = 'ACTIVE') as active_licenses,
+        COUNT(*) FILTER (WHERE status = 'PENDING') as pending_licenses,
+        COUNT(*) FILTER (WHERE status = 'EXPIRED') as expired_licenses
+      FROM export_licenses
+    `;
     
-    // Calculate statistics
+    const [profilesResult, licensesResult] = await Promise.all([
+      postgresService.query(profilesQuery),
+      postgresService.query(licensesQuery)
+    ]);
+    
+    const profileStats = profilesResult.rows[0];
+    const licenseStats = licensesResult.rows[0];
+    
     const stats = {
-      totalExporters: exporterUsers.length,
-      pendingRegistrations: exporterUsers.filter(u => u?.record?.status === 'pending_approval').length,
-      approvedExporters: exporterUsers.filter(u => {
-        const status = u?.record?.status;
-        return status === 'approved' || status === 'active';
-      }).length,
-      rejectedApplications: exporterUsers.filter(u => u?.record?.status === 'rejected').length,
-      activeLicenses: exporterUsers.filter(u => {
-        const record = u?.record;
-        return record?.status === 'active' && record?.licenseNumber;
-      }).length
+      success: true,
+      data: {
+        exporters: {
+          total: parseInt(profileStats.total_exporters) || 0,
+          pending: parseInt(profileStats.pending_approval) || 0,
+          active: parseInt(profileStats.active_exporters) || 0,
+          rejected: parseInt(profileStats.rejected_exporters) || 0
+        },
+        licenses: {
+          total: parseInt(licenseStats.total_licenses) || 0,
+          active: parseInt(licenseStats.active_licenses) || 0,
+          pending: parseInt(licenseStats.pending_licenses) || 0,
+          expired: parseInt(licenseStats.expired_licenses) || 0
+        }
+      },
+      source: 'postgresql',
+      timestamp: new Date().toISOString()
     };
     
+    console.log('[Dashboard Stats] PostgreSQL stats:', JSON.stringify(stats, null, 2));
     res.json(stats);
   } catch (error) {
     console.error('Get dashboard stats error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ 
+      success: false,
+      error: error.message,
+      data: {
+        exporters: { total: 0, pending: 0, active: 0, rejected: 0 },
+        licenses: { total: 0, pending: 0, active: 0, expired: 0 }
+      }
+    });
   }
 });
 
 /**
  * Get pending exporters for pre-registration (ECTA only)
+ * NOW QUERIES POSTGRESQL FOR RELIABILITY
  */
 router.get('/preregistration/exporters/pending', authenticateToken, requireRole('ecta', 'admin'), async (req, res) => {
   try {
-    // Query blockchain for pending users
-    let pendingUsers = [];
-    try {
-      pendingUsers = await fabricService.getPendingUsers();
-    } catch (error) {
-      console.log('No pending users found or chaincode function not available:', error.message);
-      // Return empty array if chaincode function doesn't exist yet
-      return res.json([]);
-    }
+    // Query PostgreSQL for pending exporter profiles
+    const query = `
+      SELECT 
+        ep.exporter_id,
+        ep.user_id as username,
+        u.email,
+        u.phone,
+        ep.business_name,
+        ep.tin,
+        ep.business_type,
+        ep.minimum_capital,
+        ep.status,
+        ep.created_at as registered_at
+      FROM exporter_profiles ep
+      JOIN users u ON ep.user_id = u.username
+      WHERE ep.status = 'PENDING_APPROVAL'
+      ORDER BY ep.created_at ASC
+    `;
     
-    // Ensure pendingUsers is an array
-    if (!Array.isArray(pendingUsers)) {
-      console.log('Pending users is not an array:', pendingUsers);
-      return res.json([]);
-    }
+    const result = await postgresService.query(query);
     
     // Format data for frontend compatibility
-    const pendingExporters = pendingUsers.map(item => {
-      const user = item?.record || item || {};
-      return {
-        exporter_id: user.username || 'unknown',
-        username: user.username || 'unknown',
-        email: user.email || '',
-        phone: user.phone || '',
-        businessName: user.companyName || user.businessName || 'N/A',
-        companyName: user.companyName || user.businessName || 'N/A',
-        tin: user.tin || 'N/A',
-        businessType: user.businessType || 'EXPORTER',
-        minimumCapital: user.capitalETB || user.minimumCapital || 50000000,
-        status: user.status?.toUpperCase() || 'PENDING',
-        registeredAt: user.registeredAt || new Date().toISOString(),
-        blockchainData: user
-      };
-    }).filter(exporter => exporter.username !== 'unknown'); // Filter out invalid entries
+    const pendingExporters = result.rows.map(row => ({
+      exporter_id: row.username,
+      username: row.username,
+      email: row.email || '',
+      phone: row.phone || '',
+      businessName: row.business_name || 'N/A',
+      companyName: row.business_name || 'N/A',
+      tin: row.tin || 'N/A',
+      businessType: row.business_type || 'PRIVATE',
+      minimumCapital: parseFloat(row.minimum_capital) || 50000000,
+      status: row.status || 'PENDING_APPROVAL',
+      registeredAt: row.registered_at || new Date().toISOString()
+    }));
     
     res.json(pendingExporters);
   } catch (error) {
@@ -948,51 +1067,99 @@ router.post('/preregistration/exporters/:username/approve', authenticateToken, r
     const { username } = req.params;
     const { comments } = req.body;
     
-    // Get user from blockchain
-    let user;
-    try {
-      user = await fabricService.getUser(username);
-    } catch (error) {
-      return res.status(404).json({ error: 'Exporter not found' });
-    }
+    console.log(`[ECTA Approval] Approving exporter: ${username}`);
     
-    if (user.status !== 'pending_approval') {
-      return res.status(400).json({ error: 'Exporter is not pending approval' });
-    }
-    
-    // Update user status on blockchain
-    await fabricService.updateUserStatus(username, {
-      status: 'approved',
-      approvedBy: req.user.id,
-      comments: comments || ''
-    });
-
-    // Also approve profile stage on exporter profile
+    // HYBRID MODE: Update PostgreSQL first (primary source)
     try {
-      await fabricService.submitTransaction(
-        req.user.id,
-        process.env.CHAINCODE_NAME || 'ecta',
-        'ApprovePreRegistration',
-        username,
-        'profile'
+      // Check if exporter exists in PostgreSQL
+      const exporterCheck = await postgresService.query(
+        'SELECT exporter_id, status FROM exporter_profiles WHERE user_id = $1',
+        [username]
       );
-    } catch (error) {
-      console.log('Profile approval on exporter record:', error.message);
+      
+      if (exporterCheck.rows.length === 0) {
+        return res.status(404).json({ error: 'Exporter not found in database' });
+      }
+      
+      const currentStatus = exporterCheck.rows[0].status;
+      if (currentStatus !== 'PENDING_APPROVAL') {
+        return res.status(400).json({ 
+          error: 'Exporter is not pending approval',
+          currentStatus: currentStatus
+        });
+      }
+      
+      // Update exporter profile status to ACTIVE
+      await postgresService.query(
+        `UPDATE exporter_profiles 
+         SET status = 'ACTIVE', 
+             approved_by = $1, 
+             approved_at = NOW(),
+             updated_at = NOW()
+         WHERE user_id = $2`,
+        [req.user.id, username]
+      );
+      
+      console.log(`✓ Exporter profile approved in PostgreSQL: ${username}`);
+      
+    } catch (dbError) {
+      console.error('[ECTA Approval] PostgreSQL error:', dbError);
+      return res.status(500).json({ 
+        error: 'Database approval failed',
+        details: dbError.message 
+      });
     }
     
-    // Send approval notification email
-    notificationService.notifyProfileApproved(user, req.user.id)
-      .catch(err => console.error('Email notification failed:', err));
+    // STEP 2: Try to update blockchain asynchronously (non-blocking)
+    setImmediate(async () => {
+      try {
+        // Get user from blockchain
+        const user = await fabricService.getUser(username);
+        
+        if (user.status === 'pending_approval') {
+          // Update user status on blockchain
+          await fabricService.updateUserStatus(username, {
+            status: 'approved',
+            approvedBy: req.user.id,
+            comments: comments || ''
+          });
+          
+          // Also approve profile stage on exporter profile
+          await fabricService.submitTransaction(
+            req.user.id,
+            process.env.CHAINCODE_NAME || 'ecta',
+            'ApprovePreRegistration',
+            username,
+            'profile'
+          );
+          
+          console.log(`✓ Exporter approved on blockchain (async): ${username}`);
+        }
+      } catch (blockchainError) {
+        console.warn('[ECTA Approval] Blockchain update failed (non-blocking):', blockchainError.message);
+      }
+    });
+    
+    // Send approval notification email (async, non-blocking)
+    setImmediate(async () => {
+      try {
+        await notificationService.notifyProfileApproved({ username }, req.user.id);
+      } catch (emailError) {
+        console.warn('[ECTA Approval] Email notification failed:', emailError.message);
+      }
+    });
     
     res.json({
       success: true,
       message: 'Exporter approved successfully',
       username,
-      status: 'approved',
-      approvedAt: new Date().toISOString()
+      status: 'ACTIVE',
+      approvedAt: new Date().toISOString(),
+      approvedBy: req.user.id,
+      comments: comments || ''
     });
   } catch (error) {
-    console.error('Approve exporter error:', error);
+    console.error('[ECTA Approval] Error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -1009,39 +1176,86 @@ router.post('/preregistration/exporters/:username/reject', authenticateToken, re
       return res.status(400).json({ error: 'Rejection reason is required' });
     }
     
-    // Get user from blockchain
-    let user;
+    console.log(`[ECTA Rejection] Rejecting exporter: ${username}`);
+    
+    // HYBRID MODE: Update PostgreSQL first (primary source)
     try {
-      user = await fabricService.getUser(username);
-    } catch (error) {
-      return res.status(404).json({ error: 'Exporter not found' });
+      // Check if exporter exists in PostgreSQL
+      const exporterCheck = await postgresService.query(
+        'SELECT exporter_id, status FROM exporter_profiles WHERE user_id = $1',
+        [username]
+      );
+      
+      if (exporterCheck.rows.length === 0) {
+        return res.status(404).json({ error: 'Exporter not found in database' });
+      }
+      
+      const currentStatus = exporterCheck.rows[0].status;
+      if (currentStatus !== 'PENDING_APPROVAL') {
+        return res.status(400).json({ 
+          error: 'Exporter is not pending approval',
+          currentStatus: currentStatus
+        });
+      }
+      
+      // Update exporter profile status to REVOKED (rejected)
+      await postgresService.query(
+        `UPDATE exporter_profiles 
+         SET status = 'REVOKED', 
+             rejection_reason = $1,
+             updated_at = NOW()
+         WHERE user_id = $2`,
+        [reason, username]
+      );
+      
+      console.log(`✓ Exporter profile rejected in PostgreSQL: ${username}`);
+      
+    } catch (dbError) {
+      console.error('[ECTA Rejection] PostgreSQL error:', dbError);
+      return res.status(500).json({ 
+        error: 'Database rejection failed',
+        details: dbError.message 
+      });
     }
     
-    if (user.status !== 'pending_approval') {
-      return res.status(400).json({ error: 'Exporter is not pending approval' });
-    }
-    
-    // Update user status on blockchain
-    await fabricService.updateUserStatus(username, {
-      status: 'rejected',
-      rejectedBy: req.user.id,
-      reason: reason
+    // STEP 2: Try to update blockchain asynchronously (non-blocking)
+    setImmediate(async () => {
+      try {
+        const user = await fabricService.getUser(username);
+        
+        if (user.status === 'pending_approval') {
+          await fabricService.updateUserStatus(username, {
+            status: 'rejected',
+            rejectedBy: req.user.id,
+            reason: reason
+          });
+          
+          console.log(`✓ Exporter rejected on blockchain (async): ${username}`);
+        }
+      } catch (blockchainError) {
+        console.warn('[ECTA Rejection] Blockchain update failed (non-blocking):', blockchainError.message);
+      }
     });
     
-    // Send rejection notification email
-    notificationService.notifyProfileRejected(user, req.user.id, reason)
-      .catch(err => console.error('Email notification failed:', err));
+    // Send rejection notification email (async, non-blocking)
+    setImmediate(async () => {
+      try {
+        await notificationService.notifyProfileRejected({ username }, req.user.id, reason);
+      } catch (emailError) {
+        console.warn('[ECTA Rejection] Email notification failed:', emailError.message);
+      }
+    });
     
     res.json({
       success: true,
       message: 'Exporter rejected',
       username,
-      status: 'rejected',
+      status: 'REVOKED',
       rejectedAt: new Date().toISOString(),
       reason
     });
   } catch (error) {
-    console.error('Reject exporter error:', error);
+    console.error('[ECTA Rejection] Error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -1474,4 +1688,321 @@ router.get('/certificates/license/:username/download', authenticateToken, async 
   }
 });
 
+// ============================================================================
+// SALES CONTRACT REGISTRATION ENDPOINTS
+// ============================================================================
+
+/**
+ * Get finalized sales contracts (for ECTA registration)
+ */
+router.get('/contracts/finalized', authenticateToken, requireRole('ecta', 'admin'), async (req, res) => {
+  try {
+    const result = await postgresService.query(`
+      SELECT 
+        cd.draft_id,
+        cd.contract_number,
+        br.company_name as buyer_name,
+        cd.coffee_type,
+        cd.quantity,
+        cd.total_value,
+        cd.status,
+        cd.created_at,
+        cd.updated_at as finalized_at,
+        cd.ecta_reference_number
+      FROM contract_drafts cd
+      LEFT JOIN buyer_registry br ON cd.buyer_id = br.buyer_id
+      WHERE cd.status = 'FINALIZED'
+      ORDER BY cd.updated_at DESC
+    `);
+    
+    res.json({
+      success: true,
+      contracts: result.rows
+    });
+  } catch (error) {
+    console.error('Get finalized contracts error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * Get registration statistics
+ */
+router.get('/contracts/registration-stats', authenticateToken, requireRole('ecta', 'admin'), async (req, res) => {
+  try {
+    const result = await postgresService.query(`
+      SELECT 
+        COUNT(*) as "totalFinalized",
+        COUNT(*) FILTER (WHERE ecta_reference_number IS NULL) as "pendingRegistration",
+        COUNT(*) FILTER (WHERE ecta_reference_number IS NOT NULL) as registered
+      FROM contract_drafts
+      WHERE status = 'FINALIZED'
+    `);
+    
+    const stats = result.rows[0] || {
+      totalFinalized: 0,
+      pendingRegistration: 0,
+      registered: 0
+    };
+    
+    res.json({
+      success: true,
+      stats: {
+        totalFinalized: parseInt(stats.totalFinalized) || 0,
+        pendingRegistration: parseInt(stats.pendingRegistration) || 0,
+        registered: parseInt(stats.registered) || 0
+      }
+    });
+  } catch (error) {
+    console.error('Get registration stats error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * Register a sales contract with ECTA
+ */
+router.post('/contracts/:draftId/register', authenticateToken, requireRole('ecta', 'admin'), async (req, res) => {
+  try {
+    const { draftId } = req.params;
+    const { referenceNumber, notes } = req.body;
+    
+    if (!referenceNumber) {
+      return res.status(400).json({ success: false, error: 'Reference number is required' });
+    }
+    
+    // Update the contract with ECTA reference number
+    // Note: registered_by stores the username (not UUID) for simplicity
+    const result = await postgresService.query(`
+      UPDATE contract_drafts
+      SET 
+        ecta_reference_number = $1,
+        registered_at = NOW(),
+        registration_notes = $2,
+        status = 'REGISTERED',
+        updated_at = NOW()
+      WHERE draft_id = $3
+      RETURNING *, 
+        (SELECT business_name FROM exporter_profiles WHERE exporter_id = contract_drafts.exporter_id) as exporter_name
+    `, [referenceNumber, notes, draftId]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Contract not found' });
+    }
+    
+    const contract = result.rows[0];
+    
+    // Get all active network members to notify
+    const membersResult = await postgresService.query(`
+      SELECT member_code, member_name 
+      FROM network_members 
+      WHERE is_active = true 
+        AND member_code != 'ECTA'
+      ORDER BY member_name
+    `);
+    
+    // Send notifications to all network members
+    const notificationPromises = membersResult.rows.map(async (member) => {
+      // Create notification
+      await postgresService.query(`
+        INSERT INTO contract_notifications (
+          contract_id, ecta_reference_number, exporter_id, 
+          recipient_member_code, notification_type, notification_message, metadata
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `, [
+        contract.draft_id,
+        referenceNumber,
+        contract.exporter_id,
+        member.member_code,
+        'CONTRACT_REGISTERED',
+        `New sales contract ${referenceNumber} has been registered by ECTA for exporter ${contract.exporter_name}. Please verify and approve.`,
+        JSON.stringify({
+          contractNumber: contract.contract_number,
+          exporterName: contract.exporter_name,
+          coffeeType: contract.coffee_type,
+          quantity: contract.quantity,
+          totalValue: contract.total_value,
+          currency: contract.currency,
+          registeredBy: req.user.username
+        })
+      ]);
+      
+      // Create permission record for tracking
+      await postgresService.query(`
+        INSERT INTO contract_permissions (
+          contract_id, ecta_reference_number, exporter_id, member_code, permission_status
+        ) VALUES ($1, $2, $3, $4, 'PENDING')
+        ON CONFLICT (contract_id, member_code) DO NOTHING
+      `, [contract.draft_id, referenceNumber, contract.exporter_id, member.member_code]);
+    });
+    
+    // Wait for all notifications to be sent
+    await Promise.all(notificationPromises);
+    
+    console.log(`[Contract Registration] Sent notifications to ${membersResult.rows.length} network members for contract ${referenceNumber}`);
+    
+    res.json({
+      success: true,
+      message: `Contract registered successfully. Notifications sent to ${membersResult.rows.length} network members.`,
+      contract: contract,
+      notificationsSent: membersResult.rows.length,
+      notifiedMembers: membersResult.rows.map(m => m.member_code)
+    });
+  } catch (error) {
+    console.error('Register contract error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * Verify sales contract by reference number (PUBLIC - no auth required)
+ * Returns comprehensive contract details for network member verification
+ */
+router.get('/contracts/verify/:referenceNumber', async (req, res) => {
+  try {
+    const { referenceNumber } = req.params;
+    
+    const result = await postgresService.query(`
+      SELECT 
+        cd.draft_id,
+        cd.contract_number,
+        cd.ecta_reference_number as reference_number,
+        cd.status,
+        cd.registered_at,
+        cd.updated_at as finalized_at,
+        
+        -- Exporter Information
+        ep.exporter_id,
+        ep.business_name as exporter_name,
+        ep.tin as exporter_tin,
+        ep.office_address as exporter_address,
+        ep.email as exporter_email,
+        ep.phone as exporter_phone,
+        
+        -- Buyer/Importer Information
+        br.buyer_id,
+        br.company_name as buyer_name,
+        br.country as buyer_country,
+        br.email as buyer_email,
+        br.phone as buyer_phone,
+        br.address as buyer_address,
+        
+        -- Coffee Details
+        cd.coffee_type,
+        cd.quality_grade as coffee_grade,
+        cd.quantity,
+        cd.unit_price as price_per_unit,
+        cd.total_value,
+        cd.currency,
+        cd.quality_standards as quality_standard,
+        cd.origin_region,
+        
+        -- Payment Information
+        cd.payment_terms,
+        cd.payment_method,
+        cd.payment_due_days,
+        
+        -- Shipping & Delivery
+        cd.incoterms,
+        cd.port_of_loading,
+        cd.port_of_discharge,
+        cd.delivery_date as delivery_deadline,
+        
+        -- Additional Terms
+        cd.special_conditions,
+        cd.registration_notes
+        
+      FROM contract_drafts cd
+      LEFT JOIN buyer_registry br ON cd.buyer_id = br.buyer_id
+      LEFT JOIN exporter_profiles ep ON cd.exporter_id = ep.exporter_id
+      WHERE cd.ecta_reference_number = $1
+        AND cd.status IN ('FINALIZED', 'REGISTERED', 'ACTIVE')
+    `, [referenceNumber]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Contract not found or not finalized',
+        verified: false
+      });
+    }
+    
+    const contract = result.rows[0];
+    
+    // Map payment method codes to readable names
+    const paymentMethodMap = {
+      'LC': 'Letter of Credit (LC)',
+      'CAD': 'Cash Against Documents (CAD)',
+      'TT': 'Telegraphic Transfer (TT)',
+      'DP': 'Documents Against Payment (DP)',
+      'DA': 'Documents Against Acceptance (DA)',
+      'OA': 'Open Account (OA)'
+    };
+    
+    // Format the response with organized sections
+    res.json({
+      success: true,
+      verified: true,
+      data: {
+        referenceNumber: contract.reference_number,
+        contractNumber: contract.contract_number,
+        status: contract.status,
+        registeredAt: contract.registered_at,
+        finalizedAt: contract.finalized_at,
+        
+        exporter: {
+          id: contract.exporter_id,
+          name: contract.exporter_name,
+          tin: contract.exporter_tin,
+          address: contract.exporter_address,
+          email: contract.exporter_email,
+          phone: contract.exporter_phone
+        },
+        
+        buyer: {
+          id: contract.buyer_id,
+          name: contract.buyer_name,
+          country: contract.buyer_country,
+          email: contract.buyer_email,
+          phone: contract.buyer_phone,
+          address: contract.buyer_address
+        },
+        
+        coffee: {
+          type: contract.coffee_type,
+          grade: contract.coffee_grade,
+          quantity: contract.quantity,
+          pricePerUnit: contract.price_per_unit,
+          qualityStandard: contract.quality_standard,
+          originRegion: contract.origin_region
+        },
+        
+        contract: {
+          totalValue: contract.total_value,
+          currency: contract.currency,
+          incoterms: contract.incoterms,
+          portOfLoading: contract.port_of_loading,
+          portOfDischarge: contract.port_of_discharge,
+          deliveryDeadline: contract.delivery_deadline
+        },
+        
+        payment: {
+          terms: contract.payment_terms,
+          method: contract.payment_method ? paymentMethodMap[contract.payment_method] || contract.payment_method : null,
+          dueDays: contract.payment_due_days
+        },
+        
+        additional: {
+          specialConditions: contract.special_conditions,
+          notes: contract.registration_notes
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Verify contract error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 module.exports = router;
+

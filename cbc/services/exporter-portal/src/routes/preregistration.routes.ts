@@ -68,7 +68,7 @@ router.get('/competence-certificates', controller.getMyCompetenceCertificates);
 // Get my export licenses
 router.get('/export-licenses', controller.getMyExportLicenses);
 
-// Get ESW pre-fill data (for auto-routing to ESW submission)
+// Get ESW pre-fill data (for auto-routing to Network Submission)
 router.get('/esw-prefill', controller.getESWPrefillData);
 
 export default router;

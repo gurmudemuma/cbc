@@ -32,7 +32,7 @@ Gateway service for Ethiopian coffee exporters to interact with the Hyperledger 
 
 - **Exporter Registration**: Admin can register new exporters with Fabric CA
 - **Authentication**: JWT-based auth with Fabric identity mapping
-- **ESW Submission**: Submit Export Single Window requests
+- **Network Submission**: Submit Export Single Window requests
 - **Certificate Management**: Request and view quality certificates
 - **Profile Management**: View and update exporter profiles
 - **Secure**: Rate limiting, CORS, helmet security headers
@@ -126,7 +126,7 @@ Returns JWT token for subsequent requests.
 
 **PUT** `/api/exporter/profile` (Authenticated)
 
-### ESW (Export Single Window)
+### Network Submission
 
 **POST** `/api/esw/submit` (Authenticated)
 ```json
@@ -185,7 +185,7 @@ curl -X POST http://localhost:3000/api/auth/login \
   }'
 ```
 
-### 3. Exporter submits ESW request
+### 3. Exporter submits Network request
 
 ```bash
 curl -X POST http://localhost:3000/api/esw/submit \

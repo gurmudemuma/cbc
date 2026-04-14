@@ -78,7 +78,7 @@ export const SERVICES: Record<string, ServiceConfig> = {
   },
   ESW: {
     id: 'esw',
-    name: 'Electronic Single Window (ESW)',
+    name: 'Network Submission System (ESW)',
     port: 3008,
     mspId: null,
     description: 'Unified government agency approvals',

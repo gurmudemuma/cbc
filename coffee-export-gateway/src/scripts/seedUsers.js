@@ -124,6 +124,26 @@ const DEFAULT_USERS = [
     status: 'approved',
     tin: 'TIN0000000010',
     phone: '+251911000010'
+  },
+  {
+    username: 'moa1',
+    password: 'password123',
+    email: 'phyto@moa.gov.et',
+    companyName: 'Ministry of Agriculture - Phytosanitary',
+    role: 'moa',
+    status: 'approved',
+    tin: 'TIN0000000011',
+    phone: '+251911000011'
+  },
+  {
+    username: 'moh1',
+    password: 'password123',
+    email: 'health@moh.gov.et',
+    companyName: 'Ministry of Health - Health Certification',
+    role: 'moh',
+    status: 'approved',
+    tin: 'TIN0000000012',
+    phone: '+251911000012'
   }
 ];
 
@@ -279,7 +299,7 @@ async function seedUsers() {
   console.log('Exporter (pending):');
   console.log('  Username: exporter3 / Password: password123\n');
   console.log('Other roles:');
-  console.log('  bank1, ecta1, customs1, nbe1, ecx1, shipping1');
+  console.log('  bank1, ecta1, customs1, nbe1, ecx1, shipping1, moa1, moh1');
   console.log('  Password: password123\n');
   console.log('========================================\n');
 }

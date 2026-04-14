@@ -262,13 +262,13 @@ This document describes the consolidated hybrid blockchain architecture combinin
 12. API Gateway → Client: Certificate PDF
 ```
 
-### Pattern 4: ESW Submission
+### Pattern 4: Network Submission
 
 ```
 1. Exporter → API Gateway: POST /api/v1/esw/submit
-2. API Gateway → Fabric: SubmitESWRequest (immutable record)
-3. Fabric → Event: ESWSubmitted
-4. Bridge → CBC: Create ESW submission
+2. API Gateway → Fabric: SubmitToNetworkRequest (immutable record)
+3. Fabric → Event: NetworkSubmitted
+4. Bridge → CBC: Create Network Submission
 5. CBC → Multiple Agencies: Notify for approval
 6. Each Agency → CBC: Approve/Reject
 7. CBC → Kafka: Publish to cbc.approval.granted

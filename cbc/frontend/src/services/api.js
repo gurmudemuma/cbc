@@ -61,7 +61,17 @@ apiClient.interceptors.response.use(
     
     // Handle 403 Forbidden - insufficient permissions
     if (error.response?.status === 403) {
-      console.error('Access forbidden: insufficient permissions');
+      const errorMessage = error.response?.data?.error || 'Access forbidden';
+      console.error('Access forbidden:', errorMessage);
+      
+      // If it's a token issue, redirect to login
+      if (errorMessage.includes('token') || errorMessage.includes('expired')) {
+        console.warn('Token issue detected, redirecting to login...');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        localStorage.removeItem('org');
+        window.location.href = '/login';
+      }
     }
     
     // Handle 500+ Server errors

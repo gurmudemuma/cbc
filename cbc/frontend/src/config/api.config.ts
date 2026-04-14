@@ -111,7 +111,7 @@ const labelMap: Record<string, string> = {
   'ecta': 'Ethiopian Coffee & Tea Authority (ECTA)',
   'custom-authorities': 'Ethiopian Revenues and Customs Authority (ERCA)',
   'ecx': 'Ethiopian Commodity Exchange (ECX)',
-  'esw': 'Electronic Single Window (ESW)',
+  'esw': 'Network Submission System (ESW)',
   'shipping-line': 'Shipping Line',
   // Government Agencies
   'mot': 'Ministry of Trade (MOT)',
@@ -145,10 +145,12 @@ export const ORGANIZATIONS: Organization[] = (getAllServices() as ServiceConfig[
 }));
 
 // Organizations that support authentication (for login dropdown)
+// Only network members (consortium) and exporter portal
 export const LOGIN_ORGANIZATIONS: Organization[] = ORGANIZATIONS.filter(
   (org) => {
-    const service = Object.values(SERVICES as Record<string, ServiceConfig>).find(s => s.id === org.id);
-    return service?.hasAuth !== false; // Include if hasAuth is true or undefined (default true)
+    // Include exporter portal and all consortium members (network members)
+    // Exclude ESW and other external services
+    return org.id === 'exporter-portal' || org.type === 'consortium';
   }
 );
 

@@ -32,7 +32,7 @@ coffee-export-gateway/src/routes/
 ├── auth.routes.js               ✅ WORKING - Authentication endpoints
 ├── exporter.routes.js           ✅ WORKING - Exporter management
 ├── exports.routes.js            ✅ WORKING - Export operations
-├── esw.routes.js                ✅ WORKING - ESW certificates
+├── esw.routes.js                ✅ WORKING - Network certificates
 ├── certificates.routes.js       ✅ WORKING - Certificate management
 ├── ecta.routes.js               ✅ WORKING - ECTA operations
 ├── statutory.routes.js          ✅ WORKING - Statutory compliance

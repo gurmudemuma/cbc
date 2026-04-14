@@ -71,9 +71,23 @@ const SalesContractDraftForm = ({
     if (!validate()) return;
     onSubmit({
       buyerId,
-      ...formData,
+      coffeeType: formData.coffeeType,
+      originRegion: formData.originRegion,
       quantity: parseInt(formData.quantity),
       unitPrice: parseFloat(formData.unitPrice),
+      currency: formData.currency,
+      paymentTerms: formData.paymentTerms,
+      paymentMethod: formData.paymentMethod,
+      incoterms: formData.incoterms,
+      deliveryDate: formData.deliveryDate,
+      portOfLoading: formData.portOfLoading,
+      portOfDischarge: formData.portOfDischarge,
+      governingLaw: formData.governingLaw,
+      arbitrationLocation: formData.arbitrationLocation,
+      arbitrationRules: formData.arbitrationRules,
+      qualityGrade: formData.qualityGrade,
+      specialConditions: formData.specialConditions,
+      certificationsRequired: formData.certificationsRequired,
     });
   };
 
@@ -228,9 +242,11 @@ const SalesContractDraftForm = ({
                 label="Payment Method"
               >
                 <MenuItem value="LC">Letter of Credit (LC)</MenuItem>
+                <MenuItem value="CAD">Cash Against Documents (CAD)</MenuItem>
                 <MenuItem value="TT">Telegraphic Transfer (TT)</MenuItem>
                 <MenuItem value="DP">Documents Against Payment (DP)</MenuItem>
                 <MenuItem value="DA">Documents Against Acceptance (DA)</MenuItem>
+                <MenuItem value="OA">Open Account (OA)</MenuItem>
               </Select>
             </FormControl>
           </Grid>

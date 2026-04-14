@@ -72,6 +72,38 @@ class NotificationService {
     console.log('License expiring for ' + user.username + ': ' + daysUntilExpiry + ' days');
     return { success: true, reason: 'not_configured' };
   }
+
+  async notifyDocumentRequested(networkMemberCode, exporterInfo, documentType, requestId) {
+    const subject = `New Document Request - ${documentType}`;
+    const html = `
+      <h2>New Document Request</h2>
+      <p>A new document request has been submitted by an exporter.</p>
+      <h3>Request Details:</h3>
+      <ul>
+        <li><strong>Request ID:</strong> ${requestId}</li>
+        <li><strong>Exporter:</strong> ${exporterInfo.businessName || exporterInfo.exporterId}</li>
+        <li><strong>Document Type:</strong> ${documentType}</li>
+        <li><strong>Network Member:</strong> ${networkMemberCode}</li>
+      </ul>
+      <p>Please log in to the system to review the exporter's qualification profile and process this request.</p>
+      <p><em>This is an automated notification from the ECTA Coffee Export System.</em></p>
+    `;
+    
+    // In a production system, you would look up the network member's email from the organizations table
+    // For now, we'll log the notification
+    console.log(`[Notification] Document request notification for ${networkMemberCode}: ${documentType} (Request ID: ${requestId})`);
+    
+    // If SMTP is configured and we have the network member's email, send it
+    if (this.initialized) {
+      // TODO: Query organizations table for network member email
+      // const orgQuery = await pool.query('SELECT contact_email FROM organizations WHERE organization_id = $1', [networkMemberCode]);
+      // if (orgQuery.rows.length > 0 && orgQuery.rows[0].contact_email) {
+      //   return await this.sendEmail(orgQuery.rows[0].contact_email, subject, html);
+      // }
+    }
+    
+    return { success: true, reason: 'logged' };
+  }
 }
 
 module.exports = new NotificationService();

@@ -88,11 +88,11 @@ async function createTestSubmissionAndApproval(agencyCode, exporterData, exportD
        VALUES ($1, $2, $3, $4, $5, 'PENDING')
        RETURNING export_id`, [exporterId, exportDetails.coffeeType, exportDetails.quantity, exportDetails.originRegion, exportDetails.destinationCountry]);
         const exportId = exportResult.rows[0].export_id;
-        // Create ESW submission
-        const eswReferenceNumber = `ESW-${Date.now()}-${Math.random().toString(36).substring(7)}`;
-        const submissionResult = await client.query(`INSERT INTO esw_submissions (export_id, esw_reference_number, status, submitted_by, submitted_at)
+        // Create Network Submission
+        const networkReferenceNumber = `ESW-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+        const submissionResult = await client.query(`INSERT INTO network_submissions (export_id, network_reference_number, status, submitted_by, submitted_at)
        VALUES ($1, $2, 'SUBMITTED', $3, NOW())
-       RETURNING submission_id`, [exportId, eswReferenceNumber, exporterData.exporterName]);
+       RETURNING submission_id`, [exportId, networkReferenceNumber, exporterData.exporterName]);
         const submissionId = submissionResult.rows[0].submission_id;
         // Create agency approval record
         const approvalResult = await client.query(`INSERT INTO esw_agency_approvals (submission_id, agency_code, status, approved_by, approved_at, notes)
@@ -100,7 +100,7 @@ async function createTestSubmissionAndApproval(agencyCode, exporterData, exportD
        RETURNING approval_id`, [submissionId, agencyCode, approvalData.approvedBy, approvalData.approvalNotes]);
         const approvalId = approvalResult.rows[0].approval_id;
         await client.query('COMMIT');
-        return { submissionId, approvalId, eswReferenceNumber };
+        return { submissionId, approvalId, networkReferenceNumber };
     }
     catch (error) {
         await client.query('ROLLBACK');
@@ -120,10 +120,10 @@ async function cleanupTestData(submissionId) {
         // Delete agency approvals
         await client.query('DELETE FROM esw_agency_approvals WHERE submission_id = $1', [submissionId]);
         // Get export_id before deleting submission
-        const exportResult = await client.query('SELECT export_id FROM esw_submissions WHERE submission_id = $1', [submissionId]);
+        const exportResult = await client.query('SELECT export_id FROM network_submissions WHERE submission_id = $1', [submissionId]);
         const exportId = exportResult.rows[0]?.export_id;
         // Delete submission
-        await client.query('DELETE FROM esw_submissions WHERE submission_id = $1', [submissionId]);
+        await client.query('DELETE FROM network_submissions WHERE submission_id = $1', [submissionId]);
         // Delete export
         if (exportId) {
             await client.query('DELETE FROM exports WHERE export_id = $1', [exportId]);
@@ -157,20 +157,20 @@ describe('ESW Certificate Generation - Property-Based Tests', () => {
                 const testData = await createTestSubmissionAndApproval(agencyCode, exporterData, exportDetails, approvalData);
                 submissionId = testData.submissionId;
                 const approvalId = testData.approvalId;
-                const eswReferenceNumber = testData.eswReferenceNumber;
+                const networkReferenceNumber = testData.networkReferenceNumber;
                 // Simulate certificate generation (this would normally be triggered by the approval endpoint)
                 // For now, we'll manually insert a certificate to test the schema
                 const certificateNumber = `${agencyCode}-CERT-${new Date().getFullYear()}-${Math.floor(Math.random() * 100000).toString().padStart(5, '0')}`;
                 const filePath = `./storage/certificates/${new Date().getFullYear()}/${new Date().getMonth() + 1}/${certificateNumber}.pdf`;
                 const certResult = await pool.query(`INSERT INTO esw_certificates (
                 approval_id, submission_id, agency_code, certificate_number,
-                exporter_name, exporter_tin, esw_reference_number,
+                exporter_name, exporter_tin, network_reference_number,
                 coffee_type, quantity, origin_region, destination_country,
                 approved_by, approved_at, file_path, status
               ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), $13, 'ACTIVE')
               RETURNING certificate_id, certificate_number`, [
                     approvalId, submissionId, agencyCode, certificateNumber,
-                    exporterData.exporterName, exporterData.exporterTin, eswReferenceNumber,
+                    exporterData.exporterName, exporterData.exporterTin, networkReferenceNumber,
                     exportDetails.coffeeType, exportDetails.quantity, exportDetails.originRegion, exportDetails.destinationCountry,
                     approvalData.approvedBy, filePath
                 ]);
@@ -187,7 +187,7 @@ describe('ESW Certificate Generation - Property-Based Tests', () => {
                 expect(certificate.agency_code).toBe(agencyCode);
                 expect(certificate.exporter_name).toBe(exporterData.exporterName);
                 expect(certificate.exporter_tin).toBe(exporterData.exporterTin);
-                expect(certificate.esw_reference_number).toBe(eswReferenceNumber);
+                expect(certificate.network_reference_number).toBe(networkReferenceNumber);
                 expect(certificate.status).toBe('ACTIVE');
                 expect(certificate.file_path).toBeDefined();
                 expect(certificate.issued_at).toBeDefined();
@@ -247,19 +247,19 @@ describe('ESW Certificate Generation - Property-Based Tests', () => {
                 const testData = await createTestSubmissionAndApproval(agencyCode, exporterData, exportDetails, approvalData);
                 submissionId = testData.submissionId;
                 const approvalId = testData.approvalId;
-                const eswReferenceNumber = testData.eswReferenceNumber;
+                const networkReferenceNumber = testData.networkReferenceNumber;
                 // Create certificate record
                 const certificateNumber = `${agencyCode}-CERT-${new Date().getFullYear()}-${Math.floor(Math.random() * 100000).toString().padStart(5, '0')}`;
                 const filePath = `./storage/certificates/${new Date().getFullYear()}/${new Date().getMonth() + 1}/${certificateNumber}.pdf`;
                 const certResult = await pool.query(`INSERT INTO esw_certificates (
                 approval_id, submission_id, agency_code, certificate_number,
-                exporter_name, exporter_tin, esw_reference_number,
+                exporter_name, exporter_tin, network_reference_number,
                 coffee_type, quantity, origin_region, destination_country,
                 approved_by, approved_at, file_path, status
               ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), $13, 'ACTIVE')
               RETURNING *`, [
                     approvalId, submissionId, agencyCode, certificateNumber,
-                    exporterData.exporterName, exporterData.exporterTin, eswReferenceNumber,
+                    exporterData.exporterName, exporterData.exporterTin, networkReferenceNumber,
                     exportDetails.coffeeType, exportDetails.quantity, exportDetails.originRegion, exportDetails.destinationCountry,
                     approvalData.approvedBy, filePath
                 ]);
@@ -267,7 +267,7 @@ describe('ESW Certificate Generation - Property-Based Tests', () => {
                 // Verify all required fields are present in certificate record
                 expect(certificate.agency_code).toBeDefined();
                 expect(certificate.certificate_number).toBeDefined();
-                expect(certificate.esw_reference_number).toBe(eswReferenceNumber);
+                expect(certificate.network_reference_number).toBe(networkReferenceNumber);
                 expect(certificate.exporter_name).toBe(exporterData.exporterName);
                 expect(certificate.exporter_tin).toBe(exporterData.exporterTin);
                 expect(certificate.coffee_type).toBe(exportDetails.coffeeType);
@@ -309,18 +309,18 @@ describe('ESW Certificate Generation - Property-Based Tests', () => {
                 const testData = await createTestSubmissionAndApproval(agencyCode, exporterData, exportDetails, approvalData);
                 submissionId = testData.submissionId;
                 const approvalId = testData.approvalId;
-                const eswReferenceNumber = testData.eswReferenceNumber;
+                const networkReferenceNumber = testData.networkReferenceNumber;
                 // Create certificate record
                 const certificateNumber = `${agencyCode}-CERT-${new Date().getFullYear()}-${Math.floor(Math.random() * 100000).toString().padStart(5, '0')}`;
                 const filePath = `./storage/certificates/${new Date().getFullYear()}/${new Date().getMonth() + 1}/${certificateNumber}.pdf`;
                 await pool.query(`INSERT INTO esw_certificates (
                 approval_id, submission_id, agency_code, certificate_number,
-                exporter_name, exporter_tin, esw_reference_number,
+                exporter_name, exporter_tin, network_reference_number,
                 coffee_type, quantity, origin_region, destination_country,
                 approved_by, approved_at, file_path, status
               ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), $13, 'ACTIVE')`, [
                     approvalId, submissionId, agencyCode, certificateNumber,
-                    exporterData.exporterName, exporterData.exporterTin, eswReferenceNumber,
+                    exporterData.exporterName, exporterData.exporterTin, networkReferenceNumber,
                     exportDetails.coffeeType, exportDetails.quantity, exportDetails.originRegion, exportDetails.destinationCountry,
                     approvalData.approvedBy, filePath
                 ]);
@@ -402,7 +402,7 @@ describe('ESW Certificate Generation - Property-Based Tests', () => {
     test('Certificate table has all required columns', async () => {
         const requiredColumns = [
             'certificate_id', 'approval_id', 'submission_id', 'agency_code', 'certificate_number',
-            'exporter_name', 'exporter_tin', 'esw_reference_number',
+            'exporter_name', 'exporter_tin', 'network_reference_number',
             'coffee_type', 'quantity', 'origin_region', 'destination_country',
             'approved_by', 'approved_at', 'issued_at', 'file_path', 'status',
             'created_at', 'updated_at'
@@ -430,19 +430,19 @@ describe('ESW Certificate Generation - Property-Based Tests', () => {
                 const testData = await createTestSubmissionAndApproval(agencyCode, exporterData, exportDetails, approvalData);
                 submissionId = testData.submissionId;
                 const approvalId = testData.approvalId;
-                const eswReferenceNumber = testData.eswReferenceNumber;
+                const networkReferenceNumber = testData.networkReferenceNumber;
                 // Create certificate record
                 const certificateNumber = `${agencyCode}-CERT-${new Date().getFullYear()}-${Math.floor(Math.random() * 100000).toString().padStart(5, '0')}`;
                 const filePath = `certificates/${new Date().getFullYear()}/${new Date().getMonth() + 1}/${certificateNumber}.pdf`;
                 const certResult = await pool.query(`INSERT INTO esw_certificates (
                 approval_id, submission_id, agency_code, certificate_number,
-                exporter_name, exporter_tin, esw_reference_number,
+                exporter_name, exporter_tin, network_reference_number,
                 coffee_type, quantity, origin_region, destination_country,
                 approved_by, approved_at, file_path, status
               ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), $13, 'ACTIVE')
               RETURNING certificate_id`, [
                     approvalId, submissionId, agencyCode, certificateNumber,
-                    exporterData.exporterName, exporterData.exporterTin, eswReferenceNumber,
+                    exporterData.exporterName, exporterData.exporterTin, networkReferenceNumber,
                     exportDetails.coffeeType, exportDetails.quantity, exportDetails.originRegion, exportDetails.destinationCountry,
                     approvalData.approvedBy, filePath
                 ]);
@@ -478,18 +478,18 @@ describe('ESW Certificate Generation - Property-Based Tests', () => {
                 const testData = await createTestSubmissionAndApproval(agencyCode, exporterData, exportDetails, approvalData);
                 submissionId = testData.submissionId;
                 const approvalId = testData.approvalId;
-                const eswReferenceNumber = testData.eswReferenceNumber;
+                const networkReferenceNumber = testData.networkReferenceNumber;
                 // Create certificate record
                 const certificateNumber = `${agencyCode}-CERT-${new Date().getFullYear()}-${Math.floor(Math.random() * 100000).toString().padStart(5, '0')}`;
                 const filePath = `certificates/${new Date().getFullYear()}/${new Date().getMonth() + 1}/${certificateNumber}.pdf`;
                 await pool.query(`INSERT INTO esw_certificates (
                 approval_id, submission_id, agency_code, certificate_number,
-                exporter_name, exporter_tin, esw_reference_number,
+                exporter_name, exporter_tin, network_reference_number,
                 coffee_type, quantity, origin_region, destination_country,
                 approved_by, approved_at, file_path, status
               ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), $13, 'ACTIVE')`, [
                     approvalId, submissionId, agencyCode, certificateNumber,
-                    exporterData.exporterName, exporterData.exporterTin, eswReferenceNumber,
+                    exporterData.exporterName, exporterData.exporterTin, networkReferenceNumber,
                     exportDetails.coffeeType, exportDetails.quantity, exportDetails.originRegion, exportDetails.destinationCountry,
                     approvalData.approvedBy, filePath
                 ]);
@@ -524,7 +524,7 @@ describe('ESW Certificate Generation - Property-Based Tests', () => {
                 // Create test submission
                 const testData = await createTestSubmissionAndApproval(agencyCodes[0], exporterData, exportDetails, approvalData);
                 submissionId = testData.submissionId;
-                const eswReferenceNumber = testData.eswReferenceNumber;
+                const networkReferenceNumber = testData.networkReferenceNumber;
                 // Create certificates for multiple agencies
                 const certificateIds = [];
                 for (const agencyCode of agencyCodes) {
@@ -538,13 +538,13 @@ describe('ESW Certificate Generation - Property-Based Tests', () => {
                     const filePath = `certificates/${new Date().getFullYear()}/${new Date().getMonth() + 1}/${certificateNumber}.pdf`;
                     const certResult = await pool.query(`INSERT INTO esw_certificates (
                   approval_id, submission_id, agency_code, certificate_number,
-                  exporter_name, exporter_tin, esw_reference_number,
+                  exporter_name, exporter_tin, network_reference_number,
                   coffee_type, quantity, origin_region, destination_country,
                   approved_by, approved_at, file_path, status
                 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), $13, 'ACTIVE')
                 RETURNING certificate_id`, [
                         approvalId, submissionId, agencyCode, certificateNumber,
-                        exporterData.exporterName, exporterData.exporterTin, eswReferenceNumber,
+                        exporterData.exporterName, exporterData.exporterTin, networkReferenceNumber,
                         exportDetails.coffeeType, exportDetails.quantity, exportDetails.originRegion, exportDetails.destinationCountry,
                         approvalData.approvedBy, filePath
                     ]);
@@ -582,7 +582,7 @@ describe('ESW Certificate Generation - Property-Based Tests', () => {
                 // Create test submission
                 const testData = await createTestSubmissionAndApproval(agencyCodes[0], exporterData, exportDetails, approvalDataArray[0]);
                 submissionId = testData.submissionId;
-                const eswReferenceNumber = testData.eswReferenceNumber;
+                const networkReferenceNumber = testData.networkReferenceNumber;
                 // Create certificates for multiple agencies with different officers
                 const certificatesByOfficer = {};
                 for (let i = 0; i < agencyCodes.length; i++) {
@@ -599,13 +599,13 @@ describe('ESW Certificate Generation - Property-Based Tests', () => {
                     const filePath = `certificates/${new Date().getFullYear()}/${new Date().getMonth() + 1}/${certificateNumber}.pdf`;
                     const certResult = await pool.query(`INSERT INTO esw_certificates (
                   approval_id, submission_id, agency_code, certificate_number,
-                  exporter_name, exporter_tin, esw_reference_number,
+                  exporter_name, exporter_tin, network_reference_number,
                   coffee_type, quantity, origin_region, destination_country,
                   approved_by, approved_at, file_path, status
                 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), $13, 'ACTIVE')
                 RETURNING certificate_id`, [
                         approvalId, submissionId, agencyCode, certificateNumber,
-                        exporterData.exporterName, exporterData.exporterTin, eswReferenceNumber,
+                        exporterData.exporterName, exporterData.exporterTin, networkReferenceNumber,
                         exportDetails.coffeeType, exportDetails.quantity, exportDetails.originRegion, exportDetails.destinationCountry,
                         officerName, filePath
                     ]);

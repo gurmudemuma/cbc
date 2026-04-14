@@ -1,12 +1,12 @@
 /**
- * ESW (Electronic Single Window) Models
- * Based on Ethiopian Electronic Single Window system
+ * Network Submission System Models
+ * Based on Ethiopian Network Submission System system
  */
 
 export interface ESWSubmission {
     submissionId: string;
     exportId: string;
-    eswReferenceNumber: string;
+    networkReferenceNumber: string;
     submittedBy: string;
     submittedAt: Date;
     status: 'SUBMITTED' | 'UNDER_REVIEW' | 'APPROVED' | 'REJECTED' | 'INFO_REQUIRED' | 'CANCELLED';

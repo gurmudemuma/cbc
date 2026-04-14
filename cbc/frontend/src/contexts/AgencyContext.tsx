@@ -4,7 +4,7 @@
  */
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import eswService from '../services/esw.service';
+import eswService from '../services/network.service';
 
 export interface Agency {
     id: string;

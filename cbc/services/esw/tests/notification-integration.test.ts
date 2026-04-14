@@ -45,7 +45,7 @@ describe('Notification Integration with Certificate Generation', () => {
 
       // Create test submission
       const submissionResult = await client.query(
-        `INSERT INTO esw_submissions (export_id, esw_reference_number, status)
+        `INSERT INTO network_submissions (export_id, network_reference_number, status)
          VALUES ($1, $2, $3)
          RETURNING submission_id`,
         [testExportId, 'ESW-TEST-' + Date.now(), 'PENDING']
@@ -83,7 +83,7 @@ describe('Notification Integration with Certificate Generation', () => {
       }
       if (testSubmissionId) {
         await client.query('DELETE FROM esw_certificate_notifications WHERE certificate_id IN (SELECT certificate_id FROM esw_certificates WHERE submission_id = $1)', [testSubmissionId]);
-        await client.query('DELETE FROM esw_submissions WHERE submission_id = $1', [testSubmissionId]);
+        await client.query('DELETE FROM network_submissions WHERE submission_id = $1', [testSubmissionId]);
       }
       if (testExportId) {
         await client.query('DELETE FROM exports WHERE export_id = $1', [testExportId]);
@@ -193,7 +193,7 @@ describe('Notification Integration with Certificate Generation', () => {
     expect(notification).toBeDefined();
     expect(notification?.title).toContain('Ethiopian Coffee & Tea Authority');
     expect(notification?.message).toContain(certificate.certificateNumber);
-    expect(notification?.message).toContain(certificate.eswReferenceNumber);
+    expect(notification?.message).toContain(certificate.networkReferenceNumber);
     expect(notification?.downloadUrl).toContain(`/certificates/${certificate.certificateId}/download`);
   });
 

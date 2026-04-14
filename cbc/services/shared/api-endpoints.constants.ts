@@ -67,13 +67,13 @@ export const SERVICES: Record<string, ServiceConfig> = {
   },
   ESW: {
     id: 'esw',
-    name: 'Electronic Single Window',
+    name: 'Network Submission System',
     port: 3008,
     mspId: null,
     description: 'ESW - Platform/system used by all agencies (not a login organization)',
     type: 'external',
     order: 3,
-    hasAuth: false, // ESW is infrastructure, not a login organization
+    hasAuth: false, // Network Submission is infrastructure, not a login organization
   },
   COMMERCIAL_BANK: {
     id: 'commercial-bank',
@@ -411,7 +411,7 @@ export const WAREHOUSE_ENDPOINTS = {
 } as const;
 
 /**
- * ESW (Electronic Single Window) endpoints
+ * Network Submission System endpoints
  */
 export const ESW_ENDPOINTS = {
   // Submissions

@@ -16,6 +16,8 @@ const EXPORTER_ENDPOINTS = {
   EXPORT_UPDATE: (id) => `/api/exports/${id}`,
   PROFILE: '/api/exporter/profile',
   PROFILE_VERIFICATION: '/api/exporter/profile/verification',
+  APPLICATIONS: '/api/exporter/applications',
+  APPLICATION_DETAILS: (id) => `/api/exporter/applications/${id}`,
 };
 
 const exporterService = {

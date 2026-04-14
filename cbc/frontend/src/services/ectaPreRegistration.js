@@ -348,8 +348,20 @@ const ectaPreRegistrationService = {
    * Get global dashboard statistics (ECTA Official)
    */
   getGlobalStats: async () => {
-    const response = await apiClient.get('/api/ecta/preregistration/dashboard/stats');
-    return response.data;
+    try {
+      const response = await apiClient.get('/api/ecta/preregistration/dashboard/stats');
+      console.log('Global stats response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch global stats:', error);
+      // Return default stats if API fails
+      return {
+        data: {
+          exporters: { total: 0, pending: 0, active: 0, rejected: 0 },
+          licenses: { total: 0, pending: 0, active: 0 }
+        }
+      };
+    }
   },
 };
 
