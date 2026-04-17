@@ -495,7 +495,7 @@ const AgencyApprovalDashboard = (): JSX.Element => {
                   <Table>
                     <TableHead>
                       <TableRow>
-                        <TableCell>ESW Reference</TableCell>
+                        <TableCell>Submission Reference</TableCell>
                         <TableCell>Export ID</TableCell>
                         <TableCell>Exporter</TableCell>
                         <TableCell>Submitted Date</TableCell>
@@ -559,7 +559,7 @@ const AgencyApprovalDashboard = (): JSX.Element => {
                   <Table>
                     <TableHead>
                       <TableRow>
-                        <TableCell>ESW Reference</TableCell>
+                        <TableCell>Submission Reference</TableCell>
                         <TableCell>Export ID</TableCell>
                         <TableCell>Exporter</TableCell>
                         <TableCell>Submitted Date</TableCell>

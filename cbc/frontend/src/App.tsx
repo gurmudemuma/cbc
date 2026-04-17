@@ -71,7 +71,6 @@ import SalesContractDashboard from './pages/SalesContractDashboard';
 import NetworkSubmission from './pages/NetworkSubmission';
 import NetworkMemberApprovalDashboard from './pages/NetworkMemberApprovalDashboard';
 import NetworkStatistics from './pages/NetworkStatistics';
-import CertificateVerification from './pages/CertificateVerification';
 import SalesContractVerificationPage from './pages/SalesContractVerificationPage';
 import BankingExportApproval from './pages/BankingExportApproval';
 import ECTASalesContractRegistration from './pages/ECTASalesContractRegistration';
@@ -90,9 +89,6 @@ import ExporterDocumentManager from './components/ExporterDocumentManager';
 import BankingOperations from './pages/BankingOperations';
 import LotManagement from './pages/LotManagement';
 import MonetaryPolicy from './pages/MonetaryPolicy';
-
-// Sales Contract Pages
-import SalesContractDashboard from './pages/SalesContractDashboard';
 
 // Services & Config
 // setApiBaseUrl removed to allow proxy to handle routing
@@ -243,13 +239,13 @@ function App(): JSX.Element {
       return '/my-applications';  // Exporters go to Application Dashboard to track pre-registration progress
     }
 
+    // All Network Members - Route to Network Agency Dashboard
     // Commercial Bank - Network approval dashboard (consortium member)
-    // Note: commercial-bank/commercialbank are the current IDs
     if (orgLower === 'commercial-bank' || orgLower === 'commercialbank') {
-      return '/network/agency-dashboard';  // Network approval dashboard
+      return '/network/agency-dashboard';
     }
 
-    // National Bank - FX approval and compliance
+    // National Bank - Network approval dashboard (consortium member)
     if (
       orgLower === 'nb-regulatory' ||
       orgLower === 'banker' ||
@@ -257,27 +253,27 @@ function App(): JSX.Element {
       orgLower === 'national-bank' ||
       orgLower === 'nationalbank'
     ) {
-      return '/fx-approval';
+      return '/network/agency-dashboard';
     }
 
-    // ECX - Lot verification
+    // ECX - Network approval dashboard (consortium member)
     if (orgLower === 'ecx') {
-      return '/lot-verification';
+      return '/network/agency-dashboard';
     }
 
-    // ECTA - Pre-registration management (primary responsibility)
+    // ECTA - Network approval dashboard (consortium member)
     if (orgLower === 'ecta') {
-      return '/preregistration';
+      return '/network/agency-dashboard';
     }
 
-    // Shipping Line - Shipment management
+    // Shipping Line - Network approval dashboard (consortium member)
     if (orgLower === 'shipping' || orgLower === 'shipping-line' || orgLower === 'shippingline') {
-      return '/shipments';
+      return '/network/agency-dashboard';
     }
 
-    // Custom Authorities - Customs clearance
+    // Custom Authorities - Network approval dashboard (consortium member)
     if (orgLower === 'custom-authorities') {
-      return '/customs';
+      return '/network/agency-dashboard';
     }
 
     // Agency Users - Direct to Agency Dashboard
@@ -315,10 +311,6 @@ function App(): JSX.Element {
         ) : (
           <Login onLogin={handleLogin} />
         ),
-      },
-      {
-        path: '/verify-certificate',
-        element: <CertificateVerification />,
       },
       {
         path: '/',
@@ -447,18 +439,16 @@ function App(): JSX.Element {
           { path: 'network/status', element: <NetworkStatistics user={user} org={org} /> },
           { path: 'network/agency-dashboard', element: <NetworkMemberApprovalDashboard /> },
           { path: 'network/statistics', element: <NetworkStatistics user={user} org={org} /> },
-          { path: 'network/verify-certificate', element: <CertificateVerification /> },
           
           // Exporter Network Submission (alias for exporters)
           { path: 'exporter/network-submission', element: <NetworkSubmission user={user} org={org} /> },
 
-          // ESW Routes (backward compatibility)
+          // Network Routes (backward compatibility)
           { path: 'esw/submission', element: <NetworkSubmission user={user} org={org} /> },
           { path: 'esw/submissions', element: <NetworkSubmission user={user} org={org} /> },
           { path: 'esw/status', element: <NetworkStatistics user={user} org={org} /> },
           { path: 'esw/agency-dashboard', element: <NetworkMemberApprovalDashboard /> },
           { path: 'esw/statistics', element: <NetworkStatistics user={user} org={org} /> },
-          { path: 'esw/verify-certificate', element: <CertificateVerification /> },
 
           { path: 'regulatory', element: <Dashboard user={user} org={org} /> },
           { path: 'regulatory/compliance', element: <Dashboard user={user} org={org} /> },

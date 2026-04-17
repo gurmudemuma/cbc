@@ -3,6 +3,7 @@ const router = express.Router();
 const { authenticateToken, requireRole } = require('../middleware/auth');
 const postgresService = require('../services/postgres');
 const { generateSalesContractCertificate } = require('../utils/sales-contract-certificate');
+const hybridDataService = require('../services/hybrid-data-service');
 
 // Helper function
 async function logNegotiationActivity(draftId, actorId, actorType, actionType, message, details) {
@@ -342,7 +343,7 @@ router.get('/:draftId/history', authenticateToken, async (req, res) => {
   }
 });
 
-// Finalize contract to blockchain
+// Finalize contract (using hybrid service for dual-write)
 router.post('/:draftId/finalize', authenticateToken, async (req, res) => {
   try {
     const { draftId } = req.params;
@@ -369,8 +370,21 @@ router.post('/:draftId/finalize', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Draft must be ACCEPTED before finalization' });
     }
     
-    // Prepare contract data for blockchain
-    const finalContractData = {
+    // Generate ECTA reference number (format: ECTA-SC-YYYYMMDD-XXXXX)
+    const now = new Date();
+    const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
+    const randomNum = Math.floor(10000 + Math.random() * 90000);
+    const ectaReferenceNumber = `ECTA-SC-${dateStr}-${randomNum}`;
+    
+    // Generate contract ID as UUID
+    const crypto = require('crypto');
+    const finalizedContractId = crypto.randomUUID();
+    
+    // Prepare contract data for hybrid write
+    const contractData = {
+      draftId: draftId,
+      contractId: finalizedContractId,
+      ectaReferenceNumber: ectaReferenceNumber,
       exporterId: draft.exporter_id,
       buyerId: draft.buyer_id,
       coffeeType: draft.coffee_type,
@@ -385,45 +399,80 @@ router.post('/:draftId/finalize', authenticateToken, async (req, res) => {
       governingLaw: draft.governing_law,
       arbitrationLocation: draft.arbitration_location,
       arbitrationRules: draft.arbitration_rules,
-      forceMajeureClause: draft.force_majeure_clause
+      forceMajeureClause: draft.force_majeure_clause,
+      status: 'FINALIZED'
     };
     
-    // Call blockchain to finalize contract
-    const fabricService = require('../services');
-    try {
-      await fabricService.submitTransaction(
-        req.user.id,
-        process.env.CHAINCODE_NAME || 'ecta',
-        'FinalizeContractFromDraft',
-        draftId,
-        JSON.stringify(finalContractData)
-      );
-    } catch (error) {
-      console.error('[Contract Finalize] Blockchain error:', error.message);
-      throw error;
+    console.log('[Contract Finalize] Using hybrid service for dual-write...');
+    
+    // HYBRID WRITE: Write to both PostgreSQL and Blockchain
+    const writeResults = await hybridDataService.writeContract(contractData);
+    
+    // Check if PostgreSQL write succeeded (critical)
+    if (!writeResults.postgres) {
+      console.error('[Contract Finalize] PostgreSQL write failed');
+      return res.status(500).json({ 
+        error: 'Contract finalization failed',
+        details: 'Database write failed'
+      });
     }
     
-    // Generate contract ID as UUID (since blockchain doesn't return it)
-    const crypto = require('crypto');
-    const blockchainContractId = crypto.randomUUID();
-    
-    // Update draft with blockchain contract ID
+    // Update the draft status in PostgreSQL
     const updateQuery = `
       UPDATE contract_drafts
       SET status = 'FINALIZED',
           finalized_contract_id = $1,
+          ecta_reference_number = $2,
+          blockchain_tx_id = $3,
           updated_at = CURRENT_TIMESTAMP
-      WHERE draft_id = $2
-      RETURNING draft_id, status, finalized_contract_id
+      WHERE draft_id = $4
+      RETURNING draft_id, status, finalized_contract_id, ecta_reference_number, contract_number
     `;
     
-    const updateResult = await postgresService.query(updateQuery, [blockchainContractId, draftId]);
+    const updateResult = await postgresService.query(updateQuery, [
+      finalizedContractId,
+      ectaReferenceNumber,
+      writeResults.blockchain || null,
+      draftId
+    ]);
     
+    // Log finalization activity
+    await logNegotiationActivity(
+      draftId,
+      req.user.id,
+      'EXPORTER',
+      'MODIFY',
+      'Contract finalized with ECTA reference number',
+      { 
+        ectaReferenceNumber, 
+        finalizedContractId,
+        blockchainTxId: writeResults.blockchain
+      }
+    );
+    
+    console.log(`✓ Contract finalized via hybrid service: ${ectaReferenceNumber}`);
+    console.log(`  PostgreSQL: ${writeResults.postgres ? 'SUCCESS' : 'FAILED'}`);
+    console.log(`  Blockchain: ${writeResults.blockchain ? 'SUCCESS' : 'FAILED (non-blocking)'}`);
+    
+    if (writeResults.errors.length > 0) {
+      console.warn('[Contract Finalize] Errors during hybrid write:', writeResults.errors);
+    }
+    
+    // Return success
     res.json({
       success: true,
-      message: 'Contract finalized and recorded on blockchain',
+      message: 'Contract finalized successfully',
       draft: updateResult.rows[0],
-      blockchainContractId: blockchainContractId
+      ectaReferenceNumber: ectaReferenceNumber,
+      finalizedContractId: finalizedContractId,
+      syncStatus: {
+        postgres: !!writeResults.postgres,
+        blockchain: !!writeResults.blockchain,
+        errors: writeResults.errors
+      },
+      note: writeResults.blockchain 
+        ? 'Contract finalized and synced to blockchain'
+        : 'Contract finalized in database. Blockchain sync can be retried later.'
     });
   } catch (error) {
     console.error('Finalization error:', error);

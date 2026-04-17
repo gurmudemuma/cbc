@@ -5,6 +5,7 @@ const bcrypt = require('bcryptjs');
 const fabricService = require('../services');
 const postgresService = require('../services/postgres');
 const notificationService = require('../services/notification.service');
+const hybridDataService = require('../services/hybrid-data-service');
 
 // In-memory user store (replace with database in production)
 const users = new Map();
@@ -222,113 +223,90 @@ router.post('/register', async (req, res) => {
     // Hash password
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // STEP 1: Register in PostgreSQL FIRST (Primary data store)
+    // HYBRID WRITE: Use hybrid service for dual-write to PostgreSQL + Blockchain
+    console.log('[Registration] Using hybrid data service for dual-write...');
+    
     // Use validation result to determine initial status
     let approvalStatus = validation.status; // 'approved' or 'rejected'
     
-    try {
-      // Insert into users table
-      const isActive = (approvalStatus === 'approved');
-      
-      await postgresService.query(
-        `INSERT INTO users (
-          username, password_hash, email, organization_id, role, is_active, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
-        ON CONFLICT (username) DO NOTHING`,
-        [
-          username,
-          passwordHash,
-          email,
-          'EXPORTER',
-          'exporter',
-          isActive
-        ]
-      );
+    const userData = {
+      username,
+      passwordHash,
+      email,
+      phone: phone || '',
+      companyName,
+      tin: cleanedTin,
+      capitalETB,
+      address: address || 'Addis Ababa, Ethiopia',
+      contactPerson: contactPerson || companyName,
+      role: 'exporter',
+      businessType: businessType || 'PRIVATE_EXPORTER',
+      status: approvalStatus,
+      validationReason: validation.reason
+    };
 
-      // Map business type to PostgreSQL enum values
-      const businessTypeMap = {
-        'PRIVATE_EXPORTER': 'PRIVATE',
-        'UNION': 'TRADE_ASSOCIATION',
-        'FARMER_COOPERATIVE': 'FARMER',
-        'INDIVIDUAL': 'PRIVATE'
-      };
-      const pgBusinessType = businessTypeMap[businessType] || 'PRIVATE';
-
-      // Map validation status to PostgreSQL status
-      const statusMap = {
-        'approved': 'ACTIVE',
-        'rejected': 'REVOKED',
-        'pending_approval': 'PENDING_APPROVAL'
-      };
-      const pgStatus = statusMap[approvalStatus] || 'PENDING_APPROVAL';
-
-      // Generate unique registration number
-      const registrationNumber = await generateRegistrationNumber();
-      console.log(`[Registration] Generated registration number: ${registrationNumber} for ${username}`);
-
-      // Insert into exporter_profiles table
-      await postgresService.query(
-        `INSERT INTO exporter_profiles (
-          user_id, business_name, tin, registration_number, business_type,
-          minimum_capital, office_address, contact_person, email, phone,
-          status, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
-        ON CONFLICT (user_id) DO NOTHING`,
-        [
-          username,
-          companyName,
-          cleanedTin,
-          registrationNumber,
-          pgBusinessType,
-          capitalETB,
-          address || '',
-          contactPerson || '',
-          email,
-          phone || '',
-          pgStatus
-        ]
-      );
-
-      // Note: Qualification data (laboratory, taster, competence, license) will be created
-      // when the exporter registers each component through the qualification workflow
-
-      console.log(`✓ User registered in PostgreSQL: ${username}, status: ${approvalStatus}`);
-    } catch (dbError) {
-      console.error('[Registration] PostgreSQL error:', dbError);
+    // Write to both systems using hybrid service
+    const writeResults = await hybridDataService.writeUser(userData);
+    
+    // Check if PostgreSQL write succeeded (critical)
+    if (!writeResults.postgres) {
+      console.error('[Registration] PostgreSQL write failed');
       return res.status(500).json({ 
-        error: 'Database registration failed',
-        details: dbError.message 
+        error: 'Registration failed',
+        details: 'Database write failed'
       });
     }
 
-    // STEP 2: Try to register on blockchain (non-blocking)
-    // If blockchain fails, user can still login from database
-    let blockchainRegistered = false;
-    try {
-      const blockchainResult = await fabricService.registerUser({
-        username,
-        passwordHash,
-        email,
-        phone: phone || '',
-        companyName,
-        tin: cleanedTin,
-        capitalETB,
-        address: address || 'Addis Ababa, Ethiopia',
-        contactPerson: contactPerson || companyName,
-        role: 'exporter',
-        businessType: businessType || 'PRIVATE_EXPORTER',
-        status: approvalStatus,
-        validationReason: validation.reason,
-        registrationNumber: registrationNumber
-      });
+    // Generate unique registration number
+    const registrationNumber = await generateRegistrationNumber();
+    console.log(`[Registration] Generated registration number: ${registrationNumber} for ${username}`);
 
-      console.log('[Registration] Blockchain result:', JSON.stringify(blockchainResult));
-      blockchainRegistered = true;
-      console.log(`✓ User registered on blockchain: ${username}`);
-    } catch (blockchainError) {
-      console.warn('[Registration] Blockchain registration failed (non-blocking):', blockchainError.message);
-      console.warn('[Registration] User can still login from database');
-      // Don't fail - user is already in database
+    // Map business type to PostgreSQL enum values
+    const businessTypeMap = {
+      'PRIVATE_EXPORTER': 'PRIVATE',
+      'UNION': 'TRADE_ASSOCIATION',
+      'FARMER_COOPERATIVE': 'FARMER',
+      'INDIVIDUAL': 'PRIVATE'
+    };
+    const pgBusinessType = businessTypeMap[businessType] || 'PRIVATE';
+
+    // Map validation status to PostgreSQL status
+    const statusMap = {
+      'approved': 'ACTIVE',
+      'rejected': 'REVOKED',
+      'pending_approval': 'PENDING_APPROVAL'
+    };
+    const pgStatus = statusMap[approvalStatus] || 'PENDING_APPROVAL';
+
+    // Insert into exporter_profiles table
+    await postgresService.query(
+      `INSERT INTO exporter_profiles (
+        user_id, business_name, tin, registration_number, business_type,
+        minimum_capital, office_address, contact_person, email, phone,
+        status, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
+      ON CONFLICT (user_id) DO NOTHING`,
+      [
+        username,
+        companyName,
+        cleanedTin,
+        registrationNumber,
+        pgBusinessType,
+        capitalETB,
+        address || '',
+        contactPerson || '',
+        email,
+        phone || '',
+        pgStatus
+      ]
+    );
+
+    console.log(`✓ User registered via hybrid service: ${username}, status: ${approvalStatus}`);
+    console.log(`  PostgreSQL: ${writeResults.postgres ? 'SUCCESS' : 'FAILED'}`);
+    console.log(`  Blockchain: ${writeResults.blockchain ? 'SUCCESS' : 'FAILED (non-blocking)'}`);
+    
+    if (writeResults.errors.length > 0) {
+      console.warn('[Registration] Errors during hybrid write:', writeResults.errors);
     }
 
     // Return success
@@ -338,7 +316,12 @@ router.post('/register', async (req, res) => {
       message: approvalStatus === 'approved' 
         ? 'Registration successful - auto-approved. You can login now.'
         : 'Registration submitted - pending ECTA approval',
-      blockchainSync: blockchainRegistered,
+      blockchainSync: !!writeResults.blockchain,
+      syncStatus: {
+        postgres: !!writeResults.postgres,
+        blockchain: !!writeResults.blockchain,
+        errors: writeResults.errors
+      },
       user: {
         username,
         email,

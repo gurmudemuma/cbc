@@ -575,6 +575,100 @@ router.get('/submissions', authenticateToken, async (req, res) => {
 });
 
 /**
+ * Get certificates for a submission
+ * GET /api/network/submissions/:submissionId/certificates
+ * IMPORTANT: This route must be BEFORE /submissions/:submissionId to avoid route collision
+ */
+router.get('/submissions/:submissionId/certificates', authenticateToken, async (req, res) => {
+  try {
+    const { submissionId } = req.params;
+    
+    // Query issued_documents via submission_documents junction table
+    const query = `
+      SELECT 
+        id.document_id as "certificateId",
+        id.document_number as "certificateNumber",
+        id.issuer_member_code as "agencyCode",
+        id.document_type as "documentType",
+        id.issued_at as "issuedAt",
+        id.expiry_date as "expiresAt",
+        id.status,
+        id.document_metadata as metadata
+      FROM submission_documents sd
+      JOIN issued_documents id ON sd.document_id = id.document_id
+      WHERE sd.submission_id = $1
+      ORDER BY id.issued_at DESC
+    `;
+    
+    const result = await pool.query(query, [submissionId]);
+    
+    // Helper function to get agency name from code
+    const getAgencyName = (code) => {
+      const agencies = {
+        'ECTA': 'Ethiopian Coffee & Tea Authority',
+        'MOA': 'Ministry of Agriculture',
+        'MOH': 'Ministry of Health',
+        'ECX': 'Ethiopian Commodity Exchange',
+        'BANK': 'National Bank of Ethiopia',
+        'NBE': 'National Bank of Ethiopia',
+        'SHIPPING': 'Shipping Line',
+        'ERCA': 'Ethiopian Revenues and Customs Authority',
+        'CUSTOMS': 'Customs Authority'
+      };
+      return agencies[code] || code;
+    };
+    
+    res.json({
+      success: true,
+      data: result.rows.map(row => ({
+        ...row,
+        agencyName: getAgencyName(row.agencyCode),
+        metadata: typeof row.metadata === 'string' ? JSON.parse(row.metadata) : row.metadata
+      }))
+    });
+  } catch (error) {
+    console.error('[Get Submission Certificates] Error:', error);
+    res.status(500).json({ success: false, error: error.message, data: [] });
+  }
+});
+
+/**
+ * Download certificate PDF
+ * GET /api/network/certificates/:certificateId/download
+ */
+router.get('/certificates/:certificateId/download', authenticateToken, async (req, res) => {
+  try {
+    const { certificateId } = req.params;
+    
+    // Get document details
+    const docQuery = await pool.query(
+      'SELECT document_id, document_number, document_type, document_url FROM issued_documents WHERE document_id = $1',
+      [certificateId]
+    );
+    
+    if (docQuery.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Certificate not found' });
+    }
+    
+    const document = docQuery.rows[0];
+    
+    // If document has a URL, redirect to it
+    if (document.document_url) {
+      return res.redirect(document.document_url);
+    }
+    
+    // Otherwise, return 404 as PDF generation is not implemented for this document type
+    res.status(404).json({ 
+      success: false, 
+      error: 'Certificate PDF not available. Document URL not found.' 
+    });
+  } catch (error) {
+    console.error('[Download Certificate] Error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
  * Get submission by ID
  * IMPORTANT: This route must be BEFORE /:requestId to avoid route collision
  */
@@ -589,9 +683,149 @@ router.get('/submissions/:submissionId', authenticateToken, async (req, res) => 
       return res.status(404).json({ success: false, error: 'Submission not found' });
     }
     
+    const submission = result.rows[0];
+    const exporterInfo = submission.exporter_info || {};
+    
+    // Try to get export details from linked documents or exports table
+    let exportData = {
+      exportId: exporterInfo.exportId || submission.network_reference_number || 'N/A',
+      exporterName: exporterInfo.businessName || exporterInfo.companyName || 'N/A',
+      coffeeType: exporterInfo.coffeeType || exporterInfo.productType || 'N/A',
+      quantity: exporterInfo.quantity || exporterInfo.quantityKg || 0,
+      destinationCountry: exporterInfo.destination || exporterInfo.destinationCountry || 'N/A',
+    };
+    
+    // Try to find related export record
+    try {
+      const exportQuery = await pool.query(
+        `SELECT e.export_id, e.coffee_type, e.quantity, e.destination_country, e.buyer_name, e.estimated_value
+         FROM exports e
+         WHERE e.exporter_id = $1 
+         AND e.status NOT IN ('CANCELLED', 'COMPLETED')
+         ORDER BY e.created_at DESC
+         LIMIT 1`,
+        [submission.exporter_id]
+      );
+      
+      if (exportQuery.rows.length > 0) {
+        const exp = exportQuery.rows[0];
+        exportData = {
+          exportId: exp.export_id || exportData.exportId,
+          exporterName: exporterInfo.businessName || exporterInfo.companyName || 'N/A',
+          coffeeType: exp.coffee_type || exportData.coffeeType,
+          quantity: exp.quantity || exportData.quantity,
+          destinationCountry: exp.destination_country || exportData.destinationCountry,
+          buyerName: exp.buyer_name,
+          estimatedValue: exp.estimated_value,
+        };
+      }
+    } catch (exportError) {
+      console.log('Could not fetch related export:', exportError.message);
+    }
+    
+    // Also try to extract info from issued documents metadata
+    try {
+      const docsQuery = await pool.query(
+        `SELECT id.document_type, id.document_metadata
+         FROM submission_documents sd
+         JOIN issued_documents id ON sd.document_id = id.document_id
+         WHERE sd.submission_id = $1
+         AND id.document_type IN ('EXPORT_LICENSE', 'EXPORT_PERMIT', 'QUALITY_CERTIFICATE')
+         LIMIT 3`,
+        [submission.submission_id]
+      );
+      
+      // Extract export details from document metadata
+      for (const doc of docsQuery.rows) {
+        const metadata = doc.document_metadata || {};
+        if (metadata.coffeeType && exportData.coffeeType === 'N/A') {
+          exportData.coffeeType = metadata.coffeeType;
+        }
+        if (metadata.quantity && exportData.quantity === 0) {
+          // Parse quantity from strings like "1000 bags" or "5000 kg"
+          const qtyMatch = String(metadata.quantity).match(/(\d+(?:\.\d+)?)/);
+          if (qtyMatch) {
+            exportData.quantity = parseFloat(qtyMatch[1]);
+          }
+        }
+        if (metadata.destination && exportData.destinationCountry === 'N/A') {
+          exportData.destinationCountry = metadata.destination;
+        }
+        if (metadata.destinationCountry && exportData.destinationCountry === 'N/A') {
+          exportData.destinationCountry = metadata.destinationCountry;
+        }
+      }
+    } catch (docsError) {
+      console.log('Could not fetch document metadata:', docsError.message);
+    }
+    
+    // Structure data to match frontend expectations
+    const responseData = {
+      submissionId: submission.submission_id,
+      networkReferenceNumber: submission.network_reference_number,
+      eswReferenceNumber: submission.esw_reference_number,
+      status: submission.status || 'PENDING',
+      submittedAt: submission.submitted_at,
+      submittedBy: exporterInfo.businessName || exporterInfo.companyName || 'N/A',
+      
+      // Export information (nested object as frontend expects)
+      export: exportData,
+      
+      // Exporter details
+      exporterInfo: {
+        businessName: exporterInfo.businessName || exporterInfo.companyName || 'N/A',
+        tin: exporterInfo.tin || 'N/A',
+        registrationNumber: exporterInfo.registrationNumber || exporterInfo.reg_number || 'N/A',
+        email: exporterInfo.email || 'N/A',
+        phone: exporterInfo.phone || 'N/A',
+        address: exporterInfo.address || 'N/A',
+        contactPerson: exporterInfo.contactPerson || 'N/A',
+        businessType: exporterInfo.businessType || 'N/A',
+      },
+      
+      // Agency statuses
+      ecta_status: submission.ecta_status,
+      ecta_approved_at: submission.ecta_approved_at,
+      ecta_approved_by: submission.ecta_approved_by,
+      ecta_notes: submission.ecta_notes,
+      
+      bank_status: submission.bank_status,
+      bank_approved_at: submission.bank_approved_at,
+      bank_approved_by: submission.bank_approved_by,
+      bank_notes: submission.bank_notes,
+      
+      nbe_status: submission.nbe_status,
+      nbe_approved_at: submission.nbe_approved_at,
+      nbe_approved_by: submission.nbe_approved_by,
+      nbe_notes: submission.nbe_notes,
+      
+      customs_status: submission.customs_status,
+      customs_approved_at: submission.customs_approved_at,
+      customs_approved_by: submission.customs_approved_by,
+      customs_notes: submission.customs_notes,
+      
+      shipping_status: submission.shipping_status,
+      shipping_approved_at: submission.shipping_approved_at,
+      shipping_approved_by: submission.shipping_approved_by,
+      shipping_notes: submission.shipping_notes,
+      
+      // Document counts
+      documents_collected: submission.documents_collected,
+      required_documents_count: submission.required_documents_count,
+      issued_documents_count: submission.issued_documents_count,
+      
+      // Supporting documents
+      supportingDocuments: submission.supporting_documents || [],
+      
+      // Timestamps
+      created_at: submission.created_at,
+      updated_at: submission.updated_at,
+      completed_at: submission.completed_at,
+    };
+    
     res.json({
       success: true,
-      data: result.rows[0]
+      data: responseData
     });
   } catch (error) {
     console.error('Get submission error:', error);
@@ -1487,3 +1721,4 @@ router.get('/contracts/:referenceNumber/check-permission/:memberCode', async (re
 });
 
 module.exports = router;
+

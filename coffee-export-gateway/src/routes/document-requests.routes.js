@@ -1000,3 +1000,138 @@ router.get('/:documentId/download', authenticateToken, async (req, res) => {
 });
 
 module.exports = router;
+
+
+/**
+ * GET /api/exporter/documents/collection-status
+ * Get document collection status for the logged-in exporter
+ */
+router.get('/collection-status', authenticateToken, async (req, res) => {
+  const client = await pool.connect();
+  
+  try {
+    const exporterId = req.user.id || req.user.username;
+
+    // Get exporter UUID
+    const exporterQuery = 'SELECT exporter_id FROM exporter_profiles WHERE user_id = $1';
+    const exporterResult = await client.query(exporterQuery, [exporterId]);
+
+    if (exporterResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Exporter profile not found'
+      });
+    }
+
+    const exporterUuid = exporterResult.rows[0].exporter_id;
+
+    // Define required documents for network submission
+    const requiredDocuments = [
+      { type: 'LABORATORY_CERTIFICATE', issuer: 'ECTA', required: true, name: 'Laboratory Certificate' },
+      { type: 'TASTER_CERTIFICATE', issuer: 'ECTA', required: true, name: 'Taster Certificate' },
+      { type: 'COMPETENCE_CERTIFICATE', issuer: 'ECTA', required: true, name: 'Competence Certificate' },
+      { type: 'EXPORT_LICENSE', issuer: 'ECTA', required: true, name: 'Export License' }
+    ];
+
+    // Get document request status for each required document
+    const documents = [];
+    
+    for (const doc of requiredDocuments) {
+      // Check if document has been requested
+      const requestQuery = `
+        SELECT 
+          request_id,
+          request_status,
+          requested_at,
+          reviewed_at,
+          rejection_reason
+        FROM document_requests
+        WHERE exporter_id = $1 
+          AND network_member_code = $2 
+          AND document_type = $3
+        ORDER BY requested_at DESC
+        LIMIT 1
+      `;
+      
+      const requestResult = await client.query(requestQuery, [exporterUuid, doc.issuer, doc.type]);
+      
+      let documentStatus = 'NOT_REQUESTED';
+      let requestId = null;
+      let requestedAt = null;
+      let documentId = null;
+      
+      if (requestResult.rows.length > 0) {
+        const request = requestResult.rows[0];
+        requestId = request.request_id;
+        requestedAt = request.requested_at;
+        
+        if (request.request_status === 'ISSUED') {
+          // Check if document has been issued
+          const issuedQuery = `
+            SELECT document_id, issued_at
+            FROM issued_documents
+            WHERE exporter_id = $1 AND document_type = $2
+            ORDER BY issued_at DESC
+            LIMIT 1
+          `;
+          
+          const issuedResult = await client.query(issuedQuery, [exporterUuid, doc.type]);
+          
+          if (issuedResult.rows.length > 0) {
+            documentStatus = 'ISSUED';
+            documentId = issuedResult.rows[0].document_id;
+          } else {
+            documentStatus = 'APPROVED';
+          }
+        } else if (request.request_status === 'REJECTED') {
+          documentStatus = 'REJECTED';
+        } else {
+          documentStatus = 'PENDING';
+        }
+      }
+      
+      documents.push({
+        type: doc.type,
+        name: doc.name,
+        issuer: doc.issuer,
+        required: doc.required,
+        status: documentStatus,
+        requestId,
+        documentId,
+        requestedAt
+      });
+    }
+
+    // Calculate summary statistics
+    const issuedDocuments = documents.filter(d => d.status === 'ISSUED').length;
+    const pendingDocuments = documents.filter(d => d.status === 'PENDING').length;
+    const rejectedDocuments = documents.filter(d => d.status === 'REJECTED').length;
+    const notRequestedDocuments = documents.filter(d => d.status === 'NOT_REQUESTED').length;
+    const requiredCount = documents.filter(d => d.required).length;
+    const isComplete = issuedDocuments === requiredCount;
+
+    res.json({
+      success: true,
+      data: {
+        documents,
+        issuedDocuments,
+        pendingDocuments,
+        rejectedDocuments,
+        notRequestedDocuments,
+        requiredDocuments: requiredCount,
+        isComplete,
+        canSubmitToNetwork: isComplete
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching document collection status:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch document collection status',
+      message: error.message
+    });
+  } finally {
+    client.release();
+  }
+});

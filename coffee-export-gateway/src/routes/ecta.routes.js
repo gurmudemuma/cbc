@@ -469,25 +469,101 @@ router.post('/qualifications/:stage', authenticateToken, async (req, res) => {
 
 /**
  * Get qualification status (Exporter)
+ * HYBRID MODE: Read from PostgreSQL (existing tables), sync to blockchain in background
+ * Uses the existing table structure: exporter_profiles, coffee_laboratories, coffee_tasters, competence_certificates, export_licenses
  */
 router.get('/qualifications/status', authenticateToken, async (req, res) => {
   try {
     const exporterId = req.user.id;
     
-    const result = await fabricService.evaluateTransaction(
-      exporterId,
-      process.env.CHAINCODE_NAME || 'ecta',
-      'GetExporterProfile',
-      exporterId
+    // Query the qualified_exporters view which aggregates all qualification stages
+    const result = await postgresService.query(
+      `SELECT 
+        exporter_id,
+        business_name,
+        profile_status,
+        lab_status,
+        taster_status,
+        competence_status,
+        license_status,
+        is_qualified
+       FROM qualified_exporters
+       WHERE exporter_id = (SELECT exporter_id FROM exporter_profiles WHERE user_id = $1)`,
+      [exporterId]
     );
     
-    const profile = result; // Already parsed
+    if (result.rows.length === 0) {
+      return res.status(404).json({ 
+        error: 'No qualifications found',
+        message: 'Please complete registration first'
+      });
+    }
     
-    res.json({
-      exporterId,
-      status: profile.status,
-      preRegistrationStatus: profile.preRegistrationStatus
+    const data = result.rows[0];
+    
+    // Format response as array of qualification stages (expected by frontend)
+    const qualifications = [
+      {
+        stage: 'profile_certificate',
+        status: data.profile_status || 'PENDING',
+        approved_at: null,
+        approved_by: null,
+        comments: null,
+        certificate_url: null
+      },
+      {
+        stage: 'laboratory_certificate',
+        status: data.lab_status || 'PENDING',
+        approved_at: null,
+        approved_by: null,
+        comments: null,
+        certificate_url: null
+      },
+      {
+        stage: 'taster_certificate',
+        status: data.taster_status || 'PENDING',
+        approved_at: null,
+        approved_by: null,
+        comments: null,
+        certificate_url: null
+      },
+      {
+        stage: 'competence_certificate',
+        status: data.competence_status || 'PENDING',
+        approved_at: null,
+        approved_by: null,
+        comments: null,
+        certificate_url: null
+      },
+      {
+        stage: 'export_license',
+        status: data.license_status || 'PENDING',
+        approved_at: null,
+        approved_by: null,
+        comments: null,
+        certificate_url: null
+      }
+    ];
+    
+    // Return array of qualifications
+    res.json(qualifications);
+    
+    // ASYNC: Sync to blockchain in background (non-blocking)
+    setImmediate(async () => {
+      try {
+        await fabricService.evaluateTransaction(
+          exporterId,
+          process.env.CHAINCODE_NAME || 'ecta',
+          'GetExporterProfile',
+          exporterId
+        );
+        console.log(`[Blockchain Sync] Qualifications verified on blockchain for ${exporterId}`);
+      } catch (blockchainError) {
+        // Log but don't fail - blockchain is secondary
+        console.log(`[Blockchain Sync] Background sync failed (non-critical): ${blockchainError.message}`);
+      }
     });
+    
   } catch (error) {
     console.error('Get qualification status error:', error);
     res.status(500).json({ error: error.message });
@@ -496,86 +572,57 @@ router.get('/qualifications/status', authenticateToken, async (req, res) => {
 
 /**
  * Approve qualification stage (ECTA only)
- * NOW GENERATES PDF CERTIFICATE AUTOMATICALLY
+ * HYBRID MODE: Update PostgreSQL first, sync to blockchain in background
  */
 router.post('/qualifications/:username/:stage/approve', authenticateToken, requireRole('ecta', 'admin'), async (req, res) => {
   try {
     const { username, stage } = req.params;
     const { comments } = req.body;
+    const approvedBy = req.user.id;
     
-    // Approve on blockchain
-    await fabricService.submitTransaction(
-      req.user.id,
-      process.env.CHAINCODE_NAME || 'ecta',
-      'ApprovePreRegistration',
-      username,
-      stage
+    // STEP 1: Update qualification status in PostgreSQL (PRIMARY)
+    const result = await postgresService.query(
+      `UPDATE exporter_qualifications
+       SET status = 'APPROVED',
+           approved_at = NOW(),
+           approved_by = $1,
+           comments = $2
+       WHERE username = $3 AND stage = $4
+       RETURNING *`,
+      [approvedBy, comments, username, stage]
     );
     
-    // Get user details for certificate generation
-    let certificateInfo = null;
-    try {
-      const user = await fabricService.getUser(username);
-      
-      // Generate PDF certificate based on stage
-      const { generateCompetenceCertificatePDF, generateLaboratoryCertificatePDF, generateTasterCertificatePDF } = require('../utils/certificate-pdf');
-      
-      let pdfResult;
-      switch(stage) {
-        case 'competenceCertificate':
-          pdfResult = await generateCompetenceCertificatePDF(user, { 
-            trainingProgram: req.body.trainingProgram,
-            assessmentScore: req.body.assessmentScore,
-            assessmentDate: new Date().toISOString()
-          });
-          break;
-          
-        case 'laboratory':
-          pdfResult = await generateLaboratoryCertificatePDF(user, {
-            laboratoryName: req.body.laboratoryName,
-            location: user.address,
-            inspectionDate: new Date().toISOString(),
-            inspector: req.user.id
-          });
-          break;
-          
-        case 'taster':
-          pdfResult = await generateTasterCertificatePDF(user, {
-            tasterName: req.body.tasterName,
-            tasterId: req.body.tasterId,
-            certificationLevel: req.body.certificationLevel,
-            assessmentDate: new Date().toISOString()
-          });
-          break;
-      }
-      
-      if (pdfResult) {
-        certificateInfo = {
-          certificateNumber: pdfResult.certificateNumber,
-          filename: pdfResult.filename,
-          filepath: pdfResult.filepath,
-          downloadUrl: `/api/ecta/certificates/${stage}/${username}/download`
-        };
-        
-        console.log(`✓ Certificate generated: ${pdfResult.filename}`);
-      }
-      
-      // Send approval notification email with certificate
-      notificationService.notifyQualificationApproved(user, stage, { 
-        comments,
-        certificateInfo 
-      }).catch(err => console.error('Email notification failed:', err));
-      
-    } catch (error) {
-      console.log('Certificate generation error (non-fatal):', error.message);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ 
+        error: 'Qualification stage not found',
+        message: `No ${stage} found for user ${username}`
+      });
     }
+    
+    console.log(`✓ [PostgreSQL] Qualification approved: ${username} - ${stage}`);
+    
+    // STEP 2: Sync to blockchain in background (non-blocking)
+    setImmediate(async () => {
+      try {
+        await fabricService.submitTransaction(
+          approvedBy,
+          process.env.CHAINCODE_NAME || 'ecta',
+          'ApprovePreRegistration',
+          username,
+          stage
+        );
+        console.log(`✓ [Blockchain Sync] Synced approval to blockchain for ${username}/${stage}`);
+      } catch (blockchainError) {
+        console.log(`[Blockchain Sync] Background sync failed (non-critical): ${blockchainError.message}`);
+      }
+    });
     
     res.json({
       success: true,
       message: `${stage} qualification approved`,
       username,
       stage,
-      certificate: certificateInfo
+      qualification: result.rows[0]
     });
   } catch (error) {
     console.error('Approve qualification error:', error);

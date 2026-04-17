@@ -33,11 +33,11 @@ interface Certificate {
   fileSizeBytes?: number;
 }
 
-interface ESWCertificatesProps {
+interface NetworkCertificatesProps {
   submissionId: string;
 }
 
-const ESWCertificates = ({ submissionId }: ESWCertificatesProps): JSX.Element => {
+const NetworkCertificates = ({ submissionId }: NetworkCertificatesProps): JSX.Element => {
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -232,4 +232,4 @@ const ESWCertificates = ({ submissionId }: ESWCertificatesProps): JSX.Element =>
   );
 };
 
-export default ESWCertificates;
+export default NetworkCertificates;

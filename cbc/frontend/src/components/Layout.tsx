@@ -296,7 +296,6 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
             { name: 'My Submissions', path: '/network/submissions', icon: FileText },
             { name: 'Submission Status', path: '/network/status', icon: FileCheck },
             { name: 'Network Statistics', path: '/network/statistics', icon: BarChart3 },
-            { name: 'Verify Certificate', path: '/network/verify-certificate', icon: FileCheck },
           ]
         },
         {
@@ -349,7 +348,6 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
               { name: 'Network Approval', path: '/network/agency-dashboard', icon: FileCheck, badge: badgeCounts.BANKING_PENDING },
               { name: 'Document Issuance', path: '/network/agency-dashboard', icon: FileText },
               { name: 'Network Statistics', path: '/network/statistics', icon: BarChart3 },
-              { name: 'Verify Certificate', path: '/network/verify-certificate', icon: ShieldCheck },
             ]
           },
         ];
@@ -380,7 +378,6 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
               { name: 'Network Approval', path: '/network/agency-dashboard', icon: FileCheck },
               { name: 'Document Issuance', path: '/network/agency-dashboard', icon: FileText },
               { name: 'Network Statistics', path: '/network/statistics', icon: BarChart3 },
-              { name: 'Verify Certificate', path: '/network/verify-certificate', icon: ShieldCheck },
             ]
           },
           {
@@ -429,7 +426,6 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
             { name: 'Document Issuance', path: '/network/agency-dashboard', icon: FileText },
             { name: 'Lot Verification', path: '/lot-verification', icon: Package },
             { name: 'Network Statistics', path: '/network/statistics', icon: BarChart3 },
-            { name: 'Verify Certificate', path: '/network/verify-certificate', icon: ShieldCheck },
           ]
         },
       ];
@@ -446,7 +442,6 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
             { name: 'Network Approval', path: '/network/agency-dashboard', icon: FileCheck },
             { name: 'Document Issuance', path: '/network/agency-dashboard', icon: FileText },
             { name: 'Network Statistics', path: '/network/statistics', icon: BarChart3 },
-            { name: 'Verify Certificate', path: '/network/verify-certificate', icon: ShieldCheck },
           ]
         },
         {
@@ -496,7 +491,6 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
             { name: 'Network Approval', path: '/network/agency-dashboard', icon: FileCheck },
             { name: 'Document Issuance', path: '/network/agency-dashboard', icon: FileText },
             { name: 'Network Statistics', path: '/network/statistics', icon: BarChart3 },
-            { name: 'Verify Certificate', path: '/network/verify-certificate', icon: ShieldCheck },
           ]
         },
         {
@@ -524,7 +518,6 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
             { name: 'Network Approval', path: '/network/agency-dashboard', icon: FileCheck },
             { name: 'Document Issuance', path: '/network/agency-dashboard', icon: FileText },
             { name: 'Network Statistics', path: '/network/statistics', icon: BarChart3 },
-            { name: 'Verify Certificate', path: '/network/verify-certificate', icon: ShieldCheck },
           ]
         },
         {

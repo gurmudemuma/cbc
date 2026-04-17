@@ -111,7 +111,7 @@ const labelMap: Record<string, string> = {
   'ecta': 'Ethiopian Coffee & Tea Authority (ECTA)',
   'custom-authorities': 'Ethiopian Revenues and Customs Authority (ERCA)',
   'ecx': 'Ethiopian Commodity Exchange (ECX)',
-  'esw': 'Network Submission System (ESW)',
+  'esw': 'Network Submission System',
   'shipping-line': 'Shipping Line',
   // Government Agencies
   'mot': 'Ministry of Trade (MOT)',

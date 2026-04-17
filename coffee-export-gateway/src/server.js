@@ -30,6 +30,8 @@ const salesContractNetworkRouter = require('./routes/sales-contract-network.rout
 // Document Issuance routes
 const documentRequestsRouter = require('./routes/document-requests.routes');
 const documentIssuanceRouter = require('./routes/document-issuance.routes');
+// Hybrid Data Service routes
+const hybridRouter = require('./routes/hybrid.routes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -92,11 +94,15 @@ app.use('/api', salesContractNetworkRouter); // Sales Contract Network Approval 
 
 // ESW routes (backward compatibility - redirects to network routes)
 app.use('/api/esw', networkRouter); // ESW endpoints now use network routes
+app.use('/api/network', networkRouter); // Network endpoints (preferred naming)
 
 // Document Issuance routes
 app.use('/api/document-requests', documentRequestsRouter); // Document requests endpoint
 app.use('/api/exporter/documents', documentRequestsRouter); // Alternative path for backward compatibility
 app.use('/api/document-issuance', documentIssuanceRouter); // Document issuance endpoint
+
+// Hybrid Data Service routes
+app.use('/api/hybrid', hybridRouter); // Hybrid service management and monitoring
 app.use('/api/network-member', documentIssuanceRouter); // Alternative path for backward compatibility
 
 // Error handling middleware

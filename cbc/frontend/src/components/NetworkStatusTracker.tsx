@@ -421,7 +421,7 @@ const NetworkStatusTracker = ({ submission }: NetworkStatusTrackerProps): JSX.El
 
         {/* Network Submission Agency Certificates - Downloadable */}
         <Grid item xs={12}>
-          <ESWCertificates submissionId={submission.submission_id || submission.submissionId} />
+          <NetworkCertificates submissionId={submission.submission_id || submission.submissionId} />
         </Grid>
       </Grid>
     </Box>
