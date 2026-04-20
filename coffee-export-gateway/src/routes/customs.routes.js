@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const fabricService = require('../services/fabric-chaincode');
+const fabricService = require('../services'); // Use service loader for consistent Fabric implementation
 
 /**
  * Phase 4: Customs Routes

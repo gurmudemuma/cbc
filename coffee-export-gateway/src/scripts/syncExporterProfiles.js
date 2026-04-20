@@ -5,7 +5,7 @@
 
 require('dotenv').config();
 const { Pool } = require('pg');
-const fabricService = require('../services/fabric-cli-final');
+const fabricService = require('../services'); // Use service loader for consistent Fabric implementation
 
 const pool = new Pool({
   host: process.env.POSTGRES_HOST || 'localhost',

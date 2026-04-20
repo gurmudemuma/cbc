@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { authenticateToken, requireRole } = require('../middleware/auth');
-const fabricService = require('../services/fabric-cli-final');
+const fabricService = require('../services'); // Use service loader for consistent Fabric implementation
 const postgresService = require('../services/postgres');
 
 // Test route to verify router is loaded

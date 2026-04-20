@@ -5,7 +5,7 @@
  */
 
 const postgresService = require('./postgres');
-const fabricService = require('./fabric-cli-final');
+const fabricService = require('./index'); // Use service loader for consistent Fabric implementation
 const { logger } = require('../utils/logger');
 
 class HybridDataService {

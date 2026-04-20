@@ -1,4 +1,4 @@
-const fabricService = require('./fabric-cli-final');
+const fabricService = require('./index'); // Use service loader for consistent Fabric implementation
 
 /**
  * Record document issuance on blockchain
