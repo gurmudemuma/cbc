@@ -16,8 +16,15 @@ router.get('/stats', authenticateToken, requireRole('admin'), async (req, res) =
   try {
     const stats = hybridDataService.getStats();
     
+    // Get actual record counts from database
+    const postgresService = require('../services/postgres');
+    const userCountResult = await postgresService.query('SELECT COUNT(*) as count FROM users');
+    const postgresRecords = parseInt(userCountResult.rows[0].count);
+    
     res.json({
       success: true,
+      postgresRecords: postgresRecords,
+      blockchainRecords: stats.blockchainWrites, // Approximate based on writes
       stats: stats,
       timestamp: new Date().toISOString()
     });
@@ -102,9 +109,42 @@ router.get('/user/:username', authenticateToken, async (req, res) => {
 router.get('/health', async (req, res) => {
   try {
     const stats = hybridDataService.getStats();
+    const postgresService = require('../services/postgres');
+    
+    // Test PostgreSQL connection
+    let postgresStatus = 'unknown';
+    try {
+      await postgresService.query('SELECT 1');
+      postgresStatus = 'healthy';
+    } catch (error) {
+      postgresStatus = 'unhealthy';
+    }
+    
+    // Test Blockchain connection (basic check)
+    let blockchainStatus = 'unknown';
+    try {
+      // If we've had successful blockchain writes, assume healthy
+      if (stats.blockchainWrites > 0) {
+        blockchainStatus = 'healthy';
+      } else {
+        blockchainStatus = 'unknown';
+      }
+    } catch (error) {
+      blockchainStatus = 'unhealthy';
+    }
     
     const health = {
       status: 'healthy',
+      postgres: {
+        status: postgresStatus,
+        writes: stats.postgresWrites,
+        reads: stats.postgresReads
+      },
+      blockchain: {
+        status: blockchainStatus,
+        writes: stats.blockchainWrites,
+        reads: stats.blockchainReads
+      },
       config: stats.config,
       operations: {
         totalWrites: stats.postgresWrites + stats.blockchainWrites,
@@ -116,8 +156,8 @@ router.get('/health', async (req, res) => {
       timestamp: new Date().toISOString()
     };
     
-    // Determine health status
-    if (health.errorRate > 0.5) {
+    // Determine overall health status
+    if (postgresStatus === 'unhealthy' || health.errorRate > 0.5) {
       health.status = 'degraded';
     } else if (health.errorRate > 0.8) {
       health.status = 'unhealthy';
