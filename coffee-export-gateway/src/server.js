@@ -32,6 +32,10 @@ const documentRequestsRouter = require('./routes/document-requests.routes');
 const documentIssuanceRouter = require('./routes/document-issuance.routes');
 // Hybrid Data Service routes
 const hybridRouter = require('./routes/hybrid.routes');
+// Payment routes
+const paymentsRouter = require('./routes/payments.routes');
+const paymentsBankRouter = require('./routes/payments-bank.routes');
+const paymentsNbeRouter = require('./routes/payments-nbe.routes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -104,6 +108,11 @@ app.use('/api/document-issuance', documentIssuanceRouter); // Document issuance 
 // Hybrid Data Service routes
 app.use('/api/hybrid', hybridRouter); // Hybrid service management and monitoring
 app.use('/api/network-member', documentIssuanceRouter); // Alternative path for backward compatibility
+
+// Payment routes (specific routes first)
+app.use('/api/payments/bank', paymentsBankRouter); // Bank payment endpoints
+app.use('/api/payments/nbe', paymentsNbeRouter); // NBE FX approval endpoints
+app.use('/api/payments', paymentsRouter); // Exporter payment endpoints
 
 // Error handling middleware
 app.use((err, req, res, next) => {

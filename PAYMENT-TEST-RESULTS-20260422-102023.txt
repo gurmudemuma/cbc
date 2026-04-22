@@ -1,0 +1,20 @@
+﻿Payment System Test Results
+Generated: 2026-04-22 10:20:23
+
+Summary:
+- Total Tests: 4
+- Passed: 3
+- Failed: 1
+- Pass Rate: 75%
+
+
+Exporter: /2
+  [FAIL] Initiate Payment - No exports available
+  [PASS] View Payments - 0 payments
+
+Bank: /1
+  [PASS] View Pending - 0 payments
+
+NBE: /1
+  [PASS] View Pending FX - 0 approvals
+

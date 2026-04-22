@@ -357,6 +357,45 @@ router.post('/submissions', authenticateToken, async (req, res) => {
 });
 
 /**
+ * Get network status (blockchain connectivity)
+ * GET /api/network/status
+ */
+router.get('/status', authenticateToken, async (req, res) => {
+  try {
+    // Check blockchain connectivity
+    const fabricService = require('../services');
+    
+    // Try to query blockchain
+    try {
+      await fabricService.evaluateTransaction(
+        req.user.id,
+        process.env.CHAINCODE_NAME || 'ecta',
+        'HealthCheck'
+      );
+      
+      res.json({
+        status: 'connected',
+        blockchain: 'operational',
+        timestamp: new Date().toISOString()
+      });
+    } catch (blockchainError) {
+      res.json({
+        status: 'degraded',
+        blockchain: 'unavailable',
+        error: blockchainError.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  } catch (error) {
+    console.error('Network status error:', error);
+    res.status(500).json({ 
+      status: 'error',
+      error: error.message 
+    });
+  }
+});
+
+/**
  * Get all Network submissions for current exporter
  */
 router.get('/my-submissions', authenticateToken, async (req, res) => {

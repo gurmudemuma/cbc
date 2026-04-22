@@ -6,7 +6,7 @@
 import axios from 'axios';
 import { logger } from '../utils/logger';
 
-const CHAINCODE_URL = process.env.CHAINCODE_URL || 'http://localhost:3001';
+const CHAINCODE_URL = process.env.CHAINCODE_URL || 'http://gateway:3000';
 
 export class FabricClient {
   static async healthCheck(): Promise<void> {

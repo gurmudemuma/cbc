@@ -1,0 +1,23 @@
+﻿Payment System Test Results
+Generated: 2026-04-22 11:09:28
+
+Summary:
+- Total Tests: 7
+- Passed: 6
+- Failed: 1
+- Pass Rate: 85.71%
+
+
+Exporter: 3/3
+  [PASS] Initiate Payment - Payment ID: 94b182d3-85fd-40f6-938a-fc680c8d92f9
+  [PASS] Submit Documents - 2 documents
+  [PASS] View Payments - 1 payments
+
+Bank: /2
+  [PASS] View Pending - 1 payments
+  [FAIL] Approve Payment - The remote server returned an error: (404) Not Found.
+
+NBE: 2/2
+  [PASS] View Pending FX - 0 approvals
+  [PASS] Approve FX - FX approved
+

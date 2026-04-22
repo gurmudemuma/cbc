@@ -1,0 +1,20 @@
+﻿Payment System Test Results
+Generated: 2026-04-22 10:41:44
+
+Summary:
+- Total Tests: 4
+- Passed: 2
+- Failed: 2
+- Pass Rate: 50%
+
+
+Exporter: 0/2
+  [FAIL] Initiate Payment - No exports available
+  [FAIL] View Payments - The remote server returned an error: (404) Not Found.
+
+Bank: /1
+  [PASS] View Pending - 0 payments
+
+NBE: /1
+  [PASS] View Pending FX - 0 approvals
+

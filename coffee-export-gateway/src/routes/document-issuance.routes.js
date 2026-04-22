@@ -48,6 +48,58 @@ function generateDigitalSignature(documentHash, issuerCode) {
 }
 
 /**
+ * GET /api/document-issuance/status
+ * Get document issuance status for the current exporter
+ */
+router.get('/status', authenticateToken, async (req, res) => {
+  const client = await pool.connect();
+  
+  try {
+    const exporterId = req.user.id || req.user.username;
+
+    // Get exporter UUID
+    const exporterQuery = 'SELECT exporter_id FROM exporter_profiles WHERE user_id = $1';
+    const exporterResult = await client.query(exporterQuery, [exporterId]);
+
+    if (exporterResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Exporter profile not found'
+      });
+    }
+
+    const exporterUuid = exporterResult.rows[0].exporter_id;
+
+    // Get document issuance statistics
+    const statsQuery = `
+      SELECT 
+        COUNT(*) FILTER (WHERE dr.request_status = 'PENDING') as pending_count,
+        COUNT(*) FILTER (WHERE dr.request_status = 'UNDER_REVIEW') as under_review_count,
+        COUNT(*) FILTER (WHERE dr.request_status = 'ISSUED') as issued_count,
+        COUNT(*) FILTER (WHERE dr.request_status = 'REJECTED') as rejected_count,
+        COUNT(*) as total_count
+      FROM document_requests dr
+      WHERE dr.exporter_id = $1
+    `;
+
+    const statsResult = await client.query(statsQuery, [exporterUuid]);
+
+    res.json({
+      success: true,
+      status: statsResult.rows[0]
+    });
+  } catch (error) {
+    console.error('Document issuance status error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  } finally {
+    client.release();
+  }
+});
+
+/**
  * GET /api/network-member/document-requests/pending
  * Get pending document requests for the network member
  */

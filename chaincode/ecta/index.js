@@ -1748,89 +1748,6 @@ class CoffeeExportContract extends Contract {
     }
 
     /**
-     * Upload/Update statutory document
-     */
-    async UploadStatutoryDocument(ctx, exporterId, documentType, documentDataJSON) {
-        const documentData = JSON.parse(documentDataJSON);
-        const exporterData = await ctx.stub.getState(exporterId);
-        
-        if (!exporterData || exporterData.length === 0) {
-            throw new Error(`Exporter ${exporterId} does not exist`);
-        }
-
-        const exporter = JSON.parse(exporterData.toString());
-        
-        if (!exporter.statutoryDocuments) {
-            exporter.statutoryDocuments = {};
-        }
-
-        // Update document based on type
-        switch (documentType) {
-            case 'tradeLicense':
-                exporter.statutoryDocuments.tradeLicense = {
-                    number: documentData.number,
-                    issueDate: documentData.issueDate,
-                    expiryDate: documentData.expiryDate,
-                    documentHash: documentData.documentHash || null,
-                    uploadedAt: this._getTxTimestamp(ctx),
-                    status: 'pending_verification'
-                };
-                break;
-            
-            case 'tinCertificate':
-                exporter.statutoryDocuments.tinCertificate = {
-                    tin: documentData.tin || exporter.tin,
-                    issueDate: documentData.issueDate,
-                    documentHash: documentData.documentHash || null,
-                    uploadedAt: this._getTxTimestamp(ctx),
-                    status: 'pending_verification'
-                };
-                break;
-            
-            case 'vatCertificate':
-                exporter.statutoryDocuments.vatCertificate = {
-                    vatNumber: documentData.vatNumber,
-                    issueDate: documentData.issueDate,
-                    documentHash: documentData.documentHash || null,
-                    uploadedAt: this._getTxTimestamp(ctx),
-                    status: 'pending_verification'
-                };
-                break;
-            
-            case 'investmentRegistration':
-                exporter.statutoryDocuments.investmentRegistration = {
-                    registrationNumber: documentData.registrationNumber,
-                    capitalETB: documentData.capitalETB || exporter.capitalETB,
-                    capitalType: documentData.capitalType || 'company',
-                    minimumRequired: documentData.capitalType === 'individual' ? 15000000 : 20000000,
-                    documentHash: documentData.documentHash || null,
-                    uploadedAt: this._getTxTimestamp(ctx),
-                    status: documentData.capitalETB >= (documentData.capitalType === 'individual' ? 15000000 : 20000000) 
-                        ? 'adequate' : 'inadequate'
-                };
-                // Update exporter capital
-                if (documentData.capitalETB) {
-                    exporter.capitalETB = documentData.capitalETB;
-                }
-                break;
-            
-            default:
-                throw new Error(`Invalid document type: ${documentType}`);
-        }
-
-        exporter.updatedAt = this._getTxTimestamp(ctx);
-        await ctx.stub.putState(exporterId, Buffer.from(JSON.stringify(exporter)));
-        
-        ctx.stub.setEvent('StatutoryDocumentUploaded', Buffer.from(JSON.stringify({
-            exporterId,
-            documentType,
-            timestamp: this._getTxTimestamp(ctx)
-        })));
-
-        return JSON.stringify({ success: true, exporterId, documentType });
-    }
-
-    /**
      * Verify statutory document (ECTA only)
      */
     async VerifyStatutoryDocument(ctx, exporterId, documentType, verificationDataJSON) {
@@ -4524,6 +4441,68 @@ class CoffeeExportContract extends Contract {
         const approval = JSON.parse(approvalJSON);
         
         // Validate organization
+        const validOrgs = ['ECTA', 'ECX', 'BANK', 'NBE', 'CUSTOMS', 'SHIPPING'];
+        if (!validOrgs.includes(organization)) {
+            throw new Error(`Invalid organization: ${organization}`);
+        }
+
+        const submissionData = await ctx.stub.getState(referenceNumber);
+        if (!submissionData || submissionData.length === 0) {
+            throw new Error(`Network submission ${referenceNumber} not found`);
+        }
+
+        const submission = JSON.parse(submissionData.toString());
+        
+        // Update organization approval
+        if (!submission.organizationApprovals) {
+            submission.organizationApprovals = {};
+        }
+
+        submission.organizationApprovals[organization] = {
+            status: approval.status,
+            approvedBy: approval.approvedBy,
+            comments: approval.comments || '',
+            timestamp: this._getTxTimestamp(ctx)
+        };
+
+        // Check if all required organizations have approved
+        const requiredOrgs = ['ECTA', 'ECX', 'BANK', 'NBE', 'CUSTOMS', 'SHIPPING'];
+        const allApproved = requiredOrgs.every(org => 
+            submission.organizationApprovals[org] && 
+            submission.organizationApprovals[org].status === 'approved'
+        );
+
+        if (allApproved) {
+            submission.status = 'APPROVED';
+            submission.approvedAt = this._getTxTimestamp(ctx);
+        } else if (approval.status === 'rejected') {
+            submission.status = 'REJECTED';
+            submission.rejectedBy = organization;
+            submission.rejectedAt = this._getTxTimestamp(ctx);
+        }
+
+        submission.updatedAt = this._getTxTimestamp(ctx);
+
+        await ctx.stub.putState(referenceNumber, Buffer.from(JSON.stringify(submission)));
+
+        ctx.stub.setEvent('OrganizationApprovalUpdated', Buffer.from(JSON.stringify({
+            referenceNumber,
+            organization,
+            status: approval.status,
+            timestamp: this._getTxTimestamp(ctx)
+        })));
+
+        return JSON.stringify({
+            success: true,
+            referenceNumber,
+            organization,
+            status: approval.status,
+            submissionStatus: submission.status
+        });
+    }
+}
+
+module.exports = CoffeeExportContract;
         const validOrgs = ['BANK', 'NBE', 'CUSTOMS', 'SHIPPING'];
         if (!validOrgs.includes(organization.toUpperCase())) {
             throw new Error(`Invalid organization: ${organization}. Must be one of: ${validOrgs.join(', ')}`);
@@ -4625,14 +4604,14 @@ class CoffeeExportContract extends Contract {
             organization,
             allApproved 
         });
-    }
+    
 
     /**
      * Get approval status for a contract
      */
     async GetApprovalStatus(ctx, referenceNumber) {
         const contractData = await ctx.stub.getState(referenceNumber);
-        
+    
         if (!contractData || contractData.length === 0) {
             throw new Error(`Contract with reference ${referenceNumber} does not exist`);
         }
@@ -4991,6 +4970,123 @@ class CoffeeExportContract extends Contract {
         return JSON.stringify(results);
     }
 
+    // ============================================================================
+    // SALES CONTRACT REGISTRATION & NETWORK SUBMISSION (MISSING FUNCTIONS)
+    // ============================================================================
+
+    /**
+     * Register sales contract with ECTA reference number
+     * Called by ECTA after contract is accepted by both parties
+     */
+    async RegisterSalesContractWithReference(ctx, contractDataJSON) {
+        const contractData = JSON.parse(contractDataJSON);
+        const { draftId, exporterId, buyerId } = contractData;
+
+        if (!draftId || !exporterId || !buyerId) {
+            throw new Error('Missing required fields: draftId, exporterId, buyerId');
+        }
+
+        // Generate ECTA reference number
+        const timestamp = this._getTxTimestamp(ctx);
+        const year = new Date(timestamp).getFullYear();
+        
+        // Get sequence number for this year
+        const sequenceKey = `ECTA_SC_SEQ_${year}`;
+        const sequenceData = await ctx.stub.getState(sequenceKey);
+        let sequence = 1;
+        
+        if (sequenceData && sequenceData.length > 0) {
+            sequence = parseInt(sequenceData.toString()) + 1;
+        }
+        
+        // Store updated sequence
+        await ctx.stub.putState(sequenceKey, Buffer.from(sequence.toString()));
+        
+        // Format reference number: ECTA-SC-YYYY-XXXXX
+        const referenceNumber = `ECTA-SC-${year}-${sequence.toString().padStart(5, '0')}`;
+
+        // Create registered sales contract
+        const registeredContract = {
+            docType: 'registered_sales_contract',
+            referenceNumber,
+            draftId,
+            exporterId,
+            buyerId,
+            buyerName: contractData.buyerName,
+            buyerCountry: contractData.buyerCountry,
+            coffeeType: contractData.coffeeType,
+            originRegion: contractData.originRegion,
+            quantity: contractData.quantity,
+            unitPrice: contractData.unitPrice,
+            totalValue: contractData.totalValue,
+            currency: contractData.currency || 'USD',
+            qualityGrade: contractData.qualityGrade,
+            paymentMethod: contractData.paymentMethod,
+            paymentTerms: contractData.paymentTerms,
+            incoterms: contractData.incoterms,
+            portOfLoading: contractData.portOfLoading,
+            portOfDischarge: contractData.portOfDischarge,
+            deliveryDate: contractData.deliveryDate,
+            governingLaw: contractData.governingLaw || 'CISG',
+            arbitrationRules: contractData.arbitrationRules || 'ICC',
+            arbitrationLocation: contractData.arbitrationLocation,
+            ectaOfficer: contractData.ectaOfficer,
+            registeredAt: timestamp,
+            registeredBy: 'ECTA',
+            status: 'REGISTERED',
+            approvalStatus: {
+                ecta: { status: 'APPROVED', approvedAt: timestamp },
+                bank: { status: 'PENDING' },
+                nbe: { status: 'PENDING' },
+                customs: { status: 'PENDING' },
+                shipping: { status: 'PENDING' }
+            }
+        };
+
+        // Store by reference number
+        await ctx.stub.putState(`SC_${referenceNumber}`, Buffer.from(JSON.stringify(registeredContract)));
+        
+        // Create composite key for draft ID lookup
+        const draftIndexKey = await ctx.stub.createCompositeKey('draft~reference', [draftId, referenceNumber]);
+        await ctx.stub.putState(draftIndexKey, Buffer.from(referenceNumber));
+
+        ctx.stub.setEvent('SalesContractRegistered', Buffer.from(JSON.stringify({
+            referenceNumber,
+            draftId,
+            exporterId,
+            timestamp
+        })));
+
+        return JSON.stringify({ 
+            success: true, 
+            referenceNumber,
+            draftId,
+            transactionId: ctx.stub.getTxID()
+        });
+    }
+
+    /**
+     * Get reference number by draft ID
+     * Allows querying the ECTA reference number using the original dra
+ft ID
+     */
+    async GetReferenceNumberByDraftId(ctx, draftId) {
+        const iterator = await ctx.stub.getStateByPartialCompositeKey('draft~reference', [draftId]);
+        const result = await iterator.next();
+        
+        if (result.done || !result.value) {
+            throw new Error(`No reference found for draft ${draftId}`);
+        }
+        
+        const referenceNumber = result.value.value.toString();
+        await iterator.close();
+        
+        return JSON.stringify({ 
+            success: true, 
+            draftId,
+            referenceNumber
+        });
+    }
 }
 
 module.exports = CoffeeExportContract;

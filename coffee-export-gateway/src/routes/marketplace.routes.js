@@ -64,6 +64,57 @@ router.post('/opportunities', authenticateToken, async (req, res) => {
 });
 
 /**
+ * GET /api/marketplace/listings
+ * Alias for opportunities endpoint
+ */
+router.get('/listings', authenticateToken, async (req, res) => {
+  try {
+    const { coffeeType, country, status, minQuantity, maxPrice } = req.query;
+
+    let query = 'SELECT * FROM buyer_opportunities WHERE status = $1';
+    const params = ['ACTIVE'];
+    let paramCount = 2;
+
+    if (coffeeType) {
+      query += ` AND coffee_type = $${paramCount}`;
+      params.push(coffeeType);
+      paramCount++;
+    }
+
+    if (country) {
+      query += ` AND destination_country = $${paramCount}`;
+      params.push(country);
+      paramCount++;
+    }
+
+    if (minQuantity) {
+      query += ` AND quantity_min >= $${paramCount}`;
+      params.push(parseFloat(minQuantity));
+      paramCount++;
+    }
+
+    if (maxPrice) {
+      query += ` AND target_price_max <= $${paramCount}`;
+      params.push(parseFloat(maxPrice));
+      paramCount++;
+    }
+
+    query += ' ORDER BY created_at DESC';
+
+    const result = await postgresService.query(query, params);
+
+    res.json({
+      success: true,
+      listings: result.rows,
+      count: result.rows.length
+    });
+  } catch (error) {
+    console.error('Marketplace listings error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
  * List opportunities
  * GET /api/marketplace/opportunities
  */

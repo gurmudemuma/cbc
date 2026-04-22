@@ -9,6 +9,29 @@ const { authenticateToken, requireRole } = require('../middleware/auth');
 const hybridDataService = require('../services/hybrid-data-service');
 
 /**
+ * GET /api/hybrid/status
+ * Get hybrid service status
+ */
+router.get('/status', authenticateToken, async (req, res) => {
+  try {
+    const stats = hybridDataService.getStats();
+    
+    res.json({
+      status: 'operational',
+      service: 'hybrid-data-service',
+      stats: stats,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Hybrid status error:', error);
+    res.status(500).json({ 
+      status: 'error',
+      error: error.message 
+    });
+  }
+});
+
+/**
  * Get hybrid service statistics
  * Shows write/read counts and sync status
  */

@@ -401,6 +401,66 @@ router.post('/request', authenticateToken, async (req, res) => {
 });
 
 /**
+ * GET /api/document-requests
+ * Get all document requests for the current exporter (root path)
+ */
+router.get('/', authenticateToken, async (req, res) => {
+  const client = await pool.connect();
+  
+  try {
+    const exporterId = req.user.id || req.user.username;
+
+    // Get exporter UUID
+    const exporterQuery = 'SELECT exporter_id FROM exporter_profiles WHERE user_id = $1';
+    const exporterResult = await client.query(exporterQuery, [exporterId]);
+
+    if (exporterResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Exporter profile not found'
+      });
+    }
+
+    const exporterUuid = exporterResult.rows[0].exporter_id;
+
+    // Get all document requests
+    const query = `
+      SELECT 
+        dr.request_id,
+        dr.exporter_id,
+        dr.network_member_code,
+        dr.document_type,
+        dr.request_status,
+        dr.request_notes,
+        dr.created_at,
+        dr.updated_at,
+        nm.member_name,
+        nm.member_type
+      FROM document_requests dr
+      LEFT JOIN network_members nm ON dr.network_member_code = nm.member_code
+      WHERE dr.exporter_id = $1
+      ORDER BY dr.created_at DESC
+    `;
+
+    const result = await client.query(query, [exporterUuid]);
+
+    res.json({
+      success: true,
+      requests: result.rows,
+      count: result.rows.length
+    });
+  } catch (error) {
+    console.error('Document requests fetch error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  } finally {
+    client.release();
+  }
+});
+
+/**
  * GET /api/exporter/documents/requests
  * Get all document requests for the current exporter
  */
