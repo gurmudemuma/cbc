@@ -77,8 +77,15 @@ export const AgencyProvider: React.FC<AgencyProviderProps> = ({ children }) => {
             setAgencies(response.data || []);
         } catch (err: any) {
             console.error('Failed to load agencies:', err);
-            setError(err.message || 'Failed to load agencies');
-            setAgencies([]);
+            // Handle the case where the API endpoint doesn't exist or returns 500
+            if (err.response?.status === 500 || err.response?.status === 404) {
+                console.log('Agencies endpoint not available, using default empty list');
+                setAgencies([]);
+                setError(null); // Don't show error for missing endpoint
+            } else {
+                setError(err.message || 'Failed to load agencies');
+                setAgencies([]);
+            }
         } finally {
             setIsLoading(false);
         }

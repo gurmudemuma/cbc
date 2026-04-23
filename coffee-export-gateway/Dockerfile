@@ -25,7 +25,7 @@ RUN mkdir -p wallets
 
 # Copy startup script
 COPY startup.sh /app/startup.sh
-RUN chmod +x /app/startup.sh
+RUN sed -i 's/\r$//' /app/startup.sh && chmod +x /app/startup.sh
 
 # Expose port
 EXPOSE 3000
@@ -34,5 +34,5 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
-# Start application with startup script
-CMD ["/app/startup.sh"]
+# Start with startup script when present; fall back to server directly.
+CMD ["sh", "-c", "if [ -f /app/startup.sh ]; then exec /app/startup.sh; else echo 'startup.sh not found, starting server directly'; exec node /app/src/server.js; fi"]

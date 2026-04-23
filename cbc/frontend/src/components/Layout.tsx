@@ -235,6 +235,9 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  
+  // Handle null/undefined org values
+  const normalizedOrg = org?.toLowerCase()?.trim() || user?.organization?.toLowerCase()?.trim() || user?.role?.toLowerCase()?.trim() || 'default';
 
   // Priority 2 State
   const { settings, updateSettings } = useAccessibilitySettings();
@@ -273,7 +276,7 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
 
   // Get role-specific navigation with filters and counts
   const getRoleNavigation = () => {
-    const orgLower = (org || user?.organizationId || '').toLowerCase();
+    const orgLower = normalizedOrg;
     const userRole = user?.role?.toLowerCase();
 
     // Define organization checks
@@ -350,12 +353,24 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
               { name: 'Network Statistics', path: '/network/statistics', icon: BarChart3 },
             ]
           },
+          {
+            name: 'Payment Management',
+            path: '/payments',
+            icon: DollarSign,
+            children: [
+              { name: 'All Payments', path: '/payments', icon: DollarSign },
+              { name: 'New Payment', path: '/payments/new', icon: Plus },
+              { name: 'Initiated Payments', path: '/payments/initiated', icon: Clock },
+              { name: 'Completed Payments', path: '/payments/completed', icon: CheckCircle },
+            ]
+          },
         ];
       }
 
       // Default fallback for Commercial Bank
       return [
         { name: 'Banking Dashboard', path: '/banking', icon: DollarSign },
+        { name: 'Payment Management', path: '/payments', icon: DollarSign },
       ];
     }
 
@@ -378,6 +393,16 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
               { name: 'Network Approval', path: '/network/agency-dashboard', icon: FileCheck },
               { name: 'Document Issuance', path: '/network/agency-dashboard', icon: FileText },
               { name: 'Network Statistics', path: '/network/statistics', icon: BarChart3 },
+            ]
+          },
+          {
+            name: 'Payment Management',
+            path: '/payments',
+            icon: DollarSign,
+            children: [
+              { name: 'All Payments', path: '/payments', icon: DollarSign },
+              { name: 'Payment Review', path: '/bank-payment-review', icon: FileCheck },
+              { name: 'FX Approval', path: '/nbe-fx-approval', icon: CheckCircle },
             ]
           },
           {
@@ -409,6 +434,7 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
       // Default fallback for National Bank
       return [
         { name: 'Network Management', path: '/network/agency-dashboard', icon: Building },
+        { name: 'Payment Management', path: '/payments', icon: DollarSign },
         { name: 'FX Dashboard', path: '/fx', icon: DollarSign },
         { name: 'Export Monitoring', path: '/exports', icon: Package },
       ];
@@ -607,7 +633,7 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
   };
 
   const getOrgName = () => {
-    const orgLower = (org || '').toLowerCase();
+    const orgLower = normalizedOrg;
     if (orgLower.includes('exporter')) return 'Exporter Portal';
     if (orgLower.includes('banker') || orgLower.includes('national')) return 'National Bank';
     if (orgLower === 'ecta') return 'ECTA Portal';
@@ -756,9 +782,8 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             {/* Show ContractNotifications for network members */}
             {(() => {
-              const orgUpper = (org || '').toUpperCase();
+              const orgUpper = normalizedOrg.toUpperCase();
               const shouldShow = ['BANK', 'NBE', 'ECX', 'ERCA', 'SHIPPING', 'MOA', 'MOH', 'ECTA'].includes(orgUpper);
-              console.log('ContractNotifications check:', { org, orgUpper, shouldShow });
               return shouldShow ? <ContractNotifications /> : null;
             })()}
             <NotificationCenter />

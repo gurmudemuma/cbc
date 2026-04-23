@@ -154,95 +154,257 @@ router.post('/initiate', authenticateToken, requireRole('exporter', 'admin'), as
 
 /**
  * GET /api/payments
- * Get all payments for the authenticated exporter
+ * Get all payments for the authenticated user (exporter, bank, or NBE)
  */
-router.get('/', authenticateToken, requireRole('exporter', 'admin'), async (req, res) => {
+router.get('/', authenticateToken, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { status, paymentMethod, limit = 50, offset = 0 } = req.query;
+    const userRole = req.user.role?.toLowerCase();
+    
+    // For exporters - get their own payments
+    if (userRole === 'exporter' || userRole === 'admin') {
+      const exporterQuery = 'SELECT exporter_id FROM exporter_profiles WHERE user_id = $1';
+      const exporterResult = await client.query(exporterQuery, [req.user.id]);
+      
+      if (exporterResult.rows.length === 0) {
+        return res.status(404).json({ success: false, error: 'Exporter profile not found' });
+      }
+      
+      const exporterId = exporterResult.rows[0].exporter_id;
+      
+      let query = `
+        SELECT p.*, e.coffee_type, e.quantity, e.destination_country, 
+               br.company_name as buyer_name, br.country as buyer_country, 
+               COUNT(pd.document_id) as documents_count, 
+               COUNT(pd.document_id) FILTER (WHERE pd.review_status = 'APPROVED') as approved_documents 
+        FROM payments p 
+        LEFT JOIN exports e ON p.export_id = e.export_id 
+        LEFT JOIN buyer_registry br ON p.buyer_id = br.buyer_id 
+        LEFT JOIN payment_documents pd ON p.payment_id = pd.payment_id 
+        WHERE p.exporter_id = $1
+      `;
+      const params = [exporterId];
+      let paramCount = 2;
+      
+      if (status) { 
+        query += ` AND p.status = $${paramCount}`; 
+        params.push(status); 
+        paramCount++; 
+      }
+      if (paymentMethod) { 
+        query += ` AND p.payment_method = $${paramCount}`; 
+        params.push(paymentMethod); 
+        paramCount++; 
+      }
+      
+      query += ` GROUP BY p.payment_id, e.coffee_type, e.quantity, e.destination_country, br.company_name, br.country 
+                 ORDER BY p.created_at DESC 
+                 LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
+      params.push(limit, offset);
+      
+      const result = await client.query(query, params);
+      
+      let countQuery = `SELECT COUNT(*) as total FROM payments p WHERE p.exporter_id = $1`;
+      const countParams = [exporterId];
+      let countParamNum = 2;
+      
+      if (status) { 
+        countQuery += ` AND p.status = $${countParamNum}`; 
+        countParams.push(status); 
+        countParamNum++; 
+      }
+      if (paymentMethod) { 
+        countQuery += ` AND p.payment_method = $${countParamNum}`; 
+        countParams.push(paymentMethod); 
+      }
+      
+      const countResult = await client.query(countQuery, countParams);
+      
+      return res.json({ 
+        success: true, 
+        payments: result.rows, 
+        pagination: { 
+          total: parseInt(countResult.rows[0].total), 
+          limit: parseInt(limit), 
+          offset: parseInt(offset), 
+          hasMore: (parseInt(offset) + result.rows.length) < parseInt(countResult.rows[0].total) 
+        } 
+      });
+    }
+    
+    // For banks and NBE - get all payments
+    if (userRole === 'bank' || userRole === 'banker' || userRole === 'nbe' || userRole === 'governor') {
+      let query = `
+        SELECT p.*, e.coffee_type, e.quantity, e.destination_country, 
+               ep.business_name as exporter_name, 
+               br.company_name as buyer_name, br.country as buyer_country, 
+               COUNT(pd.document_id) as documents_count, 
+               COUNT(pd.document_id) FILTER (WHERE pd.review_status = 'APPROVED') as approved_documents 
+        FROM payments p 
+        LEFT JOIN exports e ON p.export_id = e.export_id 
+        LEFT JOIN exporter_profiles ep ON p.exporter_id = ep.exporter_id 
+        LEFT JOIN buyer_registry br ON p.buyer_id = br.buyer_id 
+        LEFT JOIN payment_documents pd ON p.payment_id = pd.payment_id 
+        WHERE 1=1
+      `;
+      const params = [];
+      let paramCount = 1;
+      
+      if (status) { 
+        query += ` AND p.status = $${paramCount}`; 
+        params.push(status); 
+        paramCount++; 
+      }
+      if (paymentMethod) { 
+        query += ` AND p.payment_method = $${paramCount}`; 
+        params.push(paymentMethod); 
+        paramCount++; 
+      }
+      
+      query += ` GROUP BY p.payment_id, e.coffee_type, e.quantity, e.destination_country, ep.business_name, br.company_name, br.country 
+                 ORDER BY p.created_at DESC 
+                 LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
+      params.push(limit, offset);
+      
+      const result = await client.query(query, params);
+      
+      let countQuery = `SELECT COUNT(*) as total FROM payments p WHERE 1=1`;
+      const countParams = [];
+      let countParamNum = 1;
+      
+      if (status) { 
+        countQuery += ` AND p.status = $${countParamNum}`; 
+        countParams.push(status); 
+        countParamNum++; 
+      }
+      if (paymentMethod) { 
+        countQuery += ` AND p.payment_method = $${countParamNum}`; 
+        countParams.push(paymentMethod); 
+      }
+      
+      const countResult = await client.query(countQuery, countParams.length > 0 ? countParams : []);
+      
+      return res.json({ 
+        success: true, 
+        payments: result.rows, 
+        pagination: { 
+          total: parseInt(countResult.rows[0].total), 
+          limit: parseInt(limit), 
+          offset: parseInt(offset), 
+          hasMore: (parseInt(offset) + result.rows.length) < parseInt(countResult.rows[0].total) 
+        } 
+      });
+    }
+    
+    // For other roles - return empty array
+    return res.json({ 
+      success: true, 
+      payments: [], 
+      pagination: { 
+        total: 0, 
+        limit: parseInt(limit), 
+        offset: parseInt(offset), 
+        hasMore: false 
+      } 
+    });
+    
+  } catch (error) {
+    console.error('Payments fetch error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  } finally {
+    client.release();
+  }
+});
+
+/**
+ * GET /api/payments/statistics
+ * Get payment statistics for exporter, bank, or NBE
+ */
+router.get('/statistics', authenticateToken, async (req, res) => {
   const client = await pool.connect();
   
   try {
-    const { status, paymentMethod, limit = 50, offset = 0 } = req.query;
-
-    // Get exporter UUID
-    const exporterQuery = 'SELECT exporter_id FROM exporter_profiles WHERE user_id = $1';
-    const exporterResult = await client.query(exporterQuery, [req.user.id]);
+    const userRole = req.user.role?.toLowerCase();
     
-    if (exporterResult.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: 'Exporter profile not found'
+    // For exporters - get their own payment statistics
+    if (userRole === 'exporter' || userRole === 'admin') {
+      // Get exporter UUID
+      const exporterQuery = 'SELECT exporter_id FROM exporter_profiles WHERE user_id = $1';
+      const exporterResult = await client.query(exporterQuery, [req.user.id]);
+      
+      if (exporterResult.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'Exporter profile not found'
+        });
+      }
+
+      const exporterId = exporterResult.rows[0].exporter_id;
+
+      const statsQuery = `
+        SELECT 
+          COUNT(*) as total_payments,
+          COUNT(*) FILTER (WHERE status = 'COMPLETED') as completed_payments,
+          COUNT(*) FILTER (WHERE status IN ('INITIATED', 'DOCUMENTS_SUBMITTED', 'UNDER_REVIEW', 'PROCESSING')) as pending_payments,
+          COUNT(*) FILTER (WHERE status = 'FAILED') as failed_payments,
+          SUM(amount) FILTER (WHERE status = 'COMPLETED') as total_received,
+          SUM(amount) FILTER (WHERE status IN ('INITIATED', 'DOCUMENTS_SUBMITTED', 'UNDER_REVIEW', 'PROCESSING')) as pending_amount,
+          AVG(EXTRACT(EPOCH FROM (completed_at - initiated_at))/86400) FILTER (WHERE status = 'COMPLETED') as avg_processing_days,
+          COUNT(DISTINCT payment_method) as payment_methods_used
+        FROM payments
+        WHERE exporter_id = $1
+      `;
+
+      const result = await client.query(statsQuery, [exporterId]);
+
+      return res.json({
+        success: true,
+        statistics: result.rows[0]
       });
     }
-
-    const exporterId = exporterResult.rows[0].exporter_id;
-
-    // Build query
-    let query = `
-      SELECT 
-        p.*,
-        e.coffee_type,
-        e.quantity,
-        e.destination_country,
-        br.company_name as buyer_name,
-        br.country as buyer_country,
-        COUNT(pd.document_id) as documents_count,
-        COUNT(pd.document_id) FILTER (WHERE pd.review_status = 'APPROVED') as approved_documents
-      FROM payments p
-      LEFT JOIN exports e ON p.export_id = e.export_id
-      LEFT JOIN buyer_registry br ON p.buyer_id = br.buyer_id
-      LEFT JOIN payment_documents pd ON p.payment_id = pd.payment_id
-      WHERE p.exporter_id = $1
-    `;
-
-    const params = [exporterId];
-    let paramCount = 2;
-
-    if (status) {
-      query += ` AND p.status = $${paramCount}`;
-      params.push(status);
-      paramCount++;
-    }
-
-    if (paymentMethod) {
-      query += ` AND p.payment_method = $${paramCount}`;
-      params.push(paymentMethod);
-      paramCount++;
-    }
-
-    query += ` GROUP BY p.payment_id, e.coffee_type, e.quantity, e.destination_country, br.company_name, br.country`;
-    query += ` ORDER BY p.created_at DESC`;
-    query += ` LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
-    params.push(limit, offset);
-
-    const result = await client.query(query, params);
-
-    // Get total count
-    const countQuery = `
-      SELECT COUNT(*) as total
-      FROM payments p
-      WHERE p.exporter_id = $1
-      ${status ? 'AND p.status = $2' : ''}
-      ${paymentMethod ? `AND p.payment_method = $${status ? 3 : 2}` : ''}
-    `;
-    const countParams = [exporterId];
-    if (status) countParams.push(status);
-    if (paymentMethod) countParams.push(paymentMethod);
     
-    const countResult = await client.query(countQuery, countParams);
-    const total = parseInt(countResult.rows[0].total);
+    // For banks and NBE - get all payment statistics
+    if (userRole === 'bank' || userRole === 'banker' || userRole === 'nbe' || userRole === 'governor') {
+      const statsQuery = `
+        SELECT 
+          COUNT(*) as total_payments,
+          COUNT(*) FILTER (WHERE status = 'COMPLETED') as completed_payments,
+          COUNT(*) FILTER (WHERE status IN ('INITIATED', 'DOCUMENTS_SUBMITTED', 'UNDER_REVIEW', 'PROCESSING')) as pending_payments,
+          COUNT(*) FILTER (WHERE status = 'FAILED') as failed_payments,
+          SUM(amount) FILTER (WHERE status = 'COMPLETED') as total_received,
+          SUM(amount) FILTER (WHERE status IN ('INITIATED', 'DOCUMENTS_SUBMITTED', 'UNDER_REVIEW', 'PROCESSING')) as pending_amount,
+          AVG(EXTRACT(EPOCH FROM (completed_at - initiated_at))/86400) FILTER (WHERE status = 'COMPLETED') as avg_processing_days,
+          COUNT(DISTINCT payment_method) as payment_methods_used,
+          COUNT(DISTINCT exporter_id) as total_exporters
+        FROM payments
+      `;
 
-    res.json({
+      const result = await client.query(statsQuery);
+
+      return res.json({
+        success: true,
+        statistics: result.rows[0]
+      });
+    }
+    
+    // For other roles - return empty statistics
+    return res.json({
       success: true,
-      payments: result.rows,
-      pagination: {
-        total,
-        limit: parseInt(limit),
-        offset: parseInt(offset),
-        hasMore: (parseInt(offset) + result.rows.length) < total
+      statistics: {
+        total_payments: 0,
+        completed_payments: 0,
+        pending_payments: 0,
+        failed_payments: 0,
+        total_received: 0,
+        pending_amount: 0,
+        avg_processing_days: 0,
+        payment_methods_used: 0
       }
     });
 
   } catch (error) {
-    console.error('Payments fetch error:', error);
+    console.error('Statistics fetch error:', error);
     res.status(500).json({
       success: false,
       error: error.message
@@ -425,59 +587,6 @@ router.post('/:paymentId/documents', authenticateToken, requireRole('exporter', 
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('Document submission error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  } finally {
-    client.release();
-  }
-});
-
-/**
- * GET /api/payments/statistics
- * Get payment statistics for exporter
- */
-router.get('/statistics', authenticateToken, requireRole('exporter', 'admin'), async (req, res) => {
-  const client = await pool.connect();
-  
-  try {
-    // Get exporter UUID
-    const exporterQuery = 'SELECT exporter_id FROM exporter_profiles WHERE user_id = $1';
-    const exporterResult = await client.query(exporterQuery, [req.user.id]);
-    
-    if (exporterResult.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: 'Exporter profile not found'
-      });
-    }
-
-    const exporterId = exporterResult.rows[0].exporter_id;
-
-    const statsQuery = `
-      SELECT 
-        COUNT(*) as total_payments,
-        COUNT(*) FILTER (WHERE status = 'COMPLETED') as completed_payments,
-        COUNT(*) FILTER (WHERE status IN ('INITIATED', 'DOCUMENTS_SUBMITTED', 'UNDER_REVIEW', 'PROCESSING')) as pending_payments,
-        COUNT(*) FILTER (WHERE status = 'FAILED') as failed_payments,
-        SUM(amount) FILTER (WHERE status = 'COMPLETED') as total_received,
-        SUM(amount) FILTER (WHERE status IN ('INITIATED', 'DOCUMENTS_SUBMITTED', 'UNDER_REVIEW', 'PROCESSING')) as pending_amount,
-        AVG(EXTRACT(EPOCH FROM (completed_at - initiated_at))/86400) FILTER (WHERE status = 'COMPLETED') as avg_processing_days,
-        COUNT(DISTINCT payment_method) as payment_methods_used
-      FROM payments
-      WHERE exporter_id = $1
-    `;
-
-    const result = await client.query(statsQuery, [exporterId]);
-
-    res.json({
-      success: true,
-      statistics: result.rows[0]
-    });
-
-  } catch (error) {
-    console.error('Statistics fetch error:', error);
     res.status(500).json({
       success: false,
       error: error.message

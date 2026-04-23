@@ -427,13 +427,13 @@ const NetworkSubmission = ({ user, org }: NetworkSubmissionProps): JSX.Element =
                           <Typography variant="body2" color="textSecondary">
                             Export License
                           </Typography>
-                          <Typography variant="body1">{prefillData.licenseInfo?.licenseNumber || 'N/A'}</Typography>
+                          <Typography variant="body1">{prefillData.qualifications?.licenseNumber || prefillData.documents?.exportLicenseNumber || 'Not Available'}</Typography>
                         </Grid>
                         <Grid item xs={6}>
                           <Typography variant="body2" color="textSecondary">
                             Competence Certificate
                           </Typography>
-                          <Typography variant="body1">{prefillData.competenceInfo?.certificateNumber || 'N/A'}</Typography>
+                          <Typography variant="body1">{prefillData.qualifications?.competenceCertNumber || prefillData.documents?.competenceCertificateNumber || 'Not Available'}</Typography>
                         </Grid>
                       </Grid>
                     </CardContent>
@@ -542,9 +542,9 @@ const NetworkSubmission = ({ user, org }: NetworkSubmissionProps): JSX.Element =
             Your Profile Information is Ready
           </Typography>
           <Typography variant="body2">
-            <strong>Business:</strong> {prefillData.exporterInfo?.businessName} • 
-            <strong> TIN:</strong> {prefillData.exporterInfo?.tin} • 
-            <strong> License:</strong> {prefillData.licenseInfo?.licenseNumber || 'N/A'}
+            <strong>Business:</strong> {prefillData.exporterInfo?.businessName || 'Not Available'} • 
+            <strong> TIN:</strong> {prefillData.exporterInfo?.tin || 'Not Available'} • 
+            <strong> License:</strong> {prefillData.qualifications?.licenseNumber || prefillData.documents?.exportLicenseNumber || 'Not Available'}
           </Typography>
         </Alert>
       )}

@@ -1,7 +1,7 @@
 /**
  * API Endpoints Constants - Single Source of Truth
  * 
- * This file defines all API endpoints used across the Coffee Blockchain Consortium.
+ * This file defines all API endpoints used across the Coffee Export Consortium.
  * Both frontend and backend should reference these constants to ensure consistency.
  * 
  * ARCHITECTURE:

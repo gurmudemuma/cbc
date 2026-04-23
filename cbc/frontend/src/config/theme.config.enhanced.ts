@@ -734,7 +734,12 @@ export const orgPalettes: Record<string, PaletteOptions> = {
 
 // Main theme creation function
 export function createEnhancedTheme(org?: string, mode: 'light' | 'dark' = 'light'): Theme {
-  const palette = org && orgPalettes[org] ? orgPalettes[org] : defaultPalette;
+  // Handle null/undefined org values
+  const normalizedOrg = org?.toLowerCase()?.trim() || null;
+  
+  console.log('Creating theme for org:', normalizedOrg, 'mode:', mode);
+  
+  const palette = normalizedOrg && orgPalettes[normalizedOrg] ? orgPalettes[normalizedOrg] : defaultPalette;
 
   return createTheme({
     ...baseTheme,

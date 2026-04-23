@@ -2,7 +2,7 @@
 
 ## 🎯 Project Overview
 
-Successfully implemented a complete sales contract workflow for the Coffee Blockchain Consortium, integrating frontend components with backend APIs and blockchain finalization.
+Successfully implemented a complete sales contract workflow for the Coffee Export Consortium, integrating frontend components with backend APIs and blockchain finalization.
 
 ## 📦 Deliverables
 

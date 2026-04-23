@@ -164,7 +164,7 @@ const ExportManagement = ({ user, org }: ExportManagementProps): JSX.Element => 
             : canClearCustoms ? 'customs'
               : 'viewer';
   const [activeStep, setActiveStep] = useState(0);
-  const [uploadedDocuments, setUploadedDocuments] = useState({
+  const [uploadedDocuments, setUploadedDocuments] = useState<Record<string, File | null>>({
     commercialInvoice: null,
     packingList: null,
     certificateOfOrigin: null,
@@ -433,7 +433,7 @@ const ExportManagement = ({ user, org }: ExportManagementProps): JSX.Element => 
       // Upload documents if any
       const documentsToUpload = Object.entries(uploadedDocuments).filter(
         ([_, file]) => file !== null
-      );
+      ) as [string, File][];
 
       if (documentsToUpload.length > 0) {
         for (const [docType, file] of documentsToUpload) {

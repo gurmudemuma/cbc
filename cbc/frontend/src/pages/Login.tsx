@@ -271,7 +271,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             </Box>
 
             <Typography variant="h2" sx={{ fontWeight: 700, mb: 2, lineHeight: 1.1 }}>
-              Coffee Blockchain<br />Consortium
+              Coffee Export Consortium
             </Typography>
 
             <Typography variant="h6" sx={{ color: 'rgba(255,255,255,0.7)', mb: 6, fontWeight: 400 }}>

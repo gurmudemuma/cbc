@@ -420,7 +420,7 @@ docker-compose -f docker-compose-hybrid.yml restart
 
 ## Conclusion
 
-The Coffee Blockchain Consortium system is fully functional and ready for comprehensive end-to-end testing. All major features have been implemented and verified:
+The Coffee Export Consortium system is fully functional and ready for comprehensive end-to-end testing. All major features have been implemented and verified:
 
 - ✅ Exporter registration with auto-qualification
 - ✅ Sales contract management

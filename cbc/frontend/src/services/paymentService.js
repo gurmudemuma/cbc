@@ -50,9 +50,25 @@ const paymentService = {
   },
 
   /**
+   * Submit documents for a payment (alias)
+   */
+  submitPaymentDocuments: async (paymentId, documents) => {
+    const response = await apiClient.post(`/api/payments/${paymentId}/documents`, { documents });
+    return response.data;
+  },
+
+  /**
    * Get payment statistics for exporter
    */
   getStatistics: async () => {
+    const response = await apiClient.get('/api/payments/statistics');
+    return response.data;
+  },
+
+  /**
+   * Get payment statistics for exporter (alias)
+   */
+  getPaymentStatistics: async () => {
     const response = await apiClient.get('/api/payments/statistics');
     return response.data;
   },

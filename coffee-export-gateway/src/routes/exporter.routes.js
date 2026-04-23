@@ -1559,3 +1559,138 @@ router.get('/licenses/:licenseId/download', authenticateToken, async (req, res) 
   }
 });
 
+
+/**
+ * GET /api/exporter/network-prefill
+ * Get exporter information for network submission prefill
+ * Returns exporter profile, qualification status, and documents
+ */
+router.get('/network-prefill', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id || req.user.username;
+    
+    console.log(`[Network Prefill] Fetching data for user: ${userId}`);
+    
+    // Get exporter profile and all qualifications in one query
+    const query = `
+      SELECT 
+        ep.exporter_id,
+        ep.user_id,
+        ep.business_name,
+        ep.tin,
+        ep.registration_number,
+        ep.business_type,
+        ep.minimum_capital,
+        ep.office_address,
+        ep.city,
+        ep.region,
+        ep.contact_person,
+        ep.email,
+        ep.phone,
+        ep.status as profile_status,
+        cl.laboratory_id,
+        cl.laboratory_name,
+        cl.certification_number as lab_cert_number,
+        cl.status as lab_status,
+        ct.taster_id,
+        ct.full_name as taster_name,
+        ct.proficiency_certificate_number as taster_cert_number,
+        ct.status as taster_status,
+        cc.certificate_id as competence_cert_id,
+        cc.certificate_number as competence_cert_number,
+        cc.status as competence_status,
+        el.license_id,
+        el.license_number,
+        el.status as license_status
+      FROM exporter_profiles ep
+      LEFT JOIN coffee_laboratories cl ON ep.exporter_id = cl.exporter_id AND cl.status = 'ACTIVE'
+      LEFT JOIN coffee_tasters ct ON ep.exporter_id = ct.exporter_id AND ct.status = 'ACTIVE'
+      LEFT JOIN competence_certificates cc ON ep.exporter_id = cc.exporter_id AND cc.status = 'ACTIVE'
+      LEFT JOIN export_licenses el ON ep.exporter_id = el.exporter_id AND el.status = 'ACTIVE'
+      WHERE ep.user_id = $1
+      LIMIT 1
+    `;
+    
+    const result = await postgresService.query(query, [userId]);
+    
+    if (result.rows.length === 0) {
+      console.log(`[Network Prefill] No exporter profile found for ${userId}`);
+      return res.json({
+        success: false,
+        message: 'Exporter profile not found. Please complete pre-registration first.',
+        data: {
+          isQualified: false,
+          exporterInfo: null
+        }
+      });
+    }
+    
+    const row = result.rows[0];
+    
+    // Check if exporter is fully qualified
+    const isQualified = row.profile_status === 'ACTIVE' && 
+                       row.lab_status === 'ACTIVE' && 
+                       row.taster_status === 'ACTIVE' && 
+                       row.competence_status === 'ACTIVE' && 
+                       row.license_status === 'ACTIVE';
+    
+    // Build prefill data
+    const prefillData = {
+      isQualified,
+      exporterInfo: {
+        exporterId: row.user_id,
+        exporterUUID: row.exporter_id,
+        businessName: row.business_name,
+        tin: row.tin,
+        registrationNumber: row.registration_number,
+        businessType: row.business_type,
+        capitalAmount: row.minimum_capital,
+        officeAddress: row.office_address,
+        city: row.city,
+        region: row.region,
+        contactPerson: row.contact_person,
+        email: row.email,
+        phone: row.phone
+      },
+      qualifications: {
+        profileStatus: row.profile_status,
+        laboratoryStatus: row.lab_status || 'MISSING',
+        laboratoryCertNumber: row.lab_cert_number,
+        laboratoryName: row.laboratory_name,
+        tasterStatus: row.taster_status || 'MISSING',
+        tasterCertNumber: row.taster_cert_number,
+        tasterName: row.taster_name,
+        competenceStatus: row.competence_status || 'MISSING',
+        competenceCertNumber: row.competence_cert_number,
+        competenceCertId: row.competence_cert_id,
+        licenseStatus: row.license_status || 'MISSING',
+        licenseNumber: row.license_number,
+        licenseId: row.license_id
+      },
+      documents: {
+        registrationNumber: row.registration_number,
+        laboratoryCertificationNumber: row.lab_cert_number,
+        tasterCertificateNumber: row.taster_cert_number,
+        competenceCertificateNumber: row.competence_cert_number,
+        exportLicenseNumber: row.license_number
+      }
+    };
+    
+    console.log(`[Network Prefill] Returning data for ${userId}, isQualified: ${isQualified}`);
+    
+    res.json({
+      success: true,
+      message: isQualified ? 'Exporter is fully qualified' : 'Exporter needs to complete qualification steps',
+      data: prefillData
+    });
+    
+  } catch (error) {
+    console.error('[Network Prefill] Error:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to fetch exporter information', 
+      message: error.message 
+    });
+  }
+});
+

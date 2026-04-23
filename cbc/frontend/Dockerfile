@@ -13,19 +13,19 @@ RUN npm config set fetch-retry-mintimeout 60000 && \
 WORKDIR /app
 
 # Copy package files
-COPY frontend/package*.json ./
+COPY package*.json ./
 
 # Install dependencies with network-friendly options
 RUN npm cache clean --force && \
     rm -rf node_modules package-lock.json && \
-    npm install --legacy-peer-deps --no-optional && \
+    npm install --legacy-peer-deps && \
     npm cache clean --force
 
 # Copy shared API endpoints
 COPY services/shared/api-endpoints.constants.ts ./services/shared/api-endpoints.constants.ts
 
 # Copy frontend source code
-COPY frontend/ .
+COPY . .
 
 # Build application
 RUN npm run build
@@ -34,7 +34,7 @@ RUN npm run build
 FROM nginx:alpine
 
 # Copy custom nginx config
-COPY frontend/nginx.conf /etc/nginx/nginx.conf
+COPY nginx.conf /etc/nginx/nginx.conf
 
 # Copy built application from builder
 COPY --from=builder /app/dist /usr/share/nginx/html

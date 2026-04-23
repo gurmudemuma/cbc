@@ -4500,9 +4500,14 @@ class CoffeeExportContract extends Contract {
             submissionStatus: submission.status
         });
     }
-}
 
-module.exports = CoffeeExportContract;
+    /**
+     * Approve or reject organization approval for export contract
+     * Called by Bank, NBE, Customs, or Shipping organizations
+     */
+    async ApproveOrganization(ctx, referenceNumber, organization, approvalJSON) {
+        const approval = JSON.parse(approvalJSON);
+        
         const validOrgs = ['BANK', 'NBE', 'CUSTOMS', 'SHIPPING'];
         if (!validOrgs.includes(organization.toUpperCase())) {
             throw new Error(`Invalid organization: ${organization}. Must be one of: ${validOrgs.join(', ')}`);
@@ -4604,7 +4609,7 @@ module.exports = CoffeeExportContract;
             organization,
             allApproved 
         });
-    
+    }
 
     /**
      * Get approval status for a contract

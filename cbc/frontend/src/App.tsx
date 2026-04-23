@@ -74,6 +74,9 @@ import NetworkStatistics from './pages/NetworkStatistics';
 import SalesContractVerificationPage from './pages/SalesContractVerificationPage';
 import BankingExportApproval from './pages/BankingExportApproval';
 import ECTASalesContractRegistration from './pages/ECTASalesContractRegistration';
+import BankPaymentReview from './pages/BankPaymentReview';
+import PaymentManagement from './pages/PaymentManagement';
+import NBEFXApproval from './pages/NBEFXApproval';
 
 // Reports
 import Reports from './pages/Reports';
@@ -337,6 +340,8 @@ function App(): JSX.Element {
           { path: 'banking/financing', element: <BankingOperations user={user} org={org} /> },
           { path: 'banking/compliance', element: <BankingOperations user={user} org={org} /> },
           { path: 'banking/reports', element: <BankingOperations user={user} org={org} /> },
+          { path: 'banking/payments', element: <BankPaymentReview /> },
+          { path: 'banking/payment-review', element: <BankPaymentReview /> },
 
           // Shipment Routes
           { path: 'shipments', element: <ShipmentTracking user={user} org={org} /> },
@@ -387,6 +392,13 @@ function App(): JSX.Element {
           { path: 'exports/new', element: <ExportDashboard user={user} org={org} /> },
           { path: 'exports/status', element: <ExportDashboard user={user} org={org} /> },
           { path: 'support', element: <HelpSupport user={user} org={org} /> },
+          
+          // Payment Management Routes
+          { path: 'payments', element: <PaymentManagement user={user} org={org} /> },
+          { path: 'payments/new', element: <PaymentManagement user={user} org={org} /> },
+          { path: 'payments/initiated', element: <PaymentManagement user={user} org={org} /> },
+          { path: 'payments/completed', element: <PaymentManagement user={user} org={org} /> },
+          { path: 'payments/:id', element: <PaymentManagement user={user} org={org} /> },
 
           // FX Management Routes
           { path: 'fx', element: <FXRates user={user} org={org} /> },
@@ -394,6 +406,8 @@ function App(): JSX.Element {
           { path: 'fx/approved', element: <FXRates user={user} org={org} /> },
           { path: 'fx/rejected', element: <FXRates user={user} org={org} /> },
           { path: 'fx/rates', element: <FXRates user={user} org={org} /> },
+          { path: 'fx/payments', element: <NBEFXApproval user={user} org={org} /> },
+          { path: 'fx/payment-approval', element: <NBEFXApproval user={user} org={org} /> },
 
           // Monetary Policy Routes
           { path: 'monetary', element: <MonetaryPolicy user={user} org={org} /> },

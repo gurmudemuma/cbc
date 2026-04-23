@@ -1,6 +1,6 @@
 # End-to-End Testing Guide: Exporter Journey
 
-This guide walks through the complete exporter journey from registration to final export approval in the Coffee Blockchain Consortium system.
+This guide walks through the complete exporter journey from registration to final export approval in the Coffee Export Consortium system.
 
 ## Prerequisites
 

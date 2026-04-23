@@ -116,9 +116,9 @@ if !PG_READY! equ 0 (
 )
 echo.
 
-REM Start gateway (without build, use existing images)
+REM Start gateway and core services (build to avoid stale images)
 echo Starting gateway and core services...
-docker-compose -f %COMPOSE_HYBRID% up -d gateway blockchain-bridge buyer-verification
+docker-compose -f %COMPOSE_HYBRID% up -d --build gateway blockchain-bridge buyer-verification
 if errorlevel 1 (
     echo [ERROR] Failed to start gateway services
     docker-compose -f %COMPOSE_HYBRID% logs gateway
@@ -147,12 +147,39 @@ echo.
 
 REM Seed database
 echo Initializing database and seeding users...
-docker exec coffee-gateway npm run seed
-if errorlevel 1 (
-    echo [ERROR] Seed script failed
+set GW_RUNNING=0
+for /L %%i in (1,1,10) do (
+    docker inspect -f "{{.State.Running}}" coffee-gateway 2>nul | findstr /I "true" >nul 2>&1
+    if !errorlevel! equ 0 (
+        set GW_RUNNING=1
+        goto gw_running_done
+    )
+    timeout /t 1 >nul
+)
+:gw_running_done
+if !GW_RUNNING! equ 0 (
+    echo [ERROR] Gateway container is not running. Showing recent logs:
+    docker-compose -f %COMPOSE_HYBRID% logs --tail=80 gateway
     exit /b 1
 )
-echo [OK] Database initialized and users seeded
+
+set SEED_DONE=0
+for /L %%i in (1,1,3) do (
+    docker exec coffee-gateway npm run seed >nul 2>&1
+    if !errorlevel! equ 0 (
+        echo [OK] Database initialized and users seeded
+        set SEED_DONE=1
+        goto seed_done
+    )
+    echo [WARNING] Seed attempt %%i failed, retrying...
+    timeout /t 2 >nul
+)
+:seed_done
+if !SEED_DONE! equ 0 (
+    echo [ERROR] Seed script failed after retries. Showing gateway logs:
+    docker-compose -f %COMPOSE_HYBRID% logs --tail=80 gateway
+    exit /b 1
+)
 echo.
 
 REM Start CBC services

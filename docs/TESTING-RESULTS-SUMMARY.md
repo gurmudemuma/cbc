@@ -321,7 +321,7 @@ docker exec coffee-postgres psql -U postgres -d coffee_export_db -c "SELECT
 
 ## Conclusion
 
-The Coffee Blockchain Consortium system is **OPERATIONAL** and ready for comprehensive end-to-end testing. The hybrid PostgreSQL-first architecture ensures:
+The Coffee Export Consortium system is **OPERATIONAL** and ready for comprehensive end-to-end testing. The hybrid PostgreSQL-first architecture ensures:
 
 - ✅ Fast response times
 - ✅ High availability
