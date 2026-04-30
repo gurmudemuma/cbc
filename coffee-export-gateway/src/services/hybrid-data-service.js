@@ -239,8 +239,9 @@ class HybridDataService {
         const contractResult = await postgresService.query(
           `INSERT INTO contract_drafts (
             draft_id, exporter_id, buyer_id, coffee_type, quantity, 
-            unit_price, total_value, currency, status, created_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+            unit_price, total_value, currency, status, proposed_by, 
+            proposed_by_type, created_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
           RETURNING *`,
           [
             data.draftId || data.contractId,
@@ -251,7 +252,9 @@ class HybridDataService {
             data.unitPrice,
             data.totalValue,
             data.currency || 'USD',
-            data.status || 'DRAFT'
+            data.status || 'DRAFT',
+            data.proposedBy || 'SYSTEM',
+            data.proposedByType || 'SYSTEM'
           ]
         );
         return contractResult.rows[0];

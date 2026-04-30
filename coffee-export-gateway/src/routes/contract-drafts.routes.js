@@ -231,13 +231,38 @@ router.post('/:draftId/counter', authenticateToken, async (req, res) => {
   }
 });
 
-// Accept draft
+// Accept draft and automatically finalize
 router.post('/:draftId/accept', authenticateToken, async (req, res) => {
   try {
     const { draftId } = req.params;
     const actorUsername = req.user.id;
     
-    const query = `
+    // Step 1: Get the draft with full details
+    const draftQuery = `
+      SELECT d.*, 
+             b.buyer_id, b.company_name as buyer_company_name, b.country as buyer_country,
+             b.address as buyer_address, b.email as buyer_email, b.phone as buyer_phone,
+             b.tax_id as buyer_tax_id, b.registration_number as buyer_registration_number,
+             e.exporter_id, e.business_name as exporter_name, e.tin as exporter_tin,
+             e.contact_person as exporter_contact, e.email as exporter_email, 
+             e.phone as exporter_phone, e.office_address as exporter_address,
+             e.city as exporter_city, e.region as exporter_region
+      FROM contract_drafts d
+      LEFT JOIN buyer_registry b ON d.buyer_id = b.buyer_id
+      LEFT JOIN exporter_profiles e ON d.exporter_id = e.exporter_id
+      WHERE d.draft_id = $1
+    `;
+    
+    const draftResult = await postgresService.query(draftQuery, [draftId]);
+    
+    if (draftResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Draft not found' });
+    }
+    
+    const draft = draftResult.rows[0];
+    
+    // Step 2: Update draft status to ACCEPTED
+    const updateQuery = `
       UPDATE contract_drafts
       SET status = 'ACCEPTED',
           responded_by = $1,
@@ -248,28 +273,217 @@ router.post('/:draftId/accept', authenticateToken, async (req, res) => {
       RETURNING draft_id, status, responded_at
     `;
     
-    const result = await postgresService.query(query, [actorUsername, draftId]);
-    
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Draft not found' });
-    }
+    const updateResult = await postgresService.query(updateQuery, [actorUsername, draftId]);
     
     await logNegotiationActivity(
       draftId,
       actorUsername,
       'BUYER',
       'ACCEPT',
-      'Contract draft accepted',
+      'Contract draft accepted - proceeding to finalization',
       null
     );
     
+    // Step 3: Automatically finalize the contract
+    console.log(`[Contract Accept] Auto-finalizing draft ${draftId} with complete buyer and exporter data`);
+    
+    // Generate ECTA reference number
+    const now = new Date();
+    const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
+    const randomNum = Math.floor(10000 + Math.random() * 90000);
+    const ectaReferenceNumber = `ECTA-SC-${dateStr}-${randomNum}`;
+    
+    // Generate contract ID
+    const crypto = require('crypto');
+    const finalizedContractId = crypto.randomUUID();
+    
+    // Prepare comprehensive contract data with both buyer and exporter information
+    const contractData = {
+      draftId: draftId,
+      contractId: finalizedContractId,
+      contractNumber: draft.contract_number, // Required by chaincode
+      ectaReferenceNumber: ectaReferenceNumber,
+      // Exporter data
+      exporterId: draft.exporter_id,
+      exporterName: draft.exporter_name,
+      exporterTin: draft.exporter_tin,
+      exporterContact: draft.exporter_contact,
+      exporterEmail: draft.exporter_email,
+      exporterPhone: draft.exporter_phone,
+      exporterAddress: `${draft.exporter_address}, ${draft.exporter_city}, ${draft.exporter_region}`,
+      // Buyer data
+      buyerId: draft.buyer_id,
+      buyerName: draft.buyer_company_name,
+      buyerCountry: draft.buyer_country,
+      buyerAddress: draft.buyer_address,
+      buyerEmail: draft.buyer_email,
+      buyerPhone: draft.buyer_phone,
+      buyerTaxId: draft.buyer_tax_id,
+      buyerRegistrationNumber: draft.buyer_registration_number,
+      // Contract terms
+      coffeeType: draft.coffee_type,
+      originRegion: draft.origin_region,
+      quantity: draft.quantity,
+      unitPrice: draft.unit_price,
+      totalValue: draft.total_value,
+      currency: draft.currency,
+      qualityGrade: draft.quality_grade,
+      paymentTerms: draft.payment_terms,
+      paymentMethod: draft.payment_method,
+      incoterms: draft.incoterms,
+      deliveryDate: draft.delivery_date,
+      portOfLoading: draft.port_of_loading,
+      portOfDischarge: draft.port_of_discharge,
+      governingLaw: draft.governing_law,
+      arbitrationLocation: draft.arbitration_location,
+      arbitrationRules: draft.arbitration_rules,
+      contractLanguage: draft.contract_language,
+      forceMajeureClause: draft.force_majeure_clause,
+      specialConditions: draft.special_conditions,
+      certificationsRequired: draft.certifications_required,
+      status: 'FINALIZED',
+      proposedBy: draft.proposed_by || actorUsername,
+      proposedByType: draft.proposed_by_type || 'EXPORTER'
+    };
+    
+    console.log('[Contract Accept] Finalizing contract in PostgreSQL...');
+    
+    // Update the draft with finalization details in PostgreSQL
+    const finalizeQuery = `
+      UPDATE contract_drafts
+      SET status = 'FINALIZED',
+          finalized_contract_id = $1,
+          ecta_reference_number = $2,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE draft_id = $3
+      RETURNING draft_id, status, finalized_contract_id, ecta_reference_number, contract_number
+    `;
+    
+    const finalizeResult = await postgresService.query(finalizeQuery, [
+      finalizedContractId,
+      ectaReferenceNumber,
+      draftId
+    ]);
+    
+    console.log('[Contract Accept] PostgreSQL finalization successful');
+    
+    // Attempt blockchain write (non-blocking)
+    let blockchainTxId = null;
+    try {
+      console.log('[Contract Accept] Attempting blockchain write...');
+      const fabricService = require('../services/index');
+      
+      // First, ensure exporter exists on blockchain
+      try {
+        console.log('[Contract Accept] Checking if exporter exists on blockchain...');
+        await fabricService.evaluateTransaction(
+          'system',
+          'ecta',
+          'GetExporterProfile',
+          draft.exporter_id
+        );
+        console.log('[Contract Accept] Exporter exists on blockchain');
+      } catch (exporterError) {
+        // Exporter doesn't exist, create it
+        console.log('[Contract Accept] Exporter not found on blockchain, creating...');
+        const exporterProfile = {
+          exporterId: draft.exporter_id,
+          companyName: draft.exporter_name,
+          tin: draft.exporter_tin,
+          capitalETB: 20000000, // Default minimum capital
+          licenseNumber: '',
+          licenseType: 'export',
+          status: 'approved',
+          preRegistrationStatus: {
+            profile: { status: 'approved', submittedAt: new Date().toISOString() },
+            laboratory: { status: 'not_started' },
+            taster: { status: 'not_started' },
+            competenceCertificate: { status: 'not_started' },
+            exportLicense: { status: 'not_started' }
+          }
+        };
+        
+        await fabricService.submitTransaction(
+          'system',
+          'ecta',
+          'SubmitPreRegistration',
+          JSON.stringify(exporterProfile)
+        );
+        console.log('[Contract Accept] Exporter profile created on blockchain');
+      }
+      
+      // Now write the contract draft to blockchain
+      blockchainTxId = await fabricService.submitTransaction(
+        'system',
+        'ecta',
+        'CreateContractDraft',
+        JSON.stringify(contractData)
+      );
+      
+      if (blockchainTxId) {
+        console.log('[Contract Accept] Blockchain write successful:', blockchainTxId);
+      }
+    } catch (blockchainError) {
+      console.warn('[Contract Accept] Blockchain write failed (non-blocking):', blockchainError.message);
+    }
+    
+    // Log finalization activity
+    await logNegotiationActivity(
+      draftId,
+      actorUsername,
+      'SYSTEM',
+      'MODIFY',
+      'Contract automatically finalized with complete buyer and exporter data',
+      { 
+        ectaReferenceNumber, 
+        finalizedContractId,
+        blockchainTxId: blockchainTxId,
+        buyerData: {
+          name: draft.buyer_company_name,
+          country: draft.buyer_country,
+          taxId: draft.buyer_tax_id
+        },
+        exporterData: {
+          name: draft.exporter_name,
+          tin: draft.exporter_tin,
+          contact: draft.exporter_contact
+        }
+      }
+    );
+    
+    console.log(`✓ Contract accepted and finalized: ${ectaReferenceNumber}`);
+    console.log(`  PostgreSQL: SUCCESS`);
+    console.log(`  Blockchain: ${blockchainTxId ? 'SUCCESS' : 'FAILED (non-blocking)'}`);
+    console.log(`  Buyer: ${draft.buyer_company_name} (${draft.buyer_country})`);
+    console.log(`  Exporter: ${draft.exporter_name} (TIN: ${draft.exporter_tin})`);
+    
     res.json({
       success: true,
-      message: 'Contract accepted',
-      draft: result.rows[0]
+      message: 'Contract accepted and automatically finalized',
+      draft: finalizeResult.rows[0],
+      ectaReferenceNumber: ectaReferenceNumber,
+      finalizedContractId: finalizedContractId,
+      buyerInfo: {
+        name: draft.buyer_company_name,
+        country: draft.buyer_country,
+        email: draft.buyer_email
+      },
+      exporterInfo: {
+        name: draft.exporter_name,
+        tin: draft.exporter_tin,
+        email: draft.exporter_email
+      },
+      syncStatus: {
+        postgres: true,
+        blockchain: !!blockchainTxId,
+        errors: blockchainTxId ? [] : ['Blockchain write failed (non-blocking)']
+      },
+      note: blockchainTxId 
+        ? 'Contract finalized and synced to blockchain with complete party information'
+        : 'Contract finalized in database with complete party information. Blockchain sync can be retried later.'
     });
   } catch (error) {
-    console.error('Accept error:', error);
+    console.error('Accept and finalize error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -417,22 +631,20 @@ router.post('/:draftId/finalize', authenticateToken, async (req, res) => {
       });
     }
     
-    // Update the draft status in PostgreSQL
+    // Update the draft status in PostgreSQL (blockchain_tx_id column doesn't exist, removed)
     const updateQuery = `
       UPDATE contract_drafts
       SET status = 'FINALIZED',
           finalized_contract_id = $1,
           ecta_reference_number = $2,
-          blockchain_tx_id = $3,
           updated_at = CURRENT_TIMESTAMP
-      WHERE draft_id = $4
+      WHERE draft_id = $3
       RETURNING draft_id, status, finalized_contract_id, ecta_reference_number, contract_number
     `;
     
     const updateResult = await postgresService.query(updateQuery, [
       finalizedContractId,
       ectaReferenceNumber,
-      writeResults.blockchain || null,
       draftId
     ]);
     

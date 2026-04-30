@@ -54,6 +54,10 @@ async function invokeChaincode(functionName, ...args) {
     `--peerAddresses peer0.shipping.example.com:12051 --tlsRootCertFiles ${CRYPTO_PATH}/peerOrganizations/shipping.example.com/peers/peer0.shipping.example.com/tls/ca.crt`
   ].join(' ');
   
+  // Properly escape the JSON for shell command
+  // Replace single quotes with '\'' to escape them in the shell command
+  const escapedArgsJson = argsJson.replace(/'/g, "'\\''");
+  
   const command = `peer chaincode invoke \
     -o orderer1.orderer.example.com:7050 \
     --ordererTLSHostnameOverride orderer1.orderer.example.com \
@@ -61,12 +65,12 @@ async function invokeChaincode(functionName, ...args) {
     --cafile ${CRYPTO_PATH}/ordererOrganizations/orderer.example.com/orderers/orderer1.orderer.example.com/msp/tlscacerts/tlsca.orderer.example.com-cert.pem \
     -C ${CHANNEL_NAME} \
     -n ${CHAINCODE_NAME} \
-    -c '{"function":"${functionName}","Args":${argsJson}}' \
+    -c '{"function":"${functionName}","Args":${escapedArgsJson}}' \
     ${peerAddresses} \
     --waitForEvent`;
   
   console.log(`[Fabric CLI] Invoking: ${functionName}`);
-  console.log(`[Fabric CLI] Args: ${argsJson}`);
+  console.log(`[Fabric CLI] Args length: ${argsJson.length} chars`);
   const result = await executePeerCommand(command);
   
   console.log(`[Fabric CLI] Raw result: "${result}"`);
