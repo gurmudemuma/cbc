@@ -180,8 +180,8 @@ const ExporterDashboard: React.FC<ExporterDashboardProps> = ({ exporterId, tin, 
     };
 
     const handleNavigateToSalesContract = () => {
-        // Navigate to exporter profile for now since sales contracts have API issues
-        navigate('/profile');
+        // Navigate to sales contracts dashboard
+        navigate('/sales-contracts');
     };
 
     const getStatusIcon = (status: string, approved: boolean) => {
@@ -479,22 +479,41 @@ const ExporterDashboard: React.FC<ExporterDashboardProps> = ({ exporterId, tin, 
                         />
                     </Box>
                     {dashboard.compliance?.isFullyQualified && (
-                        <Button
-                            variant="contained"
-                            size="large"
-                            sx={{
-                                bgcolor: 'white',
-                                color: '#667eea',
-                                fontWeight: 'bold',
-                                '&:hover': {
-                                    bgcolor: 'rgba(255,255,255,0.9)',
-                                }
-                            }}
-                            startIcon={<ArrowForward />}
-                            onClick={handleNavigateToSalesContract}
-                        >
-                            Start Sales Contract
-                        </Button>
+                        <Box display="flex" gap={2} flexWrap="wrap">
+                            <Button
+                                variant="contained"
+                                size="large"
+                                sx={{
+                                    bgcolor: 'white',
+                                    color: '#667eea',
+                                    fontWeight: 'bold',
+                                    '&:hover': {
+                                        bgcolor: 'rgba(255,255,255,0.9)',
+                                    }
+                                }}
+                                startIcon={<ArrowForward />}
+                                onClick={handleNavigateToSalesContract}
+                            >
+                                Start Sales Contract
+                            </Button>
+                            <Button
+                                variant="outlined"
+                                size="large"
+                                sx={{
+                                    borderColor: 'white',
+                                    color: 'white',
+                                    fontWeight: 'bold',
+                                    '&:hover': {
+                                        borderColor: 'white',
+                                        bgcolor: 'rgba(255,255,255,0.1)',
+                                    }
+                                }}
+                                startIcon={<Business />}
+                                onClick={() => navigate('/marketplace/opportunities')}
+                            >
+                                Browse Opportunities
+                            </Button>
+                        </Box>
                     )}
                 </Box>
             </Paper>
@@ -560,6 +579,24 @@ const ExporterDashboard: React.FC<ExporterDashboardProps> = ({ exporterId, tin, 
                                                 onClick={handleNavigateToSalesContract}
                                             >
                                                 Start Sales Contract Process
+                                            </Button>
+                                            <Button
+                                                variant="outlined"
+                                                size="large"
+                                                sx={{
+                                                    borderColor: 'white',
+                                                    color: 'white',
+                                                    fontWeight: 'bold',
+                                                    px: 3,
+                                                    '&:hover': {
+                                                        borderColor: 'white',
+                                                        bgcolor: 'rgba(255,255,255,0.1)',
+                                                    }
+                                                }}
+                                                startIcon={<Business />}
+                                                onClick={() => navigate('/marketplace/opportunities')}
+                                            >
+                                                Browse Buyer Opportunities
                                             </Button>
                                             <Button
                                                 variant="outlined"

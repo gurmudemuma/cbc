@@ -88,6 +88,7 @@ import ApplicationTracking from './pages/ApplicationTracking';
 import ExportDashboard from './pages/ExportDashboard';
 import HelpSupport from './pages/HelpSupport';
 import ExporterDocumentManager from './components/ExporterDocumentManager';
+import Marketplace from './pages/Marketplace';
 
 // Consortium Member Pages
 import BankingOperations from './pages/BankingOperations';
@@ -388,6 +389,8 @@ function App(): JSX.Element {
           { path: 'profile/business', element: <ExporterProfile user={user} org={org} /> },
           { path: 'profile/verification', element: <ExporterProfile user={user} org={org} /> },
           { path: 'documents', element: <ExporterDocumentManager /> },
+          { path: 'marketplace', element: <Marketplace /> },
+          { path: 'marketplace/opportunities', element: <Marketplace /> },
           { path: 'applications', element: <ApplicationTracking user={user} org={org} /> },
           { path: 'exports/new', element: <ExportDashboard user={user} org={org} /> },
           { path: 'exports/status', element: <ExportDashboard user={user} org={org} /> },

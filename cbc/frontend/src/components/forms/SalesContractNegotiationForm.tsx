@@ -165,8 +165,8 @@ const SalesContractNegotiationForm = ({
                   />
                   <TermRow
                     label="Unit Price (USD)"
-                    original={`$${draft.unit_price.toFixed(2)}`}
-                    proposed={`$${counterData.unit_price.toFixed(2)}`}
+                    original={`$${parseFloat(draft.unit_price || 0).toFixed(2)}`}
+                    proposed={`$${parseFloat(counterData.unit_price || 0).toFixed(2)}`}
                     changed={hasChanges.unit_price}
                   />
                   <TermRow

@@ -189,12 +189,12 @@ const ContractLinkingForm = ({
                             </TableRow>
                             <TableRow>
                               <TableCell sx={{ fontWeight: 600 }}>Unit Price</TableCell>
-                              <TableCell>${selectedContract.unit_price.toFixed(2)}</TableCell>
+                              <TableCell>${parseFloat(selectedContract.unit_price || 0).toFixed(2)}</TableCell>
                             </TableRow>
                             <TableRow>
                               <TableCell sx={{ fontWeight: 600 }}>Total Value</TableCell>
                               <TableCell sx={{ fontWeight: 600, color: 'success.main' }}>
-                                ${selectedContract.total_value.toLocaleString()}
+                                ${parseFloat(selectedContract.total_value || 0).toLocaleString()}
                               </TableCell>
                             </TableRow>
                             <TableRow>
@@ -364,7 +364,7 @@ const ContractLinkingForm = ({
                     <strong>Quantity:</strong> {selectedContract.quantity} bags
                   </Typography>
                   <Typography variant="body2">
-                    <strong>Unit Price:</strong> ${selectedContract.unit_price.toFixed(2)}
+                    <strong>Unit Price:</strong> ${parseFloat(selectedContract.unit_price || 0).toFixed(2)}
                   </Typography>
                 </Box>
               </Grid>

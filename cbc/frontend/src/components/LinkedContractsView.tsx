@@ -252,7 +252,7 @@ const LinkedContractsView = ({
                     <strong>Quantity:</strong> {selectedContract.contract?.quantity} bags
                   </Typography>
                   <Typography variant="body2">
-                    <strong>Unit Price:</strong> ${selectedContract.contract?.unit_price.toFixed(2)}
+                    <strong>Unit Price:</strong> ${parseFloat(selectedContract.contract?.unit_price || 0).toFixed(2)}
                   </Typography>
                 </Box>
               </Grid>

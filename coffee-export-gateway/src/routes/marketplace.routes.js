@@ -122,7 +122,13 @@ router.get('/opportunities', authenticateToken, async (req, res) => {
   try {
     const { coffeeType, country, status, minQuantity, maxPrice } = req.query;
 
-    let query = 'SELECT * FROM v_active_opportunities WHERE 1=1';
+    let query = `
+      SELECT o.*, b.company_name as buyer_company_name, b.country as buyer_country, 
+             b.verification_status, b.reputation_score
+      FROM buyer_opportunities o
+      LEFT JOIN buyer_registry b ON o.buyer_id = b.buyer_id
+      WHERE o.status = 'OPEN'
+    `;
     const params = [];
     let paramCount = 1;
 

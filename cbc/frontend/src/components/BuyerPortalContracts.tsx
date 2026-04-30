@@ -337,7 +337,7 @@ const BuyerPortalContracts = ({
                     Pricing
                   </Typography>
                   <Typography variant="body2">
-                    <strong>Unit Price:</strong> ${selectedContract.unit_price.toFixed(2)}
+                    <strong>Unit Price:</strong> ${parseFloat(selectedContract.unit_price || 0).toFixed(2)}
                   </Typography>
                   <Typography variant="body2">
                     <strong>Total Value:</strong> ${selectedContract.total_value.toLocaleString()}
