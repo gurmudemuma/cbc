@@ -451,15 +451,72 @@ router.post('/:draftId/accept', authenticateToken, async (req, res) => {
       }
     );
     
+    // Step 4: Submit to ECTA for registration (non-blocking)
+    let ectaSubmissionStatus = 'pending';
+    try {
+      console.log('[Contract Accept] Submitting to ECTA for registration...');
+      
+      // Create ECTA registration record
+      const ectaSubmissionQuery = `
+        INSERT INTO ecta_contract_submissions (
+          draft_id,
+          ecta_reference_number,
+          exporter_id,
+          buyer_id,
+          submission_status,
+          submitted_at,
+          contract_data
+        ) VALUES ($1, $2, $3, $4, 'PENDING_REGISTRATION', CURRENT_TIMESTAMP, $5)
+        RETURNING submission_id
+      `;
+      
+      const submissionData = {
+        coffeeType: draft.coffee_type,
+        quantity: draft.quantity,
+        totalValue: draft.total_value,
+        exporterName: draft.exporter_name,
+        buyerName: draft.buyer_company_name,
+        buyerCountry: draft.buyer_country
+      };
+      
+      const submissionResult = await postgresService.query(ectaSubmissionQuery, [
+        draftId,
+        ectaReferenceNumber,
+        draft.exporter_id,
+        draft.buyer_id,
+        JSON.stringify(submissionData)
+      ]);
+      
+      ectaSubmissionStatus = 'submitted';
+      console.log(`[Contract Accept] Submitted to ECTA for registration: ${submissionResult.rows[0].submission_id}`);
+      
+      // Log submission activity
+      await logNegotiationActivity(
+        draftId,
+        'SYSTEM',
+        'SYSTEM',
+        'MODIFY',
+        'Contract submitted to ECTA for registration',
+        { 
+          submissionId: submissionResult.rows[0].submission_id,
+          ectaReferenceNumber: ectaReferenceNumber
+        }
+      );
+    } catch (ectaError) {
+      console.warn('[Contract Accept] ECTA submission failed (non-blocking):', ectaError.message);
+      ectaSubmissionStatus = 'failed';
+    }
+    
     console.log(`✓ Contract accepted and finalized: ${ectaReferenceNumber}`);
     console.log(`  PostgreSQL: SUCCESS`);
     console.log(`  Blockchain: ${blockchainTxId ? 'SUCCESS' : 'FAILED (non-blocking)'}`);
+    console.log(`  ECTA Submission: ${ectaSubmissionStatus.toUpperCase()}`);
     console.log(`  Buyer: ${draft.buyer_company_name} (${draft.buyer_country})`);
     console.log(`  Exporter: ${draft.exporter_name} (TIN: ${draft.exporter_tin})`);
     
     res.json({
       success: true,
-      message: 'Contract accepted and automatically finalized',
+      message: 'Contract accepted, finalized, and submitted to ECTA for registration',
       draft: finalizeResult.rows[0],
       ectaReferenceNumber: ectaReferenceNumber,
       finalizedContractId: finalizedContractId,
@@ -476,11 +533,13 @@ router.post('/:draftId/accept', authenticateToken, async (req, res) => {
       syncStatus: {
         postgres: true,
         blockchain: !!blockchainTxId,
-        errors: blockchainTxId ? [] : ['Blockchain write failed (non-blocking)']
+        ectaSubmission: ectaSubmissionStatus,
+        errors: [
+          ...(!blockchainTxId ? ['Blockchain write failed (non-blocking)'] : []),
+          ...(ectaSubmissionStatus === 'failed' ? ['ECTA submission failed (non-blocking)'] : [])
+        ]
       },
-      note: blockchainTxId 
-        ? 'Contract finalized and synced to blockchain with complete party information'
-        : 'Contract finalized in database with complete party information. Blockchain sync can be retried later.'
+      note: `Contract finalized and ${ectaSubmissionStatus === 'submitted' ? 'submitted to ECTA for registration' : 'awaiting ECTA submission'}. ${blockchainTxId ? 'Synced to blockchain.' : 'Blockchain sync pending.'}`
     });
   } catch (error) {
     console.error('Accept and finalize error:', error);

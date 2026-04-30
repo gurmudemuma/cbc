@@ -9,6 +9,211 @@ router.get('/test-sales-contract-routes', (req, res) => {
   res.json({ message: 'Sales contract routes are loaded!' });
 });
 
+// ============================================================================
+// ECTA PENDING REGISTRATIONS DASHBOARD
+// ============================================================================
+
+/**
+ * GET /api/ecta/contracts/pending-registration
+ * Get all contracts pending ECTA registration with full details
+ */
+router.get('/ecta/contracts/pending-registration', 
+  authenticateToken, 
+  requireRole('ecta'), 
+  async (req, res) => {
+    try {
+      const query = `
+        SELECT 
+          ecs.submission_id,
+          ecs.draft_id,
+          ecs.ecta_reference_number,
+          ecs.submission_status,
+          ecs.submitted_at,
+          ecs.contract_data,
+          cd.contract_number,
+          cd.coffee_type,
+          cd.origin_region,
+          cd.quantity,
+          cd.unit_price,
+          cd.total_value,
+          cd.currency,
+          cd.quality_grade,
+          cd.payment_method,
+          cd.payment_terms,
+          cd.incoterms,
+          cd.delivery_date,
+          cd.port_of_loading,
+          cd.port_of_discharge,
+          cd.governing_law,
+          cd.arbitration_location,
+          cd.arbitration_rules,
+          cd.special_conditions,
+          cd.certifications_required,
+          ep.business_name as exporter_name,
+          ep.tin as exporter_tin,
+          ep.contact_person as exporter_contact,
+          ep.email as exporter_email,
+          ep.phone as exporter_phone,
+          br.company_name as buyer_name,
+          br.country as buyer_country,
+          br.address as buyer_address,
+          br.email as buyer_email,
+          br.phone as buyer_phone,
+          br.tax_id as buyer_tax_id
+        FROM ecta_contract_submissions ecs
+        JOIN contract_drafts cd ON ecs.draft_id = cd.draft_id
+        JOIN exporter_profiles ep ON ecs.exporter_id = ep.exporter_id
+        JOIN buyer_registry br ON ecs.buyer_id = br.buyer_id
+        WHERE ecs.submission_status = 'PENDING_REGISTRATION'
+        ORDER BY ecs.submitted_at DESC
+      `;
+      
+      const result = await postgresService.query(query);
+      
+      res.json({
+        success: true,
+        count: result.rows.length,
+        pendingRegistrations: result.rows.map(row => ({
+          submissionId: row.submission_id,
+          draftId: row.draft_id,
+          ectaReferenceNumber: row.ecta_reference_number,
+          contractNumber: row.contract_number,
+          submittedAt: row.submitted_at,
+          exporter: {
+            name: row.exporter_name,
+            tin: row.exporter_tin,
+            contact: row.exporter_contact,
+            email: row.exporter_email,
+            phone: row.exporter_phone
+          },
+          buyer: {
+            name: row.buyer_name,
+            country: row.buyer_country,
+            address: row.buyer_address,
+            email: row.buyer_email,
+            phone: row.buyer_phone,
+            taxId: row.buyer_tax_id
+          },
+          contract: {
+            coffeeType: row.coffee_type,
+            originRegion: row.origin_region,
+            quantity: row.quantity,
+            unitPrice: row.unit_price,
+            totalValue: row.total_value,
+            currency: row.currency,
+            qualityGrade: row.quality_grade,
+            paymentMethod: row.payment_method,
+            paymentTerms: row.payment_terms,
+            incoterms: row.incoterms,
+            deliveryDate: row.delivery_date,
+            portOfLoading: row.port_of_loading,
+            portOfDischarge: row.port_of_discharge,
+            governingLaw: row.governing_law,
+            arbitrationLocation: row.arbitration_location,
+            arbitrationRules: row.arbitration_rules,
+            specialConditions: row.special_conditions,
+            certificationsRequired: row.certifications_required
+          }
+        }))
+      });
+    } catch (error) {
+      console.error('Error fetching pending registrations:', error);
+      res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * GET /api/ecta/contracts/registered
+ * Get all registered contracts with full details
+ */
+router.get('/ecta/contracts/registered', 
+  authenticateToken, 
+  requireRole('ecta'), 
+  async (req, res) => {
+    try {
+      const query = `
+        SELECT 
+          ecs.submission_id,
+          ecs.draft_id,
+          ecs.ecta_reference_number,
+          ecs.lc_number,
+          ecs.submission_status,
+          ecs.submitted_at,
+          ecs.registered_at,
+          ecs.registered_by,
+          ecs.registration_notes,
+          cd.contract_number,
+          cd.coffee_type,
+          cd.origin_region,
+          cd.quantity,
+          cd.unit_price,
+          cd.total_value,
+          cd.currency,
+          cd.quality_grade,
+          cd.payment_method,
+          cd.payment_terms,
+          cd.incoterms,
+          cd.delivery_date,
+          cd.port_of_loading,
+          cd.port_of_discharge,
+          ep.business_name as exporter_name,
+          ep.tin as exporter_tin,
+          br.company_name as buyer_name,
+          br.country as buyer_country
+        FROM ecta_contract_submissions ecs
+        JOIN contract_drafts cd ON ecs.draft_id = cd.draft_id
+        JOIN exporter_profiles ep ON ecs.exporter_id = ep.exporter_id
+        JOIN buyer_registry br ON ecs.buyer_id = br.buyer_id
+        WHERE ecs.submission_status = 'REGISTERED'
+        ORDER BY ecs.registered_at DESC
+      `;
+      
+      const result = await postgresService.query(query);
+      
+      res.json({
+        success: true,
+        count: result.rows.length,
+        registeredContracts: result.rows.map(row => ({
+          submissionId: row.submission_id,
+          draftId: row.draft_id,
+          ectaReferenceNumber: row.ecta_reference_number,
+          lcNumber: row.lc_number,
+          contractNumber: row.contract_number,
+          submittedAt: row.submitted_at,
+          registeredAt: row.registered_at,
+          registeredBy: row.registered_by,
+          registrationNotes: row.registration_notes,
+          exporter: {
+            name: row.exporter_name,
+            tin: row.exporter_tin
+          },
+          buyer: {
+            name: row.buyer_name,
+            country: row.buyer_country
+          },
+          contract: {
+            coffeeType: row.coffee_type,
+            originRegion: row.origin_region,
+            quantity: row.quantity,
+            unitPrice: row.unit_price,
+            totalValue: row.total_value,
+            currency: row.currency,
+            qualityGrade: row.quality_grade,
+            paymentMethod: row.payment_method,
+            paymentTerms: row.payment_terms,
+            incoterms: row.incoterms,
+            deliveryDate: row.delivery_date,
+            portOfLoading: row.port_of_loading,
+            portOfDischarge: row.port_of_discharge
+          }
+        }))
+      });
+    } catch (error) {
+      console.error('Error fetching registered contracts:', error);
+      res.status(500).json({ error: error.message });
+    }
+});
+
 /**
  * GET /api/sales-contracts/:contractId
  * Get sales contract details by ID (draft_id or lc_number)
@@ -111,12 +316,12 @@ router.post('/ecta/contracts/:draftId/register',
          JOIN exporter_profiles ep ON cd.exporter_id = ep.exporter_id
          JOIN users u ON ep.user_id = u.username
          JOIN buyer_registry br ON cd.buyer_id = br.buyer_id
-         WHERE cd.draft_id = $1 AND cd.status = 'ACCEPTED'`,
+         WHERE cd.draft_id = $1 AND cd.status IN ('ACCEPTED', 'FINALIZED')`,
         [draftId]
       );
       
       if (contractResult.rows.length === 0) {
-        return res.status(404).json({ error: 'Contract not found or not accepted' });
+        return res.status(404).json({ error: 'Contract not found or not in a registrable state (must be ACCEPTED or FINALIZED)' });
       }
       
       const contract = contractResult.rows[0];
@@ -149,14 +354,18 @@ router.post('/ecta/contracts/:draftId/register',
       };
       
       // Register on blockchain (3-peer endorsement handled by fabricService)
-      await fabricService.invokeChaincode(
+      await fabricService.submitTransaction(
+        'system',
+        'ecta',
         'RegisterSalesContractWithReference',
         JSON.stringify(contractData)
       );
       
       // Query the registered contract using draft ID to get the LC number
       // The chaincode creates an index: draft~reference -> [draftId, lcNumber]
-      const queryResult = await fabricService.queryChaincode(
+      const queryResult = await fabricService.evaluateTransaction(
+        'system',
+        'ecta',
         'GetReferenceByDraftId',
         draftId
       );
@@ -173,7 +382,19 @@ router.post('/ecta/contracts/:draftId/register',
              registered_by = $2,
              registration_notes = $3
          WHERE draft_id = $4`,
-        [lcNumber, req.user.username, notes, draftId]
+        [lcNumber, req.user.id, notes, draftId]
+      );
+      
+      // Update ECTA submission status
+      await postgresService.query(
+        `UPDATE ecta_contract_submissions
+         SET submission_status = 'REGISTERED',
+             registered_at = CURRENT_TIMESTAMP,
+             registered_by = $1,
+             lc_number = $2,
+             registration_notes = $3
+         WHERE draft_id = $4 AND submission_status = 'PENDING_REGISTRATION'`,
+        [req.user.id, lcNumber, notes, draftId]
       );
       
       res.json({ 
@@ -243,7 +464,9 @@ router.post('/exporter/submit-to-network',
       };
       
       // Submit to blockchain (3-peer endorsement handled by fabricService)
-      const blockchainResult = await fabricService.invokeChaincode(
+      const blockchainResult = await fabricService.submitTransaction(
+        'system',
+        'ecta',
         'SubmitToNetwork',
         JSON.stringify(submissionData)
       );
@@ -332,7 +555,9 @@ router.post('/approvals/:referenceNumber',
       };
       
       // Update blockchain (3-peer endorsement handled by fabricService)
-      const result = await fabricService.invokeChaincode(
+      const result = await fabricService.submitTransaction(
+        'system',
+        'ecta',
         'UpdateOrganizationApproval',
         referenceNumber,
         organization,
@@ -410,7 +635,9 @@ router.get('/contracts/:referenceNumber',
     try {
       const { referenceNumber } = req.params;
       
-      const result = await fabricService.queryChaincode(
+      const result = await fabricService.evaluateTransaction(
+        'system',
+        'ecta',
         'GetContractByReference',
         referenceNumber
       );
@@ -433,7 +660,9 @@ router.get('/contracts/:referenceNumber/status',
     try {
       const { referenceNumber } = req.params;
       
-      const result = await fabricService.queryChaincode(
+      const result = await fabricService.evaluateTransaction(
+        'system',
+        'ecta',
         'GetApprovalStatus',
         referenceNumber
       );
@@ -458,7 +687,9 @@ router.get('/contracts/exporter/:exporterId',
     try {
       const { exporterId } = req.params;
       
-      const result = await fabricService.queryChaincode(
+      const result = await fabricService.evaluateTransaction(
+        'system',
+        'ecta',
         'QueryContractsByExporter',
         exporterId
       );
@@ -481,7 +712,9 @@ router.get('/contracts/status/:status',
     try {
       const { status } = req.params;
       
-      const result = await fabricService.queryChaincode(
+      const result = await fabricService.evaluateTransaction(
+        'system',
+        'ecta',
         'QueryContractsByStatus',
         status
       );
@@ -504,7 +737,9 @@ router.get('/contracts/draft/:draftId/reference',
     try {
       const { draftId } = req.params;
       
-      const result = await fabricService.queryChaincode(
+      const result = await fabricService.evaluateTransaction(
+        'system',
+        'ecta',
         'GetReferenceByDraftId',
         draftId
       );
@@ -555,7 +790,9 @@ router.get('/ecta/contracts/verify/:referenceNumber',
       // Verify on blockchain
       let blockchainVerification = null;
       try {
-        const blockchainResult = await fabricService.queryChaincode(
+        const blockchainResult = await fabricService.evaluateTransaction(
+          'system',
+          'ecta',
           'GetSalesContractByReference',
           referenceNumber
         );

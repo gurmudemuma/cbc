@@ -1842,24 +1842,28 @@ router.get('/contracts/finalized', authenticateToken, async (req, res) => {
 
 /**
  * GET /api/ecta/contracts/registration-stats
- * Get statistics for contract registration
+ * Get statistics for contract registration from ECTA submissions table
  */
 router.get('/contracts/registration-stats', authenticateToken, async (req, res) => {
   try {
     const query = `
       SELECT 
-        COUNT(*) FILTER (WHERE status = 'FINALIZED') as finalized_count,
-        COUNT(*) FILTER (WHERE status = 'REGISTERED') as registered_count,
-        COUNT(*) FILTER (WHERE ecta_reference_number IS NOT NULL) as with_reference_count,
-        COUNT(*) as total_count
-      FROM contract_drafts
+        COUNT(*) as total_finalized,
+        COUNT(*) FILTER (WHERE submission_status = 'PENDING_REGISTRATION') as pending_registration,
+        COUNT(*) FILTER (WHERE submission_status = 'REGISTERED') as registered
+      FROM ecta_contract_submissions
     `;
     
     const result = await postgresService.query(query);
+    const stats = result.rows[0];
     
     res.json({
       success: true,
-      stats: result.rows[0]
+      stats: {
+        totalFinalized: parseInt(stats.total_finalized) || 0,
+        pendingRegistration: parseInt(stats.pending_registration) || 0,
+        registered: parseInt(stats.registered) || 0
+      }
     });
   } catch (error) {
     console.error('Error fetching registration stats:', error);
