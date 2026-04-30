@@ -359,6 +359,7 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
             icon: DollarSign,
             children: [
               { name: 'All Payments', path: '/payments', icon: DollarSign },
+              { name: 'Payment Dashboard', path: '/payments/dashboard', icon: BarChart3 },
               { name: 'New Payment', path: '/payments/new', icon: Plus },
               { name: 'Initiated Payments', path: '/payments/initiated', icon: Clock },
               { name: 'Completed Payments', path: '/payments/completed', icon: CheckCircle },
@@ -401,6 +402,7 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
             icon: DollarSign,
             children: [
               { name: 'All Payments', path: '/payments', icon: DollarSign },
+              { name: 'Payment Dashboard', path: '/payments/dashboard', icon: BarChart3 },
               { name: 'Payment Review', path: '/bank-payment-review', icon: FileCheck },
               { name: 'FX Approval', path: '/nbe-fx-approval', icon: CheckCircle },
             ]

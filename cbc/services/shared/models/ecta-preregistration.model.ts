@@ -5,7 +5,7 @@
  */
 
 export type BusinessType = 'PRIVATE' | 'TRADE_ASSOCIATION' | 'JOINT_STOCK' | 'LLC' | 'FARMER';
-export type ExporterStatus = 'ACTIVE' | 'SUSPENDED' | 'REVOKED' | 'PENDING_APPROVAL';
+export type ExporterStatus = 'ACTIVE' | 'SUSPENDED' | 'REVOKED' | 'PENDING_APPROVAL' | 'FULLY_QUALIFIED';
 export type CertificateStatus = 'ACTIVE' | 'EXPIRED' | 'SUSPENDED' | 'REVOKED' | 'PENDING';
 export type LicenseStatus = 'ACTIVE' | 'EXPIRED' | 'SUSPENDED' | 'REVOKED' | 'PENDING';
 

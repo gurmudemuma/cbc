@@ -308,7 +308,7 @@ router.get('/:paymentId', authenticateToken, requireRole('nbe', 'admin'), async 
         ep.tin as exporter_tin,
         ep.license_number as exporter_license,
         sc.contract_number,
-        sc.total_value as contract_value
+        sc.contract_value as contract_value
       FROM payments p
       LEFT JOIN exports e ON p.export_id = e.export_id
       LEFT JOIN buyer_registry br ON p.buyer_id = br.buyer_id
@@ -346,6 +346,53 @@ router.get('/:paymentId', authenticateToken, requireRole('nbe', 'admin'), async 
 
   } catch (error) {
     console.error('Payment fetch error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  } finally {
+    client.release();
+  }
+});
+
+/**
+ * GET /api/payments/nbe/fx-approvals
+ * Alias for pending-fx-approval endpoint (for frontend compatibility)
+ */
+router.get('/fx-approvals', authenticateToken, requireRole('nbe', 'admin'), async (req, res) => {
+  const client = await pool.connect();
+  
+  try {
+    const query = `
+      SELECT 
+        p.*,
+        e.coffee_type,
+        e.quantity,
+        e.destination_country,
+        br.company_name as buyer_name,
+        br.country as buyer_country,
+        ep.business_name as exporter_name,
+        ep.tin as exporter_tin
+      FROM payments p
+      LEFT JOIN exports e ON p.export_id = e.export_id
+      LEFT JOIN buyer_registry br ON p.buyer_id = br.buyer_id
+      LEFT JOIN exporter_profiles ep ON p.exporter_id = ep.exporter_id
+      WHERE p.status = 'APPROVED' 
+        AND (p.nbe_approval_status IS NULL OR p.nbe_approval_status = 'PENDING')
+        AND p.currency != 'ETB'
+      ORDER BY p.approved_at ASC
+    `;
+
+    const result = await client.query(query);
+
+    res.json({
+      success: true,
+      payments: result.rows,
+      count: result.rows.length
+    });
+
+  } catch (error) {
+    console.error('NBE FX approvals fetch error:', error);
     res.status(500).json({
       success: false,
       error: error.message

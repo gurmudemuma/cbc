@@ -402,9 +402,10 @@ const ExportManagement = ({ user, org }: ExportManagementProps): JSX.Element => 
       if (user?.role === 'exporter') {
         try {
           const qualificationResponse = await apiClient.get('/api/exporter/qualification-status');
-          if (!qualificationResponse.data.data.canCreateExportRequest) {
+          const qualData = qualificationResponse.data.data || qualificationResponse.data;
+          if (!qualData.canCreateExportRequest) {
             // Show qualification requirements dialog
-            setError(`Cannot create export: ${qualificationResponse.data.data.reason}`);
+            setError(`Cannot create export: ${qualData.reason}`);
             // Optionally redirect to pre-registration
             if (window.confirm('You need to complete pre-registration first. Go to pre-registration page?')) {
               navigate('/pre-registration');

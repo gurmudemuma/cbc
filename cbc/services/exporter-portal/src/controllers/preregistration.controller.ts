@@ -795,6 +795,13 @@ export class ExporterPreRegistrationController {
           isValid: validation.isValid,
           issues: validation.issues,
           requiredActions: validation.requiredActions,
+          profile: validation.profile, // Include profile status for frontend display
+          hasValidProfile: validation.hasValidProfile,
+          hasMinimumCapital: validation.hasMinimumCapital,
+          hasCertifiedLaboratory: validation.hasCertifiedLaboratory,
+          hasQualifiedTaster: validation.hasQualifiedTaster,
+          hasCompetenceCertificate: validation.hasCompetenceCertificate,
+          hasExportLicense: validation.hasExportLicense,
         },
         metadata: {
           lastUpdated: profile.updatedAt || profile.createdAt,

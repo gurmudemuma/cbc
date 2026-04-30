@@ -108,6 +108,9 @@ export class EctaPreRegistrationRepository {
       rejectionReason,
       exporterId,
     ]);
+
+    // Auto-check qualification status after profile status update
+    await this.checkAndUpdateQualificationStatus(exporterId);
   }
 
   async updateExporterProfile(
@@ -192,6 +195,10 @@ export class EctaPreRegistrationRepository {
     ];
 
     const result = await this.pool.query(query, values);
+    
+    // Auto-check qualification status after laboratory creation/update
+    await this.checkAndUpdateQualificationStatus(laboratory.exporterId);
+    
     return this.mapLaboratory(result.rows[0]);
   }
 
@@ -276,6 +283,10 @@ export class EctaPreRegistrationRepository {
     ];
 
     const result = await this.pool.query(query, values);
+    
+    // Auto-check qualification status after taster creation/update
+    await this.checkAndUpdateQualificationStatus(taster.exporterId);
+    
     return this.mapTaster(result.rows[0]);
   }
 
@@ -323,6 +334,10 @@ export class EctaPreRegistrationRepository {
     ];
 
     const result = await this.pool.query(query, values);
+    
+    // Auto-check qualification status after competence certificate creation
+    await this.checkAndUpdateQualificationStatus(certificate.exporterId);
+    
     return this.mapCompetenceCertificate(result.rows[0]);
   }
 
@@ -440,6 +455,10 @@ export class EctaPreRegistrationRepository {
     ];
 
     const result = await this.pool.query(query, values);
+    
+    // Auto-check qualification status after export license creation
+    await this.checkAndUpdateQualificationStatus(license.exporterId);
+    
     return this.mapExportLicense(result.rows[0]);
   }
 
@@ -842,5 +861,38 @@ export class EctaPreRegistrationRepository {
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };
+  }
+
+  /**
+   * Check if exporter is fully qualified and update status automatically
+   */
+  private async checkAndUpdateQualificationStatus(exporterId: string): Promise<void> {
+    try {
+      const query = `
+        SELECT is_qualified, profile_status 
+        FROM qualified_exporters 
+        WHERE exporter_id = $1 
+        LIMIT 1
+      `;
+      const result = await this.pool.query(query, [exporterId]);
+      
+      if (result.rows.length > 0) {
+        const { is_qualified, profile_status } = result.rows[0];
+        
+        // If exporter is qualified but status is not FULLY_QUALIFIED, update it
+        if (is_qualified && profile_status !== 'FULLY_QUALIFIED') {
+          const updateQuery = `
+            UPDATE exporter_profiles 
+            SET status = 'FULLY_QUALIFIED', updated_at = CURRENT_TIMESTAMP 
+            WHERE exporter_id = $1
+          `;
+          await this.pool.query(updateQuery, [exporterId]);
+          console.log(`Auto-updated exporter ${exporterId} to FULLY_QUALIFIED status`);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking qualification status:', error);
+      // Don't throw error to avoid breaking the main operation
+    }
   }
 }

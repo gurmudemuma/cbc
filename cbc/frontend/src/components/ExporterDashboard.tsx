@@ -180,21 +180,21 @@ const ExporterDashboard: React.FC<ExporterDashboardProps> = ({ exporterId, tin, 
     };
 
     const handleNavigateToSalesContract = () => {
-        // Navigate to sales contract dashboard
-        navigate('/sales-contracts');
+        // Navigate to exporter profile for now since sales contracts have API issues
+        navigate('/profile');
     };
 
     const getStatusIcon = (status: string, approved: boolean) => {
-        if (approved) return <CheckCircle color="success" />;
+        if (approved || status === 'ACTIVE' || status === 'FULLY_QUALIFIED') return <CheckCircle color="success" />;
         if (status === 'PENDING' || status === 'PENDING_APPROVAL') return <HourglassEmpty color="warning" />;
-        if (status === 'MISSING') return <Cancel color="disabled" />;
+        if (status === 'MISSING' || !status) return <Cancel color="disabled" />;
         return <Cancel color="error" />;
     };
 
     const getStatusColor = (status: string, approved: boolean): "success" | "warning" | "error" | "default" => {
-        if (approved) return 'success';
+        if (approved || status === 'ACTIVE' || status === 'FULLY_QUALIFIED') return 'success';
         if (status === 'PENDING' || status === 'PENDING_APPROVAL') return 'warning';
-        if (status === 'MISSING') return 'default';
+        if (status === 'MISSING' || !status) return 'default';
         return 'error';
     };
 
@@ -205,7 +205,7 @@ const ExporterDashboard: React.FC<ExporterDashboardProps> = ({ exporterId, tin, 
         }
 
         // Check if profile is approved (required for other steps)
-        const profileApproved = dashboard?.compliance.profileApproved;
+        const profileApproved = dashboard?.compliance?.profileApproved;
 
         switch (step) {
             case 'profile':
@@ -327,8 +327,8 @@ const ExporterDashboard: React.FC<ExporterDashboardProps> = ({ exporterId, tin, 
                 );
 
             case 'competence':
-                const labApproved = dashboard?.compliance.laboratoryApproved;
-                const tasterApproved = dashboard?.compliance.tasterApproved;
+                const labApproved = dashboard?.compliance?.laboratoryApproved;
+                const tasterApproved = dashboard?.compliance?.tasterApproved;
                 
                 if (!profileApproved || !labApproved || !tasterApproved) {
                     return (
@@ -379,7 +379,7 @@ const ExporterDashboard: React.FC<ExporterDashboardProps> = ({ exporterId, tin, 
                 );
 
             case 'license':
-                const competenceApproved = dashboard?.compliance.competenceApproved;
+                const competenceApproved = dashboard?.compliance?.competenceApproved;
                 
                 if (!profileApproved || !competenceApproved) {
                     return (
@@ -466,19 +466,19 @@ const ExporterDashboard: React.FC<ExporterDashboardProps> = ({ exporterId, tin, 
                     <Box>
                         <Typography variant="h4" sx={{ color: 'white', fontWeight: 'bold', mb: 1 }}>
                             <Business sx={{ mr: 1, verticalAlign: 'middle' }} />
-                            {dashboard.identity.businessName}
+                            {dashboard.identity?.businessName || 'Unknown Business'}
                         </Typography>
                         <Typography variant="subtitle1" sx={{ color: 'rgba(255,255,255,0.9)' }}>
-                            {dashboard.identity.businessType} • TIN: {dashboard.identity.tin}
+                            {dashboard.identity?.businessType || 'Unknown Type'} • TIN: {dashboard.identity?.tin || 'N/A'}
                         </Typography>
                         <Chip
-                            label={dashboard.compliance.isFullyQualified ? 'Fully Qualified' : 'Incomplete'}
-                            color={dashboard.compliance.isFullyQualified ? 'success' : 'warning'}
-                            icon={dashboard.compliance.isFullyQualified ? <Verified /> : <Warning />}
+                            label={dashboard.compliance?.isFullyQualified ? 'Fully Qualified' : 'Incomplete'}
+                            color={dashboard.compliance?.isFullyQualified ? 'success' : 'warning'}
+                            icon={dashboard.compliance?.isFullyQualified ? <Verified /> : <Warning />}
                             sx={{ mt: 2, fontWeight: 'bold' }}
                         />
                     </Box>
-                    {dashboard.compliance.isFullyQualified && (
+                    {dashboard.compliance?.isFullyQualified && (
                         <Button
                             variant="contained"
                             size="large"
@@ -514,7 +514,7 @@ const ExporterDashboard: React.FC<ExporterDashboardProps> = ({ exporterId, tin, 
 
             <Grid container spacing={3}>
                 {/* Fully Qualified Call-to-Action */}
-                {dashboard.compliance.isFullyQualified && (
+                {dashboard.compliance?.isFullyQualified && (
                     <Grid item xs={12}>
                         <Card 
                             elevation={4} 
@@ -575,9 +575,9 @@ const ExporterDashboard: React.FC<ExporterDashboardProps> = ({ exporterId, tin, 
                                                     }
                                                 }}
                                                 startIcon={<Visibility />}
-                                                onClick={() => navigate('/marketplace/opportunities')}
+                                                onClick={() => navigate('/profile')}
                                             >
-                                                Browse Buyer Opportunities
+                                                Manage Profile
                                             </Button>
                                         </Box>
                                     </Box>
@@ -600,16 +600,16 @@ const ExporterDashboard: React.FC<ExporterDashboardProps> = ({ exporterId, tin, 
                             </Typography>
                             <Divider sx={{ mb: 2 }} />
                             <Typography variant="body2" color="text.secondary" gutterBottom>
-                                <strong>Contact Person:</strong> {dashboard.contact.contactPerson}
+                                <strong>Contact Person:</strong> {dashboard.contact?.contactPerson || 'N/A'}
                             </Typography>
                             <Typography variant="body2" color="text.secondary" gutterBottom>
-                                <strong>Email:</strong> {dashboard.contact.email}
+                                <strong>Email:</strong> {dashboard.contact?.email || 'N/A'}
                             </Typography>
                             <Typography variant="body2" color="text.secondary" gutterBottom>
-                                <strong>Phone:</strong> {dashboard.contact.phone}
+                                <strong>Phone:</strong> {dashboard.contact?.phone || 'N/A'}
                             </Typography>
                             <Typography variant="body2" color="text.secondary" gutterBottom>
-                                <strong>Address:</strong> {dashboard.contact.officeAddress}, {dashboard.contact.city}, {dashboard.contact.region}
+                                <strong>Address:</strong> {[dashboard.contact?.officeAddress, dashboard.contact?.city, dashboard.contact?.region].filter(Boolean).join(', ') || 'N/A'}
                             </Typography>
                         </CardContent>
                     </Card>
@@ -628,27 +628,27 @@ const ExporterDashboard: React.FC<ExporterDashboardProps> = ({ exporterId, tin, 
                                 <Typography variant="body2" color="text.secondary">
                                     <strong>Registration Number:</strong>
                                 </Typography>
-                                <Chip label={dashboard.documents.registrationNumber} size="small" color="primary" />
+                                <Chip label={dashboard.documents?.registrationNumber || 'N/A'} size="small" color="primary" />
                             </Box>
                             <Typography variant="body2" color="text.secondary" gutterBottom>
-                                <strong>Lab Certification:</strong> {dashboard.documents.laboratoryCertificationNumber || 'N/A'}
+                                <strong>Lab Certification:</strong> {dashboard.documents?.laboratoryCertificationNumber || 'N/A'}
                             </Typography>
                             <Typography variant="body2" color="text.secondary" gutterBottom>
-                                <strong>Taster Certificate:</strong> {dashboard.documents.tasterCertificateNumber || 'N/A'}
+                                <strong>Taster Certificate:</strong> {dashboard.documents?.tasterCertificateNumber || 'N/A'}
                             </Typography>
                             <Box display="flex" alignItems="center" justifyContent="space-between" sx={{ mt: 1 }}>
                                 <Typography variant="body2" color="text.secondary">
-                                    <strong>Competence Certificate:</strong> {dashboard.documents.competenceCertificateNumber || 'N/A'}
+                                    <strong>Competence Certificate:</strong> {dashboard.documents?.competenceCertificateNumber || 'N/A'}
                                 </Typography>
-                                {dashboard.documents.competenceCertificateId && (
+                                {dashboard.documents?.competenceCertificateId && (
                                     <Tooltip title="Download Certificate">
                                         <IconButton
                                             size="small"
                                             color="primary"
-                                            onClick={() => handleDownloadCompetenceCertificate(dashboard.documents.competenceCertificateId!)}
-                                            disabled={downloading === dashboard.documents.competenceCertificateId}
+                                            onClick={() => handleDownloadCompetenceCertificate(dashboard.documents?.competenceCertificateId!)}
+                                            disabled={downloading === dashboard.documents?.competenceCertificateId}
                                         >
-                                            {downloading === dashboard.documents.competenceCertificateId ? (
+                                            {downloading === dashboard.documents?.competenceCertificateId ? (
                                                 <CircularProgress size={20} />
                                             ) : (
                                                 <Download />
@@ -659,17 +659,17 @@ const ExporterDashboard: React.FC<ExporterDashboardProps> = ({ exporterId, tin, 
                             </Box>
                             <Box display="flex" alignItems="center" justifyContent="space-between" sx={{ mt: 1 }}>
                                 <Typography variant="body2" color="text.secondary">
-                                    <strong>Export License:</strong> {dashboard.documents.exportLicenseNumber || 'N/A'}
+                                    <strong>Export License:</strong> {dashboard.documents?.exportLicenseNumber || 'N/A'}
                                 </Typography>
-                                {dashboard.documents.exportLicenseId && (
+                                {dashboard.documents?.exportLicenseId && (
                                     <Tooltip title="Download License">
                                         <IconButton
                                             size="small"
                                             color="primary"
-                                            onClick={() => handleDownloadExportLicense(dashboard.documents.exportLicenseId!)}
-                                            disabled={downloading === dashboard.documents.exportLicenseId}
+                                            onClick={() => handleDownloadExportLicense(dashboard.documents?.exportLicenseId!)}
+                                            disabled={downloading === dashboard.documents?.exportLicenseId}
                                         >
-                                            {downloading === dashboard.documents.exportLicenseId ? (
+                                            {downloading === dashboard.documents?.exportLicenseId ? (
                                                 <CircularProgress size={20} />
                                             ) : (
                                                 <Download />
@@ -679,7 +679,7 @@ const ExporterDashboard: React.FC<ExporterDashboardProps> = ({ exporterId, tin, 
                                 )}
                             </Box>
                             <Typography variant="body2" color="text.secondary" gutterBottom sx={{ mt: 1 }}>
-                                <strong>EIC Registration:</strong> {dashboard.documents.eicRegistrationNumber || 'N/A'}
+                                <strong>EIC Registration:</strong> {dashboard.documents?.eicRegistrationNumber || 'N/A'}
                             </Typography>
                         </CardContent>
                     </Card>
@@ -698,81 +698,81 @@ const ExporterDashboard: React.FC<ExporterDashboardProps> = ({ exporterId, tin, 
                                 <Grid item xs={12} sm={6} md={4}>
                                     <Box display="flex" flexDirection="column" gap={1}>
                                         <Box display="flex" alignItems="center" gap={1}>
-                                            {getStatusIcon(dashboard.compliance.profileStatus, dashboard.compliance.profileApproved)}
+                                            {getStatusIcon(dashboard.compliance?.profileStatus, dashboard.compliance?.profileApproved)}
                                             <Box>
                                                 <Typography variant="body2" fontWeight="bold">Profile</Typography>
                                                 <Chip
-                                                    label={dashboard.compliance.profileStatus}
+                                                    label={dashboard.compliance?.profileStatus === 'FULLY_QUALIFIED' ? 'ACTIVE' : (dashboard.compliance?.profileStatus || 'UNKNOWN')}
                                                     size="small"
-                                                    color={getStatusColor(dashboard.compliance.profileStatus, dashboard.compliance.profileApproved)}
+                                                    color={getStatusColor(dashboard.compliance?.profileStatus, dashboard.compliance?.profileApproved)}
                                                 />
                                             </Box>
                                         </Box>
-                                        {getActionButton('profile', dashboard.compliance.profileStatus, dashboard.compliance.profileApproved)}
+                                        {getActionButton('profile', dashboard.compliance?.profileStatus, dashboard.compliance?.profileApproved)}
                                     </Box>
                                 </Grid>
                                 <Grid item xs={12} sm={6} md={4}>
                                     <Box display="flex" flexDirection="column" gap={1}>
                                         <Box display="flex" alignItems="center" gap={1}>
-                                            {getStatusIcon(dashboard.compliance.laboratoryStatus, dashboard.compliance.laboratoryApproved)}
+                                            {getStatusIcon(dashboard.compliance?.laboratoryStatus, dashboard.compliance?.laboratoryApproved)}
                                             <Box>
                                                 <Typography variant="body2" fontWeight="bold">Laboratory</Typography>
                                                 <Chip
-                                                    label={dashboard.compliance.laboratoryStatus}
+                                                    label={dashboard.compliance?.laboratoryStatus || 'MISSING'}
                                                     size="small"
-                                                    color={getStatusColor(dashboard.compliance.laboratoryStatus, dashboard.compliance.laboratoryApproved)}
+                                                    color={getStatusColor(dashboard.compliance?.laboratoryStatus, dashboard.compliance?.laboratoryApproved)}
                                                 />
                                             </Box>
                                         </Box>
-                                        {getActionButton('laboratory', dashboard.compliance.laboratoryStatus, dashboard.compliance.laboratoryApproved)}
+                                        {getActionButton('laboratory', dashboard.compliance?.laboratoryStatus, dashboard.compliance?.laboratoryApproved)}
                                     </Box>
                                 </Grid>
                                 <Grid item xs={12} sm={6} md={4}>
                                     <Box display="flex" flexDirection="column" gap={1}>
                                         <Box display="flex" alignItems="center" gap={1}>
-                                            {getStatusIcon(dashboard.compliance.tasterStatus, dashboard.compliance.tasterApproved)}
+                                            {getStatusIcon(dashboard.compliance?.tasterStatus, dashboard.compliance?.tasterApproved)}
                                             <Box>
                                                 <Typography variant="body2" fontWeight="bold">Taster</Typography>
                                                 <Chip
-                                                    label={dashboard.compliance.tasterStatus}
+                                                    label={dashboard.compliance?.tasterStatus || 'MISSING'}
                                                     size="small"
-                                                    color={getStatusColor(dashboard.compliance.tasterStatus, dashboard.compliance.tasterApproved)}
+                                                    color={getStatusColor(dashboard.compliance?.tasterStatus, dashboard.compliance?.tasterApproved)}
                                                 />
                                             </Box>
                                         </Box>
-                                        {getActionButton('taster', dashboard.compliance.tasterStatus, dashboard.compliance.tasterApproved)}
+                                        {getActionButton('taster', dashboard.compliance?.tasterStatus, dashboard.compliance?.tasterApproved)}
                                     </Box>
                                 </Grid>
                                 <Grid item xs={12} sm={6} md={4}>
                                     <Box display="flex" flexDirection="column" gap={1}>
                                         <Box display="flex" alignItems="center" gap={1}>
-                                            {getStatusIcon(dashboard.compliance.competenceStatus, dashboard.compliance.competenceApproved)}
+                                            {getStatusIcon(dashboard.compliance?.competenceStatus, dashboard.compliance?.competenceApproved)}
                                             <Box>
                                                 <Typography variant="body2" fontWeight="bold">Competence</Typography>
                                                 <Chip
-                                                    label={dashboard.compliance.competenceStatus}
+                                                    label={dashboard.compliance?.competenceStatus || 'MISSING'}
                                                     size="small"
-                                                    color={getStatusColor(dashboard.compliance.competenceStatus, dashboard.compliance.competenceApproved)}
+                                                    color={getStatusColor(dashboard.compliance?.competenceStatus, dashboard.compliance?.competenceApproved)}
                                                 />
                                             </Box>
                                         </Box>
-                                        {getActionButton('competence', dashboard.compliance.competenceStatus, dashboard.compliance.competenceApproved)}
+                                        {getActionButton('competence', dashboard.compliance?.competenceStatus, dashboard.compliance?.competenceApproved)}
                                     </Box>
                                 </Grid>
                                 <Grid item xs={12} sm={6} md={4}>
                                     <Box display="flex" flexDirection="column" gap={1}>
                                         <Box display="flex" alignItems="center" gap={1}>
-                                            {getStatusIcon(dashboard.compliance.licenseStatus, dashboard.compliance.licenseApproved)}
+                                            {getStatusIcon(dashboard.compliance?.licenseStatus, dashboard.compliance?.licenseApproved)}
                                             <Box>
                                                 <Typography variant="body2" fontWeight="bold">Export License</Typography>
                                                 <Chip
-                                                    label={dashboard.compliance.licenseStatus}
+                                                    label={dashboard.compliance?.licenseStatus || 'MISSING'}
                                                     size="small"
-                                                    color={getStatusColor(dashboard.compliance.licenseStatus, dashboard.compliance.licenseApproved)}
+                                                    color={getStatusColor(dashboard.compliance?.licenseStatus, dashboard.compliance?.licenseApproved)}
                                                 />
                                             </Box>
                                         </Box>
-                                        {getActionButton('license', dashboard.compliance.licenseStatus, dashboard.compliance.licenseApproved)}
+                                        {getActionButton('license', dashboard.compliance?.licenseStatus, dashboard.compliance?.licenseApproved)}
                                     </Box>
                                 </Grid>
                             </Grid>
@@ -781,7 +781,7 @@ const ExporterDashboard: React.FC<ExporterDashboardProps> = ({ exporterId, tin, 
                 </Grid>
 
                 {/* Required Actions */}
-                {dashboard.validation.requiredActions.length > 0 && (
+                {dashboard.validation?.requiredActions && Array.isArray(dashboard.validation.requiredActions) && dashboard.validation.requiredActions.length > 0 && (
                     <Grid item xs={12}>
                         <Alert severity="warning" icon={<Warning />}>
                             <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
@@ -793,7 +793,7 @@ const ExporterDashboard: React.FC<ExporterDashboardProps> = ({ exporterId, tin, 
                                         <ListItemIcon>
                                             <Warning color="warning" fontSize="small" />
                                         </ListItemIcon>
-                                        <ListItemText primary={action} />
+                                        <ListItemText primary={action || 'Unknown action'} />
                                     </ListItem>
                                 ))}
                             </List>
@@ -803,10 +803,12 @@ const ExporterDashboard: React.FC<ExporterDashboardProps> = ({ exporterId, tin, 
             </Grid>
 
             {/* Metadata */}
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 3, textAlign: 'center' }}>
-                Last Updated: {new Date(dashboard.metadata.lastUpdated).toLocaleString()} •
-                Created: {new Date(dashboard.metadata.createdAt).toLocaleString()}
-            </Typography>
+            {dashboard.metadata && (
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 3, textAlign: 'center' }}>
+                    Last Updated: {dashboard.metadata.lastUpdated ? new Date(dashboard.metadata.lastUpdated).toLocaleString() : 'Unknown'} •
+                    Created: {dashboard.metadata.createdAt ? new Date(dashboard.metadata.createdAt).toLocaleString() : 'Unknown'}
+                </Typography>
+            )}
         </Box>
     );
 };

@@ -269,10 +269,10 @@ const Dashboard = ({ user, org }: DashboardProps): JSX.Element => {
   };
 
   const statCards = [
-    { title: 'Total Exports', value: realStats.totalExports, icon: <Package size={24} />, color: 'primary' as const, trend: calculateTrend(realStats.totalExports, 0), subtitle: 'On-chain records' },
-    { title: 'Completed', value: realStats.completedExports, icon: <CheckCircle size={24} />, color: 'success' as const, trend: calculateTrend(realStats.completedExports, 0), subtitle: 'Delivered' },
-    { title: 'Pending', value: realStats.pendingAction, icon: <Clock size={24} />, color: 'warning' as const, trend: calculateTrend(realStats.pendingAction, 0), subtitle: 'Actions Required' },
-    { title: 'Total Value', value: `$${(realStats.totalValue / 1000).toFixed(1)}K`, icon: <DollarSign size={24} />, color: 'secondary' as const, trend: calculateTrend(realStats.totalValue, 0), subtitle: 'USD' },
+    { title: 'Total Exports', value: realStats.totalExports || 0, icon: <Package size={24} />, color: 'primary' as const, trend: calculateTrend(realStats.totalExports || 0, 0), subtitle: 'On-chain records' },
+    { title: 'Completed', value: realStats.completedExports || 0, icon: <CheckCircle size={24} />, color: 'success' as const, trend: calculateTrend(realStats.completedExports || 0, 0), subtitle: 'Delivered' },
+    { title: 'Pending', value: realStats.pendingAction || 0, icon: <Clock size={24} />, color: 'warning' as const, trend: calculateTrend(realStats.pendingAction || 0, 0), subtitle: 'Actions Required' },
+    { title: 'Total Value', value: `$${((realStats.totalValue || 0) / 1000).toFixed(1)}K`, icon: <DollarSign size={24} />, color: 'secondary' as const, trend: calculateTrend(realStats.totalValue || 0, 0), subtitle: 'USD' },
   ];
 
   return (

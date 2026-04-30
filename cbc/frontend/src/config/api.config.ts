@@ -64,20 +64,19 @@ const apiGatewayUrl = isProduction
 // Build service URLs based on environment
 const buildUrl = (serviceId: string): string => {
   const service = Object.values(SERVICES as Record<string, ServiceConfig>).find(s => s.id === serviceId);
-  if (!service) return 'http://localhost:3000';
+  if (!service) return '/api';
 
   if (apiGatewayUrl) {
     // Production/staging: use API gateway with service path
     return `${apiGatewayUrl}/${serviceId}`;
   }
 
-  // Development: use individual service ports
-  const envKey = `VITE_API_${serviceId.toUpperCase().replace(/-/g, '_')}`;
-  return getEnvVar(envKey, `http://localhost:${service.port}`);
+  // Development: use relative URLs through nginx proxy
+  return '/api';
 };
 
 // Base API URL for services (used by some service files)
-export const API_BASE_URL = apiGatewayUrl || 'http://localhost';
+export const API_BASE_URL = apiGatewayUrl || '';
 
 // API Endpoints - Generated dynamically from SERVICES
 export const API_ENDPOINTS = Object.values(SERVICES as Record<string, ServiceConfig>).reduce((acc, service) => {
@@ -162,7 +161,7 @@ export const AGENCY_ORGANIZATIONS: Organization[] = [
     value: 'MOT',
     label: 'Ministry of Trade (MOT)',
     fullName: 'Ministry of Trade',
-    apiUrl: buildUrl('esw'),
+    apiUrl: '/api',
     port: 3008,
     mspId: null,
     description: 'Trade policy and regulation',
@@ -174,7 +173,7 @@ export const AGENCY_ORGANIZATIONS: Organization[] = [
     value: 'MOA',
     label: 'Ministry of Agriculture (MOA)',
     fullName: 'Ministry of Agriculture',
-    apiUrl: buildUrl('esw'),
+    apiUrl: '/api',
     port: 3008,
     mspId: null,
     description: 'Agricultural policy and development',
@@ -186,7 +185,7 @@ export const AGENCY_ORGANIZATIONS: Organization[] = [
     value: 'MOH',
     label: 'Ministry of Health (MOH)',
     fullName: 'Ministry of Health',
-    apiUrl: buildUrl('esw'),
+    apiUrl: '/api',
     port: 3008,
     mspId: null,
     description: 'Health standards and regulations',
@@ -198,7 +197,7 @@ export const AGENCY_ORGANIZATIONS: Organization[] = [
     value: 'EIC',
     label: 'Ethiopian Investment Commission (EIC)',
     fullName: 'Ethiopian Investment Commission',
-    apiUrl: buildUrl('esw'),
+    apiUrl: '/api',
     port: 3008,
     mspId: null,
     description: 'Investment promotion and facilitation',
@@ -210,7 +209,7 @@ export const AGENCY_ORGANIZATIONS: Organization[] = [
     value: 'EPA',
     label: 'Environment Protection Authority (EPA)',
     fullName: 'Environment Protection Authority',
-    apiUrl: buildUrl('esw'),
+    apiUrl: '/api',
     port: 3008,
     mspId: null,
     description: 'Environmental protection and compliance',
@@ -222,7 +221,7 @@ export const AGENCY_ORGANIZATIONS: Organization[] = [
     value: 'MOFED',
     label: 'Ministry of Finance and Economic Development (MOFED)',
     fullName: 'Ministry of Finance and Economic Development',
-    apiUrl: buildUrl('esw'),
+    apiUrl: '/api',
     port: 3008,
     mspId: null,
     description: 'Financial policy and economic development',
@@ -234,7 +233,7 @@ export const AGENCY_ORGANIZATIONS: Organization[] = [
     value: 'MOTI',
     label: 'Ministry of Transport and Infrastructure (MOTI)',
     fullName: 'Ministry of Transport and Infrastructure',
-    apiUrl: buildUrl('esw'),
+    apiUrl: '/api',
     port: 3008,
     mspId: null,
     description: 'Transport and infrastructure development',
@@ -246,7 +245,7 @@ export const AGENCY_ORGANIZATIONS: Organization[] = [
     value: 'MIDROC',
     label: 'Ministry of Industry (MIDROC)',
     fullName: 'Ministry of Industry',
-    apiUrl: buildUrl('esw'),
+    apiUrl: '/api',
     port: 3008,
     mspId: null,
     description: 'Industrial development and policy',
@@ -258,7 +257,7 @@ export const AGENCY_ORGANIZATIONS: Organization[] = [
     value: 'QSAE',
     label: 'Quality and Standards Authority (QSAE)',
     fullName: 'Quality and Standards Authority of Ethiopia',
-    apiUrl: buildUrl('esw'),
+    apiUrl: '/api',
     port: 3008,
     mspId: null,
     description: 'Quality standards and certification',
@@ -270,7 +269,7 @@ export const AGENCY_ORGANIZATIONS: Organization[] = [
     value: 'FDRE_CUSTOMS',
     label: 'Federal Democratic Republic Customs (FDRE)',
     fullName: 'Federal Democratic Republic of Ethiopia Customs',
-    apiUrl: buildUrl('esw'),
+    apiUrl: '/api',
     port: 3008,
     mspId: null,
     description: 'Federal customs operations',
@@ -282,7 +281,7 @@ export const AGENCY_ORGANIZATIONS: Organization[] = [
     value: 'TRADE_REMEDY',
     label: 'Trade Remedy Commission',
     fullName: 'Trade Remedy Commission',
-    apiUrl: buildUrl('esw'),
+    apiUrl: '/api',
     port: 3008,
     mspId: null,
     description: 'Trade remedy investigations',
@@ -300,9 +299,9 @@ export const ALL_LOGIN_OPTIONS = [...LOGIN_ORGANIZATIONS, ...AGENCY_ORGANIZATION
 
 // Get API URL by organization value
 export const getApiUrl = (orgValue: string | null): string => {
-  if (!orgValue) return (API_ENDPOINTS as any).commercialBank || 'http://localhost:3001';
+  if (!orgValue) return (API_ENDPOINTS as any).commercialBank || '/api';
   const org = ORGANIZATIONS.find((o) => o.value === orgValue);
-  return org ? org.apiUrl : (API_ENDPOINTS as any).commercialBank || 'http://localhost:3001';
+  return org ? org.apiUrl : (API_ENDPOINTS as any).commercialBank || '/api';
 };
 
 // Get organization by value

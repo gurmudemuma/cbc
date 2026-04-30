@@ -61,7 +61,7 @@ const QualificationStatus = ({ onNavigateToRegistration }) => {
 
     switch (step) {
       case 'profile':
-        return status.profile?.status === 'ACTIVE' ? 'complete' : 
+        return (status.profile?.status === 'ACTIVE' || status.profile?.status === 'FULLY_QUALIFIED') ? 'complete' : 
                status.profile?.status === 'PENDING' ? 'pending' : 'incomplete';
       case 'laboratory':
         return status.laboratory?.certified ? 'complete' : 'incomplete';
@@ -194,7 +194,8 @@ const QualificationStatus = ({ onNavigateToRegistration }) => {
                 </Box>
               }
               secondary={
-                status?.profile?.status === 'ACTIVE' ? 'Approved by ECTA' :
+                (status?.profile?.status === 'ACTIVE' || status?.profile?.status === 'FULLY_QUALIFIED') ? 
+                  (status?.profile?.status === 'FULLY_QUALIFIED' ? 'Fully Qualified by ECTA' : 'Approved by ECTA') :
                 status?.profile?.status === 'PENDING' ? 'Waiting for ECTA approval' :
                 'Not registered'
               }

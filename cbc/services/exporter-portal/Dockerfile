@@ -7,6 +7,10 @@ RUN npm config set fetch-retry-mintimeout 20000 && \
 
 WORKDIR /app
 
+# Copy shared package.json and install shared dependencies first
+COPY services/shared/package.json ../shared/package.json
+RUN cd ../shared && npm install --legacy-peer-deps --prefer-offline || npm install --legacy-peer-deps
+
 # Copy service files
 COPY services/exporter-portal/package*.json ./
 COPY services/exporter-portal/tsconfig.json ./tsconfig.json
@@ -16,7 +20,7 @@ COPY services/tsconfig.base.json ../tsconfig.base.json
 
 # Install and build
 RUN npm install --legacy-peer-deps --prefer-offline || npm install --legacy-peer-deps
-RUN npm run build || npx tsc
+RUN npm run build
 
 # Production stage
 FROM node:20-alpine
@@ -27,7 +31,6 @@ WORKDIR /app
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./
-COPY --from=builder /app/../shared ./shared
 
 # Create non-root user
 RUN addgroup -g 1001 nodejs && \
@@ -41,4 +44,4 @@ EXPOSE 3010
 
 HEALTHCHECK CMD node -e "require('http').get('http://localhost:3010/health', r => process.exit(r.statusCode === 200 ? 0 : 1))"
 
-CMD ["node", "dist/exporter-portal/src/index.js"]
+CMD ["node", "-r", "module-alias/register", "dist/app/src/index.js"]

@@ -273,7 +273,7 @@ async function generateCompetenceCertificate(certificate, exporterData) {
             
             doc.fontSize(9).font('Helvetica-Bold').fillColor(COLORS.textDark)
                .text('Certificate No:', col1X, y, { continued: true })
-               .font('Helvetica').text(' ' + certificate.certificateId);
+               .font('Helvetica').text(' ' + (certificate.certificateNumber || certificate.certificateId));
             
             doc.fontSize(9).font('Helvetica-Bold')
                .text('Issue Date:', col2X, y, { continued: true })
@@ -315,7 +315,7 @@ async function generateCompetenceCertificate(certificate, exporterData) {
             doc.fontSize(10)
                .font('Helvetica')
                .fillColor(COLORS.textGray)
-               .text(`TIN: ${exporterData.tin || 'N/A'} | Exporter ID: ${exporterData.username || 'N/A'}`, 
+               .text(`TIN: ${exporterData.tin || 'N/A'} | Exporter Code: ${exporterData.exporterCode || exporterData.exporter_id || 'N/A'}`, 
                    MARGINS.left, y, { width: CONTENT_WIDTH, align: 'center' });
             
             y += 30;
@@ -467,7 +467,7 @@ async function generateExportLicense(certificate, exporterData) {
             
             // License Details
             doc.fontSize(8).font('Helvetica-Bold').text('License No:', col1X, y, { continued: true });
-            doc.fontSize(8).font('Helvetica').text(' ' + certificate.licenseId);
+            doc.fontSize(8).font('Helvetica').text(' ' + (certificate.licenseNumber || certificate.licenseId));
             
             doc.fontSize(8).font('Helvetica-Bold').text('Issue Date:', col2X, y, { continued: true });
             doc.fontSize(8).font('Helvetica').text(' ' + new Date(certificate.issuedAt).toLocaleDateString());
@@ -635,7 +635,7 @@ async function generateLaboratoryCertificate(certificate, exporterData) {
 
             const exporterInfo = [
                 ['Company:', exporterData.business_name || 'N/A'],
-                ['Exporter ID:', exporterData.username || 'N/A'],
+                ['Exporter Code:', exporterData.exporterCode || exporterData.exporter_id || 'N/A'],
                 ['TIN:', exporterData.tin || 'N/A'],
                 ['Contact:', exporterData.contact_person || 'N/A']
             ];

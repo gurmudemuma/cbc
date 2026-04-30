@@ -156,7 +156,7 @@ export const ModernStatCard: React.FC<StatCardProps> = ({
                   lineHeight: 1.2
                 }}
               >
-                {value}
+                {value !== null && value !== undefined ? value : 0}
               </Typography>
               {subtitle && (
                 <Typography 

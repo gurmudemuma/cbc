@@ -12,6 +12,17 @@ const {
 } = require('../utils/certificate-pdf-compact');
 
 /**
+ * Generate professional certificate numbers
+ * Format: ECTA-{TYPE}-{YEAR}-{SEQUENTIAL}
+ * Examples: ECTA-COMP-2026-001234, ECTA-LIC-2026-005678
+ */
+function generateProfessionalCertificateNumber(type) {
+  const year = new Date().getFullYear();
+  const sequential = Math.floor(Math.random() * 900000) + 100000; // 6-digit random number
+  return `ECTA-${type}-${year}-${sequential}`;
+}
+
+/**
  * Register new exporter (ADMIN ONLY)
  */
 router.post('/register', authenticateToken, requireAdmin, async (req, res) => {
@@ -658,9 +669,8 @@ router.post('/laboratory/register', authenticateToken, async (req, res) => {
   try {
     const exporterId = req.user.id;
     
-    // Auto-generate certificate info for auto-approval
-    const timestamp = Date.now();
-    const certificateNumber = `LAB-${timestamp}`;
+    // Auto-generate certificate info for auto-approval with professional number
+    const certificateNumber = generateProfessionalCertificateNumber('LAB');
     const oneYearLater = new Date();
     oneYearLater.setFullYear(oneYearLater.getFullYear() + 1);
     
@@ -687,14 +697,19 @@ router.post('/laboratory/register', authenticateToken, async (req, res) => {
     // Insert into coffee_laboratories table
     const insertQuery = `
       INSERT INTO coffee_laboratories (
-        exporter_id, certificate_number, status, created_at, updated_at
-      ) VALUES ($1, $2, 'APPROVED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-      ON CONFLICT (exporter_id) DO UPDATE
-      SET certificate_number = $2, status = 'APPROVED', updated_at = CURRENT_TIMESTAMP
+        exporter_id, laboratory_name, address, certification_number, status, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      ON CONFLICT (exporter_id, status) DO UPDATE
+      SET certification_number = $4, updated_at = CURRENT_TIMESTAMP
       RETURNING *
     `;
     
-    const result = await postgresService.query(insertQuery, [exporterUUID, certificateNumber]);
+    const result = await postgresService.query(insertQuery, [
+      exporterUUID, 
+      req.body.laboratory_name || `Laboratory for ${exporterId}`,
+      req.body.address || 'Address to be provided',
+      certificateNumber
+    ]);
     
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Failed to register laboratory' });
@@ -759,8 +774,7 @@ router.post('/taster/register', authenticateToken, async (req, res) => {
     }
     
     // Auto-generate certificate info
-    const timestamp = Date.now();
-    const certificateNumber = `TASTER-${timestamp}`;
+    const certificateNumber = generateProfessionalCertificateNumber('TASTER');
     const oneYearLater = new Date();
     oneYearLater.setFullYear(oneYearLater.getFullYear() + 1);
     
@@ -777,14 +791,23 @@ router.post('/taster/register', authenticateToken, async (req, res) => {
     // Insert into coffee_tasters table
     const insertQuery = `
       INSERT INTO coffee_tasters (
-        exporter_id, certificate_number, status, created_at, updated_at
-      ) VALUES ($1, $2, 'APPROVED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-      ON CONFLICT (exporter_id) DO UPDATE
-      SET certificate_number = $2, status = 'APPROVED', updated_at = CURRENT_TIMESTAMP
+        exporter_id, full_name, proficiency_certificate_number, certificate_issue_date, 
+        certificate_expiry_date, employment_start_date, status, created_at, updated_at
+      ) VALUES ($1, $2, $3, CURRENT_DATE, $4, CURRENT_DATE, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      ON CONFLICT (exporter_id, status) DO UPDATE
+      SET proficiency_certificate_number = $3, updated_at = CURRENT_TIMESTAMP
       RETURNING *
     `;
     
-    const result = await postgresService.query(insertQuery, [exporterUUID, certificateNumber]);
+    const oneYearFromNow = new Date();
+    oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+    
+    const result = await postgresService.query(insertQuery, [
+      exporterUUID,
+      req.body.full_name || `Taster for ${exporterId}`,
+      certificateNumber,
+      oneYearFromNow.toISOString().split('T')[0]
+    ]);
     console.log('[Taster Registration] AUTO-APPROVED:', result.rows[0]);
     
     // Optionally sync to blockchain
@@ -853,10 +876,8 @@ router.post('/competence/apply', authenticateToken, async (req, res) => {
       });
     }
     
-    // Auto-generate certificate info
-    const timestamp = Date.now();
-    const certificateNumber = `COMP-${timestamp}`;
-    const certificateId = `COMP-ID-${timestamp}`;
+    // Auto-generate certificate info with professional number
+    const certificateNumber = generateProfessionalCertificateNumber('COMP');
     const oneYearLater = new Date();
     oneYearLater.setFullYear(oneYearLater.getFullYear() + 1);
     
@@ -864,7 +885,6 @@ router.post('/competence/apply', authenticateToken, async (req, res) => {
       exporterId,
       ...req.body,
       certificateNumber,
-      certificateId,
       validUntil: oneYearLater.toISOString(),
       submittedAt: new Date().toISOString()
     };
@@ -874,14 +894,19 @@ router.post('/competence/apply', authenticateToken, async (req, res) => {
     // Insert into competence_certificates table
     const insertQuery = `
       INSERT INTO competence_certificates (
-        exporter_id, certificate_number, certificate_id, status, created_at, updated_at
-      ) VALUES ($1, $2, $3, 'APPROVED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-      ON CONFLICT (exporter_id) DO UPDATE
-      SET certificate_number = $2, certificate_id = $3, status = 'APPROVED', updated_at = CURRENT_TIMESTAMP
+        exporter_id, certificate_number, issued_date, expiry_date, status, created_at, updated_at
+      ) VALUES ($1, $2, CURRENT_DATE, $3, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       RETURNING *
     `;
     
-    const result = await postgresService.query(insertQuery, [exporterUUID, certificateNumber, certificateId]);
+    const oneYearFromNow = new Date();
+    oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+    
+    const result = await postgresService.query(insertQuery, [
+      exporterUUID, 
+      certificateNumber,
+      oneYearFromNow.toISOString().split('T')[0]
+    ]);
     console.log('[Competence Application] AUTO-APPROVED:', result.rows[0]);
     
     // Optionally sync to blockchain
@@ -902,7 +927,6 @@ router.post('/competence/apply', authenticateToken, async (req, res) => {
       message: 'Competence certificate auto-approved successfully',
       status: 'approved',
       certificateNumber,
-      certificateId,
       data: result.rows[0]
     });
   } catch (error) {
@@ -962,9 +986,7 @@ router.post('/license/apply', authenticateToken, async (req, res) => {
     }
     
     // Auto-generate license info
-    const timestamp = Date.now();
-    const licenseNumber = `LIC-${timestamp}`;
-    const licenseId = `LIC-ID-${timestamp}`;
+    const licenseNumber = generateProfessionalCertificateNumber('LIC');
     const oneYearLater = new Date();
     oneYearLater.setFullYear(oneYearLater.getFullYear() + 1);
     
@@ -972,7 +994,6 @@ router.post('/license/apply', authenticateToken, async (req, res) => {
       exporterId,
       ...req.body,
       licenseNumber,
-      licenseId,
       validUntil: oneYearLater.toISOString(),
       submittedAt: new Date().toISOString()
     };
@@ -982,14 +1003,22 @@ router.post('/license/apply', authenticateToken, async (req, res) => {
     // Insert into export_licenses table
     const insertQuery = `
       INSERT INTO export_licenses (
-        exporter_id, license_number, license_id, status, created_at, updated_at
-      ) VALUES ($1, $2, $3, 'APPROVED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-      ON CONFLICT (exporter_id) DO UPDATE
-      SET license_number = $2, license_id = $3, status = 'APPROVED', updated_at = CURRENT_TIMESTAMP
+        exporter_id, license_number, issued_date, expiry_date, eic_registration_number, 
+        approved_by, approved_at, status, created_at, updated_at
+      ) VALUES ($1, $2, CURRENT_DATE, $3, $4, $5, CURRENT_TIMESTAMP, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       RETURNING *
     `;
     
-    const result = await postgresService.query(insertQuery, [exporterUUID, licenseNumber, licenseId]);
+    const oneYearFromNow = new Date();
+    oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+    
+    const result = await postgresService.query(insertQuery, [
+      exporterUUID, 
+      licenseNumber,
+      oneYearFromNow.toISOString().split('T')[0],
+      req.body.eic_registration_number || `EIC-${timestamp}`,
+      req.user.id || 'system'
+    ]);
     console.log('[License Application] AUTO-APPROVED:', result.rows[0]);
     
     // Optionally sync to blockchain
@@ -1010,7 +1039,6 @@ router.post('/license/apply', authenticateToken, async (req, res) => {
       message: 'Export license auto-approved successfully',
       status: 'approved',
       licenseNumber,
-      licenseId,
       data: result.rows[0]
     });
   } catch (error) {
@@ -1116,7 +1144,7 @@ router.get('/certificates/laboratory/download', authenticateToken, async (req, r
     }
     
     const laboratoryData = {
-      certificateNumber: labResult.rows[0].certificate_number,
+      certificateNumber: labResult.rows[0].certification_number,
       issuedAt: labResult.rows[0].created_at || new Date(),
       expiryDate: new Date(Date.now() + 3 * 365 * 24 * 60 * 60 * 1000) // 3 years
     };
@@ -1166,7 +1194,7 @@ router.get('/certificates/taster/download', authenticateToken, async (req, res) 
     }
     
     const tasterData = {
-      certificateNumber: tasterResult.rows[0].certificate_number,
+      certificateNumber: tasterResult.rows[0].proficiency_certificate_number,
       issuedAt: tasterResult.rows[0].created_at || new Date(),
       expiryDate: new Date(Date.now() + 2 * 365 * 24 * 60 * 60 * 1000) // 2 years
     };
@@ -1218,8 +1246,8 @@ router.get('/certificates/competence/download', authenticateToken, async (req, r
     const competenceData = {
       certificateId: compResult.rows[0].certificate_id,
       certificateNumber: compResult.rows[0].certificate_number,
-      issuedAt: compResult.rows[0].created_at || new Date(),
-      expiryDate: new Date(Date.now() + 3 * 365 * 24 * 60 * 60 * 1000) // 3 years
+      issuedAt: compResult.rows[0].issued_date || compResult.rows[0].created_at || new Date(),
+      expiryDate: compResult.rows[0].expiry_date || new Date(Date.now() + 3 * 365 * 24 * 60 * 60 * 1000) // 3 years
     };
     
     const { filepath, filename } = await generateCompetenceCertificate(competenceData, exporterData);
@@ -1316,7 +1344,7 @@ router.get('/laboratory/:certificateNumber/download', authenticateToken, async (
     // Get laboratory data from correct table
     const exporterUUID = exporterData.exporter_id;
     const labResult = await postgresService.query(
-      'SELECT * FROM coffee_laboratories WHERE exporter_id = $1 AND certificate_number = $2',
+      'SELECT * FROM coffee_laboratories WHERE exporter_id = $1 AND certification_number = $2',
       [exporterUUID, certificateNumber]
     );
     
@@ -1327,7 +1355,7 @@ router.get('/laboratory/:certificateNumber/download', authenticateToken, async (
     const { generateLaboratoryCertificatePDF } = require('../utils/certificate-pdf');
     
     const laboratoryData = {
-      certificateNumber: labResult.rows[0].certificate_number,
+      certificateNumber: labResult.rows[0].certification_number,
       laboratoryName: exporterData.business_name,
       location: exporterData.office_address
     };
@@ -1436,7 +1464,22 @@ router.get('/competence/:certificateId/download', authenticateToken, async (req,
     
     const competenceData = compResult.rows[0];
     
-    const { filepath, filename } = await generateCompetenceCertificate(exporterData, competenceData);
+    // Transform database fields to match PDF generator expectations
+    const transformedCertificate = {
+      certificateId: competenceData.certificate_id,
+      certificateNumber: competenceData.certificate_number,
+      issuedAt: competenceData.issued_date,
+      expiryDate: competenceData.expiry_date,
+      status: competenceData.status
+    };
+    
+    // Add professional exporter code to exporter data
+    const exporterDataWithCode = {
+      ...exporterData,
+      exporterCode: exporterData.registration_number || `EXP-${exporterData.exporter_id.substring(0, 8).toUpperCase()}`
+    };
+    
+    const { filepath, filename } = await generateCompetenceCertificate(transformedCertificate, exporterDataWithCode);
     
     res.download(filepath, filename, (err) => {
       if (err) {
@@ -1484,14 +1527,21 @@ router.get('/license/:licenseId/download', authenticateToken, async (req, res) =
       return res.status(404).json({ error: 'Export license not found or not approved' });
     }
     
-    
-    
     const licenseData = {
       licenseNumber: licenseResult.rows[0].license_number,
-      licenseId: licenseResult.rows[0].license_id
+      licenseId: licenseResult.rows[0].license_id,
+      issuedAt: licenseResult.rows[0].issued_date,
+      expiryDate: licenseResult.rows[0].expiry_date,
+      status: licenseResult.rows[0].status
     };
     
-    const { filepath, filename } = await generateExportLicense(licenseData, exporterData);
+    // Add professional exporter code to exporter data
+    const exporterDataWithCode = {
+      ...exporterData,
+      exporterCode: exporterData.registration_number || `EXP-${exporterData.exporter_id.substring(0, 8).toUpperCase()}`
+    };
+    
+    const { filepath, filename } = await generateExportLicense(licenseData, exporterDataWithCode);
     
     res.download(filepath, filename, (err) => {
       if (err) {
@@ -1538,14 +1588,21 @@ router.get('/licenses/:licenseId/download', authenticateToken, async (req, res) 
       return res.status(404).json({ error: 'Export license not found or not approved' });
     }
     
-    
-    
     const licenseData = {
       licenseNumber: licenseResult.rows[0].license_number,
-      licenseId: licenseResult.rows[0].license_id
+      licenseId: licenseResult.rows[0].license_id,
+      issuedAt: licenseResult.rows[0].issued_date,
+      expiryDate: licenseResult.rows[0].expiry_date,
+      status: licenseResult.rows[0].status
     };
     
-    const { filepath, filename } = await generateExportLicense(licenseData, exporterData);
+    // Add professional exporter code to exporter data
+    const exporterDataWithCode = {
+      ...exporterData,
+      exporterCode: exporterData.registration_number || `EXP-${exporterData.exporter_id.substring(0, 8).toUpperCase()}`
+    };
+    
+    const { filepath, filename } = await generateExportLicense(licenseData, exporterDataWithCode);
     
     res.download(filepath, filename, (err) => {
       if (err) {

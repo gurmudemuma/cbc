@@ -24,6 +24,33 @@ export interface AuthenticatedRequest extends Request {
     name: string;
     type: string;
   };
+  body: any;
+  params: any;
+  headers: any;
+  query: any;
+  ip?: string;
+  method?: string;
+  path?: string;
+  get?: (header: string) => string | undefined;
+}
+
+export interface RequestWithUser extends Request {
+  user?: {
+    id: string;
+    email: string;
+    role: string;
+    organizationId: string;
+    organizationName: string;
+    permissions: string[];
+  };
+  body: any;
+  params: any;
+  headers: any;
+  query: any;
+  ip?: string;
+  method?: string;
+  path?: string;
+  get?: (header: string) => string | undefined;
 }
 
 export interface ApiResponse<T = any> {

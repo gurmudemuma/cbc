@@ -1,22 +1,7 @@
-import axios from 'axios';
+import apiClient from './api';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Add auth token to requests
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+// Use the shared API client which has proper base URL configuration
+const api = apiClient;
 
 export interface Payment {
   payment_id: string;
@@ -95,7 +80,7 @@ export const initiatePayment = async (data: {
   };
   notes?: string;
 }) => {
-  const response = await api.post('/payments/initiate', data);
+  const response = await api.post('/api/payments/initiate', data);
   return response.data;
 };
 
@@ -105,12 +90,12 @@ export const getPayments = async (params?: {
   limit?: number;
   offset?: number;
 }) => {
-  const response = await api.get('/payments', { params });
+  const response = await api.get('/api/payments', { params });
   return response.data;
 };
 
 export const getPaymentDetails = async (paymentId: string) => {
-  const response = await api.get(`/payments/${paymentId}`);
+  const response = await api.get(`/api/payments/${paymentId}`);
   return response.data;
 };
 
@@ -123,18 +108,18 @@ export const submitPaymentDocuments = async (
     documentHash?: string;
   }>
 ) => {
-  const response = await api.post(`/payments/${paymentId}/documents`, { documents });
+  const response = await api.post(`/api/payments/${paymentId}/documents`, { documents });
   return response.data;
 };
 
 export const getPaymentStatistics = async () => {
-  const response = await api.get('/payments/statistics');
+  const response = await api.get('/api/payments/statistics');
   return response.data;
 };
 
 // Bank Payment Services
 export const getPendingPayments = async () => {
-  const response = await api.get('/payments/bank/pending-review');
+  const response = await api.get('/api/payments/bank/pending-review');
   return response.data;
 };
 
@@ -149,7 +134,7 @@ export const openLetterOfCredit = async (
     lcAmount?: number;
   }
 ) => {
-  const response = await api.post(`/payments/bank/${paymentId}/lc/open`, data);
+  const response = await api.post(`/api/payments/bank/${paymentId}/lc/open`, data);
   return response.data;
 };
 
@@ -161,7 +146,7 @@ export const reviewPaymentDocument = async (
     reviewNotes?: string;
   }
 ) => {
-  const response = await api.post(`/payments/bank/${paymentId}/documents/review`, data);
+  const response = await api.post(`/api/payments/bank/${paymentId}/documents/review`, data);
   return response.data;
 };
 
@@ -172,7 +157,7 @@ export const approvePayment = async (
     notes?: string;
   }
 ) => {
-  const response = await api.post(`/payments/bank/${paymentId}/approve`, data);
+  const response = await api.post(`/api/payments/bank/${paymentId}/approve`, data);
   return response.data;
 };
 
@@ -182,7 +167,7 @@ export const rejectPayment = async (
     rejectionReason: string;
   }
 ) => {
-  const response = await api.post(`/payments/bank/${paymentId}/reject`, data);
+  const response = await api.post(`/api/payments/bank/${paymentId}/reject`, data);
   return response.data;
 };
 
@@ -196,7 +181,7 @@ export const processPayment = async (
     };
   }
 ) => {
-  const response = await api.post(`/payments/bank/${paymentId}/process`, data);
+  const response = await api.post(`/api/payments/bank/${paymentId}/process`, data);
   return response.data;
 };
 
@@ -207,13 +192,13 @@ export const completePayment = async (
     completionNotes?: string;
   }
 ) => {
-  const response = await api.post(`/payments/bank/${paymentId}/complete`, data);
+  const response = await api.post(`/api/payments/bank/${paymentId}/complete`, data);
   return response.data;
 };
 
 // NBE Payment Services
 export const getPendingFXApprovals = async () => {
-  const response = await api.get('/payments/nbe/pending-fx-approval');
+  const response = await api.get('/api/payments/nbe/pending-fx-approval');
   return response.data;
 };
 
@@ -225,7 +210,7 @@ export const approveForeignExchange = async (
     notes?: string;
   }
 ) => {
-  const response = await api.post(`/payments/nbe/${paymentId}/fx/approve`, data);
+  const response = await api.post(`/api/payments/nbe/${paymentId}/fx/approve`, data);
   return response.data;
 };
 
@@ -235,17 +220,17 @@ export const rejectForeignExchange = async (
     rejectionReason: string;
   }
 ) => {
-  const response = await api.post(`/payments/nbe/${paymentId}/fx/reject`, data);
+  const response = await api.post(`/api/payments/nbe/${paymentId}/fx/reject`, data);
   return response.data;
 };
 
 export const getFXStatistics = async () => {
-  const response = await api.get('/payments/nbe/statistics');
+  const response = await api.get('/api/payments/nbe/statistics');
   return response.data;
 };
 
 export const getNBEPaymentDetails = async (paymentId: string) => {
-  const response = await api.get(`/payments/nbe/${paymentId}`);
+  const response = await api.get(`/api/payments/nbe/${paymentId}`);
   return response.data;
 };
 

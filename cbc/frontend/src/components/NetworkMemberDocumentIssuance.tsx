@@ -250,14 +250,14 @@ const NetworkMemberDocumentIssuance: React.FC = () => {
   };
 
   const getQualificationStatusIcon = (status: string) => {
-    if (status === 'ACTIVE') {
+    if (status === 'ACTIVE' || status === 'FULLY_QUALIFIED') {
       return <CheckCircle color="success" fontSize="small" />;
     }
     return <Warning color="warning" fontSize="small" />;
   };
 
   const getQualificationStatusColor = (status: string): "success" | "warning" | "error" => {
-    if (status === 'ACTIVE') return 'success';
+    if (status === 'ACTIVE' || status === 'FULLY_QUALIFIED') return 'success';
     if (status === 'MISSING') return 'error';
     return 'warning';
   };

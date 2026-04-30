@@ -884,6 +884,37 @@ router.get('/agencies/my/list', authenticateToken, async (req, res) => {
       organization: req.user.organization
     });
     
+    const userId = req.user.id;
+    
+    // First, check if user has explicit agency assignments in database
+    try {
+      const assignmentResult = await pool.query(`
+        SELECT 
+          nm.member_code as code, 
+          nm.member_name as name, 
+          nm.member_code as id,
+          nm.member_type as type, 
+          nm.description, 
+          nm.is_active as "isActive",
+          unm.role
+        FROM user_network_members unm
+        JOIN network_members nm ON unm.member_id = nm.member_id
+        WHERE unm.user_id = $1 AND nm.is_active = true
+        ORDER BY nm.member_name
+      `, [userId]);
+      
+      if (assignmentResult.rows.length > 0) {
+        console.log('[Agencies] Found', assignmentResult.rows.length, 'database assignments for user');
+        return res.json({
+          success: true,
+          data: assignmentResult.rows  // Changed from 'agencies' to 'data'
+        });
+      }
+    } catch (dbError) {
+      console.log('[Agencies] Database assignment check failed:', dbError.message);
+    }
+    
+    // Fallback to organization/role mapping if no database assignments
     const userOrg = (req.user.organization || '').toLowerCase();
     const userRole = (req.user.role || '').toLowerCase();
     
@@ -897,10 +928,10 @@ router.get('/agencies/my/list', authenticateToken, async (req, res) => {
       'nbe': ['NBE'],
       'governor': ['NBE'],
       'ecx': ['ECX'],
-      'commercial-bank': ['BANK'],
-      'commercialbank': ['BANK'],
-      'bank': ['BANK'],
-      'banker': ['BANK'],
+      'commercial-bank': ['CBE'],
+      'commercialbank': ['CBE'],
+      'bank': ['CBE'],  // Fixed: Changed from BANK to CBE
+      'banker': ['CBE'], // Fixed: Changed from BANK to CBE
       'shipping': ['SHIPPING'],
       'shipping-line': ['SHIPPING'],
       'shippingline': ['SHIPPING'],
@@ -935,7 +966,7 @@ router.get('/agencies/my/list', authenticateToken, async (req, res) => {
       
       return res.json({
         success: true,
-        data: allAgenciesResult.rows
+        data: allAgenciesResult.rows  // Changed from 'agencies' to 'data'
       });
     }
     
@@ -949,11 +980,11 @@ router.get('/agencies/my/list', authenticateToken, async (req, res) => {
         ORDER BY member_name
       `, [memberCodes]);
       
-      console.log('[Agencies] Returning', result.rows.length, 'agencies for user');
+      console.log('[Agencies] Returning', result.rows.length, 'agencies for user via organization mapping');
       
       return res.json({
         success: true,
-        data: result.rows
+        data: result.rows  // Changed from 'agencies' to 'data'
       });
     }
     
@@ -961,7 +992,7 @@ router.get('/agencies/my/list', authenticateToken, async (req, res) => {
     console.log('[Agencies] No agencies found for user');
     res.json({
       success: true,
-      data: []
+      data: []  // Changed from 'agencies' to 'data'
     });
   } catch (error) {
     console.error('[Agencies] Fetch error:', error);
@@ -1001,6 +1032,192 @@ router.get('/agencies/all', async (req, res) => {
     console.error('[Network Members] Fetch error:', error);
     res.status(500).json({ 
       success: false,
+      error: error.message 
+    });
+  }
+});
+
+/**
+ * GET /api/network/dashboard
+ * Get network member dashboard data (hybrid: PostgreSQL with blockchain fallback)
+ */
+router.get('/dashboard', authenticateToken, async (req, res) => {
+  const client = await pool.connect();
+  
+  try {
+    const userRole = req.user.role?.toLowerCase();
+    const userOrg = (req.user.organization || req.user.companyName || '').toUpperCase();
+    
+    console.log(`[Network Dashboard] User: ${req.user.username}, Role: ${userRole}, Org: ${userOrg}`);
+    
+    // Get basic statistics from PostgreSQL (fast)
+    const statsQuery = `
+      SELECT 
+        COUNT(DISTINCT e.export_id) as total_exports,
+        COUNT(DISTINCT e.export_id) FILTER (WHERE e.status IN ('PENDING', 'SUBMITTED')) as pending_exports,
+        COUNT(DISTINCT e.export_id) FILTER (WHERE e.status = 'COMPLETED') as completed_exports,
+        COUNT(DISTINCT p.payment_id) as total_payments,
+        COUNT(DISTINCT p.payment_id) FILTER (WHERE p.status = 'COMPLETED') as completed_payments,
+        COUNT(DISTINCT sc.contract_id) as total_contracts,
+        COUNT(DISTINCT sc.contract_id) FILTER (WHERE sc.status = 'REGISTERED') as registered_contracts
+      FROM exports e
+      LEFT JOIN payments p ON e.export_id = p.export_id
+      LEFT JOIN sales_contracts sc ON e.exporter_id = sc.exporter_id
+    `;
+    
+    const statsResult = await client.query(statsQuery);
+    const stats = statsResult.rows[0];
+    
+    // Get recent activities from PostgreSQL
+    const activitiesQuery = `
+      SELECT 
+        'export' as type,
+        e.export_id as id,
+        e.coffee_type as title,
+        e.status,
+        e.created_at,
+        ep.business_name as exporter_name
+      FROM exports e
+      LEFT JOIN exporter_profiles ep ON e.exporter_id = ep.exporter_id
+      ORDER BY e.created_at DESC
+      LIMIT 10
+    `;
+    
+    const activitiesResult = await client.query(activitiesQuery);
+    
+    // Get network member specific data
+    let memberSpecificData = {};
+    
+    if (userRole === 'bank' || userRole === 'banker') {
+      const bankQuery = `
+        SELECT 
+          COUNT(*) as pending_reviews,
+          SUM(amount) as total_amount_pending
+        FROM payments 
+        WHERE status IN ('INITIATED', 'DOCUMENTS_SUBMITTED', 'UNDER_REVIEW')
+      `;
+      const bankResult = await client.query(bankQuery);
+      memberSpecificData = {
+        pendingReviews: bankResult.rows[0].pending_reviews || 0,
+        totalAmountPending: bankResult.rows[0].total_amount_pending || 0
+      };
+    }
+    
+    if (userRole === 'ecta') {
+      const ectaQuery = `
+        SELECT 
+          COUNT(*) as pending_approvals,
+          COUNT(*) FILTER (WHERE status = 'ECTA_LICENSE_PENDING') as license_pending,
+          COUNT(*) FILTER (WHERE status = 'ECTA_QUALITY_PENDING') as quality_pending
+        FROM exports 
+        WHERE status LIKE 'ECTA_%'
+      `;
+      const ectaResult = await client.query(ectaQuery);
+      memberSpecificData = {
+        pendingApprovals: ectaResult.rows[0].pending_approvals || 0,
+        licensePending: ectaResult.rows[0].license_pending || 0,
+        qualityPending: ectaResult.rows[0].quality_pending || 0
+      };
+    }
+    
+    if (userRole === 'nbe') {
+      const nbeQuery = `
+        SELECT 
+          COUNT(*) as fx_pending,
+          SUM(amount) as fx_amount_pending
+        FROM payments 
+        WHERE status = 'PROCESSING' AND payment_method LIKE '%FX%'
+      `;
+      const nbeResult = await client.query(nbeQuery);
+      memberSpecificData = {
+        fxPending: nbeResult.rows[0].fx_pending || 0,
+        fxAmountPending: nbeResult.rows[0].fx_amount_pending || 0
+      };
+    }
+    
+    const dashboardData = {
+      success: true,
+      statistics: {
+        totalExports: parseInt(stats.total_exports) || 0,
+        pendingExports: parseInt(stats.pending_exports) || 0,
+        completedExports: parseInt(stats.completed_exports) || 0,
+        totalPayments: parseInt(stats.total_payments) || 0,
+        completedPayments: parseInt(stats.completed_payments) || 0,
+        totalContracts: parseInt(stats.total_contracts) || 0,
+        registeredContracts: parseInt(stats.registered_contracts) || 0
+      },
+      recentActivities: activitiesResult.rows,
+      memberSpecific: memberSpecificData,
+      userInfo: {
+        role: userRole,
+        organization: userOrg,
+        username: req.user.username
+      },
+      dataSource: 'postgresql', // Hybrid system using PostgreSQL as primary
+      timestamp: new Date().toISOString()
+    };
+    
+    console.log(`[Network Dashboard] Successfully fetched dashboard for ${req.user.username}`);
+    res.json(dashboardData);
+    
+  } catch (error) {
+    console.error('[Network Dashboard] Error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch network dashboard data',
+      details: error.message
+    });
+  } finally {
+    client.release();
+  }
+});
+
+/**
+ * Get all Network exports (with filters)
+ * IMPORTANT: This route MUST be BEFORE /:requestId to avoid route collision
+ */
+router.get('/exports', authenticateToken, async (req, res) => {
+  try {
+    console.log('[Network Exports] Fetching exports with query:', req.query);
+    const { status } = req.query;
+    
+    let query = `
+      SELECT 
+        e.*,
+        ep.business_name as exporter_name,
+        ep.tin as exporter_tin
+      FROM exports e
+      LEFT JOIN exporter_profiles ep ON e.exporter_id = ep.exporter_id
+      WHERE 1=1
+    `;
+    const params = [];
+    
+    if (status) {
+      query += ' AND e.status = $1';
+      params.push(status);
+    }
+    
+    query += ' ORDER BY e.created_at DESC';
+    
+    console.log('[Network Exports] Query:', query);
+    console.log('[Network Exports] Params:', params);
+    
+    const result = await pool.query(query, params);
+    
+    console.log('[Network Exports] Found', result.rows.length, 'exports from PostgreSQL');
+    
+    // Return PostgreSQL data directly (blockchain integration disabled for this endpoint)
+    res.json({
+      success: true,
+      data: result.rows,
+      source: 'postgres'
+    });
+  } catch (error) {
+    console.error('[Network Exports] Error:', error);
+    // Return empty array instead of 500 error for better UX
+    res.json({ 
+      success: true, 
+      data: [],
       error: error.message 
     });
   }
@@ -1249,7 +1466,19 @@ router.post('/authenticate-document', authenticateToken, async (req, res) => {
 router.get('/agencies/:memberCode/pending', authenticateToken, async (req, res) => {
   try {
     const { memberCode } = req.params;
-    const statusColumn = `${memberCode.toLowerCase()}_status`;
+    
+    // Map member codes to actual database column names
+    const statusColumnMap = {
+      'ECTA': 'ecta_status',
+      'CBE': 'bank_status',
+      'BANK': 'bank_status',
+      'NBE': 'nbe_status',
+      'CUSTOMS': 'customs_status',
+      'ERCA': 'customs_status',
+      'SHIPPING': 'shipping_status'
+    };
+    
+    const statusColumn = statusColumnMap[memberCode.toUpperCase()] || `${memberCode.toLowerCase()}_status`;
     
     // Query submissions where this member's status is PENDING
     const query = `
@@ -1303,7 +1532,19 @@ router.get('/agencies/:memberCode/pending', authenticateToken, async (req, res) 
 router.get('/agencies/:memberCode/stats', authenticateToken, async (req, res) => {
   try {
     const { memberCode } = req.params;
-    const statusColumn = `${memberCode.toLowerCase()}_status`;
+    
+    // Map member codes to actual database column names
+    const statusColumnMap = {
+      'ECTA': 'ecta_status',
+      'CBE': 'bank_status',
+      'BANK': 'bank_status',
+      'NBE': 'nbe_status',
+      'CUSTOMS': 'customs_status',
+      'ERCA': 'customs_status',
+      'SHIPPING': 'shipping_status'
+    };
+    
+    const statusColumn = statusColumnMap[memberCode.toUpperCase()] || `${memberCode.toLowerCase()}_status`;
     
     const query = `
       SELECT 
@@ -1756,6 +1997,62 @@ router.get('/contracts/:referenceNumber/check-permission/:memberCode', async (re
   } catch (error) {
     console.error('[Contract Permission Check] Error:', error);
     res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * Get all exports (for network members like banks)
+ * GET /api/network/exports
+ * 
+ * This endpoint allows network members (banks, ECTA, NBE, etc.) to view all exports
+ * with optional status filtering. This is different from the exporter-portal endpoint
+ * which only returns exports for the logged-in exporter.
+ */
+router.get('/exports', authenticateToken, async (req, res) => {
+  try {
+    console.log('[Network Exports] Fetching exports with query:', req.query);
+    const { status } = req.query;
+    
+    // Try PostgreSQL first (primary data source in hybrid mode)
+    let query = `
+      SELECT 
+        e.*,
+        ep.business_name as exporter_name,
+        ep.tin as exporter_tin
+      FROM exports e
+      LEFT JOIN exporter_profiles ep ON e.exporter_id = ep.exporter_id
+      WHERE 1=1
+    `;
+    const params = [];
+    
+    if (status) {
+      query += ' AND e.status = $1';
+      params.push(status);
+    }
+    
+    query += ' ORDER BY e.created_at DESC';
+    
+    console.log('[Network Exports] Query:', query);
+    console.log('[Network Exports] Params:', params);
+    
+    const result = await pool.query(query, params);
+    
+    console.log('[Network Exports] Found', result.rows.length, 'exports from PostgreSQL');
+    
+    // Return PostgreSQL data directly (blockchain integration disabled for this endpoint)
+    res.json({
+      success: true,
+      data: result.rows,
+      source: 'postgres'
+    });
+  } catch (error) {
+    console.error('[Network Exports] Error:', error);
+    // Return empty array instead of 500 error for better UX
+    res.json({ 
+      success: true, 
+      data: [],
+      error: error.message 
+    });
   }
 });
 

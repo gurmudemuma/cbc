@@ -111,20 +111,20 @@ export const baseTheme = {
   },
 };
 
-// Neutral default palette
+// Professional palette with Black text, Purple & Golden from logo, and White
 export const defaultPalette: PaletteOptions = {
   mode: 'light',
   primary: {
-    main: '#424242',
-    light: '#616161',
-    dark: '#212121',
+    main: '#9333EA', // Vibrant purple from logo
+    light: '#A855F7',
+    dark: '#7E22CE',
     contrastText: '#ffffff',
   },
   secondary: {
-    main: '#757575',
-    light: '#9e9e9e',
-    dark: '#424242',
-    contrastText: '#ffffff',
+    main: '#FBBF24', // Bright golden yellow from logo
+    light: '#FCD34D',
+    dark: '#F59E0B',
+    contrastText: '#000000',
   },
   error: {
     main: '#D32F2F',
@@ -133,33 +133,33 @@ export const defaultPalette: PaletteOptions = {
     contrastText: '#ffffff',
   },
   warning: {
-    main: '#F57C00',
-    light: '#FF9800',
-    dark: '#E65100',
-    contrastText: '#ffffff',
+    main: '#FBBF24', // Golden for warnings
+    light: '#FCD34D',
+    dark: '#F59E0B',
+    contrastText: '#000000',
   },
   info: {
-    main: '#1976D2',
-    light: '#2196F3',
-    dark: '#0D47A1',
+    main: '#9333EA', // Purple for info
+    light: '#A855F7',
+    dark: '#7E22CE',
     contrastText: '#ffffff',
   },
   success: {
-    main: '#388E3C',
-    light: '#4CAF50',
-    dark: '#2E7D32',
+    main: '#9333EA', // Purple for success
+    light: '#A855F7',
+    dark: '#7E22CE',
     contrastText: '#ffffff',
   },
   background: {
-    default: '#fafafa',
-    paper: '#ffffff',
+    default: '#FAFAFA', // Light gray background
+    paper: '#FFFFFF', // White for cards/papers
   },
   text: {
-    primary: '#212121',
-    secondary: '#616161',
-    disabled: '#9e9e9e',
+    primary: '#000000', // Pure black for all text
+    secondary: '#424242', // Dark gray for secondary text
+    disabled: '#9E9E9E',
   },
-  divider: '#e0e0e0',
+  divider: '#E0E0E0',
 };
 
 // Component overrides with modern styling
@@ -461,54 +461,54 @@ export const componentOverrides = (palette: any) => ({
   },
 });
 
-// Organization-specific palettes
+// Organization-specific palettes - All use Black text, Purple & Golden from logo, and White
 export const orgPalettes: Record<string, PaletteOptions> = {
   'commercial-bank': {
     mode: 'light',
     primary: {
-      main: '#4A148C', // Premium Royal Purple
-      light: '#7C43BD',
-      dark: '#12005E',
+      main: '#9333EA', // Vibrant purple from logo
+      light: '#A855F7',
+      dark: '#7E22CE',
       contrastText: '#ffffff',
     },
     secondary: {
-      main: '#FFD700', // Gold accent
-      light: '#FFE57F',
-      dark: '#C79A00',
+      main: '#FBBF24', // Bright golden yellow from logo
+      light: '#FCD34D',
+      dark: '#F59E0B',
       contrastText: '#000000',
-    },
-    background: {
-      default: '#F3E5F5',
-      paper: '#FFFFFF',
-    },
-    text: {
-      primary: '#2A0E4E',
-      secondary: '#4A148C',
-      disabled: '#9E9E9E',
-    },
-    divider: '#E1BEE7',
-  },
-  'commercialbank': {
-    mode: 'light',
-    primary: {
-      main: '#6A1B9A',
-      light: '#8E24AA',
-      dark: '#4A148C',
-      contrastText: '#FFD700',
-    },
-    secondary: {
-      main: '#D4AF37',
-      light: '#FFD700',
-      dark: '#B8860B',
-      contrastText: '#1A1A1A',
     },
     background: {
       default: '#FAFAFA',
       paper: '#FFFFFF',
     },
     text: {
-      primary: '#1A1A1A',
-      secondary: '#6A1B9A',
+      primary: '#000000', // Black text only
+      secondary: '#424242',
+      disabled: '#9E9E9E',
+    },
+    divider: '#E0E0E0',
+  },
+  'commercialbank': {
+    mode: 'light',
+    primary: {
+      main: '#9333EA',
+      light: '#A855F7',
+      dark: '#7E22CE',
+      contrastText: '#ffffff',
+    },
+    secondary: {
+      main: '#FBBF24',
+      light: '#FCD34D',
+      dark: '#F59E0B',
+      contrastText: '#000000',
+    },
+    background: {
+      default: '#FAFAFA',
+      paper: '#FFFFFF',
+    },
+    text: {
+      primary: '#000000',
+      secondary: '#424242',
       disabled: '#9E9E9E',
     },
     divider: '#E0E0E0',
@@ -516,24 +516,24 @@ export const orgPalettes: Record<string, PaletteOptions> = {
   'exporter-portal': {
     mode: 'light',
     primary: {
-      main: '#1E4620', // Deeper, more professional Green
-      light: '#4CAF50',
-      dark: '#0D2B0F',
+      main: '#9333EA',
+      light: '#A855F7',
+      dark: '#7E22CE',
       contrastText: '#ffffff',
     },
-    secondary: { // Gold/Amber accent for coffee
-      main: '#D4A017',
-      light: '#FFD700',
-      dark: '#A67D12',
+    secondary: {
+      main: '#FBBF24',
+      light: '#FCD34D',
+      dark: '#F59E0B',
       contrastText: '#000000',
     },
     background: {
-      default: '#F5F7F5',
+      default: '#FAFAFA',
       paper: '#FFFFFF',
     },
     text: {
-      primary: '#1B3A1F',
-      secondary: '#3B6B3F',
+      primary: '#000000',
+      secondary: '#424242',
       disabled: '#9E9E9E',
     },
     divider: '#E0E0E0',
@@ -541,194 +541,202 @@ export const orgPalettes: Record<string, PaletteOptions> = {
   'exporterportal': {
     mode: 'light',
     primary: {
-      main: '#2E7D32',
-      light: '#4CAF50',
-      dark: '#1B5E20',
+      main: '#9333EA',
+      light: '#A855F7',
+      dark: '#7E22CE',
       contrastText: '#ffffff',
     },
     secondary: {
-      main: '#F9A825',
-      light: '#FBC02D',
-      dark: '#F57F17',
+      main: '#FBBF24',
+      light: '#FCD34D',
+      dark: '#F59E0B',
       contrastText: '#000000',
     },
     background: {
-      default: '#F1F8F4',
+      default: '#FAFAFA',
       paper: '#FFFFFF',
     },
     text: {
-      primary: '#1B3A1F',
-      secondary: '#2E5C33',
+      primary: '#000000',
+      secondary: '#424242',
+      disabled: '#9E9E9E',
     },
-    divider: '#C8E6C9',
+    divider: '#E0E0E0',
   },
   'national-bank': {
     mode: 'light',
     primary: {
-      main: '#0D47A1', // Authoritative Navy
-      light: '#5472D3',
-      dark: '#002171',
+      main: '#9333EA',
+      light: '#A855F7',
+      dark: '#7E22CE',
       contrastText: '#ffffff',
     },
     secondary: {
-      main: '#B0BEC5', // Silver/Platinum
-      light: '#E2F1F8',
-      dark: '#808E95',
+      main: '#FBBF24',
+      light: '#FCD34D',
+      dark: '#F59E0B',
       contrastText: '#000000',
     },
     background: {
-      default: '#ECEFF1',
+      default: '#FAFAFA',
       paper: '#FFFFFF',
     },
     text: {
-      primary: '#0D47A1',
-      secondary: '#546E7A',
+      primary: '#000000',
+      secondary: '#424242',
+      disabled: '#9E9E9E',
     },
-    divider: '#CFD8DC',
+    divider: '#E0E0E0',
   },
   'nationalbank': {
     mode: 'light',
     primary: {
-      main: '#0D47A1',
-      light: '#5472D3',
-      dark: '#002171',
+      main: '#9333EA',
+      light: '#A855F7',
+      dark: '#7E22CE',
       contrastText: '#ffffff',
     },
     secondary: {
-      main: '#B0BEC5',
-      light: '#E2F1F8',
-      dark: '#808E95',
+      main: '#FBBF24',
+      light: '#FCD34D',
+      dark: '#F59E0B',
       contrastText: '#000000',
     },
     background: {
-      default: '#ECEFF1',
+      default: '#FAFAFA',
       paper: '#FFFFFF',
     },
     text: {
-      primary: '#0D47A1',
-      secondary: '#546E7A',
+      primary: '#000000',
+      secondary: '#424242',
+      disabled: '#9E9E9E',
     },
-    divider: '#CFD8DC',
+    divider: '#E0E0E0',
   },
   'ecta': {
     mode: 'light',
     primary: {
-      main: '#6D4C41',
-      light: '#8D6E63',
-      dark: '#4E342E',
+      main: '#9333EA',
+      light: '#A855F7',
+      dark: '#7E22CE',
       contrastText: '#ffffff',
     },
     secondary: {
-      main: '#D84315',
-      light: '#FF5722',
-      dark: '#BF360C',
-      contrastText: '#ffffff',
+      main: '#FBBF24',
+      light: '#FCD34D',
+      dark: '#F59E0B',
+      contrastText: '#000000',
     },
     background: {
-      default: '#FBF8F5',
+      default: '#FAFAFA',
       paper: '#FFFFFF',
     },
     text: {
-      primary: '#3E2723',
-      secondary: '#5D4037',
+      primary: '#000000',
+      secondary: '#424242',
+      disabled: '#9E9E9E',
     },
-    divider: '#D7CCC8',
+    divider: '#E0E0E0',
   },
   'ecx': {
     mode: 'light',
     primary: {
-      main: '#558B2F',
-      light: '#689F38',
-      dark: '#33691E',
+      main: '#9333EA',
+      light: '#A855F7',
+      dark: '#7E22CE',
       contrastText: '#ffffff',
     },
     secondary: {
-      main: '#795548',
-      light: '#8D6E63',
-      dark: '#5D4037',
-      contrastText: '#ffffff',
+      main: '#FBBF24',
+      light: '#FCD34D',
+      dark: '#F59E0B',
+      contrastText: '#000000',
     },
     background: {
-      default: '#F9FBF7',
+      default: '#FAFAFA',
       paper: '#FFFFFF',
     },
     text: {
-      primary: '#1B5E20',
-      secondary: '#33691E',
+      primary: '#000000',
+      secondary: '#424242',
+      disabled: '#9E9E9E',
     },
-    divider: '#C5E1A5',
+    divider: '#E0E0E0',
   },
   'shipping-line': {
     mode: 'light',
     primary: {
-      main: '#0277BD',
-      light: '#0288D1',
-      dark: '#01579B',
+      main: '#9333EA',
+      light: '#A855F7',
+      dark: '#7E22CE',
       contrastText: '#ffffff',
     },
     secondary: {
-      main: '#00838F',
-      light: '#00ACC1',
-      dark: '#006064',
-      contrastText: '#ffffff',
+      main: '#FBBF24',
+      light: '#FCD34D',
+      dark: '#F59E0B',
+      contrastText: '#000000',
     },
     background: {
-      default: '#F1F8FB',
+      default: '#FAFAFA',
       paper: '#FFFFFF',
     },
     text: {
-      primary: '#01579B',
-      secondary: '#0277BD',
+      primary: '#000000',
+      secondary: '#424242',
+      disabled: '#9E9E9E',
     },
-    divider: '#B3E5FC',
+    divider: '#E0E0E0',
   },
   'shippingline': {
     mode: 'light',
     primary: {
-      main: '#0277BD',
-      light: '#0288D1',
-      dark: '#01579B',
+      main: '#9333EA',
+      light: '#A855F7',
+      dark: '#7E22CE',
       contrastText: '#ffffff',
     },
     secondary: {
-      main: '#00838F',
-      light: '#00ACC1',
-      dark: '#006064',
-      contrastText: '#ffffff',
+      main: '#FBBF24',
+      light: '#FCD34D',
+      dark: '#F59E0B',
+      contrastText: '#000000',
     },
     background: {
-      default: '#F1F8FB',
+      default: '#FAFAFA',
       paper: '#FFFFFF',
     },
     text: {
-      primary: '#01579B',
-      secondary: '#0277BD',
+      primary: '#000000',
+      secondary: '#424242',
+      disabled: '#9E9E9E',
     },
-    divider: '#B3E5FC',
+    divider: '#E0E0E0',
   },
   'custom-authorities': {
     mode: 'light',
     primary: {
-      main: '#5E35B1',
-      light: '#7E57C2',
-      dark: '#4527A0',
+      main: '#9333EA',
+      light: '#A855F7',
+      dark: '#7E22CE',
       contrastText: '#ffffff',
     },
     secondary: {
-      main: '#F57C00',
-      light: '#FF9800',
-      dark: '#E65100',
-      contrastText: '#ffffff',
+      main: '#FBBF24',
+      light: '#FCD34D',
+      dark: '#F59E0B',
+      contrastText: '#000000',
     },
     background: {
-      default: '#F7F5FB',
+      default: '#FAFAFA',
       paper: '#FFFFFF',
     },
     text: {
-      primary: '#311B92',
-      secondary: '#4527A0',
+      primary: '#000000',
+      secondary: '#424242',
+      disabled: '#9E9E9E',
     },
-    divider: '#D1C4E9',
+    divider: '#E0E0E0',
   },
 };
 
@@ -736,8 +744,6 @@ export const orgPalettes: Record<string, PaletteOptions> = {
 export function createEnhancedTheme(org?: string, mode: 'light' | 'dark' = 'light'): Theme {
   // Handle null/undefined org values
   const normalizedOrg = org?.toLowerCase()?.trim() || null;
-  
-  console.log('Creating theme for org:', normalizedOrg, 'mode:', mode);
   
   const palette = normalizedOrg && orgPalettes[normalizedOrg] ? orgPalettes[normalizedOrg] : defaultPalette;
 

@@ -72,6 +72,8 @@ app.get('/health', (req, res) => {
 
 // API routes
 app.use('/api/auth', authRouter);
+// Document routes (must come before general /api/exporter route)
+app.use('/api/exporter/documents', documentRequestsRouter); // Document requests for exporters
 app.use('/api/exporter', exporterRouter);
 app.use('/api/preregistration', exporterRouter); // Frontend-compatible path for certificate downloads
 app.use('/api/exports', exportsRouter);
@@ -102,7 +104,6 @@ app.use('/api/network', networkRouter); // Network endpoints (preferred naming)
 
 // Document Issuance routes
 app.use('/api/document-requests', documentRequestsRouter); // Document requests endpoint
-app.use('/api/exporter/documents', documentRequestsRouter); // Alternative path for backward compatibility
 app.use('/api/document-issuance', documentIssuanceRouter); // Document issuance endpoint
 
 // Hybrid Data Service routes

@@ -277,8 +277,9 @@ export class AuthController {
       }
 
       // Verify user is an exporter, admin, or agency user
+      const userRole = user.role || 'unknown';
       const allowedRoles = ['exporter', 'admin', 'AGENCY_USER', 'AGENCY_ADMIN'];
-      if (!allowedRoles.includes(user.role)) {
+      if (!allowedRoles.includes(userRole)) {
         throw new AppError(
           ErrorCode.UNAUTHORIZED,
           'Access denied. Only exporters, admins, and agency officials can access this portal.',
@@ -356,7 +357,7 @@ export class AuthController {
             username: user.username,
             email: user.email,
             organizationId: user.organization_id,
-            role: user.role,
+            role: user.role || 'exporter',
             exporterId,
           },
           token,

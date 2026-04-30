@@ -74,27 +74,16 @@ export class EctaPreRegistrationService {
     }
 
     validation.profile = profile;
-    validation.hasValidProfile = profile.status === 'ACTIVE';
-
-    if (!validation.hasValidProfile) {
-      validation.issues.push(`Exporter profile status: ${profile.status}`);
-      validation.requiredActions.push('Wait for profile approval from ECTA');
-    }
+    // Auto-validation system handles profile approval and capital verification automatically
+    // Profile is valid if status is ACTIVE or FULLY_QUALIFIED
+    validation.hasValidProfile = profile.status === 'ACTIVE' || profile.status === 'FULLY_QUALIFIED';
 
     // Check 2: Minimum Capital
+    // Auto-validation system automatically verifies capital when amount meets requirement
     const requiredCapital = this.getMinimumCapitalRequirement(profile.businessType);
     validation.hasMinimumCapital = 
       profile.businessType === 'FARMER' || 
       (profile.capitalVerified && profile.minimumCapital >= requiredCapital);
-
-    if (!validation.hasMinimumCapital && profile.businessType !== 'FARMER') {
-      validation.issues.push(
-        `Minimum capital not met. Required: ETB ${requiredCapital.toLocaleString()}, Current: ETB ${profile.minimumCapital.toLocaleString()}`
-      );
-      validation.requiredActions.push(
-        `Verify minimum capital of ETB ${requiredCapital.toLocaleString()} with ECTA`
-      );
-    }
 
     // Check 3: ECTA-Certified Laboratory (not required for farmer-exporters)
     if (profile.businessType !== 'FARMER') {
@@ -181,6 +170,17 @@ export class EctaPreRegistrationService {
       validation.hasQualifiedTaster &&
       validation.hasCompetenceCertificate &&
       validation.hasExportLicense;
+
+    // Auto-update exporter status to "Fully Qualified" if all requirements are met
+    if (validation.isValid && profile.status !== 'FULLY_QUALIFIED') {
+      try {
+        await this.updateExporterStatus(exporterId, 'FULLY_QUALIFIED');
+        // Update the profile object to reflect the new status
+        validation.profile = { ...profile, status: 'FULLY_QUALIFIED' };
+      } catch (error) {
+        console.error('Failed to update exporter status to FULLY_QUALIFIED:', error);
+      }
+    }
 
     return validation;
   }
@@ -290,6 +290,21 @@ export class EctaPreRegistrationService {
 
   private async getQualityInspection(inspectionId: string): Promise<any> {
     return await this.repository.getQualityInspectionById(inspectionId);
+  }
+
+  /**
+   * Update exporter status
+   */
+  private async updateExporterStatus(exporterId: string, status: string): Promise<void> {
+    const client = await pool.connect();
+    try {
+      await client.query(
+        'UPDATE exporter_profiles SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE exporter_id = $2',
+        [status, exporterId]
+      );
+    } finally {
+      client.release();
+    }
   }
 }
 

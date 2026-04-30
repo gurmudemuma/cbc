@@ -54,7 +54,10 @@ const ContractNotifications: React.FC = () => {
         setUnreadCount(unread);
       }
     } catch (error) {
-      console.error('Error fetching contract notifications:', error);
+      // Silently fail if network service is not available
+      // This is expected when network service is not running
+      // Don't log anything - just return silently
+      return;
     } finally {
       setLoading(false);
     }

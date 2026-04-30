@@ -110,7 +110,20 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
           return Array.isArray(licenses) ? licenses : licenses?.data || [];
         case 5:
           const exporters = await ectaPreRegistrationService.getAllExporters();
-          return Array.isArray(exporters) ? exporters : exporters?.data || [];
+          const exporterData = Array.isArray(exporters) ? exporters : exporters?.data || [];
+          console.log('Frontend received exporter data:', {
+            count: exporterData.length,
+            sampleData: exporterData.length > 0 ? {
+              businessName: exporterData[0].businessName,
+              registrationNumber: exporterData[0].registrationNumber,
+              officeAddress: exporterData[0].officeAddress,
+              city: exporterData[0].city,
+              region: exporterData[0].region,
+              contactPerson: exporterData[0].contactPerson,
+              status: exporterData[0].status
+            } : null
+          });
+          return exporterData;
         default:
           return [];
       }
@@ -345,6 +358,29 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
     }
   };
 
+  const handleSuspendExporter = async (exporterId) => {
+    if (!rejectReason.trim()) {
+      setError('Please provide a reason for suspension');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Use the reject endpoint with suspension reason
+      await ectaPreRegistrationService.rejectExporter(exporterId, `SUSPENDED: ${rejectReason}`);
+      setSuccess('Exporter suspended successfully');
+      refreshAllData();
+      setDialogOpen(false);
+      setRejectReason('');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to suspend exporter');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleDownloadCompetenceCertificate = async (certificateId: string) => {
     try {
       setDownloading(certificateId);
@@ -384,16 +420,69 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
   };
 
   const openDialog = async (item, type) => {
+    console.log('=== OPEN DIALOG DEBUG ===');
+    console.log('Dialog type:', type);
+    console.log('Item data:', JSON.stringify(item, null, 2));
+    console.log('Item keys:', Object.keys(item || {}));
+    console.log('Registration Number:', item?.registrationNumber, item?.registration_number);
+    console.log('Office Address:', item?.officeAddress, item?.office_address);
+    console.log('Contact Person:', item?.contactPerson, item?.contact_person);
+    console.log('========================');
+    
     setSelectedItem(item);
     setDialogType(type);
     setDialogOpen(true);
 
+    // If it's a view-profile dialog, fetch comprehensive exporter details
+    const exporterId = item?.exporterId || item?.exporter_id;
+    if (type === 'view-profile' && exporterId) {
+      setLoading(true);
+      try {
+        // Fetch comprehensive exporter dashboard data
+        const dashboardData = await ectaPreRegistrationService.getExporterDashboard(exporterId);
+        console.log('Fetched comprehensive exporter data:', dashboardData);
+        
+        // Update selectedItem with comprehensive data
+        setSelectedItem({
+          ...item,
+          exporterId: exporterId, // Ensure exporterId is set
+          comprehensiveData: dashboardData?.data || dashboardData
+        });
+        setLoading(false);
+      } catch (err) {
+        console.error('Failed to fetch comprehensive exporter data:', err);
+        setLoading(false);
+        
+        // Check if it's an authentication error
+        if (err.response?.status === 401) {
+          // Keep the dialog open with basic data, just show a warning
+          console.warn('Authentication required - showing basic information only');
+          // Don't set error or redirect - just keep the basic data visible
+          setSelectedItem({
+            ...item,
+            exporterId: exporterId,
+            comprehensiveData: null,
+            authWarning: 'Login required to view complete details'
+          });
+        } else {
+          // For other errors, show error but keep dialog open
+          setSelectedItem({
+            ...item,
+            exporterId: exporterId,
+            comprehensiveData: null,
+            errorMessage: 'Failed to load complete details'
+          });
+        }
+      }
+    }
+
     // Fetch laboratories and tasters for competence certificate dialog
-    if (type === 'issue-competence' && item?.exporterId) {
+    if (type === 'issue-competence' && (item?.exporterId || item?.exporter_id)) {
+      const exporterIdForFetch = item?.exporterId || item?.exporter_id;
       try {
         const [labsResponse, tastersResponse] = await Promise.all([
-          ectaPreRegistrationService.getExporterLaboratories(item.exporterId),
-          ectaPreRegistrationService.getExporterTasters(item.exporterId),
+          ectaPreRegistrationService.getExporterLaboratories(exporterIdForFetch),
+          ectaPreRegistrationService.getExporterTasters(exporterIdForFetch),
         ]);
         
         setAvailableLaboratories(labsResponse?.data || []);
@@ -425,6 +514,7 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
     const statusColors = {
       PENDING: 'warning',
       ACTIVE: 'success',
+      FULLY_QUALIFIED: 'success',
       REJECTED: 'error',
       SUSPENDED: 'default',
     };
@@ -461,7 +551,7 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
               <TableCell>{profile.minimumCapital?.toLocaleString() || '0'}</TableCell>
               <TableCell>{getStatusChip(profile.status)}</TableCell>
               <TableCell>
-                {profile.status === 'ACTIVE' && profile.approvalCertificateId ? (
+                {(profile.status === 'ACTIVE' || profile.status === 'FULLY_QUALIFIED') && profile.approvalCertificateId ? (
                   <Tooltip title="Download Approval Certificate">
                     <IconButton
                       size="small"
@@ -476,7 +566,7 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
                       )}
                     </IconButton>
                   </Tooltip>
-                ) : profile.status === 'ACTIVE' ? (
+                ) : (profile.status === 'ACTIVE' || profile.status === 'FULLY_QUALIFIED') ? (
                   <Chip label="PDF Pending" size="small" color="warning" />
                 ) : (
                   <Chip label="Not Approved" size="small" color="default" />
@@ -874,7 +964,7 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
         </TableHead>
         <TableBody>
           {allExporters.map((exporter) => (
-            <TableRow key={exporter.id}>
+            <TableRow key={exporter.id || exporter.exporterId}>
               <TableCell sx={{ fontWeight: 500 }}>
                 {exporter.businessName || exporter.business_name || 'N/A'}
               </TableCell>
@@ -882,7 +972,7 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
               <TableCell>{exporter.businessType || exporter.business_type || 'N/A'}</TableCell>
               <TableCell>{getStatusChip(exporter.status)}</TableCell>
               <TableCell align="center">
-                {exporter.laboratoryCertified || exporter.laboratory_certified ? (
+                {(exporter.laboratoryCertified || exporter.laboratory_certified || exporter.hasCertifiedLaboratory || exporter.status === 'FULLY_QUALIFIED') ? (
                   <Tooltip title="Laboratory Certified">
                     <CheckCircle color="success" fontSize="small" />
                   </Tooltip>
@@ -893,7 +983,7 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
                 )}
               </TableCell>
               <TableCell align="center">
-                {exporter.hasCompetenceCertificate || exporter.has_competence_certificate ? (
+                {(exporter.hasCompetenceCertificate || exporter.has_competence_certificate || exporter.status === 'FULLY_QUALIFIED') ? (
                   <Tooltip title="Competence Certificate Issued">
                     <CheckCircle color="success" fontSize="small" />
                   </Tooltip>
@@ -904,7 +994,7 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
                 )}
               </TableCell>
               <TableCell align="center">
-                {exporter.hasExportLicense || exporter.has_export_license ? (
+                {(exporter.hasExportLicense || exporter.has_export_license || exporter.status === 'FULLY_QUALIFIED') ? (
                   <Tooltip title="Export License Issued">
                     <CheckCircle color="success" fontSize="small" />
                   </Tooltip>
@@ -915,8 +1005,12 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
                 )}
               </TableCell>
               <TableCell align="center">
-                {exporter.isQualified || exporter.is_qualified ? (
-                  <Chip label="Qualified" color="success" size="small" />
+                {(exporter.isQualified || exporter.is_qualified) ? (
+                  <Chip 
+                    label={exporter.status === 'FULLY_QUALIFIED' ? 'Fully Qualified' : 'Qualified'} 
+                    color="success" 
+                    size="small" 
+                  />
                 ) : (
                   <Chip label="Not Qualified" color="default" size="small" />
                 )}
@@ -974,6 +1068,43 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
                       </IconButton>
                     </Tooltip>
                   ) : null}
+
+                  {/* Approve/Reject buttons - only show for non-FULLY_QUALIFIED exporters */}
+                  {exporter.status !== 'FULLY_QUALIFIED' && exporter.status !== 'REJECTED' && (
+                    <>
+                      <Tooltip title="Approve Exporter">
+                        <IconButton
+                          size="small"
+                          color="success"
+                          onClick={() => handleApproveProfile(exporter.exporterId || exporter.exporter_id)}
+                        >
+                          <CheckCircle fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Reject Exporter">
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => openDialog(exporter, 'reject-profile')}
+                        >
+                          <Cancel fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </>
+                  )}
+
+                  {/* Status change actions for FULLY_QUALIFIED exporters */}
+                  {exporter.status === 'FULLY_QUALIFIED' && (
+                    <Tooltip title="Suspend Exporter">
+                      <IconButton
+                        size="small"
+                        color="warning"
+                        onClick={() => openDialog(exporter, 'suspend-exporter')}
+                      >
+                        <Cancel fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  )}
                 </Box>
               </TableCell>
             </TableRow>
@@ -1123,6 +1254,42 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
       );
     }
 
+    if (dialogType === 'suspend-exporter') {
+      return (
+        <Dialog open={dialogOpen} onClose={closeDialog} maxWidth="sm" fullWidth>
+          <DialogTitle>Suspend Exporter</DialogTitle>
+          <DialogContent>
+            <Typography variant="body2" paragraph>
+              Suspending: <strong>{selectedItem?.businessName || selectedItem?.companyName || 'N/A'}</strong>
+            </Typography>
+            <Typography variant="body2" color="warning.main" paragraph>
+              This will change the exporter's status from FULLY_QUALIFIED to SUSPENDED.
+            </Typography>
+            <TextField
+              fullWidth
+              multiline
+              rows={4}
+              label="Reason for Suspension"
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              required
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={closeDialog}>Cancel</Button>
+            <Button
+              variant="contained"
+              color="warning"
+              onClick={() => handleSuspendExporter(selectedItem?.exporterId || selectedItem?.exporter_id)}
+              disabled={loading || !rejectReason.trim()}
+            >
+              {loading ? <CircularProgress size={24} /> : 'Suspend'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+      );
+    }
+
     if (dialogType === 'certify-lab' || dialogType === 'issue-competence' || dialogType === 'issue-license') {
       const titles = {
         'certify-lab': 'Certify Laboratory',
@@ -1244,55 +1411,399 @@ const ECTAPreRegistrationManagement = ({ user, org }: ECTAPreRegistrationManagem
     }
 
     if (dialogType === 'view-profile' && selectedItem) {
+      const comprehensiveData = selectedItem.comprehensiveData;
+      // Use comprehensive data if available, otherwise use selectedItem directly
+      const rawProfile = comprehensiveData?.details?.profile || selectedItem;
+      
+      // Normalize field names (handle both camelCase and snake_case)
+      const profile = {
+        exporterId: rawProfile?.exporterId || rawProfile?.exporter_id,
+        businessName: rawProfile?.businessName || rawProfile?.business_name || rawProfile?.companyName,
+        tin: rawProfile?.tin,
+        registrationNumber: rawProfile?.registrationNumber || rawProfile?.registration_number,
+        businessType: rawProfile?.businessType || rawProfile?.business_type,
+        minimumCapital: rawProfile?.minimumCapital || rawProfile?.minimum_capital,
+        status: rawProfile?.status,
+        officeAddress: rawProfile?.officeAddress || rawProfile?.office_address,
+        city: rawProfile?.city,
+        region: rawProfile?.region,
+        contactPerson: rawProfile?.contactPerson || rawProfile?.contact_person,
+        email: rawProfile?.email,
+        phone: rawProfile?.phone,
+      };
+      
+      const laboratory = comprehensiveData?.details?.laboratory;
+      const taster = comprehensiveData?.details?.taster;
+      const competenceCertificate = comprehensiveData?.details?.competenceCertificate;
+      const exportLicense = comprehensiveData?.details?.exportLicense;
+      const validation = comprehensiveData?.validation || {};
+      const compliance = comprehensiveData?.compliance || {};
+
+      // Debug logging
+      console.log('Dialog rendering with:', {
+        hasComprehensiveData: !!comprehensiveData,
+        rawProfile,
+        normalizedProfile: profile,
+        validation,
+        compliance,
+        profileStatus: profile?.status,
+      });
+
       return (
-        <Dialog open={dialogOpen} onClose={closeDialog} maxWidth="md" fullWidth>
-          <DialogTitle>Exporter Profile Details</DialogTitle>
+        <Dialog open={dialogOpen} onClose={closeDialog} maxWidth="lg" fullWidth>
+          <DialogTitle>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Business />
+              <Typography variant="h6">Exporter Profile Details</Typography>
+              {loading && <CircularProgress size={20} />}
+            </Box>
+          </DialogTitle>
           <DialogContent>
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={12} md={6}>
-                <Typography variant="subtitle2">Business Name:</Typography>
-                <Typography>{selectedItem?.businessName || selectedItem?.companyName || 'N/A'}</Typography>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Typography variant="subtitle2">TIN:</Typography>
-                <Typography>{selectedItem?.tin || 'N/A'}</Typography>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Typography variant="subtitle2">Registration Number:</Typography>
-                <Typography>{selectedItem?.registrationNumber || 'N/A'}</Typography>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Typography variant="subtitle2">Business Type:</Typography>
-                <Typography>{selectedItem?.businessType || 'N/A'}</Typography>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Typography variant="subtitle2">Capital (ETB):</Typography>
-                <Typography>{selectedItem?.minimumCapital?.toLocaleString() || '0'}</Typography>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Typography variant="subtitle2">Status:</Typography>
-                <Typography>{selectedItem.status}</Typography>
-              </Grid>
+            <Grid container spacing={3} sx={{ mt: 1 }}>
+              {/* Basic Profile Information */}
               <Grid item xs={12}>
-                <Typography variant="subtitle2">Address:</Typography>
-                <Typography>{selectedItem.officeAddress}, {selectedItem.city}, {selectedItem.region}</Typography>
+                <Typography variant="h6" color="primary" gutterBottom>
+                  📋 Basic Information
+                </Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="subtitle2">Business Name:</Typography>
+                    <Typography>{profile?.businessName || 'N/A'}</Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="subtitle2">TIN:</Typography>
+                    <Typography>{profile?.tin || 'N/A'}</Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="subtitle2">Registration Number:</Typography>
+                    <Typography>{profile?.registrationNumber || 'N/A'}</Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="subtitle2">Business Type:</Typography>
+                    <Typography>{profile?.businessType || 'N/A'}</Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="subtitle2">Capital (ETB):</Typography>
+                    <Typography>{profile?.minimumCapital?.toLocaleString() || '0'}</Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="subtitle2">Status:</Typography>
+                    <Chip 
+                      label={profile?.status === 'FULLY_QUALIFIED' ? 'ACTIVE' : (profile?.status || 'Unknown')} 
+                      color={profile?.status === 'FULLY_QUALIFIED' || profile?.status === 'ACTIVE' ? 'success' : profile?.status === 'PENDING_APPROVAL' ? 'warning' : 'default'}
+                      size="small"
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Typography variant="subtitle2">Address:</Typography>
+                    <Typography>
+                      {[
+                        profile?.officeAddress,
+                        profile?.city,
+                        profile?.region
+                      ]
+                        .filter(Boolean)
+                        .join(', ') || 'N/A'}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="subtitle2">Contact Person:</Typography>
+                    <Typography>{profile?.contactPerson || 'N/A'}</Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="subtitle2">Email:</Typography>
+                    <Typography>{profile?.email || 'N/A'}</Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="subtitle2">Phone:</Typography>
+                    <Typography>{profile?.phone || 'N/A'}</Typography>
+                  </Grid>
+                </Grid>
               </Grid>
-              <Grid item xs={12} md={6}>
-                <Typography variant="subtitle2">Contact Person:</Typography>
-                <Typography>{selectedItem.contactPerson}</Typography>
+
+              {/* Qualification Status */}
+              <Grid item xs={12}>
+                <Typography variant="h6" color="primary" gutterBottom>
+                  ✅ Qualification Status
+                </Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={3}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {compliance?.isFullyQualified || 
+                       compliance?.profileApproved || 
+                       profile?.status === 'FULLY_QUALIFIED' || 
+                       profile?.status === 'ACTIVE' ||
+                       validation?.isValid ? (
+                        <CheckCircle color="success" />
+                      ) : (
+                        <Cancel color="error" />
+                      )}
+                      <Typography>Overall Qualified</Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} md={3}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {compliance?.laboratoryApproved || laboratory?.status === 'ACTIVE' || 
+                       selectedItem?.laboratoryCertified || selectedItem?.laboratory_certified ? (
+                        <CheckCircle color="success" />
+                      ) : (
+                        <Cancel color="error" />
+                      )}
+                      <Typography>Laboratory Certified</Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} md={3}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {compliance?.tasterApproved || taster?.status === 'ACTIVE' || 
+                       selectedItem?.tasterVerified || selectedItem?.hasQualifiedTaster ? (
+                        <CheckCircle color="success" />
+                      ) : (
+                        <Cancel color="error" />
+                      )}
+                      <Typography>Taster Verified</Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} md={3}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {compliance?.competenceApproved || competenceCertificate?.status === 'ACTIVE' || 
+                       selectedItem?.hasCompetenceCertificate || selectedItem?.has_competence_certificate ? (
+                        <CheckCircle color="success" />
+                      ) : (
+                        <Cancel color="error" />
+                      )}
+                      <Typography>Competence Certificate</Typography>
+                    </Box>
+                  </Grid>
+                </Grid>
               </Grid>
-              <Grid item xs={12} md={6}>
-                <Typography variant="subtitle2">Email:</Typography>
-                <Typography>{selectedItem.email}</Typography>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Typography variant="subtitle2">Phone:</Typography>
-                <Typography>{selectedItem.phone}</Typography>
-              </Grid>
+
+              {/* Laboratory - Single entity, not array */}
+              {laboratory && (
+                <Grid item xs={12}>
+                  <Typography variant="h6" color="primary" gutterBottom>
+                    🧪 Coffee Laboratory
+                  </Typography>
+                  <Box sx={{ p: 2, border: '1px solid #e0e0e0', borderRadius: 1 }}>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="subtitle2">Laboratory Name:</Typography>
+                        <Typography>{laboratory.laboratoryName || 'N/A'}</Typography>
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="subtitle2">Status:</Typography>
+                        <Chip 
+                          label={laboratory.status || 'Unknown'} 
+                          color={laboratory.status === 'ACTIVE' ? 'success' : 'default'}
+                          size="small"
+                        />
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="subtitle2">Address:</Typography>
+                        <Typography>{laboratory.address || 'N/A'}</Typography>
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="subtitle2">Certification Number:</Typography>
+                        <Typography>{laboratory.certificationNumber || 'N/A'}</Typography>
+                      </Grid>
+                      <Grid item xs={12}>
+                        <Typography variant="subtitle2">Facilities:</Typography>
+                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                          {laboratory.hasRoastingFacility && <Chip label="Roasting" size="small" />}
+                          {laboratory.hasCuppingRoom && <Chip label="Cupping Room" size="small" />}
+                          {laboratory.hasSampleStorage && <Chip label="Sample Storage" size="small" />}
+                        </Box>
+                      </Grid>
+                    </Grid>
+                  </Box>
+                </Grid>
+              )}
+
+              {/* Coffee Taster - Single entity, not array */}
+              {taster && (
+                <Grid item xs={12}>
+                  <Typography variant="h6" color="primary" gutterBottom>
+                    👨‍🍳 Coffee Taster
+                  </Typography>
+                  <Box sx={{ p: 2, border: '1px solid #e0e0e0', borderRadius: 1 }}>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="subtitle2">Full Name:</Typography>
+                        <Typography>{taster.fullName || 'N/A'}</Typography>
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="subtitle2">Status:</Typography>
+                        <Chip 
+                          label={taster.status || 'Unknown'} 
+                          color={taster.status === 'ACTIVE' ? 'success' : 'default'}
+                          size="small"
+                        />
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="subtitle2">Qualification Level:</Typography>
+                        <Typography>{taster.qualificationLevel || 'N/A'}</Typography>
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="subtitle2">Certificate Number:</Typography>
+                        <Typography>{taster.proficiencyCertificateNumber || 'N/A'}</Typography>
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="subtitle2">Exclusive Employee:</Typography>
+                        <Chip 
+                          label={taster.isExclusiveEmployee ? 'Yes' : 'No'} 
+                          color={taster.isExclusiveEmployee ? 'success' : 'warning'}
+                          size="small"
+                        />
+                      </Grid>
+                    </Grid>
+                  </Box>
+                </Grid>
+              )}
+
+              {/* Competence Certificate - Single entity, not array */}
+              {competenceCertificate && (
+                <Grid item xs={12}>
+                  <Typography variant="h6" color="primary" gutterBottom>
+                    📜 Competence Certificate
+                  </Typography>
+                  <Box sx={{ p: 2, border: '1px solid #e0e0e0', borderRadius: 1 }}>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="subtitle2">Certificate Number:</Typography>
+                        <Typography>{competenceCertificate.certificateNumber || 'N/A'}</Typography>
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="subtitle2">Status:</Typography>
+                        <Chip 
+                          label={competenceCertificate.status || 'Unknown'} 
+                          color={competenceCertificate.status === 'ACTIVE' ? 'success' : 'default'}
+                          size="small"
+                        />
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="subtitle2">Issued Date:</Typography>
+                        <Typography>{competenceCertificate.issuedDate ? new Date(competenceCertificate.issuedDate).toLocaleDateString() : 'N/A'}</Typography>
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="subtitle2">Expiry Date:</Typography>
+                        <Typography>{competenceCertificate.expiryDate ? new Date(competenceCertificate.expiryDate).toLocaleDateString() : 'N/A'}</Typography>
+                      </Grid>
+                    </Grid>
+                  </Box>
+                </Grid>
+              )}
+
+              {/* Export License - Single entity, not array */}
+              {exportLicense && (
+                <Grid item xs={12}>
+                  <Typography variant="h6" color="primary" gutterBottom>
+                    📋 Export License
+                  </Typography>
+                  <Box sx={{ p: 2, border: '1px solid #e0e0e0', borderRadius: 1 }}>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="subtitle2">License Number:</Typography>
+                        <Typography>{exportLicense.licenseNumber || 'N/A'}</Typography>
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="subtitle2">Status:</Typography>
+                        <Chip 
+                          label={exportLicense.status || 'Unknown'} 
+                          color={exportLicense.status === 'ACTIVE' ? 'success' : 'default'}
+                          size="small"
+                        />
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="subtitle2">Issued Date:</Typography>
+                        <Typography>{exportLicense.issuedDate ? new Date(exportLicense.issuedDate).toLocaleDateString() : 'N/A'}</Typography>
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="subtitle2">Expiry Date:</Typography>
+                        <Typography>{exportLicense.expiryDate ? new Date(exportLicense.expiryDate).toLocaleDateString() : 'N/A'}</Typography>
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="subtitle2">EIC Registration:</Typography>
+                        <Typography>{exportLicense.eicRegistrationNumber || 'N/A'}</Typography>
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="subtitle2">Authorized Coffee Types:</Typography>
+                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                          {(exportLicense.authorizedCoffeeTypes || []).map((type, i) => (
+                            <Chip key={i} label={type} size="small" />
+                          ))}
+                        </Box>
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="subtitle2">Annual Quota:</Typography>
+                        <Typography>{exportLicense.annualQuota ? `${exportLicense.annualQuota.toLocaleString()} kg` : 'N/A'}</Typography>
+                      </Grid>
+                    </Grid>
+                  </Box>
+                </Grid>
+              )}
+
+              {/* Required Actions */}
+              {validation?.requiredActions && validation.requiredActions.length > 0 && (
+                <Grid item xs={12}>
+                  <Typography variant="h6" color="warning.main" gutterBottom>
+                    ⚠️ Required Actions
+                  </Typography>
+                  <Box sx={{ p: 2, border: '1px solid #ff9800', borderRadius: 1, bgcolor: '#fff3e0' }}>
+                    {validation.requiredActions.map((action, index) => (
+                      <Typography key={index} variant="body2" sx={{ mb: 1 }}>
+                        • {action}
+                      </Typography>
+                    ))}
+                  </Box>
+                </Grid>
+              )}
             </Grid>
           </DialogContent>
-          <DialogActions>
-            <Button onClick={closeDialog}>Close</Button>
+          <DialogActions sx={{ px: 3, py: 2, gap: 1 }}>
+            <Button onClick={closeDialog} variant="outlined">
+              Close
+            </Button>
+            
+            {/* Show action buttons only for pending profiles */}
+            {profile?.status === 'PENDING_APPROVAL' && (
+              <>
+                <Button
+                  variant="contained"
+                  color="error"
+                  startIcon={<Cancel />}
+                  onClick={() => {
+                    closeDialog();
+                    openDialog(selectedItem, 'reject');
+                  }}
+                  disabled={loading}
+                >
+                  Reject
+                </Button>
+                <Button
+                  variant="contained"
+                  color="success"
+                  startIcon={<CheckCircle />}
+                  onClick={() => handleApproveProfile(profile?.exporterId)}
+                  disabled={loading}
+                >
+                  {loading ? <CircularProgress size={24} /> : 'Approve'}
+                </Button>
+              </>
+            )}
+            
+            {/* Show suspend button for active/qualified exporters */}
+            {(profile?.status === 'ACTIVE' || profile?.status === 'FULLY_QUALIFIED') && (
+              <Button
+                variant="contained"
+                color="warning"
+                onClick={() => {
+                  closeDialog();
+                  openDialog(selectedItem, 'suspend-exporter');
+                }}
+                disabled={loading}
+              >
+                Suspend
+              </Button>
+            )}
           </DialogActions>
         </Dialog>
       );

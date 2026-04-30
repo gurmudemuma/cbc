@@ -988,7 +988,7 @@ Quality Standards: ${competenceData.qualityStandards}
                       </Typography>
                       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          {qualificationStatus.profile?.status === 'ACTIVE' ? (
+                          {(qualificationStatus.profile?.status === 'ACTIVE' || qualificationStatus.profile?.status === 'FULLY_QUALIFIED') ? (
                             <CheckCircle color="success" />
                           ) : (
                             <RadioButtonUnchecked color="disabled" />
@@ -996,7 +996,7 @@ Quality Standards: ${competenceData.qualityStandards}
                           <Typography>Business Profile Approved</Typography>
                         </Box>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          {qualificationStatus.laboratory?.certified ? (
+                          {(qualificationStatus.laboratory?.certified || qualificationStatus.profile?.status === 'FULLY_QUALIFIED') ? (
                             <CheckCircle color="success" />
                           ) : (
                             <RadioButtonUnchecked color="disabled" />
@@ -1004,12 +1004,28 @@ Quality Standards: ${competenceData.qualityStandards}
                           <Typography>Laboratory Certified</Typography>
                         </Box>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          {qualificationStatus.taster?.verified ? (
+                          {(qualificationStatus.taster?.verified || qualificationStatus.profile?.status === 'FULLY_QUALIFIED') ? (
                             <CheckCircle color="success" />
                           ) : (
                             <RadioButtonUnchecked color="disabled" />
                           )}
                           <Typography>Taster Verified</Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          {(qualificationStatus.competenceCertificate?.valid || qualificationStatus.profile?.status === 'FULLY_QUALIFIED') ? (
+                            <CheckCircle color="success" />
+                          ) : (
+                            <RadioButtonUnchecked color="disabled" />
+                          )}
+                          <Typography>Competence Certificate</Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          {(qualificationStatus.exportLicense?.valid || qualificationStatus.profile?.status === 'FULLY_QUALIFIED') ? (
+                            <CheckCircle color="success" />
+                          ) : (
+                            <RadioButtonUnchecked color="disabled" />
+                          )}
+                          <Typography>Export License</Typography>
                         </Box>
                       </Box>
                     </Box>
@@ -1181,54 +1197,68 @@ Quality Standards: ${competenceData.qualityStandards}
                       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 1, bgcolor: 'grey.50', borderRadius: 1 }}>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            {qualificationStatus.profile?.status === 'ACTIVE' ? (
+                            {(qualificationStatus.profile?.status === 'ACTIVE' || qualificationStatus.profile?.status === 'FULLY_QUALIFIED') ? (
                               <CheckCircle color="success" />
                             ) : (
                               <Schedule color="warning" />
                             )}
                             <Typography>Business Profile</Typography>
                           </Box>
-                          <Typography variant="caption" color={qualificationStatus.profile?.status === 'ACTIVE' ? 'success.main' : 'warning.main'}>
-                            {qualificationStatus.profile?.status === 'ACTIVE' ? 'Approved' : 'Pending'}
+                          <Typography variant="caption" color={(qualificationStatus.profile?.status === 'ACTIVE' || qualificationStatus.profile?.status === 'FULLY_QUALIFIED') ? 'success.main' : 'warning.main'}>
+                            {(qualificationStatus.profile?.status === 'ACTIVE' || qualificationStatus.profile?.status === 'FULLY_QUALIFIED') ? 
+                              (qualificationStatus.profile?.status === 'FULLY_QUALIFIED' ? 'Fully Qualified' : 'Approved') : 'Pending'}
                           </Typography>
                         </Box>
                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 1, bgcolor: 'grey.50', borderRadius: 1 }}>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            {qualificationStatus.laboratory?.certified ? (
+                            {(qualificationStatus.laboratory?.certified || qualificationStatus.profile?.status === 'FULLY_QUALIFIED') ? (
                               <CheckCircle color="success" />
                             ) : (
                               <Schedule color="warning" />
                             )}
                             <Typography>Laboratory</Typography>
                           </Box>
-                          <Typography variant="caption" color={qualificationStatus.laboratory?.certified ? 'success.main' : 'warning.main'}>
-                            {qualificationStatus.laboratory?.certified ? 'Certified' : 'Pending'}
+                          <Typography variant="caption" color={(qualificationStatus.laboratory?.certified || qualificationStatus.profile?.status === 'FULLY_QUALIFIED') ? 'success.main' : 'warning.main'}>
+                            {(qualificationStatus.laboratory?.certified || qualificationStatus.profile?.status === 'FULLY_QUALIFIED') ? 'Certified' : 'Pending'}
                           </Typography>
                         </Box>
                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 1, bgcolor: 'grey.50', borderRadius: 1 }}>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            {qualificationStatus.taster?.verified ? (
+                            {(qualificationStatus.taster?.verified || qualificationStatus.profile?.status === 'FULLY_QUALIFIED') ? (
                               <CheckCircle color="success" />
                             ) : (
                               <Schedule color="warning" />
                             )}
                             <Typography>Taster</Typography>
                           </Box>
-                          <Typography variant="caption" color={qualificationStatus.taster?.verified ? 'success.main' : 'warning.main'}>
-                            {qualificationStatus.taster?.verified ? 'Verified' : 'Pending'}
+                          <Typography variant="caption" color={(qualificationStatus.taster?.verified || qualificationStatus.profile?.status === 'FULLY_QUALIFIED') ? 'success.main' : 'warning.main'}>
+                            {(qualificationStatus.taster?.verified || qualificationStatus.profile?.status === 'FULLY_QUALIFIED') ? 'Verified' : 'Pending'}
                           </Typography>
                         </Box>
                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 1, bgcolor: 'grey.50', borderRadius: 1 }}>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            {qualificationStatus.competenceCertificate?.valid ? (
+                            {(qualificationStatus.competenceCertificate?.valid || qualificationStatus.profile?.status === 'FULLY_QUALIFIED') ? (
                               <CheckCircle color="success" />
                             ) : (
                               <Schedule color="warning" />
                             )}
                             <Typography>Competence Certificate</Typography>
                           </Box>
-                          <Typography variant="caption" color={qualificationStatus.competenceCertificate?.valid ? 'success.main' : 'warning.main'}>
-                            {qualificationStatus.competenceCertificate?.valid ? 'Valid' : 'Pending'}
+                          <Typography variant="caption" color={(qualificationStatus.competenceCertificate?.valid || qualificationStatus.profile?.status === 'FULLY_QUALIFIED') ? 'success.main' : 'warning.main'}>
+                            {(qualificationStatus.competenceCertificate?.valid || qualificationStatus.profile?.status === 'FULLY_QUALIFIED') ? 'Valid' : 'Pending'}
+                          </Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 1, bgcolor: 'grey.50', borderRadius: 1 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            {(qualificationStatus.exportLicense?.valid || qualificationStatus.profile?.status === 'FULLY_QUALIFIED') ? (
+                              <CheckCircle color="success" />
+                            ) : (
+                              <Schedule color="warning" />
+                            )}
+                            <Typography>Export License</Typography>
+                          </Box>
+                          <Typography variant="caption" color={(qualificationStatus.exportLicense?.valid || qualificationStatus.profile?.status === 'FULLY_QUALIFIED') ? 'success.main' : 'warning.main'}>
+                            {(qualificationStatus.exportLicense?.valid || qualificationStatus.profile?.status === 'FULLY_QUALIFIED') ? 'Valid' : 'Pending'}
                           </Typography>
                         </Box>
                       </Box>

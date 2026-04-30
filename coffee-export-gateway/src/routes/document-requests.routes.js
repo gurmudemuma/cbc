@@ -787,16 +787,20 @@ router.post('/request-all', authenticateToken, async (req, res) => {
  * Get list of all required documents and their status
  */
 router.get('/required', authenticateToken, async (req, res) => {
+  console.log('[Required Documents] Route hit by user:', req.user);
   const client = await pool.connect();
   
   try {
     const exporterId = req.user.id || req.user.username;
+    console.log('[Required Documents] Looking for exporter:', exporterId);
 
     // Get exporter UUID
     const exporterQuery = 'SELECT exporter_id FROM exporter_profiles WHERE user_id = $1';
     const exporterResult = await client.query(exporterQuery, [exporterId]);
+    console.log('[Required Documents] Exporter query result:', exporterResult.rows);
 
     if (exporterResult.rows.length === 0) {
+      console.log('[Required Documents] Exporter profile not found for user:', exporterId);
       return res.status(404).json({
         success: false,
         error: 'Exporter profile not found'

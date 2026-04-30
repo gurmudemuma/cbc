@@ -47,7 +47,63 @@ export class PreRegistrationController {
       const enrichedExporters = await Promise.all(
         result.rows.map(async (exporter) => {
           try {
-            // Get validation status
+            // For FULLY_QUALIFIED exporters, skip validation and set all flags to true
+            if (exporter.status === 'FULLY_QUALIFIED') {
+              // Get competence certificate ID if exists
+              const competenceCertQuery = await pool.query(
+                `SELECT certificate_id, file_path FROM competence_certificates 
+                 WHERE exporter_id = $1 AND status = 'ACTIVE' 
+                 ORDER BY issued_date DESC LIMIT 1`,
+                [exporter.exporter_id]
+              );
+              
+              // Get export license ID if exists
+              const exportLicenseQuery = await pool.query(
+                `SELECT license_id, file_path FROM export_licenses 
+                 WHERE exporter_id = $1 AND status = 'ACTIVE' 
+                 ORDER BY issued_date DESC LIMIT 1`,
+                [exporter.exporter_id]
+              );
+              
+              const competenceCert = competenceCertQuery.rows[0];
+              const exportLicense = exportLicenseQuery.rows[0];
+              
+              return {
+                id: exporter.exporter_id,
+                exporterId: exporter.exporter_id,
+                userId: exporter.user_id,
+                businessName: exporter.business_name,
+                tin: exporter.tin,
+                registrationNumber: exporter.registration_number,
+                businessType: exporter.business_type,
+                minimumCapital: exporter.minimum_capital,
+                capitalVerified: exporter.capital_verified,
+                capitalVerificationDate: exporter.capital_verification_date,
+                capitalProofDocument: exporter.capital_proof_document,
+                officeAddress: exporter.office_address,
+                city: exporter.city,
+                region: exporter.region,
+                contactPerson: exporter.contact_person,
+                email: exporter.email,
+                phone: exporter.phone,
+                status: exporter.status,
+                createdAt: exporter.created_at,
+                updatedAt: exporter.updated_at,
+                // For FULLY_QUALIFIED exporters, all flags are true
+                isQualified: true,
+                hasCompetenceCertificate: true,
+                hasExportLicense: true,
+                laboratoryCertified: true,
+                tasterVerified: true,
+                // Add certificate IDs for download functionality
+                competenceCertificateId: competenceCert?.certificate_id || null,
+                competenceCertificateFilePath: competenceCert?.file_path || null,
+                exportLicenseId: exportLicense?.license_id || null,
+                exportLicenseFilePath: exportLicense?.file_path || null,
+              };
+            }
+
+            // For non-FULLY_QUALIFIED exporters, run validation
             const validation = await ectaPreRegistrationService.validateExporter(exporter.exporter_id);
             
             // Get competence certificate ID if exists
@@ -90,7 +146,7 @@ export class PreRegistrationController {
               status: exporter.status,
               createdAt: exporter.created_at,
               updatedAt: exporter.updated_at,
-              // Add qualification status fields
+              // Add qualification status fields based on validation
               isQualified: validation.isValid,
               hasCompetenceCertificate: validation.hasCompetenceCertificate,
               hasExportLicense: validation.hasExportLicense,
@@ -103,7 +159,7 @@ export class PreRegistrationController {
               exportLicenseFilePath: exportLicense?.file_path || null,
             };
           } catch (err) {
-            // If validation fails, return exporter with false flags
+            // If validation fails, return exporter with flags based on FULLY_QUALIFIED status
             logger.warn('Failed to validate exporter', { exporterId: exporter.exporter_id, error: err });
             return {
               id: exporter.exporter_id,
@@ -126,11 +182,12 @@ export class PreRegistrationController {
               status: exporter.status,
               createdAt: exporter.created_at,
               updatedAt: exporter.updated_at,
-              isQualified: false,
-              hasCompetenceCertificate: false,
-              hasExportLicense: false,
-              laboratoryCertified: false,
-              tasterVerified: false,
+              // If FULLY_QUALIFIED, show as qualified even if validation fails
+              isQualified: exporter.status === 'FULLY_QUALIFIED',
+              hasCompetenceCertificate: exporter.status === 'FULLY_QUALIFIED',
+              hasExportLicense: exporter.status === 'FULLY_QUALIFIED',
+              laboratoryCertified: exporter.status === 'FULLY_QUALIFIED',
+              tasterVerified: exporter.status === 'FULLY_QUALIFIED',
               competenceCertificateId: null,
               competenceCertificateFilePath: null,
               exportLicenseId: null,
@@ -140,6 +197,20 @@ export class PreRegistrationController {
         })
       );
       
+      // Debug logging to see what data is being returned
+      logger.info('Returning enriched exporters', { 
+        count: enrichedExporters.length,
+        sampleData: enrichedExporters.length > 0 ? {
+          businessName: enrichedExporters[0].businessName,
+          registrationNumber: enrichedExporters[0].registrationNumber,
+          officeAddress: enrichedExporters[0].officeAddress,
+          city: enrichedExporters[0].city,
+          region: enrichedExporters[0].region,
+          contactPerson: enrichedExporters[0].contactPerson,
+          status: enrichedExporters[0].status
+        } : null
+      });
+
       res.json({
         success: true,
         data: enrichedExporters,
@@ -169,10 +240,38 @@ export class PreRegistrationController {
         WHERE status = 'PENDING_APPROVAL'
         ORDER BY created_at DESC
       `);
+      
+      // Map database rows to camelCase for consistency with getAllExporters
+      const mappedData = result.rows.map(row => ({
+        id: row.exporter_id,
+        exporterId: row.exporter_id,
+        userId: row.user_id,
+        businessName: row.business_name,
+        tin: row.tin,
+        registrationNumber: row.registration_number,
+        businessType: row.business_type,
+        minimumCapital: row.minimum_capital,
+        capitalVerified: row.capital_verified,
+        capitalVerificationDate: row.capital_verification_date,
+        capitalProofDocument: row.capital_proof_document,
+        officeAddress: row.office_address,
+        city: row.city,
+        region: row.region,
+        contactPerson: row.contact_person,
+        email: row.email,
+        phone: row.phone,
+        status: row.status,
+        approvedBy: row.approved_by,
+        approvedAt: row.approved_at,
+        rejectionReason: row.rejection_reason,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      }));
+      
       res.json({
         success: true,
-        data: result.rows,
-        count: result.rows.length,
+        data: mappedData,
+        count: mappedData.length,
         message: 'Pending exporter applications',
       });
     } catch (error: any) {

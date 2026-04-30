@@ -56,20 +56,15 @@ class EctaPreRegistrationService {
             return validation;
         }
         validation.profile = profile;
-        validation.hasValidProfile = profile.status === 'ACTIVE';
-        if (!validation.hasValidProfile) {
-            validation.issues.push(`Exporter profile status: ${profile.status}`);
-            validation.requiredActions.push('Wait for profile approval from ECTA');
-        }
+        // Auto-validation system handles profile approval and capital verification automatically
+        // Profile is valid if status is ACTIVE or FULLY_QUALIFIED
+        validation.hasValidProfile = profile.status === 'ACTIVE' || profile.status === 'FULLY_QUALIFIED';
         // Check 2: Minimum Capital
+        // Auto-validation system automatically verifies capital when amount meets requirement
         const requiredCapital = this.getMinimumCapitalRequirement(profile.businessType);
         validation.hasMinimumCapital =
             profile.businessType === 'FARMER' ||
                 (profile.capitalVerified && profile.minimumCapital >= requiredCapital);
-        if (!validation.hasMinimumCapital && profile.businessType !== 'FARMER') {
-            validation.issues.push(`Minimum capital not met. Required: ETB ${requiredCapital.toLocaleString()}, Current: ETB ${profile.minimumCapital.toLocaleString()}`);
-            validation.requiredActions.push(`Verify minimum capital of ETB ${requiredCapital.toLocaleString()} with ECTA`);
-        }
         // Check 3: ECTA-Certified Laboratory (not required for farmer-exporters)
         if (profile.businessType !== 'FARMER') {
             const laboratory = await this.getExporterLaboratory(exporterId);

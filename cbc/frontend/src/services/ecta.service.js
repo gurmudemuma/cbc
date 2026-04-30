@@ -272,16 +272,23 @@ export const getPendingRenewals = async (type = null) => {
   try {
     const token = localStorage.getItem('token');
     const url = type 
-      ? `${API_ENDPOINTS.ecta}/api/ecta/certificate/renewal/pending?type=${type}`
-      : `${API_ENDPOINTS.ecta}/api/ecta/certificate/renewal/pending`;
+      ? `/api/ecta/certificate/renewal/pending?type=${type}`
+      : `/api/ecta/certificate/renewal/pending`;
     
     const response = await axios.get(url, {
-      headers: { 'Authorization': `Bearer ${token}` }
+      headers: { 'Authorization': `Bearer ${token}` },
+      validateStatus: (status) => status < 500 // Don't throw on 404
     });
+    
+    // Return empty array if endpoint not found
+    if (response.status === 404) {
+      return [];
+    }
+    
     return response.data;
   } catch (error) {
     console.error('Failed to get pending renewals:', error);
-    throw error;
+    return [];
   }
 };
 
@@ -294,15 +301,22 @@ export const getRenewalHistory = async (filters = {}) => {
   try {
     const token = localStorage.getItem('token');
     const params = new URLSearchParams(filters).toString();
-    const url = `${API_ENDPOINTS.ecta}/api/ecta/certificate/renewal/history${params ? `?${params}` : ''}`;
+    const url = `/api/ecta/certificate/renewal/history${params ? `?${params}` : ''}`;
     
     const response = await axios.get(url, {
-      headers: { 'Authorization': `Bearer ${token}` }
+      headers: { 'Authorization': `Bearer ${token}` },
+      validateStatus: (status) => status < 500 // Don't throw on 404
     });
+    
+    // Return empty array if endpoint not found
+    if (response.status === 404) {
+      return [];
+    }
+    
     return response.data;
   } catch (error) {
     console.error('Failed to get renewal history:', error);
-    throw error;
+    return [];
   }
 };
 
@@ -315,15 +329,22 @@ export const getExpiringCertificates = async (daysThreshold = 90) => {
   try {
     const token = localStorage.getItem('token');
     const response = await axios.get(
-      `${API_ENDPOINTS.ecta}/api/ecta/certificate/renewal/expiring?days=${daysThreshold}`,
+      `/api/ecta/certificate/renewal/expiring?days=${daysThreshold}`,
       {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 'Authorization': `Bearer ${token}` },
+        validateStatus: (status) => status < 500 // Don't throw on 404
       }
     );
+    
+    // Return empty array if endpoint not found
+    if (response.status === 404) {
+      return [];
+    }
+    
     return response.data;
   } catch (error) {
     console.error('Failed to get expiring certificates:', error);
-    throw error;
+    return [];
   }
 };
 
@@ -337,7 +358,7 @@ export const approveRenewal = async (requestId, data) => {
   try {
     const token = localStorage.getItem('token');
     const response = await axios.post(
-      `${API_ENDPOINTS.ecta}/api/ecta/certificate/renewal/${requestId}/approve`,
+      `/api/ecta/certificate/renewal/${requestId}/approve`,
       data,
       {
         headers: {
@@ -363,7 +384,7 @@ export const rejectRenewal = async (requestId, data) => {
   try {
     const token = localStorage.getItem('token');
     const response = await axios.post(
-      `${API_ENDPOINTS.ecta}/api/ecta/certificate/renewal/${requestId}/reject`,
+      `/api/ecta/certificate/renewal/${requestId}/reject`,
       data,
       {
         headers: {

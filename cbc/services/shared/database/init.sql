@@ -52,6 +52,9 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- Run migration 012: Add blockchain user synchronization fields
 \i /docker-entrypoint-initdb.d/migrations/012_add_blockchain_user_fields.sql
 
+-- Run migration 013: Add FULLY_QUALIFIED status to exporter_profiles
+\i /docker-entrypoint-initdb.d/migrations/013_add_fully_qualified_status.sql
+
 -- ============================================================================
 -- HYBRID BLOCKCHAIN SYSTEM MIGRATIONS
 -- ============================================================================

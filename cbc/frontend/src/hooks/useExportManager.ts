@@ -38,7 +38,8 @@ export const useExports = () => {
         queryKey: ['exports'],
         queryFn: async () => {
             const response = await apiClient.get('/exports');
-            return response.data.data || [];
+            // Handle different response structures
+            return response.data.data || response.data.exports || response.data || [];
         },
         // Auto-refresh every 5 seconds for real-time updates
         refetchInterval: 5000,
@@ -73,7 +74,8 @@ export const useExport = (exportId: string) => {
         queryFn: async () => {
             if (!exportId) return null;
             const response = await apiClient.get(`/exports/${exportId}`);
-            return response.data.data;
+            // Handle different response structures
+            return response.data.data || response.data.export || response.data;
         },
         enabled: !!exportId,
         refetchInterval: 5000,
@@ -96,7 +98,8 @@ export const useCreateExport = () => {
     const mutation = useMutation({
         mutationFn: async (data: CreateExportData) => {
             const response = await apiClient.post('/exports', data);
-            return response.data.data;
+            // Handle different response structures
+            return response.data.data || response.data.export || response.data;
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['exports'] });
@@ -197,12 +200,41 @@ export const useExportStats = () => {
         queryFn: async () => {
             try {
                 const response = await apiClient.get('/exports/stats');
-                return response.data.data;
+                // Handle different response structures
+                const statsData = response.data.data || response.data.statistics || response.data;
+                
+                // Ensure all required fields exist with defaults
+                return {
+                    totalExports: statsData.totalExports || statsData.total_exports || 0,
+                    totalValue: statsData.totalValue || statsData.total_value || 0,
+                    completedExports: statsData.completedExports || statsData.completed_exports || 0,
+                    activeShipments: statsData.activeShipments || statsData.active_shipments || 0,
+                    pendingAction: statsData.pendingAction || statsData.pending_action || 0
+                };
             } catch (error: any) {
                 // Return fallback for Commercial Bank API path if 404
                 if (error.response && error.response.status === 404) {
-                    const fallbackResponse = await apiClient.get('/exports/dashboard/stats');
-                    return fallbackResponse.data.data;
+                    try {
+                        const fallbackResponse = await apiClient.get('/exports/dashboard/stats');
+                        const statsData = fallbackResponse.data.data || fallbackResponse.data.statistics || fallbackResponse.data;
+                        
+                        return {
+                            totalExports: statsData.totalExports || statsData.total_exports || 0,
+                            totalValue: statsData.totalValue || statsData.total_value || 0,
+                            completedExports: statsData.completedExports || statsData.completed_exports || 0,
+                            activeShipments: statsData.activeShipments || statsData.active_shipments || 0,
+                            pendingAction: statsData.pendingAction || statsData.pending_action || 0
+                        };
+                    } catch (fallbackError) {
+                        // Return default values if both endpoints fail
+                        return {
+                            totalExports: 0,
+                            totalValue: 0,
+                            completedExports: 0,
+                            activeShipments: 0,
+                            pendingAction: 0
+                        };
+                    }
                 }
                 throw error;
             }

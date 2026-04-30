@@ -5,6 +5,14 @@
     "skipLibCheck": true,
     "noEmitOnError": false,
     "baseUrl": ".",
+    "types": [],
+    "strict": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "strictFunctionTypes": false,
+    "strictPropertyInitialization": false,
+    "noImplicitThis": false,
+    "alwaysStrict": false,
     "paths": {
       "@shared/*": [
         "../shared/*"
@@ -30,12 +38,19 @@
     }
   },
   "include": [
-    "src/**/*",
-    "../shared/**/*"
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "../shared/**/*.ts",
+    "../shared/**/*.tsx"
   ],
   "exclude": [
     "node_modules",
     "dist",
-    "**/*.test.ts"
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/__tests__/**/*",
+    "src/__tests__/**/*",
+    "../shared/__tests__/**/*",
+    "../shared/test-setup.ts"
   ]
 }

@@ -219,7 +219,7 @@ services:
       # Kafka
       KAFKA_BROKERS: kafka:9092
       # JWT
-      JWT_SECRET: 8f3a9b2c7d1e6f4a5b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0
+      JWT_SECRET: 8f2a9b7c6d5e4f3a2b1c9d8e7f6a5b4c3d2e1f9a8b7c6d5e4f3a2b1c9d8e7f6a5b4c3d2e1f
       JWT_EXPIRES_IN: 24h
       JWT_REFRESH_EXPIRES_IN: 7d
       # Organization
@@ -255,6 +255,81 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+
+  exporter-portal-service:
+    image: cbc-exporter-portal-service:latest
+    build:
+      context: ./cbc
+      dockerfile: services/exporter-portal/Dockerfile
+    container_name: coffee-exporter-portal
+    depends_on:
+      - postgres
+      - kafka
+      - redis
+      - gateway
+    ports:
+      - "3010:3010"
+    environment:
+      PORT: 3010
+      NODE_ENV: production
+      # Database
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: coffee_export_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: coffee_export_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      # Kafka
+      KAFKA_BROKERS: kafka:9092
+      KAFKA_CLIENT_ID: exporter-portal
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      # JWT
+      JWT_SECRET: 8f2a9b7c6d5e4f3a2b1c9d8e7f6a5b4c3d2e1f9a8b7c6d5e4f3a2b1c9d8e7f6a5b4c3d2e1f
+      JWT_EXPIRES_IN: 24h
+      JWT_REFRESH_EXPIRES_IN: 7d
+      # Fabric SDK via Gateway
+      GATEWAY_URL: http://gateway:3000
+      BLOCKCHAIN_BRIDGE_URL: http://blockchain-bridge:3008
+      CHANNEL_NAME: coffeechannel
+      CHAINCODE_NAME: ecta
+      # ECTA Service
+      ECTA_SERVICE_URL: http://ecta-service:3003
+      # Email Configuration
+      SMTP_HOST: smtp.gmail.com
+      SMTP_PORT: 587
+      SMTP_SECURE: false
+      SMTP_USER: noreply@coffeeexport.et
+      SMTP_PASSWORD: changeme
+      EMAIL_FROM: noreply@coffeeexport.et
+      # Other
+      LOG_LEVEL: info
+      RATE_LIMIT_WINDOW_MS: 900000
+      RATE_LIMIT_MAX_REQUESTS: 100
+      CORS_ORIGIN: "*"
+      MAX_FILE_SIZE_MB: 10
+      WEBSOCKET_ENABLED: true
+      # Sales Contract Workflow
+      CONTRACT_DRAFT_EXPIRY_DAYS: 30
+      CONTRACT_LOCK_TIMEOUT_MINUTES: 15
+      NOTIFICATION_RETRY_MAX_ATTEMPTS: 3
+      BLOCKCHAIN_RETRY_MAX_ATTEMPTS: 5
+      ECTA_RETRY_MAX_ATTEMPTS: 5
+    volumes:
+      - ./coffee-export-gateway/wallets:/app/wallets:ro
+      - ./coffee-export-gateway/src/config:/app/config:ro
+      - ./crypto-config:/app/crypto-config:ro
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3010/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
   commercial-bank-service:
     image: cbc-commercial-bank-service:latest

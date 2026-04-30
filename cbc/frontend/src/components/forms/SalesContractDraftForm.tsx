@@ -1,24 +1,33 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Card, CardHeader, CardContent, CardActions, Button, TextField, Grid,
   Alert, CircularProgress, Box, Typography, Divider, Select, MenuItem, FormControl, InputLabel,
+  Stack,
 } from '@mui/material';
-import { CheckCircle, FileText } from 'lucide-react';
+import { CheckCircle, FileText, X } from 'lucide-react';
 
 interface SalesContractDraftFormProps {
-  buyerId: string;
-  buyerName: string;
+  buyerId?: string;
+  buyerName?: string;
   onSubmit: (data: any) => void;
+  onCancel?: () => void;
   loading?: boolean;
+  initialData?: any;
+  isEditMode?: boolean;
 }
 
 const SalesContractDraftForm = ({
-  buyerId,
-  buyerName,
+  buyerId = '',
+  buyerName = '',
   onSubmit,
+  onCancel,
   loading = false,
+  initialData,
+  isEditMode = false,
 }: SalesContractDraftFormProps): JSX.Element => {
   const [formData, setFormData] = useState({
+    buyerName: buyerName || '',
+    buyerEmail: '',
     coffeeType: '',
     originRegion: '',
     quantity: '',
@@ -39,6 +48,8 @@ const SalesContractDraftForm = ({
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [submitAttempted, setSubmitAttempted] = useState(false);
 
   const coffeeTypes = [
     'Arabica Grade 1',
@@ -55,19 +66,59 @@ const SalesContractDraftForm = ({
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
+    if (!formData.buyerName?.trim()) newErrors.buyerName = 'Buyer name required';
+    if (!formData.buyerEmail?.trim()) newErrors.buyerEmail = 'Buyer email required';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.buyerEmail))
+      newErrors.buyerEmail = 'Valid email required';
     if (!formData.coffeeType?.trim()) newErrors.coffeeType = 'Coffee type required';
     if (!formData.quantity || parseFloat(formData.quantity) <= 0)
-      newErrors.quantity = 'Valid quantity required';
+      newErrors.quantity = 'Valid quantity required (minimum 1 bag)';
     if (!formData.unitPrice || parseFloat(formData.unitPrice) <= 0)
       newErrors.unitPrice = 'Valid unit price required';
     if (!formData.deliveryDate) newErrors.deliveryDate = 'Delivery date required';
+    else {
+      const deliveryDate = new Date(formData.deliveryDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (deliveryDate <= today) {
+        newErrors.deliveryDate = 'Delivery date must be in the future';
+      }
+    }
     if (!formData.portOfDischarge?.trim())
       newErrors.portOfDischarge = 'Port of discharge required';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
+  // Initialize form with initial data if provided
+  useEffect(() => {
+    if (initialData && isEditMode) {
+      setFormData({
+        buyerName: initialData.buyer_name || '',
+        buyerEmail: initialData.buyer_email || '',
+        coffeeType: initialData.coffee_type || '',
+        originRegion: initialData.origin_region || '',
+        quantity: initialData.quantity?.toString() || '',
+        unitPrice: initialData.unit_price?.toString() || '',
+        currency: initialData.currency || 'USD',
+        paymentTerms: initialData.payment_terms || 'Net 30',
+        paymentMethod: initialData.payment_method || 'LC',
+        incoterms: initialData.incoterms || 'FOB',
+        deliveryDate: initialData.delivery_date || '',
+        portOfLoading: initialData.port_of_loading || 'Port of Djibouti',
+        portOfDischarge: initialData.port_of_discharge || '',
+        governingLaw: initialData.governing_law || 'CISG',
+        arbitrationLocation: initialData.arbitration_location || 'Geneva',
+        arbitrationRules: initialData.arbitration_rules || 'ICC',
+        qualityGrade: initialData.quality_grade || 'Grade 1',
+        specialConditions: initialData.special_conditions || '',
+        certificationsRequired: initialData.certifications_required || [],
+      });
+    }
+  }, [initialData, isEditMode]);
+
   const handleSubmit = () => {
+    setSubmitAttempted(true);
     if (!validate()) return;
     onSubmit({
       buyerId,
@@ -75,6 +126,27 @@ const SalesContractDraftForm = ({
       quantity: parseInt(formData.quantity),
       unitPrice: parseFloat(formData.unitPrice),
     });
+  };
+
+  const handleSendToBuyer = () => {
+    setSubmitAttempted(true);
+    if (!validate()) return;
+    onSubmit({
+      buyerId,
+      ...formData,
+      quantity: parseInt(formData.quantity),
+      unitPrice: parseFloat(formData.unitPrice),
+      sendToBuyer: true,
+    });
+  };
+
+  const handleFieldChange = (field: string, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    setTouched(prev => ({ ...prev, [field]: true }));
+  };
+
+  const handleFieldBlur = (field: string) => {
+    setTouched(prev => ({ ...prev, [field]: true }));
   };
 
   const totalValue = formData.quantity && formData.unitPrice
@@ -94,30 +166,68 @@ const SalesContractDraftForm = ({
     <Card>
       <CardHeader
         avatar={<FileText size={32} color="#1976d2" />}
-        title="Create Sales Contract Draft"
-        subheader={`Buyer: ${buyerName}`}
+        title={isEditMode ? 'Edit Sales Contract Draft' : 'Create Sales Contract Draft'}
+        subheader={isEditMode ? 'Update contract details' : 'Create a new contract for negotiation'}
       />
       <Divider />
       <CardContent>
         <Alert severity="info" sx={{ mb: 3 }}>
-          Create a contract draft for negotiation. Both parties can counter-offer before
-          finalization.
+          {isEditMode
+            ? 'Update contract details. You can save as draft or send to buyer for negotiation.'
+            : 'Create a contract draft for negotiation. Both parties can counter-offer before finalization.'}
         </Alert>
 
         <Grid container spacing={2}>
-          {/* Coffee Details */}
+          {/* Buyer Information */}
           <Grid item xs={12}>
             <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+              Buyer Information
+            </Typography>
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <TextField
+              fullWidth
+              label="Buyer Name *"
+              value={formData.buyerName}
+              onChange={(e) => handleFieldChange('buyerName', e.target.value)}
+              onBlur={() => handleFieldBlur('buyerName')}
+              placeholder="e.g., ABC Coffee Imports Ltd"
+              required
+              error={!!(touched.buyerName && errors.buyerName)}
+              helperText={touched.buyerName && errors.buyerName}
+            />
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <TextField
+              fullWidth
+              type="email"
+              label="Buyer Email *"
+              value={formData.buyerEmail}
+              onChange={(e) => handleFieldChange('buyerEmail', e.target.value)}
+              onBlur={() => handleFieldBlur('buyerEmail')}
+              placeholder="e.g., buyer@company.com"
+              required
+              error={!!(touched.buyerEmail && errors.buyerEmail)}
+              helperText={touched.buyerEmail && errors.buyerEmail}
+            />
+          </Grid>
+
+          {/* Coffee Details */}
+          <Grid item xs={12}>
+            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600, mt: 2 }}>
               Coffee Details
             </Typography>
           </Grid>
 
           <Grid item xs={12} md={6}>
-            <FormControl fullWidth error={!!errors.coffeeType}>
+            <FormControl fullWidth error={!!(touched.coffeeType && errors.coffeeType)}>
               <InputLabel>Coffee Type *</InputLabel>
               <Select
                 value={formData.coffeeType}
-                onChange={(e) => setFormData({ ...formData, coffeeType: e.target.value })}
+                onChange={(e) => handleFieldChange('coffeeType', e.target.value)}
+                onBlur={() => handleFieldBlur('coffeeType')}
                 label="Coffee Type *"
               >
                 {coffeeTypes.map((type) => (
@@ -127,7 +237,7 @@ const SalesContractDraftForm = ({
                 ))}
               </Select>
             </FormControl>
-            {errors.coffeeType && (
+            {touched.coffeeType && errors.coffeeType && (
               <Typography variant="caption" color="error" sx={{ display: 'block', mt: 0.5 }}>
                 {errors.coffeeType}
               </Typography>
@@ -139,7 +249,7 @@ const SalesContractDraftForm = ({
               fullWidth
               label="Origin Region"
               value={formData.originRegion}
-              onChange={(e) => setFormData({ ...formData, originRegion: e.target.value })}
+              onChange={(e) => handleFieldChange('originRegion', e.target.value)}
               placeholder="e.g., Yirgacheffe Region"
             />
           </Grid>
@@ -150,11 +260,12 @@ const SalesContractDraftForm = ({
               type="number"
               label="Quantity (bags) *"
               value={formData.quantity}
-              onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+              onChange={(e) => handleFieldChange('quantity', e.target.value)}
+              onBlur={() => handleFieldBlur('quantity')}
               placeholder="e.g., 150"
               required
-              error={!!errors.quantity}
-              helperText={errors.quantity}
+              error={!!(touched.quantity && errors.quantity)}
+              helperText={touched.quantity && errors.quantity}
               inputProps={{ min: 1 }}
             />
           </Grid>
@@ -165,11 +276,12 @@ const SalesContractDraftForm = ({
               type="number"
               label="Unit Price (USD) *"
               value={formData.unitPrice}
-              onChange={(e) => setFormData({ ...formData, unitPrice: e.target.value })}
+              onChange={(e) => handleFieldChange('unitPrice', e.target.value)}
+              onBlur={() => handleFieldBlur('unitPrice')}
               placeholder="e.g., 4.00"
               required
-              error={!!errors.unitPrice}
-              helperText={errors.unitPrice}
+              error={!!(touched.unitPrice && errors.unitPrice)}
+              helperText={touched.unitPrice && errors.unitPrice}
               inputProps={{ min: 0.01, step: 0.01 }}
             />
           </Grid>
@@ -190,7 +302,7 @@ const SalesContractDraftForm = ({
               <InputLabel>Quality Grade</InputLabel>
               <Select
                 value={formData.qualityGrade}
-                onChange={(e) => setFormData({ ...formData, qualityGrade: e.target.value })}
+                onChange={(e) => handleFieldChange('qualityGrade', e.target.value)}
                 label="Quality Grade"
               >
                 {qualityGrades.map((grade) => (
@@ -214,7 +326,7 @@ const SalesContractDraftForm = ({
               fullWidth
               label="Payment Terms"
               value={formData.paymentTerms}
-              onChange={(e) => setFormData({ ...formData, paymentTerms: e.target.value })}
+              onChange={(e) => handleFieldChange('paymentTerms', e.target.value)}
               placeholder="e.g., Net 30"
             />
           </Grid>
@@ -224,7 +336,7 @@ const SalesContractDraftForm = ({
               <InputLabel>Payment Method</InputLabel>
               <Select
                 value={formData.paymentMethod}
-                onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
+                onChange={(e) => handleFieldChange('paymentMethod', e.target.value)}
                 label="Payment Method"
               >
                 <MenuItem value="LC">Letter of Credit (LC)</MenuItem>
@@ -240,7 +352,7 @@ const SalesContractDraftForm = ({
               <InputLabel>Incoterms</InputLabel>
               <Select
                 value={formData.incoterms}
-                onChange={(e) => setFormData({ ...formData, incoterms: e.target.value })}
+                onChange={(e) => handleFieldChange('incoterms', e.target.value)}
                 label="Incoterms"
               >
                 <MenuItem value="FOB">FOB - Free On Board</MenuItem>
@@ -257,10 +369,11 @@ const SalesContractDraftForm = ({
               type="date"
               label="Delivery Date *"
               value={formData.deliveryDate}
-              onChange={(e) => setFormData({ ...formData, deliveryDate: e.target.value })}
+              onChange={(e) => handleFieldChange('deliveryDate', e.target.value)}
+              onBlur={() => handleFieldBlur('deliveryDate')}
               required
-              error={!!errors.deliveryDate}
-              helperText={errors.deliveryDate}
+              error={!!(touched.deliveryDate && errors.deliveryDate)}
+              helperText={touched.deliveryDate && errors.deliveryDate}
               InputLabelProps={{ shrink: true }}
             />
           </Grid>
@@ -270,7 +383,7 @@ const SalesContractDraftForm = ({
               fullWidth
               label="Port of Loading"
               value={formData.portOfLoading}
-              onChange={(e) => setFormData({ ...formData, portOfLoading: e.target.value })}
+              onChange={(e) => handleFieldChange('portOfLoading', e.target.value)}
               placeholder="e.g., Port of Djibouti"
             />
           </Grid>
@@ -280,11 +393,12 @@ const SalesContractDraftForm = ({
               fullWidth
               label="Port of Discharge *"
               value={formData.portOfDischarge}
-              onChange={(e) => setFormData({ ...formData, portOfDischarge: e.target.value })}
+              onChange={(e) => handleFieldChange('portOfDischarge', e.target.value)}
+              onBlur={() => handleFieldBlur('portOfDischarge')}
               placeholder="e.g., Port of Hamburg"
               required
-              error={!!errors.portOfDischarge}
-              helperText={errors.portOfDischarge}
+              error={!!(touched.portOfDischarge && errors.portOfDischarge)}
+              helperText={touched.portOfDischarge && errors.portOfDischarge}
             />
           </Grid>
 
@@ -300,7 +414,7 @@ const SalesContractDraftForm = ({
               <InputLabel>Governing Law</InputLabel>
               <Select
                 value={formData.governingLaw}
-                onChange={(e) => setFormData({ ...formData, governingLaw: e.target.value })}
+                onChange={(e) => handleFieldChange('governingLaw', e.target.value)}
                 label="Governing Law"
               >
                 <MenuItem value="CISG">UN Convention on Contracts for International Sale of Goods</MenuItem>
@@ -315,7 +429,7 @@ const SalesContractDraftForm = ({
               <InputLabel>Arbitration Rules</InputLabel>
               <Select
                 value={formData.arbitrationRules}
-                onChange={(e) => setFormData({ ...formData, arbitrationRules: e.target.value })}
+                onChange={(e) => handleFieldChange('arbitrationRules', e.target.value)}
                 label="Arbitration Rules"
               >
                 <MenuItem value="ICC">ICC Rules for Arbitration</MenuItem>
@@ -330,7 +444,7 @@ const SalesContractDraftForm = ({
               fullWidth
               label="Arbitration Location"
               value={formData.arbitrationLocation}
-              onChange={(e) => setFormData({ ...formData, arbitrationLocation: e.target.value })}
+              onChange={(e) => handleFieldChange('arbitrationLocation', e.target.value)}
               placeholder="e.g., Geneva"
             />
           </Grid>
@@ -348,7 +462,12 @@ const SalesContractDraftForm = ({
                     formData.certificationsRequired.includes(cert) ? 'contained' : 'outlined'
                   }
                   size="small"
-                  onClick={() => handleCertificationToggle(cert)}
+                  onClick={() => {
+                    const newCerts = formData.certificationsRequired.includes(cert)
+                      ? formData.certificationsRequired.filter(c => c !== cert)
+                      : [...formData.certificationsRequired, cert];
+                    handleFieldChange('certificationsRequired', newCerts);
+                  }}
                 >
                   {cert}
                 </Button>
@@ -364,7 +483,7 @@ const SalesContractDraftForm = ({
               rows={3}
               label="Special Conditions"
               value={formData.specialConditions}
-              onChange={(e) => setFormData({ ...formData, specialConditions: e.target.value })}
+              onChange={(e) => handleFieldChange('specialConditions', e.target.value)}
               placeholder="e.g., Organic certified, Fair Trade compliant, etc."
             />
           </Grid>
@@ -372,16 +491,40 @@ const SalesContractDraftForm = ({
       </CardContent>
       <Divider />
       <CardActions sx={{ justifyContent: 'flex-end', p: 2 }}>
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={loading ? <CircularProgress size={18} color="inherit" /> : <CheckCircle size={18} />}
-          onClick={handleSubmit}
-          disabled={loading}
-          size="large"
-        >
-          {loading ? 'Creating Draft...' : 'Create Draft'}
-        </Button>
+        <Stack direction="row" spacing={1}>
+          {onCancel && (
+            <Button
+              variant="outlined"
+              startIcon={<X size={18} />}
+              onClick={onCancel}
+              disabled={loading}
+            >
+              Cancel
+            </Button>
+          )}
+          <Button
+            variant="outlined"
+            color="primary"
+            startIcon={loading ? <CircularProgress size={18} color="inherit" /> : <CheckCircle size={18} />}
+            onClick={handleSubmit}
+            disabled={loading}
+            size="large"
+          >
+            {loading ? 'Saving...' : isEditMode ? 'Save Changes' : 'Save as Draft'}
+          </Button>
+          {!isEditMode && (
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={loading ? <CircularProgress size={18} color="inherit" /> : <CheckCircle size={18} />}
+              onClick={handleSendToBuyer}
+              disabled={loading}
+              size="large"
+            >
+              {loading ? 'Sending...' : 'Send to Buyer'}
+            </Button>
+          )}
+        </Stack>
       </CardActions>
     </Card>
   );

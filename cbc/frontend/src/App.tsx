@@ -76,6 +76,7 @@ import BankingExportApproval from './pages/BankingExportApproval';
 import ECTASalesContractRegistration from './pages/ECTASalesContractRegistration';
 import BankPaymentReview from './pages/BankPaymentReview';
 import PaymentManagement from './pages/PaymentManagement';
+import PaymentDashboard from './pages/PaymentDashboard';
 import NBEFXApproval from './pages/NBEFXApproval';
 
 // Reports
@@ -136,7 +137,6 @@ const AppThemeProvider: React.FC<AppThemeProviderProps> = ({ children }) => {
 
   // Create theme with organization and mode
   const theme = useMemo(() => {
-    console.log('Creating theme for org:', org, 'mode:', mode);
     return createEnhancedTheme(org, mode);
   }, [org, mode]);
 
@@ -399,6 +399,10 @@ function App(): JSX.Element {
           { path: 'payments/initiated', element: <PaymentManagement user={user} org={org} /> },
           { path: 'payments/completed', element: <PaymentManagement user={user} org={org} /> },
           { path: 'payments/:id', element: <PaymentManagement user={user} org={org} /> },
+          
+          // Payment Dashboard - Universal for all parties
+          { path: 'payments/dashboard', element: <PaymentDashboard user={user} org={org} /> },
+          { path: 'banking/payment-dashboard', element: <PaymentDashboard user={user} org={org} /> },
 
           // FX Management Routes
           { path: 'fx', element: <FXRates user={user} org={org} /> },

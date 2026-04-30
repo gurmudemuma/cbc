@@ -917,7 +917,7 @@ async function generateCompetenceCertificatePDF(exporterData, certificateData) {
             doc.fontSize(14).font('Helvetica-Bold').text('EXPORTER INFORMATION', 50, y);
             y += 30;
             y = addField(doc, 'Company Name', exporterData.companyName, y);
-            y = addField(doc, 'Exporter ID', exporterData.username, y);
+            y = addField(doc, 'Exporter Code', exporterData.exporterCode || exporterData.exporter_id || exporterData.username, y);
             y = addField(doc, 'TIN', exporterData.tin, y);
             y = addField(doc, 'Business Type', exporterData.businessType, y);
             y += 15;
@@ -1031,7 +1031,7 @@ async function generateLaboratoryCertificatePDF(exporterData, laboratoryData) {
             doc.fontSize(14).font('Helvetica-Bold').text('EXPORTER INFORMATION', 50, y);
             y += 30;
             y = addField(doc, 'Company Name', exporterData.companyName, y);
-            y = addField(doc, 'Exporter ID', exporterData.username, y);
+            y = addField(doc, 'Exporter Code', exporterData.exporterCode || exporterData.exporter_id || exporterData.username, y);
             y = addField(doc, 'TIN', exporterData.tin, y);
             y += 15;
             
@@ -1135,7 +1135,7 @@ async function generateTasterCertificatePDF(exporterData, tasterData) {
             doc.fontSize(14).font('Helvetica-Bold').text('EXPORTER INFORMATION', 50, y);
             y += 30;
             y = addField(doc, 'Company Name', exporterData.companyName, y);
-            y = addField(doc, 'Exporter ID', exporterData.username, y);
+            y = addField(doc, 'Exporter Code', exporterData.exporterCode || exporterData.exporter_id || exporterData.username, y);
             y += 15;
             
             // Taster Details
@@ -1239,7 +1239,7 @@ async function generateExportLicensePDF(exporterData, licenseData) {
             doc.fontSize(14).font('Helvetica-Bold').text('LICENSEE INFORMATION', 50, y);
             y += 30;
             y = addField(doc, 'Company Name', exporterData.companyName, y);
-            y = addField(doc, 'Exporter ID', exporterData.username, y);
+            y = addField(doc, 'Exporter Code', exporterData.exporterCode || exporterData.exporter_id || exporterData.username, y);
             y = addField(doc, 'TIN', exporterData.tin, y);
             y = addField(doc, 'Business Type', exporterData.businessType, y);
             y = addField(doc, 'Registered Capital', `${exporterData.capitalETB?.toLocaleString()} ETB`, y);

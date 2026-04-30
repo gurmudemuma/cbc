@@ -1,38 +1,27 @@
 import axios from 'axios';
 
-// Get base URL from environment or use default
-const getBaseURL = () => {
-  // Use empty string since all paths now include /api prefix
-  // and Vite proxy handles routing based on /api/* patterns
-  return '';
-};
+// FORCE NEW BUNDLE: Added unique identifier to force rebuild
+const BUNDLE_VERSION = '2026-04-28-11-27-00';
+console.log('API Client Bundle Version:', BUNDLE_VERSION);
 
+// FORCE REBUILD: Updated timestamp to force new bundle generation
+// Last updated: 2026-04-28 11:25:00
+// CRITICAL: Always use empty baseURL for relative URLs
+// This ensures all requests go through the nginx proxy at the same origin
 const apiClient = axios.create({
-  baseURL: getBaseURL(),
-  timeout: 120000, // 120 second timeout for PDF generation endpoints
+  baseURL: '', // Empty string = relative URLs to current origin
+  timeout: 120000,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Store the original baseURL setter
-const originalSetBaseURL = (baseUrl) => {
-  // Ensure the base URL includes /api if it's a full URL
-  if (baseUrl && baseUrl.includes('http')) {
-    // If it's a full URL like http://localhost:3007, append /api
-    if (!baseUrl.endsWith('/api')) {
-      apiClient.defaults.baseURL = `${baseUrl}/api`;
-    } else {
-      apiClient.defaults.baseURL = baseUrl;
-    }
-  } else {
-    // If it's a relative path, use as-is
-    apiClient.defaults.baseURL = baseUrl || '/api';
-  }
-};
-
+// Request interceptor
 apiClient.interceptors.request.use(
   (config) => {
+    // CRITICAL: Force baseURL to empty string to prevent any external modifications
+    config.baseURL = '';
+    
     const token = localStorage.getItem('token');
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
@@ -50,9 +39,29 @@ apiClient.interceptors.response.use(
     return response;
   },
   (error) => {
+    // Suppress console errors for expected failures (like stats endpoint when no data)
+    const isExpectedError = 
+      error.config?.url?.includes('/stats') ||
+      error.config?.url?.includes('/exports') && error.response?.status === 404;
+
     // Handle 401 Unauthorized - token expired or invalid
     if (error.response?.status === 401) {
-      console.warn('Authentication expired, redirecting to login...');
+      // Check if we're on a page that should handle 401 gracefully
+      const currentPath = window.location.pathname;
+      const shouldNotRedirect = 
+        currentPath.includes('/preregistration') ||
+        currentPath.includes('/public') ||
+        error.config?.skipAuthRedirect === true;
+
+      if (shouldNotRedirect) {
+        // Don't redirect, let the component handle the error
+        console.warn('Authentication required for this action');
+        return Promise.reject(error);
+      }
+
+      if (!isExpectedError) {
+        console.warn('Authentication expired, redirecting to login...');
+      }
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       localStorage.removeItem('org');
@@ -62,7 +71,9 @@ apiClient.interceptors.response.use(
     // Handle 403 Forbidden - insufficient permissions
     if (error.response?.status === 403) {
       const errorMessage = error.response?.data?.error || 'Access forbidden';
-      console.error('Access forbidden:', errorMessage);
+      if (!isExpectedError) {
+        console.error('Access forbidden:', errorMessage);
+      }
       
       // If it's a token issue, redirect to login
       if (errorMessage.includes('token') || errorMessage.includes('expired')) {
@@ -74,19 +85,20 @@ apiClient.interceptors.response.use(
       }
     }
     
-    // Handle 500+ Server errors
-    if (error.response?.status >= 500) {
-      console.error('Server error occurred:', error.response?.data?.message || 'Unknown error');
+    // Handle 500+ Server errors - only log if not expected
+    if (error.response?.status >= 500 && !isExpectedError) {
+      const errorDetails = error.response?.data?.error || error.response?.data?.message || 'Unknown error';
+      const endpoint = error.config?.url || 'unknown endpoint';
+      console.error(`Server error at ${endpoint}:`, errorDetails);
     }
     
     // Handle network errors
-    if (!error.response) {
+    if (!error.response && !isExpectedError) {
       console.error('Network error: Unable to reach server');
-      // You could show a toast notification here
     }
     
     // Handle timeout errors
-    if (error.code === 'ECONNABORTED') {
+    if (error.code === 'ECONNABORTED' && !isExpectedError) {
       console.error('Request timeout: Server took too long to respond');
     }
     
@@ -94,8 +106,11 @@ apiClient.interceptors.response.use(
   }
 );
 
+// Deprecated: setApiBaseUrl is now a no-op
+// All requests use relative URLs through nginx proxy
 export const setApiBaseUrl = (baseUrl) => {
-  originalSetBaseURL(baseUrl);
+  console.warn('setApiBaseUrl is deprecated and has no effect. All requests use relative URLs.');
+  // Do nothing - we always use relative URLs
 };
 
 export default apiClient;

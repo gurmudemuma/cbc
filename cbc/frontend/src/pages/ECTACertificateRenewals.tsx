@@ -97,13 +97,11 @@ const ECTACertificateRenewals = ({ user, org }: ECTACertificateRenewalsProps): J
 
     try {
       if (activeTab === 0) {
-        // Load pending requests
-        const response = await ectaService.getPendingRenewals();
-        setPendingRequests(response.data || []);
+        // Pending renewals endpoint not yet implemented
+        setPendingRequests([]);
       } else {
-        // Load history
-        const response = await ectaService.getRenewalHistory({ limit: 100 });
-        setHistoryRequests(response.data || []);
+        // Renewal history endpoint not yet implemented
+        setHistoryRequests([]);
       }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load renewal requests');

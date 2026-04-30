@@ -33,7 +33,8 @@ import {
   List,
   ListItem,
   ListItemText,
-  LinearProgress
+  LinearProgress,
+  Autocomplete
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -46,6 +47,8 @@ import {
   CheckCircle as CheckCircleIcon
 } from '@mui/icons-material';
 import paymentService from '../services/paymentService';
+import exporterService from '../services/exporterService';
+import apiClient from '../services/api';
 
 interface PaymentManagementProps {
   user: any;
@@ -66,14 +69,23 @@ const PaymentManagement: React.FC<PaymentManagementProps> = ({ user, org }) => {
   const [openDetailsDialog, setOpenDetailsDialog] = useState(false);
   const [openDocumentsDialog, setOpenDocumentsDialog] = useState(false);
 
+  // Export selection states
+  const [availableExports, setAvailableExports] = useState<any[]>([]);
+  const [selectedExport, setSelectedExport] = useState<any>(null);
+  const [loadingExports, setLoadingExports] = useState(false);
+  const [loadingExportDetails, setLoadingExportDetails] = useState(false);
+
   // Form states for payment initiation
   const [exportId, setExportId] = useState('');
+  const [contractId, setContractId] = useState('');
+  const [buyerId, setBuyerId] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('LC');
   const [amount, setAmount] = useState('');
   const [currency, setCurrency] = useState('USD');
   const [paymentTerms, setPaymentTerms] = useState('');
   const [lcNumber, setLcNumber] = useState('');
   const [issuingBank, setIssuingBank] = useState('');
+  const [advisingBank, setAdvisingBank] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
   const [notes, setNotes] = useState('');
 
@@ -123,6 +135,152 @@ const PaymentManagement: React.FC<PaymentManagementProps> = ({ user, org }) => {
     }
   };
 
+  const loadAvailableExports = async () => {
+    try {
+      setLoadingExports(true);
+      // Fetch exports that don't have payments yet or are approved
+      // Use /api/network/exports for network members (banks) to see all exports
+      const response = await apiClient.get('/api/network/exports', {
+        params: { status: 'APPROVED' }
+      });
+      const exports = response.data?.exports || response.data?.data || [];
+      setAvailableExports(exports);
+    } catch (err: any) {
+      console.error('Failed to load exports:', err);
+      setError('Failed to load available exports');
+    } finally {
+      setLoadingExports(false);
+    }
+  };
+
+  const handleExportSelection = async (export_: any) => {
+    if (!export_) {
+      setSelectedExport(null);
+      resetInitiateForm();
+      return;
+    }
+
+    try {
+      setLoadingExportDetails(true);
+      setSelectedExport(export_);
+      
+      // Set export ID
+      setExportId(export_.export_id);
+      
+      // Auto-fill LC number if available directly from export
+      if (export_.lc_number) {
+        setLcNumber(export_.lc_number);
+      }
+      
+      // Auto-fill payment method if available
+      if (export_.payment_method) {
+        setPaymentMethod(export_.payment_method);
+      }
+      
+      // Auto-fill payment terms if available
+      if (export_.payment_terms) {
+        setPaymentTerms(export_.payment_terms);
+      }
+      
+      // Auto-fill banks if available
+      if (export_.issuing_bank) {
+        setIssuingBank(export_.issuing_bank);
+      }
+      
+      if (export_.advising_bank) {
+        setAdvisingBank(export_.advising_bank);
+      }
+      
+      // Auto-fill LC expiry date if available
+      if (export_.lc_expiry_date) {
+        const date = new Date(export_.lc_expiry_date);
+        const formattedDate = date.toISOString().split('T')[0];
+        setExpiryDate(formattedDate);
+      }
+      
+      // Fetch full export details including contract information
+      const detailsResponse = await apiClient.get(`/api/exports/${export_.export_id}`);
+      const exportDetails = detailsResponse.data?.export || detailsResponse.data?.data || export_;
+      
+      // Auto-fill amount from export value or contract
+      if (exportDetails.contract_total_value) {
+        setAmount(exportDetails.contract_total_value.toString());
+      } else if (exportDetails.estimated_value || exportDetails.value || exportDetails.amount) {
+        setAmount((exportDetails.estimated_value || exportDetails.value || exportDetails.amount).toString());
+      }
+      
+      // Set currency
+      if (exportDetails.contract_currency) {
+        setCurrency(exportDetails.contract_currency);
+      } else if (exportDetails.currency) {
+        setCurrency(exportDetails.currency);
+      }
+      
+      // Set buyer ID if available
+      if (exportDetails.buyer_id) {
+        setBuyerId(exportDetails.buyer_id);
+      }
+      
+      // Set contract ID if available
+      if (exportDetails.contract_id || exportDetails.sales_contract_id) {
+        const contractId = exportDetails.contract_id || exportDetails.sales_contract_id;
+        setContractId(contractId);
+      }
+      
+      // If contract details are embedded in export response, use them
+      if (exportDetails.contract_details) {
+        const contract = exportDetails.contract_details;
+        
+        if (contract.lc_number && !lcNumber) {
+          setLcNumber(contract.lc_number);
+        }
+        
+        if (contract.payment_method && !paymentMethod) {
+          setPaymentMethod(contract.payment_method);
+        }
+        
+        if (contract.payment_terms && !paymentTerms) {
+          setPaymentTerms(contract.payment_terms);
+        }
+        
+        if (contract.issuing_bank && !issuingBank) {
+          setIssuingBank(contract.issuing_bank);
+        }
+        
+        if (contract.advising_bank && !advisingBank) {
+          setAdvisingBank(contract.advising_bank);
+        }
+        
+        if (contract.lc_expiry_date && !expiryDate) {
+          const date = new Date(contract.lc_expiry_date);
+          const formattedDate = date.toISOString().split('T')[0];
+          setExpiryDate(formattedDate);
+        }
+        
+        if (contract.total_value && !amount) {
+          setAmount(contract.total_value.toString());
+        }
+        
+        if (contract.currency && !currency) {
+          setCurrency(contract.currency);
+        }
+      }
+      
+      setSuccess('Export details loaded successfully. LC Number and payment information auto-filled from registered sales contract.');
+    } catch (err: any) {
+      console.error('Failed to load export details:', err);
+      setError('Failed to load export details');
+    } finally {
+      setLoadingExportDetails(false);
+    }
+  };
+
+  const handleOpenInitiateDialog = () => {
+    resetInitiateForm();
+    loadAvailableExports();
+    setOpenInitiateDialog(true);
+  };
+
   const getStatusFilter = (tab: number) => {
     switch (tab) {
       case 0: return {}; // All
@@ -138,7 +296,7 @@ const PaymentManagement: React.FC<PaymentManagementProps> = ({ user, org }) => {
   const handleInitiatePayment = async () => {
     try {
       if (!exportId || !amount || !paymentMethod) {
-        setError('Please fill in all required fields');
+        setError('Please select an export and fill in all required fields');
         return;
       }
 
@@ -151,10 +309,21 @@ const PaymentManagement: React.FC<PaymentManagementProps> = ({ user, org }) => {
         notes: notes || undefined
       };
 
-      if (paymentMethod === 'LC' && lcNumber) {
+      // Add contract ID if available
+      if (contractId) {
+        paymentData.contractId = contractId;
+      }
+
+      // Add buyer ID if available
+      if (buyerId) {
+        paymentData.buyerId = buyerId;
+      }
+
+      if (paymentMethod === 'LC') {
         paymentData.lcDetails = {
-          lcNumber,
-          issuingBank,
+          lcNumber: lcNumber || undefined,
+          issuingBank: issuingBank || undefined,
+          advisingBank: advisingBank || undefined,
           expiryDate: expiryDate || undefined
         };
       }
@@ -171,13 +340,17 @@ const PaymentManagement: React.FC<PaymentManagementProps> = ({ user, org }) => {
   };
 
   const resetInitiateForm = () => {
+    setSelectedExport(null);
     setExportId('');
+    setContractId('');
+    setBuyerId('');
     setPaymentMethod('LC');
     setAmount('');
     setCurrency('USD');
     setPaymentTerms('');
     setLcNumber('');
     setIssuingBank('');
+    setAdvisingBank('');
     setExpiryDate('');
     setNotes('');
   };
@@ -271,7 +444,7 @@ const PaymentManagement: React.FC<PaymentManagementProps> = ({ user, org }) => {
           <Button
             variant="contained"
             startIcon={<AddIcon />}
-            onClick={() => setOpenInitiateDialog(true)}
+            onClick={handleOpenInitiateDialog}
           >
             Initiate Payment
           </Button>
@@ -500,78 +673,70 @@ const PaymentManagement: React.FC<PaymentManagementProps> = ({ user, org }) => {
         <DialogTitle>Initiate New Payment</DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
+            {/* Export Selection */}
             <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Export ID"
-                value={exportId}
-                onChange={(e) => setExportId(e.target.value)}
-                required
-                helperText="Enter the export ID for this payment"
+              <Alert severity="info" sx={{ mb: 2 }}>
+                Select an approved export to initiate payment. Payment details will be auto-filled from the export and sales contract.
+              </Alert>
+            </Grid>
+
+            <Grid item xs={12}>
+              <Autocomplete
+                options={availableExports}
+                getOptionLabel={(option) => 
+                  `${option.coffee_type || 'Export'} - ${option.quantity || 0} kg to ${option.destination_country || 'Unknown'} (${option.export_id?.substring(0, 8)}...)`
+                }
+                value={selectedExport}
+                onChange={(_, newValue) => handleExportSelection(newValue)}
+                loading={loadingExports}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Select Export *"
+                    placeholder="Choose an approved export"
+                    InputProps={{
+                      ...params.InputProps,
+                      endAdornment: (
+                        <>
+                          {loadingExports ? <CircularProgress color="inherit" size={20} /> : null}
+                          {params.InputProps.endAdornment}
+                        </>
+                      ),
+                    }}
+                  />
+                )}
+                renderOption={(props, option) => (
+                  <li {...props}>
+                    <Box>
+                      <Typography variant="body2">
+                        <strong>{option.coffee_type || 'Export'}</strong> - {option.quantity || 0} kg
+                      </Typography>
+                      <Typography variant="caption" color="textSecondary">
+                        To: {option.destination_country || 'Unknown'} | ID: {option.export_id?.substring(0, 12)}...
+                      </Typography>
+                    </Box>
+                  </li>
+                )}
               />
             </Grid>
 
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth required>
-                <InputLabel>Payment Method</InputLabel>
-                <Select
-                  value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                  label="Payment Method"
-                >
-                  <MenuItem value="LC">Letter of Credit (LC)</MenuItem>
-                  <MenuItem value="TT">Telegraphic Transfer (TT)</MenuItem>
-                  <MenuItem value="CAD">Cash Against Documents (CAD)</MenuItem>
-                  <MenuItem value="DP">Documents Against Payment (DP)</MenuItem>
-                  <MenuItem value="DA">Documents Against Acceptance (DA)</MenuItem>
-                  <MenuItem value="OA">Open Account (OA)</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
+            {loadingExportDetails && (
+              <Grid item xs={12}>
+                <Box display="flex" alignItems="center" gap={2}>
+                  <CircularProgress size={20} />
+                  <Typography variant="body2" color="textSecondary">
+                    Loading export and contract details...
+                  </Typography>
+                </Box>
+              </Grid>
+            )}
 
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Payment Terms"
-                value={paymentTerms}
-                onChange={(e) => setPaymentTerms(e.target.value)}
-                placeholder="e.g., Net 30, Net 60"
-              />
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                type="number"
-                label="Amount"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                required
-                inputProps={{ min: 0, step: 0.01 }}
-              />
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel>Currency</InputLabel>
-                <Select
-                  value={currency}
-                  onChange={(e) => setCurrency(e.target.value)}
-                  label="Currency"
-                >
-                  <MenuItem value="USD">USD</MenuItem>
-                  <MenuItem value="EUR">EUR</MenuItem>
-                  <MenuItem value="ETB">ETB</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-
-            {paymentMethod === 'LC' && (
+            {selectedExport && !loadingExportDetails && (
               <>
                 <Grid item xs={12}>
                   <Divider sx={{ my: 1 }}>
                     <Typography variant="body2" color="textSecondary">
-                      Letter of Credit Details
+                      Payment Details
                     </Typography>
                   </Divider>
                 </Grid>
@@ -579,45 +744,136 @@ const PaymentManagement: React.FC<PaymentManagementProps> = ({ user, org }) => {
                 <Grid item xs={12} md={6}>
                   <TextField
                     fullWidth
-                    label="LC Number"
-                    value={lcNumber}
-                    onChange={(e) => setLcNumber(e.target.value)}
+                    label="Export ID"
+                    value={exportId}
+                    disabled
+                    helperText="Auto-filled from selected export"
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth required>
+                    <InputLabel>Payment Method</InputLabel>
+                    <Select
+                      value={paymentMethod}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                      label="Payment Method"
+                    >
+                      <MenuItem value="LC">Letter of Credit (LC)</MenuItem>
+                      <MenuItem value="TT">Telegraphic Transfer (TT)</MenuItem>
+                      <MenuItem value="CAD">Cash Against Documents (CAD)</MenuItem>
+                      <MenuItem value="DP">Documents Against Payment (DP)</MenuItem>
+                      <MenuItem value="DA">Documents Against Acceptance (DA)</MenuItem>
+                      <MenuItem value="OA">Open Account (OA)</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Payment Terms"
+                    value={paymentTerms}
+                    onChange={(e) => setPaymentTerms(e.target.value)}
+                    placeholder="e.g., Net 30, Net 60"
+                    helperText={contractId ? "From sales contract" : ""}
                   />
                 </Grid>
 
                 <Grid item xs={12} md={6}>
                   <TextField
                     fullWidth
-                    label="Issuing Bank"
-                    value={issuingBank}
-                    onChange={(e) => setIssuingBank(e.target.value)}
+                    type="number"
+                    label="Amount *"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    required
+                    inputProps={{ min: 0, step: 0.01 }}
+                    helperText={contractId ? "From sales contract" : "From export value"}
                   />
                 </Grid>
 
                 <Grid item xs={12} md={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Currency</InputLabel>
+                    <Select
+                      value={currency}
+                      onChange={(e) => setCurrency(e.target.value)}
+                      label="Currency"
+                    >
+                      <MenuItem value="USD">USD</MenuItem>
+                      <MenuItem value="EUR">EUR</MenuItem>
+                      <MenuItem value="ETB">ETB</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+
+                {paymentMethod === 'LC' && (
+                  <>
+                    <Grid item xs={12}>
+                      <Divider sx={{ my: 1 }}>
+                        <Typography variant="body2" color="textSecondary">
+                          Letter of Credit Details
+                        </Typography>
+                      </Divider>
+                    </Grid>
+
+                    <Grid item xs={12} md={6}>
+                      <TextField
+                        fullWidth
+                        label="LC Number"
+                        value={lcNumber}
+                        onChange={(e) => setLcNumber(e.target.value)}
+                        helperText={contractId ? "ECTA Reference Number from registered sales contract" : "Enter LC number"}
+                      />
+                    </Grid>
+
+                    <Grid item xs={12} md={6}>
+                      <TextField
+                        fullWidth
+                        label="Issuing Bank"
+                        value={issuingBank}
+                        onChange={(e) => setIssuingBank(e.target.value)}
+                        helperText={contractId ? "From sales contract" : ""}
+                      />
+                    </Grid>
+
+                    <Grid item xs={12} md={6}>
+                      <TextField
+                        fullWidth
+                        label="Advising Bank"
+                        value={advisingBank}
+                        onChange={(e) => setAdvisingBank(e.target.value)}
+                      />
+                    </Grid>
+
+                    <Grid item xs={12} md={6}>
+                      <TextField
+                        fullWidth
+                        type="date"
+                        label="Expiry Date"
+                        value={expiryDate}
+                        onChange={(e) => setExpiryDate(e.target.value)}
+                        InputLabelProps={{ shrink: true }}
+                        helperText={contractId ? "From sales contract" : ""}
+                      />
+                    </Grid>
+                  </>
+                )}
+
+                <Grid item xs={12}>
                   <TextField
                     fullWidth
-                    type="date"
-                    label="Expiry Date"
-                    value={expiryDate}
-                    onChange={(e) => setExpiryDate(e.target.value)}
-                    InputLabelProps={{ shrink: true }}
+                    multiline
+                    rows={3}
+                    label="Notes"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Additional notes or instructions"
                   />
                 </Grid>
               </>
             )}
-
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                multiline
-                rows={3}
-                label="Notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Additional notes or instructions"
-              />
-            </Grid>
           </Grid>
         </DialogContent>
         <DialogActions>
@@ -625,7 +881,7 @@ const PaymentManagement: React.FC<PaymentManagementProps> = ({ user, org }) => {
           <Button
             variant="contained"
             onClick={handleInitiatePayment}
-            disabled={!exportId || !amount || !paymentMethod}
+            disabled={!selectedExport || !exportId || !amount || !paymentMethod || loadingExportDetails}
           >
             Initiate Payment
           </Button>
@@ -697,6 +953,104 @@ const PaymentManagement: React.FC<PaymentManagementProps> = ({ user, org }) => {
                 </Grid>
               )}
 
+              {/* Review Status and Reviewer Information */}
+              {(selectedPayment.status === 'DOCUMENTS_SUBMITTED' || 
+                selectedPayment.status === 'UNDER_REVIEW' || 
+                selectedPayment.status === 'APPROVED') && (
+                <>
+                  <Grid item xs={12}>
+                    <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+                      Review Information
+                    </Typography>
+                    <Divider sx={{ mb: 2 }} />
+                  </Grid>
+
+                  <Grid item xs={12}>
+                    <Card variant="outlined" sx={{ bgcolor: 'background.default', p: 2 }}>
+                      <Typography variant="body2" color="textSecondary" gutterBottom>
+                        Current Stage
+                      </Typography>
+                      <Typography variant="h6" gutterBottom>
+                        {selectedPayment.status === 'DOCUMENTS_SUBMITTED' ? '📋 Documents Submitted - Awaiting Importer Bank Review' :
+                         selectedPayment.status === 'UNDER_REVIEW' ? '🔍 Under Review - Importer Bank Verification' :
+                         selectedPayment.status === 'APPROVED' ? '✅ Approved by Importer Bank - Ready for Payment' : 
+                         selectedPayment.status}
+                      </Typography>
+
+                      <Box sx={{ mt: 2 }}>
+                        <Typography variant="body2" fontWeight="bold" gutterBottom>
+                          Payment Flow:
+                        </Typography>
+                        
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 1 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Chip 
+                              label="Initiator" 
+                              size="small" 
+                              color="success" 
+                              sx={{ minWidth: 80 }}
+                            />
+                            <Typography variant="body2">
+                              <strong>CBE (Exporter's Bank)</strong> - Payment initiated and documents submitted
+                            </Typography>
+                          </Box>
+                          
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Chip 
+                              label="Reviewer" 
+                              size="small" 
+                              color="primary" 
+                              sx={{ minWidth: 80 }}
+                            />
+                            <Typography variant="body2">
+                              <strong>Importer's Bank</strong> - Reviews documents against sales contract requirements
+                            </Typography>
+                          </Box>
+
+                          {selectedPayment.payment_method === 'LC' && selectedPayment.lc_advising_bank && (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Chip 
+                                label="Advising" 
+                                size="small" 
+                                color="info" 
+                                sx={{ minWidth: 80 }}
+                              />
+                              <Typography variant="body2">
+                                <strong>{selectedPayment.lc_advising_bank}</strong> - LC Terms Verification
+                              </Typography>
+                            </Box>
+                          )}
+                        </Box>
+
+                        {selectedPayment.status === 'DOCUMENTS_SUBMITTED' && (
+                          <Alert severity="info" sx={{ mt: 2 }}>
+                            <Typography variant="caption">
+                              <strong>Next Step:</strong> Importer's Bank ({selectedPayment.lc_issuing_bank || 'Buyer\'s Bank'}) will review submitted documents to verify they meet the requirements agreed upon in the sales contract. Expected review time: 2-3 business days.
+                            </Typography>
+                          </Alert>
+                        )}
+
+                        {selectedPayment.status === 'UNDER_REVIEW' && (
+                          <Alert severity="warning" sx={{ mt: 2 }}>
+                            <Typography variant="caption">
+                              <strong>In Progress:</strong> Importer's Bank is verifying that all submitted documents comply with the sales contract terms and conditions. You will be notified once the review is complete.
+                            </Typography>
+                          </Alert>
+                        )}
+
+                        {selectedPayment.status === 'APPROVED' && (
+                          <Alert severity="success" sx={{ mt: 2 }}>
+                            <Typography variant="caption">
+                              <strong>Completed:</strong> Importer's Bank has approved the documents. Payment will be processed according to the agreed terms in the sales contract.
+                            </Typography>
+                          </Alert>
+                        )}
+                      </Box>
+                    </Card>
+                  </Grid>
+                </>
+              )}
+
               {selectedPayment.lc_number && (
                 <>
                   <Grid item xs={12}>
@@ -728,29 +1082,140 @@ const PaymentManagement: React.FC<PaymentManagementProps> = ({ user, org }) => {
                 <>
                   <Grid item xs={12}>
                     <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
-                      Documents
+                      Submitted Documents
                     </Typography>
                     <Divider sx={{ mb: 2 }} />
                   </Grid>
 
                   <Grid item xs={12}>
+                    {selectedPayment.status === 'DOCUMENTS_SUBMITTED' && (
+                      <Alert severity="warning" sx={{ mb: 2 }}>
+                        <Typography variant="body2" fontWeight="bold">
+                          📋 Documents Submitted - Awaiting Review
+                        </Typography>
+                        <Typography variant="body2">
+                          Submitted by: <strong>CBE (Exporter's Bank)</strong>
+                        </Typography>
+                        <Typography variant="body2">
+                          To be reviewed by: <strong>{selectedPayment.lc_issuing_bank || 'Importer\'s Bank'}</strong>
+                        </Typography>
+                        <Typography variant="caption" color="textSecondary">
+                          Documents are pending review by the importer's bank to verify compliance with sales contract requirements.
+                        </Typography>
+                      </Alert>
+                    )}
+
+                    {selectedPayment.status === 'UNDER_REVIEW' && (
+                      <Alert severity="info" sx={{ mb: 2 }}>
+                        <Typography variant="body2" fontWeight="bold">
+                          🔍 Currently Under Review
+                        </Typography>
+                        <Typography variant="body2">
+                          Reviewer: <strong>{selectedPayment.lc_issuing_bank || 'Importer\'s Bank'}</strong> (Document Verification Team)
+                        </Typography>
+                        <Typography variant="caption" color="textSecondary">
+                          The importer's bank is verifying that all submitted documents meet the requirements specified in the sales contract.
+                        </Typography>
+                      </Alert>
+                    )}
+
+                    {selectedPayment.status === 'APPROVED' && (
+                      <Alert severity="success" sx={{ mb: 2 }}>
+                        <Typography variant="body2" fontWeight="bold">
+                          ✅ Documents Approved
+                        </Typography>
+                        <Typography variant="body2">
+                          Approved by: <strong>{selectedPayment.lc_issuing_bank || 'Importer\'s Bank'}</strong>
+                        </Typography>
+                        <Typography variant="caption" color="textSecondary">
+                          All documents have been verified and approved by the importer's bank. Payment will be processed according to the sales contract terms.
+                        </Typography>
+                      </Alert>
+                    )}
+
                     <List>
                       {selectedPayment.documents.map((doc: any) => (
-                        <ListItem key={doc.document_id}>
+                        <ListItem 
+                          key={doc.document_id}
+                          sx={{
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            borderRadius: 1,
+                            mb: 1,
+                            bgcolor: doc.review_status === 'APPROVED' ? 'success.50' : 
+                                     doc.review_status === 'REJECTED' ? 'error.50' : 
+                                     'background.paper'
+                          }}
+                        >
+                          <DocumentIcon sx={{ mr: 2, color: 'primary.main' }} />
                           <ListItemText
-                            primary={doc.document_name}
-                            secondary={`Type: ${doc.document_type} | Status: ${
-                              doc.review_status || 'PENDING'
-                            }`}
-                          />
-                          <Chip
-                            label={doc.review_status || 'PENDING'}
-                            color={doc.review_status === 'APPROVED' ? 'success' : 'default'}
-                            size="small"
+                            primary={
+                              <Box display="flex" alignItems="center" gap={1}>
+                                <Typography variant="body1" fontWeight="medium">
+                                  {doc.document_name}
+                                </Typography>
+                                <Chip
+                                  label={doc.review_status || 'PENDING REVIEW'}
+                                  color={
+                                    doc.review_status === 'APPROVED' ? 'success' : 
+                                    doc.review_status === 'REJECTED' ? 'error' : 
+                                    'warning'
+                                  }
+                                  size="small"
+                                />
+                              </Box>
+                            }
+                            secondary={
+                              <Box sx={{ mt: 0.5 }}>
+                                <Typography variant="body2" color="textSecondary">
+                                  Type: <strong>{doc.document_type}</strong>
+                                </Typography>
+                                {doc.review_status === 'PENDING' || !doc.review_status ? (
+                                  <Typography variant="caption" color="warning.main">
+                                    ⏳ Awaiting review by {selectedPayment.lc_issuing_bank || 'Importer\'s Bank'}
+                                  </Typography>
+                                ) : doc.review_status === 'APPROVED' ? (
+                                  <Typography variant="caption" color="success.main">
+                                    ✓ Approved by {doc.reviewed_by || 'Importer\'s Bank Officer'} on {doc.reviewed_at ? new Date(doc.reviewed_at).toLocaleDateString() : 'N/A'}
+                                  </Typography>
+                                ) : doc.review_status === 'REJECTED' ? (
+                                  <Typography variant="caption" color="error.main">
+                                    ✗ Rejected by {doc.reviewed_by || 'Importer\'s Bank Officer'}: {doc.rejection_reason || 'See comments'}
+                                  </Typography>
+                                ) : null}
+                              </Box>
+                            }
                           />
                         </ListItem>
                       ))}
                     </List>
+
+                    {/* Review Progress Indicator */}
+                    {(selectedPayment.status === 'DOCUMENTS_SUBMITTED' || selectedPayment.status === 'UNDER_REVIEW') && (
+                      <Box sx={{ mt: 3 }}>
+                        <Typography variant="body2" color="textSecondary" gutterBottom>
+                          Review Progress
+                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 1 }}>
+                          <Box sx={{ flex: 1 }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                              <Typography variant="caption">CBE Submitted</Typography>
+                              <Typography variant="caption">Importer Bank Review</Typography>
+                              <Typography variant="caption">Approved</Typography>
+                            </Box>
+                            <LinearProgress 
+                              variant="determinate" 
+                              value={
+                                selectedPayment.status === 'DOCUMENTS_SUBMITTED' ? 33 :
+                                selectedPayment.status === 'UNDER_REVIEW' ? 66 :
+                                selectedPayment.status === 'APPROVED' ? 100 : 0
+                              }
+                              sx={{ height: 8, borderRadius: 1 }}
+                            />
+                          </Box>
+                        </Box>
+                      </Box>
+                    )}
                   </Grid>
                 </>
               )}
@@ -769,13 +1234,25 @@ const PaymentManagement: React.FC<PaymentManagementProps> = ({ user, org }) => {
         maxWidth="md"
         fullWidth
       >
-        <DialogTitle>Submit Payment Documents</DialogTitle>
+        <DialogTitle>Submit Payment Documents to Importer's Bank</DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid item xs={12}>
               <Alert severity="info">
-                Submit required documents for payment processing. Common documents include:
-                Commercial Invoice, Packing List, Bill of Lading, Certificate of Origin, etc.
+                <Typography variant="body2" fontWeight="bold" gutterBottom>
+                  Documents from Export Record
+                </Typography>
+                <Typography variant="body2">
+                  These documents were uploaded by the exporter during export creation and will be submitted to the Importer's Bank for verification against the sales contract requirements.
+                </Typography>
+              </Alert>
+            </Grid>
+            
+            <Grid item xs={12}>
+              <Alert severity="warning">
+                <Typography variant="body2">
+                  <strong>Note:</strong> The Importer's Bank will review these documents to ensure they comply with the terms agreed upon in the sales contract.
+                </Typography>
               </Alert>
             </Grid>
 

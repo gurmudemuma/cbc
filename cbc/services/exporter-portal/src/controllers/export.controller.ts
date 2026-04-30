@@ -199,6 +199,7 @@ export class ExportController {
   ): Promise<void> => {
     try {
       const userId = (req as any).user?.id;
+      const { status } = req.query;
 
       if (!userId) {
         throw new AppError(ErrorCode.UNAUTHORIZED, 'User not authenticated', 401);
@@ -217,10 +218,18 @@ export class ExportController {
         return;
       }
 
-      const result = await pool.query(
-        'SELECT * FROM exports WHERE exporter_id = $1 ORDER BY created_at DESC',
-        [profile.exporterId]
-      );
+      // Build query with optional status filter
+      let query = 'SELECT * FROM exports WHERE exporter_id = $1';
+      const params = [profile.exporterId];
+
+      if (status) {
+        query += ' AND status = $2';
+        params.push(status as string);
+      }
+
+      query += ' ORDER BY created_at DESC';
+
+      const result = await pool.query(query, params);
 
       res.status(200).json({
         success: true,

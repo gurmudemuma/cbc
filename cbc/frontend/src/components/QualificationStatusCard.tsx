@@ -45,7 +45,7 @@ const QualificationStatusCard = ({ user }) => {
   const fetchQualificationStatus = async () => {
     try {
       const response = await apiClient.get('/api/exporter/qualification-status');
-      setQualificationStatus(response.data.data);
+      setQualificationStatus(response.data.data || response.data);
     } catch (err) {
       setError('Could not load qualification status');
       console.error('Qualification status error:', err);
@@ -146,14 +146,15 @@ const QualificationStatusCard = ({ user }) => {
           <Stack spacing={1} mb={2}>
             {/* Business Profile */}
             <Box display="flex" alignItems="center" gap={1}>
-              {getStatusIcon(validation.hasValidProfile)}
+              {getStatusIcon(validation.hasValidProfile || validation.profile?.status === 'FULLY_QUALIFIED' || validation.profile?.status === 'ACTIVE')}
               <Typography variant="body2">
-                Business Profile
+                Profile
               </Typography>
               <Chip
-                label={validation.hasValidProfile ? 'Approved' : 'Pending'}
+                label={(validation.hasValidProfile || validation.profile?.status === 'FULLY_QUALIFIED' || validation.profile?.status === 'ACTIVE') ? 
+                  (validation.profile?.status || 'ACTIVE') : 'Pending'}
                 size="small"
-                color={getStatusColor(validation.hasValidProfile)}
+                color={getStatusColor(validation.hasValidProfile || validation.profile?.status === 'FULLY_QUALIFIED' || validation.profile?.status === 'ACTIVE')}
                 variant="outlined"
               />
             </Box>

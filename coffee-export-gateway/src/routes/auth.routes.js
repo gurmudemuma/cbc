@@ -425,6 +425,7 @@ router.post('/login', async (req, res) => {
       { 
         id: username, 
         role: databaseUser.role,
+        organization: databaseUser.organization_id || databaseUser.role, // Add organization for agency mapping
         isActive: databaseUser.isActive
       },
       process.env.JWT_SECRET,
@@ -440,6 +441,7 @@ router.post('/login', async (req, res) => {
         id: username,
         username: username,
         role: databaseUser.role,
+        organization: databaseUser.organization_id || databaseUser.role,
         isActive: databaseUser.isActive
       }
     });

@@ -9,6 +9,82 @@ router.get('/test-sales-contract-routes', (req, res) => {
   res.json({ message: 'Sales contract routes are loaded!' });
 });
 
+/**
+ * GET /api/sales-contracts/:contractId
+ * Get sales contract details by ID (draft_id or lc_number)
+ */
+router.get('/sales-contracts/:contractId', authenticateToken, async (req, res) => {
+  try {
+    const { contractId } = req.params;
+    
+    // Try to find by draft_id or lc_number
+    const query = `
+      SELECT 
+        cd.*,
+        ep.business_name as exporter_name,
+        br.company_name as buyer_name,
+        br.country as buyer_country
+      FROM contract_drafts cd
+      LEFT JOIN exporter_profiles ep ON cd.exporter_id = ep.exporter_id
+      LEFT JOIN buyer_registry br ON cd.buyer_id = br.buyer_id
+      WHERE cd.draft_id = $1 OR cd.lc_number = $1
+    `;
+    
+    const result = await postgresService.query(query, [contractId]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Sales contract not found'
+      });
+    }
+    
+    const contract = result.rows[0];
+    
+    // Map database fields to expected format
+    // LC Number is the primary identifier for registered contracts
+    const contractData = {
+      contract_id: contract.draft_id,
+      lc_number: contract.lc_number,
+      reference_number: contract.lc_number, // Alias for backward compatibility
+      exporter_id: contract.exporter_id,
+      exporter_name: contract.exporter_name,
+      buyer_id: contract.buyer_id,
+      buyer_name: contract.buyer_name,
+      buyer_country: contract.buyer_country,
+      coffee_type: contract.coffee_type,
+      quantity: contract.quantity,
+      unit_price: contract.unit_price,
+      total_amount: contract.total_value,
+      amount: contract.total_value,
+      currency: contract.currency,
+      payment_method: contract.payment_method,
+      payment_terms: contract.payment_terms,
+      issuing_bank: contract.issuing_bank,
+      lc_issuing_bank: contract.issuing_bank,
+      advising_bank: contract.advising_bank,
+      lc_advising_bank: contract.advising_bank,
+      lc_expiry_date: contract.lc_expiry_date,
+      status: contract.status,
+      created_at: contract.created_at,
+      updated_at: contract.updated_at
+    };
+    
+    res.json({
+      success: true,
+      contract: contractData,
+      data: contractData,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Sales contract fetch error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // ============================================================================
 // ECTA REGISTRATION
 // ============================================================================
@@ -78,32 +154,33 @@ router.post('/ecta/contracts/:draftId/register',
         JSON.stringify(contractData)
       );
       
-      // Query the registered contract using draft ID to get the reference number
-      // The chaincode creates an index: draft~reference -> [draftId, referenceNumber]
+      // Query the registered contract using draft ID to get the LC number
+      // The chaincode creates an index: draft~reference -> [draftId, lcNumber]
       const queryResult = await fabricService.queryChaincode(
         'GetReferenceByDraftId',
         draftId
       );
       
       const response = typeof queryResult === 'string' ? JSON.parse(queryResult) : queryResult;
-      const referenceNumber = response.referenceNumber;
+      const lcNumber = response.referenceNumber || response.lcNumber;
       
-      // Update database
+      // Update database with LC Number
       await postgresService.query(
         `UPDATE contract_drafts 
          SET status = 'FINALIZED',
-             ecta_reference_number = $1,
+             lc_number = $1,
              registered_at = CURRENT_TIMESTAMP,
              registered_by = $2,
              registration_notes = $3
          WHERE draft_id = $4`,
-        [referenceNumber, req.user.username, notes, draftId]
+        [lcNumber, req.user.username, notes, draftId]
       );
       
       res.json({ 
         success: true, 
-        referenceNumber,
-        message: 'Sales contract registered successfully'
+        lcNumber,
+        referenceNumber: lcNumber, // Alias for backward compatibility
+        message: 'Sales contract registered successfully with LC Number: ' + lcNumber
       });
       
     } catch (error) {

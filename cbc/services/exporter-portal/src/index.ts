@@ -29,6 +29,9 @@ import exportRoutes from "./routes/export.routes";
 import exporterRoutes from "./routes/exporter.routes";
 import preregistrationRoutes from "./routes/preregistration.routes";
 import certificateRenewalRoutes from "./routes/certificate-renewal.routes";
+import contractRoutes from "./routes/contract.routes";
+import buyerPortalRoutes from "./routes/buyer-portal.routes";
+import paymentRoutes from "./routes/payment.routes";
 import { getPool } from "@shared/database/pool";
 import { errorHandler } from "@shared/middleware/error.middleware";
 import { monitoringMiddleware, errorMonitoringMiddleware } from "@shared/middleware/monitoring.middleware";
@@ -79,6 +82,10 @@ app.use("/api/exporter", apiLimiter, exporterRoutes);
 app.use("/api/exporter", apiLimiter, preregistrationRoutes);
 app.use("/api/exporter/certificate/renewal", apiLimiter, certificateRenewalRoutes);
 app.use("/api/exports", apiLimiter, exportRoutes);
+app.use("/api/contracts", apiLimiter, contractRoutes);
+app.use("/api/buyer", apiLimiter, buyerPortalRoutes);
+// Payment routes removed - now handled by gateway for all user roles
+// app.use("/api/payments", apiLimiter, paymentRoutes);
 
 // Health check
 app.get("/health", async (_req: Request, res: Response) => {
