@@ -184,7 +184,7 @@ echo.
 
 REM Start CBC services
 echo Starting CBC services...
-docker-compose -f %COMPOSE_HYBRID% up -d ecta-service commercial-bank-service national-bank-service customs-service ecx-service shipping-service
+docker-compose -f %COMPOSE_HYBRID% up -d ecta-service exporter-portal-service commercial-bank-service national-bank-service customs-service ecx-service shipping-service
 if errorlevel 1 (
     echo [WARNING] CBC services startup command failed, but continuing...
 )
@@ -244,6 +244,7 @@ echo Service URLs:
 echo   Frontend:        http://localhost:5173
 echo   Gateway API:     http://localhost:3000
 echo   ECTA Service:    http://localhost:3003
+echo   Exporter Portal: http://localhost:3004
 echo   PostgreSQL:      localhost:5432
 echo   Redis:           localhost:6379
 echo.
