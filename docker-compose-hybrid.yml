@@ -1,0 +1,670 @@
+services:
+  # ==================== Infrastructure ====================
+  
+  postgres:
+    image: postgres:14-alpine
+    container_name: coffee-postgres
+    environment:
+      POSTGRES_DB: coffee_export_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./cbc/services/shared/database/init.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - ./cbc/services/shared/database/migrations:/docker-entrypoint-initdb.d/migrations
+      - ./cbc/services/shared/database/init-migrations.sh:/docker-entrypoint-initdb.d/02-init-migrations.sh
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: coffee-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: coffee-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    volumes:
+      - zookeeper-data:/var/lib/zookeeper/data
+      - zookeeper-logs:/var/lib/zookeeper/log
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: coffee-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ==================== Gateway Service (Fabric SDK) ====================
+  
+  gateway:
+    image: cbc-gateway:latest
+    build:
+      context: ./coffee-export-gateway
+      dockerfile: Dockerfile
+    container_name: coffee-gateway
+    depends_on:
+      - postgres
+      - kafka
+      - redis
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      NODE_ENV: production
+      # Fabric Configuration
+      CHANNEL_NAME: coffeechannel
+      CHAINCODE_NAME: ecta
+      FABRIC_NETWORK_AS_LOCALHOST: "false"
+      FABRIC_TEST_MODE: "false"
+      FABRIC_USE_CLI: "true"  # Use CLI mode to bypass SDK endorsement policy issues
+      CONNECTION_PROFILE_PATH: ./src/config/connection-profile.json
+      WALLET_PATH: ./wallets
+      ORG_NAME: ECTA
+      ORG_MSP_ID: ECTAMSP
+      # Database
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: coffee_export_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: coffee_export_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      # Verification Service
+      VERIFICATION_SERVICE_URL: http://buyer-verification:3009
+      # Kafka
+      KAFKA_BROKERS: kafka:9092
+      KAFKA_CLIENT_ID: coffee-gateway
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      # Dual Write Strategy
+      DUAL_WRITE_ENABLED: "true"
+      BLOCKCHAIN_PRIMARY: "true"
+      BLOCKCHAIN_SYNC: "true"
+      # JWT
+      JWT_SECRET: 8f2a9b7c6d5e4f3a2b1c9d8e7f6a5b4c3d2e1f9a8b7c6d5e4f3a2b1c9d8e7f6a5b4c3d2e1f
+      JWT_EXPIRES_IN: 24h
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock  # Mount Docker socket for CLI access
+      - ./coffee-export-gateway/wallets:/app/wallets
+      - ./coffee-export-gateway/src/config:/app/src/config
+      - ./crypto-config:/app/crypto-config:ro
+    networks:
+      - default
+      - fabric-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ==================== Blockchain Bridge ====================
+  
+  blockchain-bridge:
+    image: cbc-blockchain-bridge:latest
+    build:
+      context: ./cbc/services/blockchain-bridge
+      dockerfile: Dockerfile
+    container_name: coffee-bridge
+    depends_on:
+      - postgres
+      - kafka
+      - redis
+      - gateway
+    ports:
+      - "3008:3008"
+    environment:
+      PORT: 3008
+      NODE_ENV: production
+      # Fabric Configuration
+      CHANNEL_NAME: coffeechannel
+      CHAINCODE_NAME: ecta
+      CHAINCODE_URL: http://gateway:3000
+      FABRIC_NETWORK_AS_LOCALHOST: "false"
+      FABRIC_TEST_MODE: fabric
+      CONNECTION_PROFILE_PATH: /app/config/connection-profile.json
+      WALLET_PATH: /app/wallets
+      ORG_NAME: ECTA
+      ORG_MSP_ID: ECTAMSP
+      # Database
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: coffee_export_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      # Kafka
+      KAFKA_BROKERS: kafka:9092
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      # Reconciliation
+      RECONCILIATION_ENABLED: "true"
+      RECONCILIATION_INTERVAL: 300000
+    volumes:
+      - ./coffee-export-gateway/wallets:/app/wallets:ro
+      - ./coffee-export-gateway/src/config:/app/config:ro
+      - ./crypto-config:/app/crypto-config:ro
+    networks:
+      - default
+      - fabric-network
+    restart: on-failure
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3008/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ==================== CBC Services ====================
+  
+  ecta-service:
+    image: cbc-ecta-service:latest
+    build:
+      context: ./cbc
+      dockerfile: services/ecta/Dockerfile
+    container_name: coffee-ecta
+    depends_on:
+      - postgres
+      - kafka
+    ports:
+      - "3003:3003"
+    environment:
+      PORT: 3003
+      NODE_ENV: production
+      # Database
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: coffee_export_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      # Kafka
+      KAFKA_BROKERS: kafka:9092
+      # JWT
+      JWT_SECRET: 8f2a9b7c6d5e4f3a2b1c9d8e7f6a5b4c3d2e1f9a8b7c6d5e4f3a2b1c9d8e7f6a5b4c3d2e1f
+      JWT_EXPIRES_IN: 24h
+      JWT_REFRESH_EXPIRES_IN: 7d
+      # Organization
+      ORGANIZATION_ID: ecta
+      ORGANIZATION_NAME: Ethiopian Coffee and Tea Authority
+      PEER_ENDPOINT: peer0.ecta.example.com:7051
+      MSP_ID: ECTAMSP
+      # Fabric
+      CHANNEL_NAME: coffeechannel
+      CHAINCODE_NAME_EXPORT: ecta
+      CHAINCODE_NAME_USER: users
+      CONNECTION_PROFILE_PATH: /app/config/connection-profile.json
+      WALLET_PATH: /app/wallets
+      ADMIN_CERT_PATH: /app/crypto-config/peerOrganizations/ecta.example.com/users/Admin@ecta.example.com/msp/signcerts/cert.pem
+      ADMIN_KEY_PATH: /app/crypto-config/peerOrganizations/ecta.example.com/users/Admin@ecta.example.com/msp/keystore/priv_sk
+      # IPFS
+      IPFS_HOST: localhost
+      IPFS_PORT: 5001
+      IPFS_PROTOCOL: http
+      # Other
+      LOG_LEVEL: info
+      RATE_LIMIT_WINDOW_MS: 900000
+      RATE_LIMIT_MAX_REQUESTS: 100
+      CORS_ORIGIN: "*"
+      MAX_FILE_SIZE_MB: 10
+      WEBSOCKET_ENABLED: true
+    volumes:
+      - ./coffee-export-gateway/wallets:/app/wallets:ro
+      - ./coffee-export-gateway/src/config:/app/config:ro
+      - ./crypto-config:/app/crypto-config:ro
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  exporter-portal-service:
+    image: cbc-exporter-portal-service:latest
+    build:
+      context: ./cbc
+      dockerfile: services/exporter-portal/Dockerfile
+    container_name: coffee-exporter-portal
+    depends_on:
+      - postgres
+      - kafka
+      - redis
+      - gateway
+    ports:
+      - "3010:3010"
+    environment:
+      PORT: 3010
+      NODE_ENV: production
+      # Database
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: coffee_export_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: coffee_export_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      # Kafka
+      KAFKA_BROKERS: kafka:9092
+      KAFKA_CLIENT_ID: exporter-portal
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      # JWT
+      JWT_SECRET: 8f2a9b7c6d5e4f3a2b1c9d8e7f6a5b4c3d2e1f9a8b7c6d5e4f3a2b1c9d8e7f6a5b4c3d2e1f
+      JWT_EXPIRES_IN: 24h
+      JWT_REFRESH_EXPIRES_IN: 7d
+      # Fabric SDK via Gateway
+      GATEWAY_URL: http://gateway:3000
+      BLOCKCHAIN_BRIDGE_URL: http://blockchain-bridge:3008
+      CHANNEL_NAME: coffeechannel
+      CHAINCODE_NAME: ecta
+      # ECTA Service
+      ECTA_SERVICE_URL: http://ecta-service:3003
+      # Email Configuration
+      SMTP_HOST: smtp.gmail.com
+      SMTP_PORT: 587
+      SMTP_SECURE: false
+      SMTP_USER: noreply@coffeeexport.et
+      SMTP_PASSWORD: changeme
+      EMAIL_FROM: noreply@coffeeexport.et
+      # Other
+      LOG_LEVEL: info
+      RATE_LIMIT_WINDOW_MS: 900000
+      RATE_LIMIT_MAX_REQUESTS: 100
+      CORS_ORIGIN: "*"
+      MAX_FILE_SIZE_MB: 10
+      WEBSOCKET_ENABLED: true
+      # Sales Contract Workflow
+      CONTRACT_DRAFT_EXPIRY_DAYS: 30
+      CONTRACT_LOCK_TIMEOUT_MINUTES: 15
+      NOTIFICATION_RETRY_MAX_ATTEMPTS: 3
+      BLOCKCHAIN_RETRY_MAX_ATTEMPTS: 5
+      ECTA_RETRY_MAX_ATTEMPTS: 5
+    volumes:
+      - ./coffee-export-gateway/wallets:/app/wallets:ro
+      - ./coffee-export-gateway/src/config:/app/config:ro
+      - ./crypto-config:/app/crypto-config:ro
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3010/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  commercial-bank-service:
+    image: cbc-commercial-bank-service:latest
+    build:
+      context: ./cbc
+      dockerfile: services/commercial-bank/Dockerfile
+    container_name: coffee-commercial-bank
+    depends_on:
+      - postgres
+      - kafka
+    ports:
+      - "3002:3002"
+    environment:
+      PORT: 3002
+      NODE_ENV: production
+      # Database
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: coffee_export_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      # Kafka
+      KAFKA_BROKERS: kafka:9092
+      # JWT
+      JWT_SECRET: 8f2a9b7c6d5e4f3a2b1c9d8e7f6a5b4c3d2e1f9a8b7c6d5e4f3a2b1c9d8e7f6a5b4c3d2e1f
+      JWT_EXPIRES_IN: 24h
+      JWT_REFRESH_EXPIRES_IN: 7d
+      # Organization
+      ORGANIZATION_ID: commercial-bank
+      ORGANIZATION_NAME: Commercial Bank
+      PEER_ENDPOINT: peer0.bank.example.com:7051
+      MSP_ID: BankMSP
+      # Fabric
+      CHANNEL_NAME: coffeechannel
+      CHAINCODE_NAME_EXPORT: ecta
+      CHAINCODE_NAME_USER: users
+      CONNECTION_PROFILE_PATH: /app/config/connection-profile.json
+      WALLET_PATH: /app/wallets
+      ADMIN_CERT_PATH: /app/crypto-config/peerOrganizations/bank.example.com/users/Admin@bank.example.com/msp/signcerts/cert.pem
+      ADMIN_KEY_PATH: /app/crypto-config/peerOrganizations/bank.example.com/users/Admin@bank.example.com/msp/keystore/priv_sk
+      # IPFS
+      IPFS_HOST: localhost
+      IPFS_PORT: 5001
+      IPFS_PROTOCOL: http
+      # Other
+      LOG_LEVEL: info
+      RATE_LIMIT_WINDOW_MS: 900000
+      RATE_LIMIT_MAX_REQUESTS: 100
+      CORS_ORIGIN: "*"
+      MAX_FILE_SIZE_MB: 10
+      WEBSOCKET_ENABLED: true
+    volumes:
+      - ./coffee-export-gateway/wallets:/app/wallets:ro
+      - ./coffee-export-gateway/src/config:/app/config:ro
+      - ./crypto-config:/app/crypto-config:ro
+
+  national-bank-service:
+    image: cbc-national-bank-service:latest
+    build:
+      context: ./cbc
+      dockerfile: services/national-bank/Dockerfile
+    container_name: coffee-national-bank
+    depends_on:
+      - postgres
+      - kafka
+    ports:
+      - "3004:3004"
+    environment:
+      PORT: 3004
+      NODE_ENV: production
+      # Database
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: coffee_export_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      # Kafka
+      KAFKA_BROKERS: kafka:9092
+      # JWT
+      JWT_SECRET: 8f2a9b7c6d5e4f3a2b1c9d8e7f6a5b4c3d2e1f9a8b7c6d5e4f3a2b1c9d8e7f6a5b4c3d2e1f
+      JWT_EXPIRES_IN: 24h
+      JWT_REFRESH_EXPIRES_IN: 7d
+      # Organization
+      ORGANIZATION_ID: national-bank
+      ORGANIZATION_NAME: National Bank of Ethiopia
+      PEER_ENDPOINT: peer0.nbe.example.com:7051
+      MSP_ID: NBEMSP
+      # Fabric
+      CHANNEL_NAME: coffeechannel
+      CHAINCODE_NAME_EXPORT: ecta
+      CHAINCODE_NAME_USER: users
+      CONNECTION_PROFILE_PATH: /app/config/connection-profile.json
+      WALLET_PATH: /app/wallets
+      ADMIN_CERT_PATH: /app/crypto-config/peerOrganizations/nbe.example.com/users/Admin@nbe.example.com/msp/signcerts/cert.pem
+      ADMIN_KEY_PATH: /app/crypto-config/peerOrganizations/nbe.example.com/users/Admin@nbe.example.com/msp/keystore/priv_sk
+      # IPFS
+      IPFS_HOST: localhost
+      IPFS_PORT: 5001
+      IPFS_PROTOCOL: http
+      # Other
+      LOG_LEVEL: info
+      RATE_LIMIT_WINDOW_MS: 900000
+      RATE_LIMIT_MAX_REQUESTS: 100
+      CORS_ORIGIN: "*"
+      MAX_FILE_SIZE_MB: 10
+      WEBSOCKET_ENABLED: true
+    volumes:
+      - ./coffee-export-gateway/wallets:/app/wallets:ro
+      - ./coffee-export-gateway/src/config:/app/config:ro
+      - ./crypto-config:/app/crypto-config:ro
+
+  customs-service:
+    image: cbc-customs-service:latest
+    build:
+      context: ./cbc
+      dockerfile: services/custom-authorities/Dockerfile
+    container_name: coffee-customs
+    depends_on:
+      - postgres
+      - kafka
+    ports:
+      - "3005:3005"
+    environment:
+      PORT: 3005
+      NODE_ENV: production
+      # Database
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: coffee_export_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      # Kafka
+      KAFKA_BROKERS: kafka:9092
+      # JWT
+      JWT_SECRET: 8f2a9b7c6d5e4f3a2b1c9d8e7f6a5b4c3d2e1f9a8b7c6d5e4f3a2b1c9d8e7f6a5b4c3d2e1f
+      JWT_EXPIRES_IN: 24h
+      JWT_REFRESH_EXPIRES_IN: 7d
+      # Organization
+      ORGANIZATION_ID: customs
+      ORGANIZATION_NAME: Ethiopian Customs Authority
+      PEER_ENDPOINT: peer0.customs.example.com:7051
+      MSP_ID: CustomsMSP
+      # Fabric
+      CHANNEL_NAME: coffeechannel
+      CHAINCODE_NAME_EXPORT: ecta
+      CHAINCODE_NAME_USER: users
+      CONNECTION_PROFILE_PATH: /app/config/connection-profile.json
+      WALLET_PATH: /app/wallets
+      ADMIN_CERT_PATH: /app/crypto-config/peerOrganizations/customs.example.com/users/Admin@customs.example.com/msp/signcerts/cert.pem
+      ADMIN_KEY_PATH: /app/crypto-config/peerOrganizations/customs.example.com/users/Admin@customs.example.com/msp/keystore/priv_sk
+      # IPFS
+      IPFS_HOST: localhost
+      IPFS_PORT: 5001
+      IPFS_PROTOCOL: http
+      # Other
+      LOG_LEVEL: info
+      RATE_LIMIT_WINDOW_MS: 900000
+      RATE_LIMIT_MAX_REQUESTS: 100
+      CORS_ORIGIN: "*"
+      MAX_FILE_SIZE_MB: 10
+      WEBSOCKET_ENABLED: true
+    volumes:
+      - ./coffee-export-gateway/wallets:/app/wallets:ro
+      - ./coffee-export-gateway/src/config:/app/config:ro
+      - ./crypto-config:/app/crypto-config:ro
+
+  ecx-service:
+    image: cbc-ecx-service:latest
+    build:
+      context: ./cbc
+      dockerfile: services/ecx/Dockerfile
+    container_name: coffee-ecx
+    depends_on:
+      - postgres
+      - kafka
+    ports:
+      - "3006:3006"
+    environment:
+      PORT: 3006
+      NODE_ENV: production
+      # Database
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: coffee_export_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      # Kafka
+      KAFKA_BROKERS: kafka:9092
+      # JWT
+      JWT_SECRET: 8f2a9b7c6d5e4f3a2b1c9d8e7f6a5b4c3d2e1f9a8b7c6d5e4f3a2b1c9d8e7f6a5b4c3d2e1f
+      JWT_EXPIRES_IN: 24h
+      JWT_REFRESH_EXPIRES_IN: 7d
+      # Organization
+      ORGANIZATION_ID: ecx
+      ORGANIZATION_NAME: Ethiopian Commodity Exchange
+      PEER_ENDPOINT: peer0.ecta.example.com:7051
+      MSP_ID: ECTAMSP
+      # Fabric
+      CHANNEL_NAME: coffeechannel
+      CHAINCODE_NAME_EXPORT: ecta
+      CHAINCODE_NAME_USER: users
+      CONNECTION_PROFILE_PATH: /app/config/connection-profile.json
+      WALLET_PATH: /app/wallets
+      ADMIN_CERT_PATH: /app/crypto-config/peerOrganizations/ecta.example.com/users/Admin@ecta.example.com/msp/signcerts/cert.pem
+      ADMIN_KEY_PATH: /app/crypto-config/peerOrganizations/ecta.example.com/users/Admin@ecta.example.com/msp/keystore/priv_sk
+      # IPFS
+      IPFS_HOST: localhost
+      IPFS_PORT: 5001
+      IPFS_PROTOCOL: http
+      # Other
+      LOG_LEVEL: info
+      RATE_LIMIT_WINDOW_MS: 900000
+      RATE_LIMIT_MAX_REQUESTS: 100
+      CORS_ORIGIN: "*"
+      MAX_FILE_SIZE_MB: 10
+      WEBSOCKET_ENABLED: true
+    volumes:
+      - ./coffee-export-gateway/wallets:/app/wallets:ro
+      - ./coffee-export-gateway/src/config:/app/config:ro
+      - ./crypto-config:/app/crypto-config:ro
+
+  shipping-service:
+    image: cbc-shipping-service:latest
+    build:
+      context: ./cbc
+      dockerfile: services/shipping-line/Dockerfile
+    container_name: coffee-shipping
+    depends_on:
+      - postgres
+      - kafka
+    ports:
+      - "3007:3007"
+    environment:
+      PORT: 3007
+      NODE_ENV: production
+      # Database
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: coffee_export_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      # Kafka
+      KAFKA_BROKERS: kafka:9092
+      # JWT
+      JWT_SECRET: 8f2a9b7c6d5e4f3a2b1c9d8e7f6a5b4c3d2e1f9a8b7c6d5e4f3a2b1c9d8e7f6a5b4c3d2e1f
+      JWT_EXPIRES_IN: 24h
+      JWT_REFRESH_EXPIRES_IN: 7d
+      # Organization
+      ORGANIZATION_ID: shipping
+      ORGANIZATION_NAME: Ethiopian Shipping Lines
+      PEER_ENDPOINT: peer0.shipping.example.com:7051
+      MSP_ID: ShippingMSP
+      # Fabric
+      CHANNEL_NAME: coffeechannel
+      CHAINCODE_NAME_EXPORT: ecta
+      CHAINCODE_NAME_USER: users
+      CONNECTION_PROFILE_PATH: /app/config/connection-profile.json
+      WALLET_PATH: /app/wallets
+      ADMIN_CERT_PATH: /app/crypto-config/peerOrganizations/shipping.example.com/users/Admin@shipping.example.com/msp/signcerts/cert.pem
+      ADMIN_KEY_PATH: /app/crypto-config/peerOrganizations/shipping.example.com/users/Admin@shipping.example.com/msp/keystore/priv_sk
+      # IPFS
+      IPFS_HOST: localhost
+      IPFS_PORT: 5001
+      IPFS_PROTOCOL: http
+      # Other
+      LOG_LEVEL: info
+      RATE_LIMIT_WINDOW_MS: 900000
+      RATE_LIMIT_MAX_REQUESTS: 100
+      CORS_ORIGIN: "*"
+      MAX_FILE_SIZE_MB: 10
+      WEBSOCKET_ENABLED: true
+    volumes:
+      - ./coffee-export-gateway/wallets:/app/wallets:ro
+      - ./coffee-export-gateway/src/config:/app/config:ro
+      - ./crypto-config:/app/crypto-config:ro
+
+  # ==================== Buyer Verification Service ====================
+  
+  buyer-verification:
+    image: cbc-buyer-verification:latest
+    build:
+      context: ./cbc/services/buyer-verification
+      dockerfile: Dockerfile
+    container_name: coffee-buyer-verification
+    depends_on:
+      - postgres
+    ports:
+      - "3009:3009"
+    environment:
+      PORT: 3009
+      NODE_ENV: production
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: coffee_export_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3009/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ==================== Frontend ====================
+  
+  frontend:
+    image: cbc-frontend:latest
+    build:
+      context: ./cbc/frontend
+      dockerfile: Dockerfile
+    container_name: coffee-frontend
+    depends_on:
+      - gateway
+      - blockchain-bridge
+      - ecta-service
+    ports:
+      - "5173:80"
+    environment:
+      # No VITE_API_URL needed - nginx proxies /api/* to gateway container
+      VITE_ENV: production
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  postgres-data:
+  redis-data:
+  zookeeper-data:
+  zookeeper-logs:
+  kafka-data:
+
+networks:
+  default:
+    name: coffee-export-network
+  fabric-network:
+    name: fabric-network
+    external: true

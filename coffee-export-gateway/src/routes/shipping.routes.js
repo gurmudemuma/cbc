@@ -1,0 +1,135 @@
+const express = require('express');
+const router = express.Router();
+const fabricService = require('../services'); // Use service loader for consistent Fabric implementation
+const { authenticateToken, requireRole } = require('../middleware/auth');
+const { Pool } = require('pg');
+
+const pool = new Pool({
+  host: process.env.POSTGRES_HOST || process.env.DB_HOST || 'localhost',
+  port: process.env.POSTGRES_PORT || 5432,
+  database: process.env.POSTGRES_DB || 'coffee_export_db',
+  user: process.env.POSTGRES_USER || 'postgres',
+  password: process.env.POSTGRES_PASSWORD || 'postgres',
+});
+
+/**
+ * Phase 4: Shipping Routes
+ * Handles shipping instructions, Bill of Lading, and fumigation
+ */
+
+/**
+ * GET /api/shipping/shipments
+ * Get all shipments
+ */
+router.get('/shipments', authenticateToken, requireRole('shipping', 'admin'), async (req, res) => {
+  try {
+    const query = `
+      SELECT 
+        export_id,
+        exporter_id,
+        status,
+        coffee_type,
+        quantity,
+        destination_country,
+        created_at,
+        updated_at
+      FROM exports
+      WHERE status IN ('APPROVED', 'IN_TRANSIT', 'SHIPPED')
+      ORDER BY created_at DESC
+    `;
+    
+    const result = await pool.query(query);
+    
+    res.json({
+      success: true,
+      shipments: result.rows,
+      count: result.rows.length
+    });
+  } catch (error) {
+    console.error('Shipments error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Create shipping instructions
+router.post('/instructions', async (req, res) => {
+    try {
+        const result = await fabricService.createShippingInstructions(req.body);
+        res.json(result);
+    } catch (error) {
+        console.error('Error creating shipping instructions:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Confirm shipping instructions (Shipping line only)
+router.post('/instructions/:instructionId/confirm', async (req, res) => {
+    try {
+        const { instructionId } = req.params;
+        const result = await fabricService.confirmShippingInstructions(instructionId, req.body);
+        res.json(result);
+    } catch (error) {
+        console.error('Error confirming shipping instructions:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Generate Bill of Lading
+router.post('/bill-of-lading', async (req, res) => {
+    try {
+        const result = await fabricService.generateBillOfLading(req.body);
+        res.json(result);
+    } catch (error) {
+        console.error('Error generating Bill of Lading:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get Bill of Lading
+router.get('/bill-of-lading/:blNumber', async (req, res) => {
+    try {
+        const { blNumber } = req.params;
+        const result = await fabricService.getBillOfLading(blNumber);
+        res.json(result);
+    } catch (error) {
+        console.error('Error getting Bill of Lading:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Request fumigation
+router.post('/fumigation/request', async (req, res) => {
+    try {
+        const result = await fabricService.requestFumigation(req.body);
+        res.json(result);
+    } catch (error) {
+        console.error('Error requesting fumigation:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Issue fumigation certificate
+router.post('/fumigation/:fumigationId/issue', async (req, res) => {
+    try {
+        const { fumigationId } = req.params;
+        const result = await fabricService.issueFumigationCertificate(fumigationId, req.body);
+        res.json(result);
+    } catch (error) {
+        console.error('Error issuing fumigation certificate:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get fumigation certificate
+router.get('/fumigation/:fumigationId', async (req, res) => {
+    try {
+        const { fumigationId } = req.params;
+        const result = await fabricService.getFumigationCertificate(fumigationId);
+        res.json(result);
+    } catch (error) {
+        console.error('Error getting fumigation certificate:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+module.exports = router;

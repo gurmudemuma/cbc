@@ -1,0 +1,48 @@
+OrdererOrgs:
+  - Name: Orderer
+    Domain: orderer.example.com
+    Specs:
+      - Hostname: orderer1
+      - Hostname: orderer2
+      - Hostname: orderer3
+
+PeerOrgs:
+  - Name: ECTAOrg
+    Domain: ecta.example.com
+    EnableNodeOUs: true
+    Template:
+      Count: 2  # peer0 and peer1 for HA
+    Users:
+      Count: 10  # Admin + gateway service + exporter client registrations
+
+  - Name: BankOrg
+    Domain: bank.example.com
+    EnableNodeOUs: true
+    Template:
+      Count: 1
+    Users:
+      Count: 1
+
+  - Name: NBEOrg
+    Domain: nbe.example.com
+    EnableNodeOUs: true
+    Template:
+      Count: 1
+    Users:
+      Count: 1
+
+  - Name: CustomsOrg
+    Domain: customs.example.com
+    EnableNodeOUs: true
+    Template:
+      Count: 1
+    Users:
+      Count: 1
+
+  - Name: ShippingOrg
+    Domain: shipping.example.com
+    EnableNodeOUs: true
+    Template:
+      Count: 1
+    Users:
+      Count: 1

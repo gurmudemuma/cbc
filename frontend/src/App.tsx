@@ -1,0 +1,659 @@
+﻿﻿import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
+import { useState, useEffect, useMemo, useCallback, createContext, useContext } from 'react';
+import { ThemeProvider, CssBaseline, Box } from '@mui/material';
+import { LocalizationProvider } from '@mui/x-date-pickers';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { SnackbarProvider } from 'notistack';
+import { motion, AnimatePresence } from 'framer-motion';
+
+// NETWORK ROUTES MARKER - DO NOT REMOVE
+// Contexts
+import { NotificationProvider } from './contexts/NotificationContext';
+import { ToastProvider } from './components/ToastProvider';
+
+// Priority 2 Hooks
+import { useDashboardCustomization } from './hooks/useDashboardCustomization';
+import { useAccessibilitySettings } from './components/AccessibilityEnhancements';
+import { useKeyboardShortcuts, COMMON_SHORTCUTS } from './hooks/useKeyboardShortcuts';
+
+// Priority 2 Components
+import DashboardCustomizer from './components/DashboardCustomizer';
+import KeyboardShortcutsHelp from './components/KeyboardShortcutsHelp';
+import { AccessibilitySettingsDialog, SkipToMainContent } from './components/AccessibilityEnhancements';
+
+// Type definitions
+interface ThemeContextType {
+  mode: 'light' | 'dark';
+  org: string | null;
+  toggleColorMode: () => void;
+  setOrganization: (org: string) => void;
+}
+
+// Create a theme context
+export const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+
+export const useAppTheme = (): ThemeContextType => {
+  const context = useContext(ThemeContext);
+  if (!context) {
+    throw new Error('useAppTheme must be used within a ThemeProvider');
+  }
+  return context;
+};
+
+// Components
+import Layout from './components/Layout';
+import ErrorBoundary from './components/ErrorBoundary';
+import LoadingSkeleton from './components/LoadingSkeleton';
+
+// Pages
+import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
+import ExportManagement from './pages/ExportManagement';
+import QualityCertification from './pages/QualityCertification';
+import FXRates from './pages/FXRates';
+import UserManagement from './pages/UserManagement';
+import ShipmentTracking from './pages/ShipmentTracking';
+import ExportDetails from './pages/ExportDetails';
+import ExportEdit from './pages/ExportEdit';
+import CustomsClearance from './pages/CustomsClearance';
+import ExporterPreRegistration from './pages/ExporterPreRegistration';
+import ExporterApplicationDashboard from './pages/ExporterApplicationDashboard';
+import ECTAPreRegistrationManagement from './pages/ECTAPreRegistrationManagement';
+import ECTACertificateRenewals from './pages/ECTACertificateRenewals';
+import BankDocumentVerification from './pages/BankDocumentVerification';
+import ECTAContractApproval from './pages/ECTAContractApproval';
+import ECTALicenseApproval from './pages/ECTALicenseApproval';
+import ECXVerification from './pages/ECXVerification';
+import SalesContractDashboard from './pages/SalesContractDashboard';
+// Network Pages
+import NetworkSubmission from './pages/NetworkSubmission';
+import NetworkMemberApprovalDashboard from './pages/NetworkMemberApprovalDashboard';
+import NetworkStatistics from './pages/NetworkStatistics';
+import SalesContractVerificationPage from './pages/SalesContractVerificationPage';
+import BankingExportApproval from './pages/BankingExportApproval';
+import ECTASalesContractRegistration from './pages/ECTASalesContractRegistration';
+import BankPaymentReview from './pages/BankPaymentReview';
+import PaymentManagement from './pages/PaymentManagement';
+import PaymentDashboard from './pages/PaymentDashboard';
+import NBEFXApproval from './pages/NBEFXApproval';
+
+// Reports
+import Reports from './pages/Reports';
+
+// Exporter Portal Pages
+import ExporterProfile from './pages/ExporterProfile';
+import ApplicationTracking from './pages/ApplicationTracking';
+import ExportDashboard from './pages/ExportDashboard';
+import HelpSupport from './pages/HelpSupport';
+import ExporterDocumentManager from './components/ExporterDocumentManager';
+import Marketplace from './pages/Marketplace';
+
+// Consortium Member Pages
+import BankingOperations from './pages/BankingOperations';
+import LotManagement from './pages/LotManagement';
+import MonetaryPolicy from './pages/MonetaryPolicy';
+
+// Services & Config
+// setApiBaseUrl removed to allow proxy to handle routing
+import { createEnhancedTheme } from './config/theme.config.enhanced';
+
+// Create a client for React Query
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+    },
+  },
+});
+
+const getOrgClass = (org: string | null): string => {
+  const orgLower = (org || '').toLowerCase();
+
+  // Map organization IDs to CSS class names
+  if (orgLower.includes('exporter')) return 'exporter';
+  if (orgLower.includes('national') || orgLower.includes('banker')) return 'nb-regulatory';
+  if (orgLower === 'ecta') return 'ecta';
+  if (orgLower.includes('shipping')) return 'shipping-line';
+  if (orgLower.includes('custom')) return 'customs';
+
+  // Default fallback
+  return 'nb-regulatory';
+};
+
+interface AppThemeProviderProps {
+  children: React.ReactNode;
+}
+
+// Theme provider component to wrap the app
+const AppThemeProvider: React.FC<AppThemeProviderProps> = ({ children }) => {
+  const [org, setOrg] = useState<string | null>(null);
+  const [mode, setMode] = useState<'light' | 'dark'>(() => {
+    // Initialize from localStorage or default to 'light'
+    return (localStorage.getItem('themeMode') as 'light' | 'dark') || 'light';
+  });
+
+  // Create theme with organization and mode
+  const theme = useMemo(() => {
+    return createEnhancedTheme(org, mode);
+  }, [org, mode]);
+
+  // Toggle between light and dark mode
+  const toggleColorMode = useCallback((): void => {
+    setMode((prevMode: 'light' | 'dark') => {
+      const newMode: 'light' | 'dark' = prevMode === 'light' ? 'dark' : 'light';
+      localStorage.setItem('themeMode', newMode);
+      return newMode;
+    });
+  }, []);
+
+  // Set organization and update theme
+  const setOrganization = useCallback((newOrg: string): void => {
+    setOrg(newOrg);
+  }, []);
+
+  // Theme context value
+  const themeContextValue = useMemo(() => ({
+    mode,
+    org,
+    toggleColorMode,
+    setOrganization,
+  }), [mode, org, toggleColorMode, setOrganization]);
+
+  return (
+    <ThemeContext.Provider value={themeContextValue}>
+      <ThemeProvider theme={theme}>
+        {children}
+      </ThemeProvider>
+    </ThemeContext.Provider>
+  );
+};
+
+// Main App component
+function App(): JSX.Element {
+  const { mode, org, toggleColorMode, setOrganization } = useAppTheme();
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  // Priority 2 State
+  const { settings, updateSettings } = useAccessibilitySettings();
+  const { layouts, activeLayout, ...dashboardMethods } = useDashboardCustomization(user?.id);
+  const [showCustomizer, setShowCustomizer] = useState(false);
+  const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
+  const [showAccessibility, setShowAccessibility] = useState(false);
+
+  const orgClass = useMemo(() => getOrgClass(org), [org]);
+
+  // Setup keyboard shortcuts
+  useKeyboardShortcuts([
+    {
+      ...COMMON_SHORTCUTS.CUSTOMIZE_DASHBOARD,
+      callback: () => setShowCustomizer(true),
+    },
+    {
+      ...COMMON_SHORTCUTS.HELP,
+      callback: () => setShowShortcutsHelp(true),
+    },
+    {
+      ...COMMON_SHORTCUTS.TOGGLE_THEME,
+      callback: () => toggleColorMode(),
+    },
+  ]);
+
+  useEffect(() => {
+    // Check for stored auth token
+    const token = localStorage.getItem('token');
+    const userData = localStorage.getItem('user');
+    const storedOrg = localStorage.getItem('org');
+
+    if (token && userData) {
+      const parsedUser = JSON.parse(userData);
+      setUser(parsedUser);
+
+      // If user is an agency user, force org to be 'government-agency' if not set
+      let effectiveOrg = storedOrg;
+      if (!effectiveOrg && (parsedUser.role === 'AGENCY_USER' || parsedUser.role === 'AGENCY_ADMIN')) {
+        effectiveOrg = 'government-agency';
+      } else if (!effectiveOrg) {
+        effectiveOrg = parsedUser.role;
+      }
+
+      setOrganization(effectiveOrg || '');
+      // setApiBaseUrl removed - relying on proxy
+    }
+    setLoading(false);
+  }, [setOrganization]);
+
+  // Add theme class to body for global styles
+  useEffect(() => {
+    document.body.className = `${orgClass || ''} ${mode}-mode`;
+    return () => {
+      document.body.className = '';
+    };
+  }, [orgClass, mode]);
+
+  const getRoleBasedRoute = useCallback((orgId: string | null) => {
+    const orgLower = orgId?.toLowerCase();
+
+    // Exporter Portal - External exporters (SDK-based)
+    if (orgLower === 'exporter-portal' || orgLower === 'exporterportal') {
+      return '/my-applications';  // Exporters go to Application Dashboard to track pre-registration progress
+    }
+
+    // All Network Members - Route to Network Agency Dashboard
+    // Commercial Bank - Network approval dashboard (consortium member)
+    if (orgLower === 'commercial-bank' || orgLower === 'commercialbank') {
+      return '/network/agency-dashboard';
+    }
+
+    // National Bank - Network approval dashboard (consortium member)
+    if (
+      orgLower === 'nb-regulatory' ||
+      orgLower === 'banker' ||
+      orgLower === 'banker-001' ||
+      orgLower === 'national-bank' ||
+      orgLower === 'nationalbank'
+    ) {
+      return '/network/agency-dashboard';
+    }
+
+    // ECX - Network approval dashboard (consortium member)
+    if (orgLower === 'ecx') {
+      return '/network/agency-dashboard';
+    }
+
+    // ECTA - Network approval dashboard (consortium member)
+    if (orgLower === 'ecta') {
+      return '/network/agency-dashboard';
+    }
+
+    // Shipping Line - Network approval dashboard (consortium member)
+    if (orgLower === 'shipping' || orgLower === 'shipping-line' || orgLower === 'shippingline') {
+      return '/network/agency-dashboard';
+    }
+
+    // Custom Authorities - Network approval dashboard (consortium member)
+    if (orgLower === 'custom-authorities') {
+      return '/network/agency-dashboard';
+    }
+
+    // Agency Users - Direct to Agency Dashboard
+    // All government agency users route to Network agency dashboard
+    if (orgLower === 'government-agency') {
+      return '/network/agency-dashboard';
+    }
+
+    return '/dashboard';
+  }, []);
+
+  const handleLogin = useCallback((userData: any, token: string, selectedOrg: string) => {
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(userData));
+    localStorage.setItem('org', selectedOrg);
+    setUser(userData);
+    setOrganization(selectedOrg);
+    // setApiBaseUrl removed - relying on proxy
+  }, [setOrganization]);
+
+  const handleLogout = useCallback(() => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('org');
+    setUser(null);
+    setOrganization(null);
+  }, [setOrganization]);
+
+  const router = useMemo(() => createBrowserRouter(
+    [
+      {
+        path: '/login',
+        element: user ? (
+          <Navigate to={getRoleBasedRoute(org)} />
+        ) : (
+          <Login onLogin={handleLogin} />
+        ),
+      },
+      {
+        path: '/',
+        element: user ? (
+          <Layout user={user} org={org} onLogout={handleLogout} exports={[]} />
+        ) : (
+          <Navigate to="/login" />
+        ),
+        children: [
+          { index: true, element: <Navigate to={getRoleBasedRoute(org)} /> },
+          { path: 'dashboard', element: <Dashboard user={user} org={org} /> },
+          { path: 'exports', element: <ExportManagement user={user} org={org} /> },
+          { path: 'exports/:id', element: <ExportDetails user={user} org={org} /> },
+          { path: 'exports/:id/edit', element: <ExportEdit user={user} org={org} /> },
+          { path: 'quality', element: <QualityCertification user={user} org={org} /> },
+          { path: 'quality/pending', element: <QualityCertification user={user} org={org} /> },
+          { path: 'quality/inspections', element: <QualityCertification user={user} org={org} /> },
+          { path: 'quality/certified', element: <QualityCertification user={user} org={org} /> },
+          { path: 'quality/reports', element: <QualityCertification user={user} org={org} /> },
+          { path: 'fx-approval', element: <ExportManagement user={user} org={org} /> },
+          { path: 'fx-rates', element: <FXRates user={user} org={org} /> },
+          { path: 'banking', element: <BankingOperations user={user} org={org} /> },
+          { path: 'banking/documents', element: <BankDocumentVerification user={user} org={org} /> },
+          { path: 'banking/financing', element: <BankingOperations user={user} org={org} /> },
+          { path: 'banking/compliance', element: <BankingOperations user={user} org={org} /> },
+          { path: 'banking/reports', element: <BankingOperations user={user} org={org} /> },
+          { path: 'banking/payments', element: <BankPaymentReview /> },
+          { path: 'banking/payment-review', element: <BankPaymentReview /> },
+
+          // Shipment Routes
+          { path: 'shipments', element: <ShipmentTracking user={user} org={org} /> },
+          { path: 'shipments/pending', element: <ShipmentTracking user={user} org={org} /> },
+          { path: 'shipments/scheduled', element: <ShipmentTracking user={user} org={org} /> },
+          { path: 'shipments/transit', element: <ShipmentTracking user={user} org={org} /> },
+          { path: 'shipments/delivered', element: <ShipmentTracking user={user} org={org} /> },
+
+          // User Management
+          { path: 'users', element: <UserManagement user={user} org={org} /> },
+
+          // Customs Routes
+          { path: 'customs', element: <CustomsClearance user={user} org={org} /> },
+          { path: 'customs/pending', element: <CustomsClearance user={user} org={org} /> },
+          { path: 'customs/inspection', element: <CustomsClearance user={user} org={org} /> },
+          { path: 'customs/cleared', element: <CustomsClearance user={user} org={org} /> },
+          { path: 'customs/rejected', element: <CustomsClearance user={user} org={org} /> },
+
+          // Pre-registration Routes
+          { path: 'pre-registration', element: <ExporterPreRegistration user={user} org={org} /> },
+          { path: 'my-applications', element: <ExporterApplicationDashboard user={user} org={org} /> },
+          { path: 'ecta/pre-registration', element: <ECTAPreRegistrationManagement user={user} org={org} /> },
+
+          // Sales Contract Routes
+          { path: 'sales-contracts', element: <SalesContractDashboard /> },
+          { path: 'sales-contracts/drafts', element: <SalesContractDashboard /> },
+          { path: 'sales-contracts/create', element: <SalesContractDashboard /> },
+          { path: 'sales-contracts/negotiations', element: <SalesContractDashboard /> },
+          { path: 'sales-contracts/finalized', element: <SalesContractDashboard /> },
+          
+          // ECTA Sales Contract Routes (Network Management submenu)
+          { path: 'ecta/sales-contracts/registration', element: <ECTASalesContractRegistration /> },
+          { path: 'ecta/sales-contracts/registered', element: <ECTASalesContractRegistration /> },
+          
+          // Sales Contract Verification (for all agencies)
+          { path: 'sales-contracts/verify', element: <SalesContractVerificationPage user={user} org={org} /> },
+          { path: 'sales-contracts/verify/:referenceNumber', element: <SalesContractVerificationPage user={user} org={org} /> },
+          
+          // Banking Export Approval (Commercial Bank) - includes sales contract verification
+          { path: 'banking/export-approval', element: <BankingExportApproval /> },
+
+          // Exporter Portal Routes
+          { path: 'profile', element: <ExporterProfile user={user} org={org} /> },
+          { path: 'profile/business', element: <ExporterProfile user={user} org={org} /> },
+          { path: 'profile/verification', element: <ExporterProfile user={user} org={org} /> },
+          { path: 'documents', element: <ExporterDocumentManager /> },
+          { path: 'marketplace', element: <Marketplace /> },
+          { path: 'marketplace/opportunities', element: <Marketplace /> },
+          { path: 'applications', element: <ApplicationTracking user={user} org={org} /> },
+          { path: 'exports/new', element: <ExportDashboard user={user} org={org} /> },
+          { path: 'exports/status', element: <ExportDashboard user={user} org={org} /> },
+          { path: 'support', element: <HelpSupport user={user} org={org} /> },
+          
+          // Payment Management Routes
+          { path: 'payments', element: <PaymentManagement user={user} org={org} /> },
+          { path: 'payments/new', element: <PaymentManagement user={user} org={org} /> },
+          { path: 'payments/initiated', element: <PaymentManagement user={user} org={org} /> },
+          { path: 'payments/completed', element: <PaymentManagement user={user} org={org} /> },
+          { path: 'payments/:id', element: <PaymentManagement user={user} org={org} /> },
+          
+          // Payment Dashboard - Universal for all parties
+          { path: 'payments/dashboard', element: <PaymentDashboard user={user} org={org} /> },
+          { path: 'banking/payment-dashboard', element: <PaymentDashboard user={user} org={org} /> },
+
+          // FX Management Routes
+          { path: 'fx', element: <FXRates user={user} org={org} /> },
+          { path: 'fx/approvals', element: <FXRates user={user} org={org} /> },
+          { path: 'fx/approved', element: <FXRates user={user} org={org} /> },
+          { path: 'fx/rejected', element: <FXRates user={user} org={org} /> },
+          { path: 'fx/rates', element: <FXRates user={user} org={org} /> },
+          { path: 'fx/payments', element: <NBEFXApproval user={user} org={org} /> },
+          { path: 'fx/payment-approval', element: <NBEFXApproval user={user} org={org} /> },
+
+          // Monetary Policy Routes
+          { path: 'monetary', element: <MonetaryPolicy user={user} org={org} /> },
+          { path: 'monetary/dashboard', element: <MonetaryPolicy user={user} org={org} /> },
+          { path: 'monetary/controls', element: <MonetaryPolicy user={user} org={org} /> },
+          { path: 'monetary/compliance', element: <MonetaryPolicy user={user} org={org} /> },
+
+          // ECTA Routes
+          { path: 'preregistration', element: <ECTAPreRegistrationManagement user={user} org={org} /> },
+          { path: 'preregistration/pending', element: <ECTAPreRegistrationManagement user={user} org={org} /> },
+          { path: 'preregistration/profiles', element: <ECTAPreRegistrationManagement user={user} org={org} /> },
+          { path: 'preregistration/laboratories', element: <ECTAPreRegistrationManagement user={user} org={org} /> },
+          { path: 'preregistration/tasters', element: <ECTAPreRegistrationManagement user={user} org={org} /> },
+          { path: 'preregistration/competence', element: <ECTAPreRegistrationManagement user={user} org={org} /> },
+          { path: 'preregistration/licenses', element: <ECTAPreRegistrationManagement user={user} org={org} /> },
+          { path: 'preregistration/approved', element: <ECTAPreRegistrationManagement user={user} org={org} /> },
+
+          { path: 'licenses', element: <ECTALicenseApproval user={user} org={org} /> },
+          { path: 'licenses/applications', element: <ECTALicenseApproval user={user} org={org} /> },
+          { path: 'licenses/active', element: <ECTALicenseApproval user={user} org={org} /> },
+          { path: 'licenses/expiring', element: <ECTALicenseApproval user={user} org={org} /> },
+          { path: 'licenses/expired', element: <ECTALicenseApproval user={user} org={org} /> },
+          { path: 'licenses/renewals', element: <ECTALicenseApproval user={user} org={org} /> },
+
+          { path: 'certificate-renewals', element: <ECTACertificateRenewals user={user} org={org} /> },
+
+          { path: 'contracts', element: <ECTAContractApproval user={user} org={org} /> },
+          { path: 'contracts/new', element: <ECTAContractApproval user={user} org={org} /> },
+          { path: 'contracts/pending', element: <ECTAContractApproval user={user} org={org} /> },
+          { path: 'contracts/review', element: <ECTAContractApproval user={user} org={org} /> },
+          { path: 'contracts/approved', element: <ECTAContractApproval user={user} org={org} /> },
+          { path: 'contracts/rejected', element: <ECTAContractApproval user={user} org={org} /> },
+          { path: 'contracts/origin', element: <ECTAContractApproval user={user} org={org} /> },
+
+          // Sales Contract Routes
+          { path: 'sales-contracts', element: <SalesContractDashboard /> },
+          { path: 'sales-contracts/drafts', element: <SalesContractDashboard /> },
+          { path: 'sales-contracts/details/:id', element: <SalesContractDashboard /> },
+
+          // Network Routes (Primary)
+          { path: 'network/submission', element: <NetworkSubmission user={user} org={org} /> },
+          { path: 'network/submissions', element: <NetworkSubmission user={user} org={org} /> },
+          { path: 'network/status', element: <NetworkStatistics user={user} org={org} /> },
+          { path: 'network/agency-dashboard', element: <NetworkMemberApprovalDashboard /> },
+          { path: 'network/statistics', element: <NetworkStatistics user={user} org={org} /> },
+          
+          // Exporter Network Submission (alias for exporters)
+          { path: 'exporter/network-submission', element: <NetworkSubmission user={user} org={org} /> },
+
+          // Network Routes (backward compatibility)
+          { path: 'esw/submission', element: <NetworkSubmission user={user} org={org} /> },
+          { path: 'esw/submissions', element: <NetworkSubmission user={user} org={org} /> },
+          { path: 'esw/status', element: <NetworkStatistics user={user} org={org} /> },
+          { path: 'esw/agency-dashboard', element: <NetworkMemberApprovalDashboard /> },
+          { path: 'esw/statistics', element: <NetworkStatistics user={user} org={org} /> },
+
+          { path: 'regulatory', element: <Dashboard user={user} org={org} /> },
+          { path: 'regulatory/compliance', element: <Dashboard user={user} org={org} /> },
+          { path: 'regulatory/audits', element: <Dashboard user={user} org={org} /> },
+          { path: 'regulatory/updates', element: <Dashboard user={user} org={org} /> },
+
+          // ECX Routes
+          { path: 'lot-verification', element: <ECXVerification user={user} org={org} /> },
+          { path: 'lots', element: <LotManagement user={user} org={org} /> },
+          { path: 'lots/pending', element: <LotManagement user={user} org={org} /> },
+          { path: 'lots/verified', element: <LotManagement user={user} org={org} /> },
+          { path: 'lots/rejected', element: <LotManagement user={user} org={org} /> },
+          { path: 'lots/grading', element: <LotManagement user={user} org={org} /> },
+
+          { path: 'trading', element: <Dashboard user={user} org={org} /> },
+          { path: 'trading/active', element: <Dashboard user={user} org={org} /> },
+          { path: 'trading/prices', element: <Dashboard user={user} org={org} /> },
+          { path: 'trading/reports', element: <Dashboard user={user} org={org} /> },
+          { path: 'trading/history', element: <Dashboard user={user} org={org} /> },
+
+          { path: 'warehouse', element: <Dashboard user={user} org={org} /> },
+          { path: 'warehouse/receipts', element: <Dashboard user={user} org={org} /> },
+          { path: 'warehouse/storage', element: <Dashboard user={user} org={org} /> },
+          { path: 'warehouse/quality', element: <Dashboard user={user} org={org} /> },
+          { path: 'warehouse/inventory', element: <Dashboard user={user} org={org} /> },
+
+          // Shipping Routes
+          { path: 'vessels', element: <ShipmentTracking user={user} org={org} /> },
+          { path: 'vessels/fleet', element: <ShipmentTracking user={user} org={org} /> },
+          { path: 'vessels/schedule', element: <ShipmentTracking user={user} org={org} /> },
+          { path: 'vessels/maintenance', element: <ShipmentTracking user={user} org={org} /> },
+          { path: 'vessels/reports', element: <ShipmentTracking user={user} org={org} /> },
+
+          { path: 'logistics', element: <ShipmentTracking user={user} org={org} /> },
+          { path: 'logistics/routes', element: <ShipmentTracking user={user} org={org} /> },
+          { path: 'logistics/tracking', element: <ShipmentTracking user={user} org={org} /> },
+          { path: 'logistics/ports', element: <ShipmentTracking user={user} org={org} /> },
+          { path: 'logistics/delivery', element: <ShipmentTracking user={user} org={org} /> },
+
+          // Customs Routes
+          { path: 'documents', element: <CustomsClearance user={user} org={org} /> },
+          { path: 'documents/export', element: <CustomsClearance user={user} org={org} /> },
+          { path: 'documents/compliance', element: <CustomsClearance user={user} org={org} /> },
+          { path: 'documents/declarations', element: <CustomsClearance user={user} org={org} /> },
+          { path: 'documents/templates', element: <CustomsClearance user={user} org={org} /> },
+
+          { path: 'border', element: <CustomsClearance user={user} org={org} /> },
+          { path: 'border/checkpoints', element: <CustomsClearance user={user} org={org} /> },
+          { path: 'border/security', element: <CustomsClearance user={user} org={org} /> },
+          { path: 'border/compliance', element: <CustomsClearance user={user} org={org} /> },
+          { path: 'border/reports', element: <CustomsClearance user={user} org={org} /> },
+
+          // Admin Routes
+          { path: 'admin', element: <UserManagement user={user} org={org} /> },
+          { path: 'admin/users', element: <UserManagement user={user} org={org} /> },
+          { path: 'admin/settings', element: <Dashboard user={user} org={org} /> },
+          { path: 'admin/audit', element: <Dashboard user={user} org={org} /> },
+          { path: 'admin/reports', element: <Dashboard user={user} org={org} /> },
+
+          // Reports Route
+          { path: 'reports', element: <Reports user={user} org={org} /> },
+
+          // Blockchain Routes
+          { path: 'blockchain', element: <Dashboard user={user} org={org} /> },
+          { path: 'blockchain/transactions', element: <Dashboard user={user} org={org} /> },
+          { path: 'blockchain/status', element: <Dashboard user={user} org={org} /> },
+          { path: 'blockchain/peers', element: <Dashboard user={user} org={org} /> },
+
+          // Gateway Routes
+          { path: 'gateway', element: <Dashboard user={user} org={org} /> },
+          { path: 'gateway/exporter-requests', element: <Dashboard user={user} org={org} /> },
+          { path: 'gateway/logs', element: <Dashboard user={user} org={org} /> },
+        ],
+      },
+      {
+        path: '*',
+        element: <Navigate to="/dashboard" />,
+      },
+    ],
+    {
+      future: {
+        v7_relativeSplatPath: true,
+      },
+    }
+  ), [user, org, handleLogin, handleLogout, getRoleBasedRoute]);
+
+  if (loading) {
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '100vh',
+          bgcolor: 'background.default',
+        }}
+      >
+        <motion.div
+          animate={{
+            scale: [1, 1.1, 1],
+          }}
+          transition={{
+            duration: 1.5,
+            repeat: Infinity,
+            repeatType: 'loop',
+          }}
+        >
+          <LoadingSkeleton height={100} width={100} borderRadius={4} />
+        </motion.div>
+      </Box>
+    );
+  }
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <LocalizationProvider dateAdapter={AdapterDateFns}>
+        <SnackbarProvider
+          maxSnack={3}
+          anchorOrigin={{
+            vertical: 'top',
+            horizontal: 'right',
+          }}
+          autoHideDuration={6000}
+          preventDuplicate
+        >
+          <ToastProvider>
+            <NotificationProvider>
+              <SkipToMainContent />
+
+              {/* Priority 2 Dialogs */}
+              <DashboardCustomizer
+                open={showCustomizer}
+                onClose={() => setShowCustomizer(false)}
+                layout={activeLayout}
+                onUpdateLayout={dashboardMethods.updateLayout}
+                onAddWidget={dashboardMethods.addWidget}
+                onRemoveWidget={dashboardMethods.removeWidget}
+                onToggleVisibility={dashboardMethods.toggleWidgetVisibility}
+              />
+
+              <KeyboardShortcutsHelp
+                open={showShortcutsHelp}
+                onClose={() => setShowShortcutsHelp(false)}
+              />
+
+              <AccessibilitySettingsDialog
+                open={showAccessibility}
+                onClose={() => setShowAccessibility(false)}
+                settings={settings}
+                onSettingsChange={updateSettings}
+              />
+
+              <CssBaseline />
+              <div className={`app ${orgClass} ${mode}-mode`}>
+                <ErrorBoundary>
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={orgClass}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <RouterProvider router={router} />
+                    </motion.div>
+                  </AnimatePresence>
+                </ErrorBoundary>
+              </div>
+            </NotificationProvider>
+          </ToastProvider>
+        </SnackbarProvider>
+      </LocalizationProvider>
+      <ReactQueryDevtools initialIsOpen={false} position="right" />
+    </QueryClientProvider>
+  );
+}
+
+// Wrap the app with the theme provider
+const AppWrapper = () => {
+  return (
+    <AppThemeProvider>
+      <App />
+    </AppThemeProvider>
+  );
+};
+
+export default AppWrapper;

@@ -1,0 +1,55 @@
+{
+  "name": "coffee-export-network",
+  "version": "1.0.0",
+  "client": {
+    "organization": "ECTA",
+    "connection": {
+      "timeout": {
+        "peer": {
+          "endorser": "300"
+        },
+        "orderer": "300"
+      }
+    }
+  },
+  "organizations": {
+    "ECTA": {
+      "mspid": "ECTAMSP",
+      "peers": [
+        "peer0.ecta.example.com",
+        "peer1.ecta.example.com"
+      ]
+    }
+  },
+  "orderers": {
+    "orderer1.orderer.example.com": {
+      "url": "grpc://orderer1.orderer.example.com:7050",
+      "grpcOptions": {
+        "grpc.keepalive_time_ms": 120000
+      }
+    }
+  },
+  "peers": {
+    "peer0.ecta.example.com": {
+      "url": "grpc://peer0.ecta.example.com:7051",
+      "grpcOptions": {
+        "grpc.keepalive_time_ms": 120000,
+        "grpc.http2.min_time_between_pings_ms": 120000,
+        "grpc.keepalive_timeout_ms": 20000,
+        "grpc.http2.max_pings_without_data": 0,
+        "grpc.keepalive_permit_without_calls": 1
+      }
+    },
+    "peer1.ecta.example.com": {
+      "url": "grpc://peer1.ecta.example.com:8051",
+      "grpcOptions": {
+        "grpc.keepalive_time_ms": 120000,
+        "grpc.http2.min_time_between_pings_ms": 120000,
+        "grpc.keepalive_timeout_ms": 20000,
+        "grpc.http2.max_pings_without_data": 0,
+        "grpc.keepalive_permit_without_calls": 1
+      }
+    }
+  }
+}
+
