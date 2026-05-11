@@ -6,6 +6,9 @@
 CREATE TABLE IF NOT EXISTS contract_notifications (
     notification_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     draft_id UUID REFERENCES contract_drafts(draft_id),
+    exporter_id UUID REFERENCES exporter_profiles(exporter_id),
+    contract_id UUID,
+    ecta_reference_number VARCHAR(100),
     recipient_organization VARCHAR(100) NOT NULL,
     recipient_user_id UUID,
     notification_type VARCHAR(50) NOT NULL,

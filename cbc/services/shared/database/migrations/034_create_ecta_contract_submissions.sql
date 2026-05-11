@@ -6,6 +6,8 @@
 CREATE TABLE IF NOT EXISTS ecta_contract_submissions (
     submission_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     draft_id UUID NOT NULL REFERENCES contract_drafts(draft_id),
+    exporter_id UUID REFERENCES exporter_profiles(exporter_id),
+    contract_id UUID,
     contract_number VARCHAR(100),
     ecta_reference_number VARCHAR(100),
     submission_status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
