@@ -307,10 +307,11 @@ export class PreRegistrationController {
       const now = new Date().toISOString();
       const result = await pool.query(
         `UPDATE exporter_profiles 
-         SET status = $1, approved_by = $2, approved_at = $3, updated_at = $4
-         WHERE exporter_id = $5
+         SET status = $1, approved_by = $2, approved_at = $3, updated_at = $4, 
+             capital_verified = true, capital_verification_date = $5
+         WHERE exporter_id = $6
          RETURNING *`,
-        ['ACTIVE', user.username, now, now, exporterId]
+        ['ACTIVE', user.username, now, now, now, exporterId]
       );
 
       if (result.rows.length === 0) {

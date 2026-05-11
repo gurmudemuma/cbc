@@ -70,7 +70,17 @@ const ExporterDocumentManager: React.FC<ExporterDocumentManagerProps> = ({ contr
     const [success, setSuccess] = useState<string | null>(null);
     const [requesting, setRequesting] = useState(false);
     const [downloading, setDownloading] = useState<string | null>(null);
-    const [selectedTab, setSelectedTab] = useState(0);
+    
+    // Read tab from URL parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabParam = urlParams.get('tab');
+    const [selectedTab, setSelectedTab] = useState(tabParam ? parseInt(tabParam) : 0);
+    
+    // NEW: Contract-based document requests
+    const [registeredContracts, setRegisteredContracts] = useState<any[]>([]);
+    const [selectedContract, setSelectedContract] = useState<any | null>(null);
+    const [documentRequests, setDocumentRequests] = useState<any[]>([]);
+    const [requestBatches, setRequestBatches] = useState<any[]>([]);
     
     // Request dialog state
     const [requestDialogOpen, setRequestDialogOpen] = useState(false);
@@ -78,8 +88,58 @@ const ExporterDocumentManager: React.FC<ExporterDocumentManagerProps> = ({ contr
     const [requestNotes, setRequestNotes] = useState('');
 
     useEffect(() => {
-        loadDocuments();
+        // Don't call loadDocuments() - it uses the old failing endpoint
+        // We calculate summary from document requests instead
+        loadRegisteredContracts();
+        loadDocumentRequests();
     }, []);
+
+    const loadRegisteredContracts = async () => {
+        try {
+            // Load registered contracts from document request service
+            const response = await documentService.getRegisteredContracts();
+            console.log('Registered contracts response:', response);
+            if (response.success) {
+                setRegisteredContracts(response.registeredContracts || []);
+                console.log('Loaded contracts:', response.registeredContracts);
+            }
+        } catch (err) {
+            console.error('Failed to load registered contracts:', err);
+            setError('Failed to load registered contracts: ' + (err.response?.data?.error || err.message));
+        }
+    };
+
+    const loadDocumentRequests = async () => {
+        try {
+            setLoading(true);
+            const response = await documentService.getMyDocumentRequests();
+            if (response.success) {
+                const requests = response.requests || [];
+                setDocumentRequests(requests);
+                
+                // Calculate summary from document requests
+                const summary = {
+                    total: requests.length,
+                    issued: requests.filter(r => r.status === 'COMPLETED').length,
+                    pending: requests.filter(r => r.status === 'PENDING').length,
+                    underReview: requests.filter(r => r.status === 'IN_PROGRESS').length,
+                    rejected: requests.filter(r => r.status === 'REJECTED').length,
+                    notRequested: 0
+                };
+                setSummary(summary);
+            }
+            
+            const batchesResponse = await documentService.getDocumentRequestBatches();
+            if (batchesResponse.success) {
+                setRequestBatches(batchesResponse.batches || []);
+            }
+        } catch (err) {
+            console.error('Failed to load document requests:', err);
+            setError('Failed to load document requests');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const loadDocuments = async () => {
         try {
@@ -96,19 +156,22 @@ const ExporterDocumentManager: React.FC<ExporterDocumentManagerProps> = ({ contr
     };
 
     const handleRequestAll = async () => {
-        if (!contractId) {
-            setError('Contract ID is required to request documents');
+        if (!selectedContract) {
+            setError('Please select a registered contract first');
             return;
         }
 
         try {
             setRequesting(true);
             setError(null);
-            const response = await documentService.requestAllDocuments(contractId);
-            setSuccess(`Successfully requested ${response.data.created.length} documents`);
-            await loadDocuments();
+            const response = await documentService.createDocumentRequestsFromContract(
+                selectedContract.draft_id,
+                selectedContract.ecta_reference_number
+            );
+            setSuccess(`Successfully created ${response.data.totalRequests} document requests`);
+            await loadDocumentRequests();
         } catch (err: any) {
-            setError(err.response?.data?.error || 'Failed to request documents');
+            setError(err.response?.data?.error || 'Failed to create document requests');
         } finally {
             setRequesting(false);
         }
@@ -291,20 +354,24 @@ const ExporterDocumentManager: React.FC<ExporterDocumentManagerProps> = ({ contr
                         <Button
                             variant="outlined"
                             startIcon={<Refresh />}
-                            onClick={loadDocuments}
+                            onClick={() => {
+                                loadDocuments();
+                                loadDocumentRequests();
+                                loadRegisteredContracts();
+                            }}
                             disabled={loading}
                         >
                             Refresh
                         </Button>
-                        {contractId && (
+                        {selectedContract && selectedTab === 3 && (
                             <Button
                                 variant="contained"
                                 size="large"
                                 startIcon={<Send />}
                                 onClick={handleRequestAll}
-                                disabled={requesting || !summary || summary.notRequested === 0}
+                                disabled={requesting}
                             >
-                                {requesting ? 'Requesting...' : 'Request All Export Documents'}
+                                {requesting ? 'Requesting...' : 'Request All Documents'}
                             </Button>
                         )}
                     </Box>
@@ -414,11 +481,183 @@ const ExporterDocumentManager: React.FC<ExporterDocumentManagerProps> = ({ contr
                 )}
                 {selectedTab === 3 && (
                     <Box>
-                        <Typography variant="h6" gutterBottom>Export Execution Documents</Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                            Request these documents from network members after your sales contract is finalized.
+                        <Typography variant="h6" gutterBottom>Request Export Documents</Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                            Select a registered sales contract and request all required documents from network agencies.
                         </Typography>
-                        {getCategoryDocuments('EXPORT_EXECUTION').map(doc => renderDocumentCard(doc))}
+
+                        {/* Contract Selection */}
+                        {registeredContracts.length > 0 ? (
+                            <Card sx={{ mb: 3 }}>
+                                <CardContent>
+                                    <Typography variant="subtitle1" gutterBottom fontWeight="bold">
+                                        Step 1: Select Registered Contract
+                                    </Typography>
+                                    <Grid container spacing={2}>
+                                        {registeredContracts.map((contract) => (
+                                            <Grid item xs={12} md={6} key={contract.draft_id}>
+                                                <Card 
+                                                    variant="outlined" 
+                                                    sx={{ 
+                                                        cursor: 'pointer',
+                                                        border: selectedContract?.draft_id === contract.draft_id ? 2 : 1,
+                                                        borderColor: selectedContract?.draft_id === contract.draft_id ? 'primary.main' : 'divider'
+                                                    }}
+                                                    onClick={() => setSelectedContract(contract)}
+                                                >
+                                                    <CardContent>
+                                                        <Typography variant="h6" gutterBottom>
+                                                            {contract.ecta_reference_number}
+                                                        </Typography>
+                                                        <Typography variant="body2" color="text.secondary">
+                                                            Buyer: {contract.buyer_name} ({contract.buyer_country})
+                                                        </Typography>
+                                                        <Typography variant="body2" color="text.secondary">
+                                                            Coffee: {contract.coffee_type} - {contract.quantity} kg
+                                                        </Typography>
+                                                        <Typography variant="body2" color="text.secondary">
+                                                            Value: {contract.currency} {contract.total_value}
+                                                        </Typography>
+                                                        <Typography variant="body2" color="text.secondary">
+                                                            Delivery: {new Date(contract.delivery_date).toLocaleDateString()}
+                                                        </Typography>
+                                                        <Chip 
+                                                            label={contract.submission_status} 
+                                                            color="success" 
+                                                            size="small" 
+                                                            sx={{ mt: 1 }}
+                                                        />
+                                                    </CardContent>
+                                                </Card>
+                                            </Grid>
+                                        ))}
+                                    </Grid>
+                                </CardContent>
+                            </Card>
+                        ) : (
+                            <Alert severity="info" sx={{ mb: 3 }}>
+                                No registered contracts found. Please register a sales contract with ECTA first.
+                            </Alert>
+                        )}
+
+                        {/* Request Button */}
+                        {selectedContract && (
+                            <Card sx={{ mb: 3 }}>
+                                <CardContent>
+                                    <Typography variant="subtitle1" gutterBottom fontWeight="bold">
+                                        Step 2: Request All Required Documents
+                                    </Typography>
+                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                        This will create document requests for all 8 required documents:
+                                    </Typography>
+                                    <List dense>
+                                        <ListItem>
+                                            <ListItemIcon><CheckCircle fontSize="small" /></ListItemIcon>
+                                            <ListItemText primary="Export License (ECTA)" />
+                                        </ListItem>
+                                        <ListItem>
+                                            <ListItemIcon><CheckCircle fontSize="small" /></ListItemIcon>
+                                            <ListItemText primary="Phytosanitary Certificate (MOA)" />
+                                        </ListItem>
+                                        <ListItem>
+                                            <ListItemIcon><CheckCircle fontSize="small" /></ListItemIcon>
+                                            <ListItemText primary="Health Certificate (MOH)" />
+                                        </ListItem>
+                                        <ListItem>
+                                            <ListItemIcon><CheckCircle fontSize="small" /></ListItemIcon>
+                                            <ListItemText primary="Quality Certificate (ECX)" />
+                                        </ListItem>
+                                        <ListItem>
+                                            <ListItemIcon><CheckCircle fontSize="small" /></ListItemIcon>
+                                            <ListItemText primary="Certificate of Origin (ECTA)" />
+                                        </ListItem>
+                                        <ListItem>
+                                            <ListItemIcon><CheckCircle fontSize="small" /></ListItemIcon>
+                                            <ListItemText primary="Bank Guarantee (BANK)" />
+                                        </ListItem>
+                                        <ListItem>
+                                            <ListItemIcon><CheckCircle fontSize="small" /></ListItemIcon>
+                                            <ListItemText primary="Shipping Booking (SHIPPING)" />
+                                        </ListItem>
+                                        <ListItem>
+                                            <ListItemIcon><CheckCircle fontSize="small" /></ListItemIcon>
+                                            <ListItemText primary="Customs Clearance (CUSTOMS)" />
+                                        </ListItem>
+                                    </List>
+                                    <Button
+                                        variant="contained"
+                                        size="large"
+                                        fullWidth
+                                        startIcon={<Send />}
+                                        onClick={handleRequestAll}
+                                        disabled={requesting}
+                                        sx={{ mt: 2 }}
+                                    >
+                                        {requesting ? 'Creating Requests...' : 'Request All Documents'}
+                                    </Button>
+                                </CardContent>
+                            </Card>
+                        )}
+
+                        {/* Document Requests Status */}
+                        {documentRequests.length > 0 && (
+                            <Card>
+                                <CardContent>
+                                    <Typography variant="subtitle1" gutterBottom fontWeight="bold">
+                                        Step 3: Track Document Requests
+                                    </Typography>
+                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                        Monitor the status of your document requests. Agencies will review and issue documents.
+                                    </Typography>
+                                    {documentRequests.map((request) => (
+                                        <Card key={request.request_id} variant="outlined" sx={{ mb: 2 }}>
+                                            <CardContent>
+                                                <Box display="flex" justifyContent="space-between" alignItems="center">
+                                                    <Box>
+                                                        <Typography variant="subtitle2">
+                                                            {request.description}
+                                                        </Typography>
+                                                        <Typography variant="caption" color="text.secondary">
+                                                            Agency: {request.issuer_agency} • Priority: {request.priority}
+                                                        </Typography>
+                                                    </Box>
+                                                    <Chip 
+                                                        label={request.status.replace('_', ' ')} 
+                                                        color={
+                                                            request.status === 'COMPLETED' ? 'success' :
+                                                            request.status === 'REJECTED' ? 'error' :
+                                                            request.status === 'IN_PROGRESS' ? 'info' :
+                                                            'warning'
+                                                        }
+                                                        size="small"
+                                                    />
+                                                </Box>
+                                                {request.document_id && (
+                                                    <Box mt={1}>
+                                                        <Typography variant="caption" color="success.main">
+                                                            ✓ Document Issued: {request.document_number}
+                                                        </Typography>
+                                                        <Button
+                                                            size="small"
+                                                            startIcon={<Download />}
+                                                            onClick={() => handleDownload(request.document_id)}
+                                                            sx={{ ml: 2 }}
+                                                        >
+                                                            Download
+                                                        </Button>
+                                                    </Box>
+                                                )}
+                                                {request.rejection_reason && (
+                                                    <Alert severity="error" sx={{ mt: 1 }}>
+                                                        {request.rejection_reason}
+                                                    </Alert>
+                                                )}
+                                            </CardContent>
+                                        </Card>
+                                    ))}
+                                </CardContent>
+                            </Card>
+                        )}
                     </Box>
                 )}
             </Box>

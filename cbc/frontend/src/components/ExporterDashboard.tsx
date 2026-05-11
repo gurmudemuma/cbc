@@ -108,6 +108,8 @@ const ExporterDashboard: React.FC<ExporterDashboardProps> = ({ exporterId, tin, 
     useEffect(() => {
         // If dashboard data is provided as prop, use it directly
         if (propDashboardData) {
+            console.log('[ExporterDashboard] Received propDashboardData:', propDashboardData);
+            console.log('[ExporterDashboard] isFullyQualified:', propDashboardData?.compliance?.isFullyQualified);
             setDashboard(propDashboardData);
             setLoading(false);
             return;
@@ -128,6 +130,9 @@ const ExporterDashboard: React.FC<ExporterDashboardProps> = ({ exporterId, tin, 
                     throw new Error('Either exporterId, tin, or dashboardData must be provided');
                 }
 
+                console.log('[ExporterDashboard] Fetched response:', response);
+                console.log('[ExporterDashboard] response.data:', response.data);
+                console.log('[ExporterDashboard] isFullyQualified:', response.data?.compliance?.isFullyQualified);
                 setDashboard(response.data);
             } catch (err: any) {
                 setError(err.response?.data?.message || 'Failed to load dashboard');

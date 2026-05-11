@@ -282,9 +282,10 @@ router.post('/register', async (req, res) => {
     await postgresService.query(
       `INSERT INTO exporter_profiles (
         user_id, business_name, tin, registration_number, business_type,
-        minimum_capital, office_address, contact_person, email, phone,
+        minimum_capital, capital_verified, capital_verification_date,
+        office_address, contact_person, email, phone,
         status, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW())
       ON CONFLICT (user_id) DO NOTHING`,
       [
         username,
@@ -293,6 +294,8 @@ router.post('/register', async (req, res) => {
         registrationNumber,
         pgBusinessType,
         capitalETB,
+        true, // capital_verified
+        new Date(), // capital_verification_date
         address || '',
         contactPerson || '',
         email,

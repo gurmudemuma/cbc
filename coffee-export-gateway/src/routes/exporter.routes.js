@@ -271,10 +271,10 @@ router.get('/dashboard', authenticateToken, requireRole('exporter', 'admin'), as
         el.expiry_date as license_expiry_date
       FROM exporter_profiles ep
       LEFT JOIN users u ON ep.user_id = u.username
-      LEFT JOIN coffee_laboratories cl ON ep.exporter_id = cl.exporter_id AND cl.status = 'ACTIVE'
-      LEFT JOIN coffee_tasters ct ON ep.exporter_id = ct.exporter_id AND ct.status = 'ACTIVE'
-      LEFT JOIN competence_certificates cc ON ep.exporter_id = cc.exporter_id AND cc.status = 'ACTIVE'
-      LEFT JOIN export_licenses el ON ep.exporter_id = el.exporter_id AND el.status = 'ACTIVE'
+      LEFT JOIN coffee_laboratories cl ON ep.exporter_id = cl.exporter_id
+      LEFT JOIN coffee_tasters ct ON ep.exporter_id = ct.exporter_id
+      LEFT JOIN competence_certificates cc ON ep.exporter_id = cc.exporter_id
+      LEFT JOIN export_licenses el ON ep.exporter_id = el.exporter_id
       WHERE ep.user_id = $1 OR u.username = $1
       LIMIT 1
     `;
@@ -316,8 +316,8 @@ router.get('/dashboard', authenticateToken, requireRole('exporter', 'admin'), as
       },
       compliance: {
         profileStatus: row.profile_status,
-        profileApproved: row.profile_status === 'ACTIVE',
-        capitalVerified: row.profile_status === 'ACTIVE',
+        profileApproved: row.profile_status === 'ACTIVE' || row.profile_status === 'FULLY_QUALIFIED',
+        capitalVerified: row.profile_status === 'ACTIVE' || row.profile_status === 'FULLY_QUALIFIED',
         capitalAmount: row.minimum_capital,
         
         // Laboratory
@@ -350,12 +350,35 @@ router.get('/dashboard', authenticateToken, requireRole('exporter', 'admin'), as
         licenseIssuedDate: row.license_issued_date,
         licenseExpiryDate: row.license_expiry_date,
         
-        // Overall qualification status
-        isFullyQualified: row.profile_status === 'ACTIVE' && 
-                         row.lab_status === 'ACTIVE' && 
-                         row.taster_status === 'ACTIVE' && 
-                         row.competence_status === 'ACTIVE' && 
-                         row.license_status === 'ACTIVE'
+        // Overall qualification status - depends on business type
+        // FARMER: Only needs profile, competence, and license
+        // PRIVATE/COMPANY/UNION: Needs all 5 (profile, lab, taster, competence, license)
+        isFullyQualified: row.business_type === 'FARMER' 
+          ? ((row.profile_status === 'ACTIVE' || row.profile_status === 'FULLY_QUALIFIED') && 
+             row.competence_status === 'ACTIVE' && 
+             row.license_status === 'ACTIVE')
+          : ((row.profile_status === 'ACTIVE' || row.profile_status === 'FULLY_QUALIFIED') && 
+             row.lab_status === 'ACTIVE' && 
+             row.taster_status === 'ACTIVE' && 
+             row.competence_status === 'ACTIVE' && 
+             row.license_status === 'ACTIVE')
+      },
+      debug: {
+        businessType: row.business_type,
+        profileStatus: row.profile_status,
+        labStatus: row.lab_status,
+        tasterStatus: row.taster_status,
+        competenceStatus: row.competence_status,
+        licenseStatus: row.license_status,
+        isFullyQualifiedCalc: row.business_type === 'FARMER' 
+          ? ((row.profile_status === 'ACTIVE' || row.profile_status === 'FULLY_QUALIFIED') && 
+             row.competence_status === 'ACTIVE' && 
+             row.license_status === 'ACTIVE')
+          : ((row.profile_status === 'ACTIVE' || row.profile_status === 'FULLY_QUALIFIED') && 
+             row.lab_status === 'ACTIVE' && 
+             row.taster_status === 'ACTIVE' && 
+             row.competence_status === 'ACTIVE' && 
+             row.license_status === 'ACTIVE')
       },
       documents: {
         registrationNumber: row.registration_number,
@@ -368,7 +391,15 @@ router.get('/dashboard', authenticateToken, requireRole('exporter', 'admin'), as
         eicRegistrationNumber: null
       },
       validation: {
-        isValid: row.profile_status === 'ACTIVE' && row.lab_status === 'ACTIVE' && row.taster_status === 'ACTIVE' && row.competence_status === 'ACTIVE' && row.license_status === 'ACTIVE',
+        isValid: row.business_type === 'FARMER'
+          ? ((row.profile_status === 'ACTIVE' || row.profile_status === 'FULLY_QUALIFIED') && 
+             row.competence_status === 'ACTIVE' && 
+             row.license_status === 'ACTIVE')
+          : ((row.profile_status === 'ACTIVE' || row.profile_status === 'FULLY_QUALIFIED') && 
+             row.lab_status === 'ACTIVE' && 
+             row.taster_status === 'ACTIVE' && 
+             row.competence_status === 'ACTIVE' && 
+             row.license_status === 'ACTIVE'),
         issues: [],
         requiredActions: []
       },
@@ -377,7 +408,7 @@ router.get('/dashboard', authenticateToken, requireRole('exporter', 'admin'), as
         createdAt: row.created_at || new Date().toISOString()
       },
       qualificationProgress: {
-        profileComplete: row.profile_status === 'ACTIVE',
+        profileComplete: row.profile_status === 'ACTIVE' || row.profile_status === 'FULLY_QUALIFIED',
         laboratoryComplete: row.lab_status === 'ACTIVE',
         tasterComplete: row.taster_status === 'ACTIVE',
         competenceComplete: row.competence_status === 'ACTIVE',
@@ -387,6 +418,8 @@ router.get('/dashboard', authenticateToken, requireRole('exporter', 'admin'), as
     };
     
     console.log(`[Dashboard] Successfully fetched dashboard for ${exporterId}`);
+    console.log(`[Dashboard] isFullyQualified: ${dashboardData.compliance.isFullyQualified}`);
+    console.log(`[Dashboard] Debug info:`, JSON.stringify(dashboardData.debug, null, 2));
     res.json(dashboardData);
     
   } catch (error) {
@@ -403,13 +436,22 @@ router.get('/dashboard', authenticateToken, requireRole('exporter', 'admin'), as
  */
 function calculateProgress(row) {
   let completed = 0;
-  const total = 5;
+  let total = 5;
   
-  if (row.profile_status === 'ACTIVE') completed++;
-  if (row.lab_status === 'ACTIVE') completed++;
-  if (row.taster_status === 'ACTIVE') completed++;
-  if (row.competence_status === 'ACTIVE') completed++;
-  if (row.license_status === 'ACTIVE') completed++;
+  // For FARMER type, only 3 qualifications are required
+  if (row.business_type === 'FARMER') {
+    total = 3;
+    if (row.profile_status === 'ACTIVE' || row.profile_status === 'FULLY_QUALIFIED') completed++;
+    if (row.competence_status === 'ACTIVE') completed++;
+    if (row.license_status === 'ACTIVE') completed++;
+  } else {
+    // For PRIVATE/COMPANY/UNION, all 5 are required
+    if (row.profile_status === 'ACTIVE' || row.profile_status === 'FULLY_QUALIFIED') completed++;
+    if (row.lab_status === 'ACTIVE') completed++;
+    if (row.taster_status === 'ACTIVE') completed++;
+    if (row.competence_status === 'ACTIVE') completed++;
+    if (row.license_status === 'ACTIVE') completed++;
+  }
   
   return Math.round((completed / total) * 100);
 }
@@ -1660,10 +1702,10 @@ router.get('/network-prefill', authenticateToken, async (req, res) => {
         el.license_number,
         el.status as license_status
       FROM exporter_profiles ep
-      LEFT JOIN coffee_laboratories cl ON ep.exporter_id = cl.exporter_id AND cl.status = 'ACTIVE'
-      LEFT JOIN coffee_tasters ct ON ep.exporter_id = ct.exporter_id AND ct.status = 'ACTIVE'
-      LEFT JOIN competence_certificates cc ON ep.exporter_id = cc.exporter_id AND cc.status = 'ACTIVE'
-      LEFT JOIN export_licenses el ON ep.exporter_id = el.exporter_id AND el.status = 'ACTIVE'
+      LEFT JOIN coffee_laboratories cl ON ep.exporter_id = cl.exporter_id
+      LEFT JOIN coffee_tasters ct ON ep.exporter_id = ct.exporter_id
+      LEFT JOIN competence_certificates cc ON ep.exporter_id = cc.exporter_id
+      LEFT JOIN export_licenses el ON ep.exporter_id = el.exporter_id
       WHERE ep.user_id = $1
       LIMIT 1
     `;

@@ -52,6 +52,8 @@ export class EctaPreRegistrationService {
    * Validate if exporter meets all requirements to create export requests
    */
   public async validateExporter(exporterId: string): Promise<ExporterValidation> {
+    console.log('[validateExporter] Starting validation for:', exporterId);
+    
     const validation: ExporterValidation = {
       isValid: false,
       exporterId,
@@ -67,6 +69,8 @@ export class EctaPreRegistrationService {
 
     // Check 1: Exporter Profile
     const profile = await this.getExporterProfile(exporterId);
+    console.log('[validateExporter] Profile:', profile ? { status: profile.status, businessType: profile.businessType } : 'NOT FOUND');
+    
     if (!profile) {
       validation.issues.push('Exporter profile not found');
       validation.requiredActions.push('Complete exporter registration');
@@ -77,6 +81,7 @@ export class EctaPreRegistrationService {
     // Auto-validation system handles profile approval and capital verification automatically
     // Profile is valid if status is ACTIVE or FULLY_QUALIFIED
     validation.hasValidProfile = profile.status === 'ACTIVE' || profile.status === 'FULLY_QUALIFIED';
+    console.log('[validateExporter] hasValidProfile:', validation.hasValidProfile);
 
     // Check 2: Minimum Capital
     // Auto-validation system automatically verifies capital when amount meets requirement
@@ -84,10 +89,13 @@ export class EctaPreRegistrationService {
     validation.hasMinimumCapital = 
       profile.businessType === 'FARMER' || 
       (profile.capitalVerified && profile.minimumCapital >= requiredCapital);
+    console.log('[validateExporter] hasMinimumCapital:', validation.hasMinimumCapital, { capitalVerified: profile.capitalVerified, minimumCapital: profile.minimumCapital, requiredCapital });
 
     // Check 3: ECTA-Certified Laboratory (not required for farmer-exporters)
     if (profile.businessType !== 'FARMER') {
       const laboratory = await this.getExporterLaboratory(exporterId);
+      console.log('[validateExporter] Laboratory:', laboratory ? { status: laboratory.status, expiryDate: laboratory.expiryDate } : 'NOT FOUND');
+      
       if (!laboratory) {
         validation.issues.push('No ECTA-certified laboratory found');
         validation.requiredActions.push('Establish and certify coffee laboratory with ECTA');
@@ -96,6 +104,12 @@ export class EctaPreRegistrationService {
         const labValid = laboratory.status === 'ACTIVE' && 
                         new Date(laboratory.expiryDate) > new Date();
         validation.hasCertifiedLaboratory = labValid;
+        console.log('[validateExporter] hasCertifiedLaboratory:', labValid, {
+          status: laboratory.status,
+          expiryDate: laboratory.expiryDate,
+          currentDate: new Date().toISOString(),
+          isExpired: new Date(laboratory.expiryDate) <= new Date()
+        });
 
         if (!labValid) {
           validation.issues.push(`Laboratory certification ${laboratory.status.toLowerCase()}`);
@@ -104,11 +118,14 @@ export class EctaPreRegistrationService {
       }
     } else {
       validation.hasCertifiedLaboratory = true; // Exempt for farmers
+      console.log('[validateExporter] hasCertifiedLaboratory: true (FARMER exempt)');
     }
 
     // Check 4: Qualified Taster (not required for farmer-exporters)
     if (profile.businessType !== 'FARMER') {
       const taster = await this.getExporterTaster(exporterId);
+      console.log('[validateExporter] Taster:', taster ? { status: taster.status, expiryDate: taster.certificateExpiryDate, isExclusive: taster.isExclusiveEmployee } : 'NOT FOUND');
+      
       if (!taster) {
         validation.issues.push('No qualified coffee taster found');
         validation.requiredActions.push('Hire qualified taster with valid proficiency certificate');
@@ -118,6 +135,13 @@ export class EctaPreRegistrationService {
                            new Date(taster.certificateExpiryDate) > new Date() &&
                            taster.isExclusiveEmployee;
         validation.hasQualifiedTaster = tasterValid;
+        console.log('[validateExporter] hasQualifiedTaster:', tasterValid, {
+          status: taster.status,
+          expiryDate: taster.certificateExpiryDate,
+          currentDate: new Date().toISOString(),
+          isExpired: new Date(taster.certificateExpiryDate) <= new Date(),
+          isExclusive: taster.isExclusiveEmployee
+        });
 
         if (!tasterValid) {
           validation.issues.push('Taster qualification invalid or expired');
@@ -126,10 +150,13 @@ export class EctaPreRegistrationService {
       }
     } else {
       validation.hasQualifiedTaster = true; // Exempt for farmers
+      console.log('[validateExporter] hasQualifiedTaster: true (FARMER exempt)');
     }
 
     // Check 5: Competence Certificate
     const competenceCert = await this.getCompetenceCertificate(exporterId);
+    console.log('[validateExporter] Competence:', competenceCert ? { status: competenceCert.status, expiryDate: competenceCert.expiryDate } : 'NOT FOUND');
+    
     if (!competenceCert) {
       validation.issues.push('No competence certificate found');
       validation.requiredActions.push('Apply for competence certificate from ECTA');
@@ -138,6 +165,12 @@ export class EctaPreRegistrationService {
       const certValid = competenceCert.status === 'ACTIVE' && 
                        new Date(competenceCert.expiryDate) > new Date();
       validation.hasCompetenceCertificate = certValid;
+      console.log('[validateExporter] hasCompetenceCertificate:', certValid, {
+        status: competenceCert.status,
+        expiryDate: competenceCert.expiryDate,
+        currentDate: new Date().toISOString(),
+        isExpired: new Date(competenceCert.expiryDate) <= new Date()
+      });
 
       if (!certValid) {
         validation.issues.push(`Competence certificate ${competenceCert.status.toLowerCase()}`);
@@ -147,6 +180,8 @@ export class EctaPreRegistrationService {
 
     // Check 6: Export License
     const exportLicense = await this.getExportLicense(exporterId);
+    console.log('[validateExporter] License:', exportLicense ? { status: exportLicense.status, expiryDate: exportLicense.expiryDate } : 'NOT FOUND');
+    
     if (!exportLicense) {
       validation.issues.push('No export license found');
       validation.requiredActions.push('Apply for export license from ECTA');
@@ -155,6 +190,12 @@ export class EctaPreRegistrationService {
       const licenseValid = exportLicense.status === 'ACTIVE' && 
                           new Date(exportLicense.expiryDate) > new Date();
       validation.hasExportLicense = licenseValid;
+      console.log('[validateExporter] hasExportLicense:', licenseValid, {
+        status: exportLicense.status,
+        expiryDate: exportLicense.expiryDate,
+        currentDate: new Date().toISOString(),
+        isExpired: new Date(exportLicense.expiryDate) <= new Date()
+      });
 
       if (!licenseValid) {
         validation.issues.push(`Export license ${exportLicense.status.toLowerCase()}`);
@@ -170,6 +211,17 @@ export class EctaPreRegistrationService {
       validation.hasQualifiedTaster &&
       validation.hasCompetenceCertificate &&
       validation.hasExportLicense;
+    
+    console.log('[validateExporter] FINAL VALIDATION:', {
+      isValid: validation.isValid,
+      hasValidProfile: validation.hasValidProfile,
+      hasMinimumCapital: validation.hasMinimumCapital,
+      hasCertifiedLaboratory: validation.hasCertifiedLaboratory,
+      hasQualifiedTaster: validation.hasQualifiedTaster,
+      hasCompetenceCertificate: validation.hasCompetenceCertificate,
+      hasExportLicense: validation.hasExportLicense,
+      issues: validation.issues,
+    });
 
     // Auto-update exporter status to "Fully Qualified" if all requirements are met
     if (validation.isValid && profile.status !== 'FULLY_QUALIFIED') {

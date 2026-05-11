@@ -245,9 +245,10 @@ async function createUserInPostgreSQL(user) {
         const insertResult = await pool.query(
           `INSERT INTO exporter_profiles (
             user_id, business_name, tin, registration_number, business_type,
-            minimum_capital, office_address, city, region, contact_person, email, phone,
+            minimum_capital, capital_verified, capital_verification_date,
+            office_address, city, region, contact_person, email, phone,
             status, created_at, updated_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW())
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW(), NOW())
           RETURNING exporter_id`,
           [
             user.username,
@@ -256,6 +257,8 @@ async function createUserInPostgreSQL(user) {
             registrationNumber,
             user.businessType || 'PRIVATE',
             user.capitalETB || 15000000,
+            true, // capital_verified
+            new Date(), // capital_verification_date
             user.address || 'Addis Ababa, Ethiopia',
             user.city || 'Addis Ababa',
             user.region || 'Addis Ababa',

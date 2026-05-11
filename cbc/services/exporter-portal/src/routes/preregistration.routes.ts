@@ -71,4 +71,7 @@ router.get('/export-licenses', controller.getMyExportLicenses);
 // Get ESW pre-fill data (for auto-routing to Network Submission)
 router.get('/esw-prefill', controller.getESWPrefillData);
 
+// Alias for network-prefill (same as esw-prefill)
+router.get('/network-prefill', controller.getESWPrefillData);
+
 export default router;

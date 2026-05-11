@@ -16,6 +16,8 @@ interface IssueDocumentData {
   exporterId: string;
   documentType: string;
   documentNumber: string;
+  documentHash?: string;
+  documentUrl?: string;
   documentMetadata?: Record<string, any>;
   expiryDate?: string;
   documentFile?: string; // base64 encoded PDF
@@ -50,6 +52,58 @@ const documentService = {
       contractId,
       shipmentDetails
     });
+    return response.data;
+  },
+
+  /**
+   * Get registered contracts for the current exporter
+   * NEW: Get contracts that can be used to request documents
+   */
+  getRegisteredContracts: async () => {
+    const response = await apiClient.get('/api/document-requests/registered-contracts');
+    return response.data;
+  },
+
+  /**
+   * Create document requests from a registered sales contract
+   * NEW: Contract-based document request workflow
+   */
+  createDocumentRequestsFromContract: async (contractId: string, ectaReferenceNumber?: string) => {
+    const response = await apiClient.post('/api/document-requests/from-contract', {
+      contractId,
+      ectaReferenceNumber
+    });
+    return response.data;
+  },
+
+  /**
+   * Get all document request batches
+   * NEW: Get batches with completion status
+   */
+  getDocumentRequestBatches: async () => {
+    const response = await apiClient.get('/api/document-requests/batches');
+    return response.data;
+  },
+
+  /**
+   * Get document requests from the new workflow
+   * NEW: Get requests with issued document details
+   */
+  getMyDocumentRequests: async (status?: string, batchId?: string) => {
+    const params = new URLSearchParams();
+    if (status) params.append('status', status);
+    if (batchId) params.append('batchId', batchId);
+    const queryString = params.toString();
+    const response = await apiClient.get(`/api/document-requests/my-requests${queryString ? '?' + queryString : ''}`);
+    return response.data;
+  },
+
+  /**
+   * Get specific document request details
+   * NEW: Get request with issued document
+   */
+  getDocumentRequestDetails: async (requestId: string) => {
+    const response = await apiClient.get(`/api/document-requests/${requestId}`);
     return response.data;
   },
 
@@ -147,15 +201,20 @@ const documentService = {
    * Get pending document requests for a network member
    */
   getPendingRequests: async () => {
-    const response = await apiClient.get('/api/network-member/document-requests/pending');
+    const response = await apiClient.get('/api/agency/document-requests/pending');
     return response.data;
   },
 
   /**
    * Issue a document to an exporter
+   * System automatically signs with MSP certificate
    */
   issueDocument: async (data: IssueDocumentData) => {
-    const response = await apiClient.post('/api/network-member/documents/issue', data);
+    const response = await apiClient.post(`/api/agency/document-requests/${data.requestId}/issue`, {
+      documentNumber: data.documentNumber,
+      expiryDate: data.expiryDate,
+      metadata: data.documentMetadata,
+    });
     return response.data;
   },
 

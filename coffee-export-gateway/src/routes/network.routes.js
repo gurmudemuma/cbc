@@ -822,31 +822,31 @@ router.get('/submissions/:submissionId', authenticateToken, async (req, res) => 
         businessType: exporterInfo.businessType || 'N/A',
       },
       
-      // Agency statuses
-      ecta_status: submission.ecta_status,
-      ecta_approved_at: submission.ecta_approved_at,
-      ecta_approved_by: submission.ecta_approved_by,
-      ecta_notes: submission.ecta_notes,
+      // Agency statuses (camelCase for frontend)
+      ectaStatus: submission.ecta_status,
+      ectaApprovedAt: submission.ecta_approved_at,
+      ectaApprovedBy: submission.ecta_approved_by,
+      ectaNotes: submission.ecta_notes,
       
-      bank_status: submission.bank_status,
-      bank_approved_at: submission.bank_approved_at,
-      bank_approved_by: submission.bank_approved_by,
-      bank_notes: submission.bank_notes,
+      bankStatus: submission.bank_status,
+      bankApprovedAt: submission.bank_approved_at,
+      bankApprovedBy: submission.bank_approved_by,
+      bankNotes: submission.bank_notes,
       
-      nbe_status: submission.nbe_status,
-      nbe_approved_at: submission.nbe_approved_at,
-      nbe_approved_by: submission.nbe_approved_by,
-      nbe_notes: submission.nbe_notes,
+      nbeStatus: submission.nbe_status,
+      nbeApprovedAt: submission.nbe_approved_at,
+      nbeApprovedBy: submission.nbe_approved_by,
+      nbeNotes: submission.nbe_notes,
       
-      customs_status: submission.customs_status,
-      customs_approved_at: submission.customs_approved_at,
-      customs_approved_by: submission.customs_approved_by,
-      customs_notes: submission.customs_notes,
+      customsStatus: submission.customs_status,
+      customsApprovedAt: submission.customs_approved_at,
+      customsApprovedBy: submission.customs_approved_by,
+      customsNotes: submission.customs_notes,
       
-      shipping_status: submission.shipping_status,
-      shipping_approved_at: submission.shipping_approved_at,
-      shipping_approved_by: submission.shipping_approved_by,
-      shipping_notes: submission.shipping_notes,
+      shippingStatus: submission.shipping_status,
+      shippingApprovedAt: submission.shipping_approved_at,
+      shippingApprovedBy: submission.shipping_approved_by,
+      shippingNotes: submission.shipping_notes,
       
       // Document counts
       documents_collected: submission.documents_collected,
@@ -1484,17 +1484,19 @@ router.get('/agencies/:memberCode/pending', authenticateToken, async (req, res) 
     const query = `
       SELECT 
         ns.*,
-        ep.business_name as exporter_name
+        ep.business_name as exporter_name,
+        cd.ecta_reference_number as sales_contract_reference
       FROM network_submissions ns
       LEFT JOIN exporter_profiles ep ON ns.exporter_id = ep.exporter_id
-      WHERE ${statusColumn} = 'PENDING'
+      LEFT JOIN contract_drafts cd ON cd.exporter_id = ns.exporter_id AND cd.status = 'FINALIZED'
+      WHERE ${statusColumn} IN ('PENDING', 'APPROVED', 'REJECTED')
       ORDER BY submitted_at ASC
     `;
     
     const result = await pool.query(query);
     
     // Map database fields to frontend-expected field names
-    const mappedData = result.rows.map(row => ({
+    let mappedData = result.rows.map(row => ({
       submissionId: row.submission_id,
       exportId: row.network_reference_number,
       networkReferenceNumber: row.esw_reference_number,
@@ -1503,18 +1505,82 @@ router.get('/agencies/:memberCode/pending', authenticateToken, async (req, res) 
       submittedAt: row.submitted_at,
       status: row.status,
       ectaStatus: row.ecta_status,
+      ectaApprovedAt: row.ecta_approved_at,
+      ectaApprovedBy: row.ecta_approved_by,
       bankStatus: row.bank_status,
+      bankApprovedAt: row.bank_approved_at,
+      bankApprovedBy: row.bank_approved_by,
       nbeStatus: row.nbe_status,
+      nbeApprovedAt: row.nbe_approved_at,
+      nbeApprovedBy: row.nbe_approved_by,
       customsStatus: row.customs_status,
+      customsApprovedAt: row.customs_approved_at,
+      customsApprovedBy: row.customs_approved_by,
       shippingStatus: row.shipping_status,
+      shippingApprovedAt: row.shipping_approved_at,
+      shippingApprovedBy: row.shipping_approved_by,
       exporterInfo: row.exporter_info,
       supportingDocuments: row.supporting_documents,
       documentsCollected: row.documents_collected,
       requiredDocumentsCount: row.required_documents_count,
       issuedDocumentsCount: row.issued_documents_count,
+      salesContractReference: row.sales_contract_reference,
       createdAt: row.created_at,
-      updatedAt: row.updated_at
+      updatedAt: row.updated_at,
+      type: 'EXPORT_SUBMISSION'
     }));
+    
+    // For ECTA, also include pending contract registrations
+    if (memberCode.toUpperCase() === 'ECTA') {
+      const contractQuery = `
+        SELECT 
+          ecs.submission_id,
+          ecs.ecta_reference_number,
+          ecs.submission_status,
+          ecs.submitted_at,
+          ecs.contract_data,
+          cd.contract_number,
+          cd.total_value,
+          cd.coffee_type,
+          cd.quantity,
+          ep.business_name as exporter_name,
+          br.company_name as buyer_name,
+          br.country as buyer_country
+        FROM ecta_contract_submissions ecs
+        LEFT JOIN contract_drafts cd ON ecs.draft_id = cd.draft_id
+        LEFT JOIN exporter_profiles ep ON ecs.exporter_id = ep.exporter_id
+        LEFT JOIN buyer_registry br ON ecs.buyer_id = br.buyer_id
+        WHERE ecs.submission_status = 'PENDING_REGISTRATION'
+        ORDER BY ecs.submitted_at ASC
+      `;
+      
+      const contractResult = await pool.query(contractQuery);
+      
+      const contractMappedData = contractResult.rows.map(row => ({
+        submissionId: row.submission_id,
+        exportId: row.ecta_reference_number,
+        networkReferenceNumber: row.contract_number,
+        exporterId: row.exporter_id,
+        exporterName: row.exporter_name || 'Unknown',
+        submittedAt: row.submitted_at,
+        status: row.submission_status,
+        ectaStatus: 'PENDING',
+        contractNumber: row.contract_number,
+        ectaReferenceNumber: row.ecta_reference_number,
+        totalValue: row.total_value,
+        coffeeType: row.coffee_type,
+        quantity: row.quantity,
+        buyerName: row.buyer_name,
+        buyerCountry: row.buyer_country,
+        contractData: row.contract_data,
+        createdAt: row.submitted_at,
+        updatedAt: row.submitted_at,
+        type: 'CONTRACT_REGISTRATION'
+      }));
+      
+      // Combine both types of pending items
+      mappedData = [...mappedData, ...contractMappedData];
+    }
     
     res.json({
       success: true,
@@ -1593,9 +1659,9 @@ router.post('/submissions/:submissionId/agencies/:memberCode/approve', authentic
       
       // Verify the sales contract exists and is valid
       const contractQuery = `
-        SELECT reference_number, status, exporter_id
-        FROM sales_contracts
-        WHERE reference_number = $1 AND status IN ('FINALIZED', 'ACTIVE')
+        SELECT ecta_reference_number, status, exporter_id
+        FROM contract_drafts
+        WHERE ecta_reference_number = $1 AND status IN ('REGISTERED', 'APPROVED', 'FINALIZED')
       `;
       const contractResult = await pool.query(contractQuery, [salesContractReference]);
       

@@ -59,15 +59,48 @@ export class EctaPreRegistrationRepository {
     return this.mapExporterProfile(result.rows[0]);
   }
 
+  /**
+   * Helper method to resolve exporter_id from either UUID or username
+   * @param exporterIdOrUsername - Either exporter_id (UUID) or user_id (username)
+   * @returns The exporter_id UUID
+   */
+  private async resolveExporterId(exporterIdOrUsername: string): Promise<string | null> {
+    // Check if it's already a UUID
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(exporterIdOrUsername);
+    
+    if (isUUID) {
+      return exporterIdOrUsername;
+    }
+    
+    // It's a username, look up the exporter_id
+    const query = 'SELECT exporter_id FROM exporter_profiles WHERE user_id = $1';
+    const result = await this.pool.query(query, [exporterIdOrUsername]);
+    return result.rows[0]?.exporter_id || null;
+  }
+
   async getExporterProfileById(exporterId: string): Promise<ExporterProfile | null> {
-    const query = 'SELECT * FROM exporter_profiles WHERE exporter_id = $1';
+    // Check if exporterId is a UUID or username
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(exporterId);
+    
+    const query = isUUID 
+      ? 'SELECT * FROM exporter_profiles WHERE exporter_id = $1'
+      : 'SELECT * FROM exporter_profiles WHERE user_id = $1';
+    
     const result = await this.pool.query(query, [exporterId]);
     return result.rows[0] ? this.mapExporterProfile(result.rows[0]) : null;
   }
 
   async getExporterProfileByUserId(userId: string): Promise<ExporterProfile | null> {
+    // Try to find by user_id (which may contain either numeric ID or username string)
     const query = 'SELECT * FROM exporter_profiles WHERE user_id = $1';
     const result = await this.pool.query(query, [String(userId)]);
+    return result.rows[0] ? this.mapExporterProfile(result.rows[0]) : null;
+  }
+
+  async getExporterProfileByUsername(username: string): Promise<ExporterProfile | null> {
+    // Lookup by username (for cases where user_id column stores username strings)
+    const query = 'SELECT * FROM exporter_profiles WHERE user_id = $1';
+    const result = await this.pool.query(query, [username]);
     return result.rows[0] ? this.mapExporterProfile(result.rows[0]) : null;
   }
 
@@ -203,8 +236,11 @@ export class EctaPreRegistrationRepository {
   }
 
   async getLaboratoryByExporterId(exporterId: string): Promise<CoffeeLaboratory | null> {
+    const resolvedId = await this.resolveExporterId(exporterId);
+    if (!resolvedId) return null;
+    
     const query = 'SELECT * FROM coffee_laboratories WHERE exporter_id = $1 AND status = $2';
-    const result = await this.pool.query(query, [exporterId, 'ACTIVE']);
+    const result = await this.pool.query(query, [resolvedId, 'ACTIVE']);
     return result.rows[0] ? this.mapLaboratory(result.rows[0]) : null;
   }
 
@@ -291,8 +327,11 @@ export class EctaPreRegistrationRepository {
   }
 
   async getTasterByExporterId(exporterId: string): Promise<CoffeeTaster | null> {
+    const resolvedId = await this.resolveExporterId(exporterId);
+    if (!resolvedId) return null;
+    
     const query = 'SELECT * FROM coffee_tasters WHERE exporter_id = $1 AND status = $2';
-    const result = await this.pool.query(query, [exporterId, 'ACTIVE']);
+    const result = await this.pool.query(query, [resolvedId, 'ACTIVE']);
     return result.rows[0] ? this.mapTaster(result.rows[0]) : null;
   }
 
@@ -342,8 +381,11 @@ export class EctaPreRegistrationRepository {
   }
 
   async getCompetenceCertificateByExporterId(exporterId: string): Promise<CompetenceCertificate | null> {
+    const resolvedId = await this.resolveExporterId(exporterId);
+    if (!resolvedId) return null;
+    
     const query = 'SELECT * FROM competence_certificates WHERE exporter_id = $1 AND status = $2';
-    const result = await this.pool.query(query, [exporterId, 'ACTIVE']);
+    const result = await this.pool.query(query, [resolvedId, 'ACTIVE']);
     return result.rows[0] ? this.mapCompetenceCertificate(result.rows[0]) : null;
   }
 
@@ -463,8 +505,11 @@ export class EctaPreRegistrationRepository {
   }
 
   async getExportLicenseByExporterId(exporterId: string): Promise<ExportLicense | null> {
+    const resolvedId = await this.resolveExporterId(exporterId);
+    if (!resolvedId) return null;
+    
     const query = 'SELECT * FROM export_licenses WHERE exporter_id = $1 AND status = $2';
-    const result = await this.pool.query(query, [exporterId, 'ACTIVE']);
+    const result = await this.pool.query(query, [resolvedId, 'ACTIVE']);
     return result.rows[0] ? this.mapExportLicense(result.rows[0]) : null;
   }
 

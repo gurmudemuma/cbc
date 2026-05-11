@@ -51,6 +51,7 @@ apiClient.interceptors.response.use(
       const shouldNotRedirect = 
         currentPath.includes('/preregistration') ||
         currentPath.includes('/public') ||
+        currentPath.includes('/network') ||  // Allow network pages to handle 401 gracefully
         error.config?.skipAuthRedirect === true;
 
       if (shouldNotRedirect) {

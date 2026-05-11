@@ -66,6 +66,7 @@ const AgencyApprovalDashboard = (): JSX.Element => {
   const [selectedAgency, setSelectedAgency] = useState<string | null>(null);
   const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
   const [approvedSubmissions, setApprovedSubmissions] = useState<any[]>([]);
+  const [rejectedSubmissions, setRejectedSubmissions] = useState<any[]>([]);
   const [agencyStatistics, setAgencyStatistics] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -142,6 +143,7 @@ const AgencyApprovalDashboard = (): JSX.Element => {
     if (selectedAgency) {
       loadPendingApprovals();
       loadApprovedSubmissions();
+      loadRejectedSubmissions();
       loadAgencyStatistics();
     }
   }, [selectedAgency]);
@@ -151,7 +153,26 @@ const AgencyApprovalDashboard = (): JSX.Element => {
     try {
       const response = await networkService.getPendingApprovalsForAgency(selectedAgency);
       if (response.success) {
-        setPendingApprovals(response.data || []);
+        const allSubmissions = response.data || [];
+        
+        // Map agency codes to their database field names (matches backend statusColumnMap)
+        const fieldMapping: Record<string, string> = {
+          'CBE': 'bank',
+          'BANK': 'bank',
+          'ECTA': 'ecta',
+          'NBE': 'nbe',
+          'CUSTOMS': 'customs',
+          'ERCA': 'customs',
+          'SHIPPING': 'shipping',
+          'ECX': 'ecx'
+        };
+        
+        const fieldName = fieldMapping[selectedAgency] || selectedAgency.toLowerCase();
+        const statusField = `${fieldName}Status`;
+        
+        // Filter for PENDING submissions only
+        const pending = allSubmissions.filter((s: any) => s[statusField] === 'PENDING');
+        setPendingApprovals(pending);
       }
     } catch (error) {
       console.error('Failed to load pending approvals:', error);
@@ -163,16 +184,78 @@ const AgencyApprovalDashboard = (): JSX.Element => {
 
   const loadApprovedSubmissions = async () => {
     try {
-      // Get all submissions and filter for approved ones where this agency approved
-      const response = await networkService.getSubmissions();
+      // Get agency-specific submissions (same endpoint as pending, but filter for approved)
+      const response = await networkService.getPendingApprovalsForAgency(selectedAgency);
+      console.log('[Agency Dashboard] Raw API response:', response);
+      
       if (response.success) {
         const allSubmissions = response.data || [];
-        // Filter for approved submissions
-        const approved = allSubmissions.filter((s: any) => s.status === 'APPROVED' || s.status === 'EXPORT_APPROVED');
+        console.log('[Agency Dashboard] All submissions count:', allSubmissions.length);
+        console.log('[Agency Dashboard] First submission sample:', allSubmissions[0]);
+        
+        // Map agency codes to their database field names (matches backend statusColumnMap)
+        const fieldMapping: Record<string, string> = {
+          'CBE': 'bank',
+          'BANK': 'bank',
+          'ECTA': 'ecta',
+          'NBE': 'nbe',
+          'CUSTOMS': 'customs',
+          'ERCA': 'customs',
+          'SHIPPING': 'shipping',
+          'ECX': 'ecx'
+        };
+        
+        const fieldName = fieldMapping[selectedAgency] || selectedAgency.toLowerCase();
+        const statusField = `${fieldName}Status`;
+        console.log('[Agency Dashboard] Looking for field:', statusField);
+        
+        // Filter for submissions where this specific agency has approved
+        const approved = allSubmissions.filter((s: any) => {
+          console.log(`[Agency Dashboard] Submission ${s.submissionId}: ${statusField} = ${s[statusField]}`);
+          return s[statusField] === 'APPROVED';
+        });
+        
+        console.log(`[Agency Dashboard] Filtering by ${statusField}, found ${approved.length} approved submissions`);
         setApprovedSubmissions(approved);
       }
     } catch (error) {
       console.error('Failed to load approved submissions:', error);
+    }
+  };
+
+  const loadRejectedSubmissions = async () => {
+    try {
+      // Get agency-specific submissions (same endpoint, but filter for rejected)
+      const response = await networkService.getPendingApprovalsForAgency(selectedAgency);
+      
+      if (response.success) {
+        const allSubmissions = response.data || [];
+        
+        // Map agency codes to their database field names (matches backend statusColumnMap)
+        const fieldMapping: Record<string, string> = {
+          'CBE': 'bank',
+          'BANK': 'bank',
+          'ECTA': 'ecta',
+          'NBE': 'nbe',
+          'CUSTOMS': 'customs',
+          'ERCA': 'customs',
+          'SHIPPING': 'shipping',
+          'ECX': 'ecx'
+        };
+        
+        const fieldName = fieldMapping[selectedAgency] || selectedAgency.toLowerCase();
+        const statusField = `${fieldName}Status`;
+        
+        // Filter for submissions where this specific agency has rejected
+        const rejected = allSubmissions.filter((s: any) => 
+          s[statusField] === 'REJECTED'
+        );
+        
+        console.log(`[Agency Dashboard] Filtering by ${statusField}, found ${rejected.length} rejected submissions`);
+        setRejectedSubmissions(rejected);
+      }
+    } catch (error) {
+      console.error('Failed to load rejected submissions:', error);
     }
   };
 
@@ -182,10 +265,46 @@ const AgencyApprovalDashboard = (): JSX.Element => {
 
   const loadAgencyStatistics = async () => {
     try {
+      // Load network approval statistics
       const response = await networkService.getAgencyStatistics(selectedAgency);
-      if (response.success) {
-        setAgencyStatistics(response.data);
+      let stats = response.success ? {
+        pending: Number(response.data.pending || 0),
+        approved: Number(response.data.approved || 0),
+        rejected: Number(response.data.rejected || 0),
+        totalApprovals: Number(response.data.totalApprovals || 0),
+      } : {};
+      
+      // Load document request statistics
+      try {
+        const docService = (await import('../services/document.service')).documentService;
+        const docResponse = await docService.getPendingRequests();
+        if (docResponse.success) {
+          const requests = docResponse.requests || [];
+          // Calculate document request stats
+          const docStats = {
+            totalDocumentRequests: requests.length,
+            pendingDocuments: requests.filter((r: any) => r.status === 'PENDING').length,
+            acknowledgedDocuments: requests.filter((r: any) => r.status === 'ACKNOWLEDGED').length,
+            completedDocuments: requests.filter((r: any) => r.status === 'COMPLETED').length,
+            rejectedDocuments: requests.filter((r: any) => r.status === 'REJECTED').length,
+          };
+          
+          // Merge with existing stats
+          stats = {
+            ...stats,
+            ...docStats,
+            // Update total approvals to include document requests
+            totalApprovals: Number(stats.totalApprovals || 0) + docStats.totalDocumentRequests,
+            pendingReview: Number(stats.pendingReview || 0) + docStats.pendingDocuments,
+            approved: Number(stats.approved || 0) + docStats.completedDocuments,
+            rejected: Number(stats.rejected || 0) + docStats.rejectedDocuments,
+          };
+        }
+      } catch (docError) {
+        console.error('Failed to load document request statistics:', docError);
       }
+      
+      setAgencyStatistics(stats);
     } catch (error) {
       console.error('Failed to load agency statistics:', error);
     }
@@ -193,7 +312,7 @@ const AgencyApprovalDashboard = (): JSX.Element => {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([loadPendingApprovals(), loadApprovedSubmissions(), loadAgencyStatistics()]);
+    await Promise.all([loadPendingApprovals(), loadApprovedSubmissions(), loadRejectedSubmissions(), loadAgencyStatistics()]);
     setRefreshing(false);
     showNotification('Data refreshed', 'success');
   };
@@ -427,7 +546,7 @@ const AgencyApprovalDashboard = (): JSX.Element => {
           <Grid item xs={12} md={3}>
             <ModernStatCard
               title="Total Approvals"
-              value={agencyStatistics.totalApprovals || 0}
+              value={Number(agencyStatistics.totalApprovals) || 0}
               subtitle={`for ${userAgencies.find((a) => a.code === selectedAgency)?.name}`}
               icon={<FileText />}
               color="primary"
@@ -437,7 +556,7 @@ const AgencyApprovalDashboard = (): JSX.Element => {
           <Grid item xs={12} md={3}>
             <ModernStatCard
               title="Pending Review"
-              value={agencyStatistics.pending || 0}
+              value={Number(agencyStatistics.pending) || 0}
               subtitle="Awaiting your approval"
               icon={<Clock />}
               color="warning"
@@ -447,7 +566,7 @@ const AgencyApprovalDashboard = (): JSX.Element => {
           <Grid item xs={12} md={3}>
             <ModernStatCard
               title="Approved"
-              value={agencyStatistics.approved || 0}
+              value={Number(agencyStatistics.approved) || 0}
               subtitle="Successfully approved"
               icon={<CheckCircle />}
               color="success"
@@ -457,11 +576,11 @@ const AgencyApprovalDashboard = (): JSX.Element => {
           <Grid item xs={12} md={3}>
             <ModernStatCard
               title="Rejected"
-              value={agencyStatistics.rejected || 0}
+              value={Number(agencyStatistics.rejected) || 0}
               subtitle="Rejected submissions"
               icon={<XCircle />}
               color="error"
-              onClick={() => setTabValue(1)}
+              onClick={() => setTabValue(2)}
             />
           </Grid>
         </Grid>
@@ -474,6 +593,7 @@ const AgencyApprovalDashboard = (): JSX.Element => {
             <Tabs value={tabValue} onChange={(e, v) => setTabValue(v)}>
               <Tab label={`Pending Approvals (${pendingApprovals.length})`} />
               <Tab label={`Approved Submissions (${approvedSubmissions.length})`} />
+              <Tab label={`Rejected Submissions (${rejectedSubmissions.length})`} />
               <Tab label="Document Issuance" />
             </Tabs>
           </Box>
@@ -569,33 +689,38 @@ const AgencyApprovalDashboard = (): JSX.Element => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {approvedSubmissions.map((submission) => (
-                        <TableRow key={submission.submissionId}>
-                          <TableCell>{submission.networkReferenceNumber}</TableCell>
-                          <TableCell>{submission.exportId}</TableCell>
-                          <TableCell>{submission.exporterName || 'N/A'}</TableCell>
-                          <TableCell>{formatDate(submission.submittedAt)}</TableCell>
-                          <TableCell>{formatDate(submission.approvedAt)}</TableCell>
-                          <TableCell>
-                            <Chip
-                              label="APPROVED"
-                              color="success"
-                              size="small"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Tooltip title="View Details & Certificates">
-                              <IconButton 
-                                size="small" 
-                                color="primary"
-                                onClick={() => handleViewDetails(submission)}
-                              >
-                                <Eye size={18} />
-                              </IconButton>
-                            </Tooltip>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {approvedSubmissions.map((submission) => {
+                        const agencyLower = selectedAgency?.toLowerCase();
+                        const approvedAtField = `${agencyLower}ApprovedAt`;
+                        
+                        return (
+                          <TableRow key={submission.submissionId}>
+                            <TableCell>{submission.networkReferenceNumber}</TableCell>
+                            <TableCell>{submission.exportId}</TableCell>
+                            <TableCell>{submission.exporterName || 'N/A'}</TableCell>
+                            <TableCell>{formatDate(submission.submittedAt)}</TableCell>
+                            <TableCell>{formatDate(submission[approvedAtField])}</TableCell>
+                            <TableCell>
+                              <Chip
+                                label="APPROVED"
+                                color="success"
+                                size="small"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Tooltip title="View Details & Certificates">
+                                <IconButton 
+                                  size="small" 
+                                  color="primary"
+                                  onClick={() => handleViewDetails(submission)}
+                                >
+                                  <Eye size={18} />
+                                </IconButton>
+                              </Tooltip>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </TableContainer>
@@ -604,6 +729,72 @@ const AgencyApprovalDashboard = (): JSX.Element => {
           )}
 
           {tabValue === 2 && (
+            <>
+              <Typography variant="h6" gutterBottom>
+                Rejected Submissions
+              </Typography>
+
+              {loading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+                  <CircularProgress />
+                </Box>
+              ) : rejectedSubmissions.length === 0 ? (
+                <Alert severity="info">No rejected submissions yet</Alert>
+              ) : (
+                <TableContainer component={Paper} sx={{ mt: 2 }}>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Submission Reference</TableCell>
+                        <TableCell>Export ID</TableCell>
+                        <TableCell>Exporter</TableCell>
+                        <TableCell>Submitted Date</TableCell>
+                        <TableCell>Rejected Date</TableCell>
+                        <TableCell>Status</TableCell>
+                        <TableCell>Actions</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {rejectedSubmissions.map((submission) => {
+                        const agencyLower = selectedAgency?.toLowerCase();
+                        const rejectedAtField = `${agencyLower}ApprovedAt`;
+                        
+                        return (
+                          <TableRow key={submission.submissionId}>
+                            <TableCell>{submission.networkReferenceNumber}</TableCell>
+                            <TableCell>{submission.exportId}</TableCell>
+                            <TableCell>{submission.exporterName || 'N/A'}</TableCell>
+                            <TableCell>{formatDate(submission.submittedAt)}</TableCell>
+                            <TableCell>{formatDate(submission[rejectedAtField])}</TableCell>
+                            <TableCell>
+                              <Chip
+                                label="REJECTED"
+                                color="error"
+                                size="small"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Tooltip title="View Details">
+                                <IconButton 
+                                  size="small" 
+                                  color="primary"
+                                  onClick={() => handleViewDetails(submission)}
+                                >
+                                  <Eye size={18} />
+                                </IconButton>
+                              </Tooltip>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
+            </>
+          )}
+
+          {tabValue === 3 && (
             <Box sx={{ mt: 2 }}>
               <NetworkMemberDocumentIssuance />
             </Box>

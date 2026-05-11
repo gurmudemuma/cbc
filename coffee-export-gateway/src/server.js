@@ -30,6 +30,12 @@ const salesContractNetworkRouter = require('./routes/sales-contract-network.rout
 // Document Issuance routes
 const documentRequestsRouter = require('./routes/document-requests.routes');
 const documentIssuanceRouter = require('./routes/document-issuance.routes');
+// NEW: Document Request Workflow routes
+const documentRequestWorkflowRouter = require('./routes/document-request.routes');
+// NEW: Agency Document Processing routes
+const agencyDocumentProcessingRouter = require('./routes/agency-document-processing.routes');
+// NEW: Document Verification Workflow routes
+const documentVerificationRouter = require('./routes/document-verification.routes');
 // Hybrid Data Service routes
 const hybridRouter = require('./routes/hybrid.routes');
 // Payment routes
@@ -65,6 +71,14 @@ app.use(limiter);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Prevent caching of API responses
+app.use('/api', (req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  next();
+});
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -74,6 +88,12 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRouter);
 // Document routes (must come before general /api/exporter route)
 app.use('/api/exporter/documents', documentRequestsRouter); // Document requests for exporters
+// NEW: Document Request Workflow (contract-based document requests)
+app.use('/api/document-requests', documentRequestWorkflowRouter);
+// NEW: Agency Document Processing
+app.use('/api/agency', agencyDocumentProcessingRouter);
+// NEW: Document Verification Workflow
+app.use('/api/document-verification', documentVerificationRouter);
 app.use('/api/exporter', exporterRouter);
 app.use('/api/preregistration', exporterRouter); // Frontend-compatible path for certificate downloads
 app.use('/api/exports', exportsRouter);
@@ -103,7 +123,6 @@ app.use('/api/esw', networkRouter); // ESW endpoints now use network routes
 app.use('/api/network', networkRouter); // Network endpoints (preferred naming)
 
 // Document Issuance routes
-app.use('/api/document-requests', documentRequestsRouter); // Document requests endpoint
 app.use('/api/document-issuance', documentIssuanceRouter); // Document issuance endpoint
 
 // Hybrid Data Service routes

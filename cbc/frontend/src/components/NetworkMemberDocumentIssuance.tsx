@@ -55,11 +55,29 @@ interface DocumentRequest {
   requestId: string;
   exporterId: string;
   exporterName: string;
+  exporterTin: string;
+  exporterEmail: string;
+  exporterContactPerson?: string;
+  exporterPhone?: string;
+  laboratoryInspector?: string;
+  lastInspectionDate?: string;
+  laboratoryName?: string;
+  tasterName?: string;
+  proficiencyCertificateNumber?: string;
+  tasterCertificateDate?: string;
+  licenseNumber?: string;
+  licenseIssueDate?: string;
+  licenseExpiryDate?: string;
+  competenceCertificateNumber?: string;
+  competenceIssueDate?: string;
+  competenceExpiryDate?: string;
   documentType: string;
   requestNotes?: string;
   requestedAt: string;
   requestStatus: string;
   exporterQualification: ExporterQualification;
+  ectaReferenceNumber?: string;
+  requiredData?: Record<string, any>;
 }
 
 interface IssueFormData {
@@ -108,7 +126,7 @@ const NetworkMemberDocumentIssuance: React.FC = () => {
       setError(null);
       const response = await documentService.getPendingRequests();
       if (response.success) {
-        setRequests(response.data);
+        setRequests(response.requests || []);
       }
     } catch (err: any) {
       console.error('Failed to fetch pending requests:', err);
@@ -123,11 +141,93 @@ const NetworkMemberDocumentIssuance: React.FC = () => {
   };
 
   const handleOpenIssueDialog = (request: DocumentRequest) => {
+    // Auto-generate document number based on document type and agency
+    const userRole = 'ECTA'; // TODO: Get from auth context
+    const timestamp = Date.now();
+    const docNumber = `${userRole}-${request.document_type}-${timestamp}`;
+    
+    // Pre-fill metadata based on document type and request data
+    const metadata: any = {};
+    const requiredData = request.required_data || {};
+    
+    // Add common metadata (using snake_case from API)
+    metadata.contractReference = request.ecta_reference_number;
+    metadata.exporterTin = request.exporter_tin;
+    metadata.exporterName = request.exporter_name;
+    metadata.issuedBy = userRole;
+    metadata.issuedDate = new Date().toISOString();
+    
+    // Fetch inspection date from qualification data
+    const inspectionDate = request.last_inspection_date 
+      ? new Date(request.last_inspection_date).toISOString().split('T')[0]
+      : new Date().toISOString().split('T')[0];
+    metadata.inspectionDate = inspectionDate;
+    
+    // Fetch inspector name from qualification data
+    // Priority: laboratory_inspector > taster_name > contact_person > default
+    let inspectorName = `${userRole} Inspector`; // Default
+    if (request.laboratory_inspector) {
+      inspectorName = request.laboratory_inspector;
+    } else if (request.taster_name) {
+      inspectorName = request.taster_name;
+    } else if (request.exporter_contact_person) {
+      inspectorName = request.exporter_contact_person;
+    }
+    metadata.inspectorName = inspectorName;
+    
+    // Add document-specific metadata from required_data
+    if (requiredData.coffeeType) metadata.coffeeType = requiredData.coffeeType;
+    if (requiredData.quantity) metadata.quantity = requiredData.quantity;
+    if (requiredData.destination) metadata.destination = requiredData.destination;
+    if (requiredData.originRegion) metadata.originRegion = requiredData.originRegion;
+    if (requiredData.productType) metadata.productType = requiredData.productType;
+    
+    // Set default expiry date based on document type and qualification data
+    const issuedDate = new Date();
+    let expiryDate = new Date();
+    
+    // Use qualification expiry dates if available
+    if (request.document_type === 'EXPORT_LICENSE' && request.license_expiry_date) {
+      expiryDate = new Date(request.license_expiry_date);
+    } else if (request.document_type === 'COMPETENCE_CERTIFICATE' && request.competence_expiry_date) {
+      expiryDate = new Date(request.competence_expiry_date);
+    } else {
+      // Default: 1 year from now
+      expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+    }
+    
+    // Calculate validity period in days
+    const validityPeriodDays = Math.ceil((expiryDate.getTime() - issuedDate.getTime()) / (1000 * 60 * 60 * 24));
+    metadata.validityPeriod = `${validityPeriodDays} days`;
+    
+    // Add notes template based on document type and qualification data
+    let notes = '';
+    switch (request.document_type) {
+      case 'EXPORT_LICENSE':
+        notes = `This export license authorizes ${request.exporter_name} (TIN: ${request.exporter_tin}) to export coffee as specified in the contract. Inspected by ${inspectorName} on ${inspectionDate}.`;
+        break;
+      case 'PHYTOSANITARY_CERTIFICATE':
+        notes = `Product inspected by ${inspectorName} on ${inspectionDate} and found free from pests and diseases. Meets phytosanitary requirements for export.`;
+        break;
+      case 'HEALTH_CERTIFICATE':
+        notes = `Product inspected by ${inspectorName} on ${inspectionDate} and meets health and safety standards for export. Complies with international food safety regulations.`;
+        break;
+      case 'QUALITY_CERTIFICATE':
+        notes = `Coffee quality verified by ${inspectorName} on ${inspectionDate} and meets specified grade standards. Laboratory analysis confirms quality parameters.`;
+        break;
+      case 'CERTIFICATE_OF_ORIGIN':
+        notes = `Certifies that the coffee originates from Ethiopia. Verified by ${inspectorName} on ${inspectionDate}.`;
+        break;
+      default:
+        notes = `Document issued by ${userRole} for ${request.exporter_name}. Verified by ${inspectorName} on ${inspectionDate}.`;
+    }
+    metadata.notes = notes;
+    
     setSelectedRequest(request);
     setIssueForm({
-      documentNumber: '',
-      expiryDate: '',
-      metadata: {},
+      documentNumber: docNumber,
+      expiryDate: expiryDate.toISOString().split('T')[0],
+      metadata: metadata,
       documentFile: null,
     });
     setIssueDialogOpen(true);
@@ -154,6 +254,22 @@ const NetworkMemberDocumentIssuance: React.FC = () => {
       setError(null);
     }
   };
+  
+  const handleExpiryDateChange = (newExpiryDate: string) => {
+    // Recalculate validity period when expiry date changes
+    const issuedDate = new Date();
+    const expiryDate = new Date(newExpiryDate);
+    const validityPeriodDays = Math.ceil((expiryDate.getTime() - issuedDate.getTime()) / (1000 * 60 * 60 * 24));
+    
+    setIssueForm({
+      ...issueForm,
+      expiryDate: newExpiryDate,
+      metadata: {
+        ...issueForm.metadata,
+        validityPeriod: `${validityPeriodDays} days`
+      }
+    });
+  };
 
   const handleIssueDocument = async () => {
     if (!selectedRequest) return;
@@ -163,32 +279,24 @@ const NetworkMemberDocumentIssuance: React.FC = () => {
       setError('Document number is required');
       return;
     }
-    if (!issueForm.documentFile) {
-      setError('Please upload a signed PDF document');
-      return;
-    }
 
     try {
       setSubmitting(true);
       setError(null);
 
-      // Convert file to base64
-      const base64File = await fileToBase64(issueForm.documentFile);
-
       const issueData = {
-        requestId: selectedRequest.requestId,
-        exporterId: selectedRequest.exporterId,
-        documentType: selectedRequest.documentType,
+        requestId: selectedRequest.request_id,
+        exporterId: selectedRequest.exporter_id,
+        documentType: selectedRequest.document_type,
         documentNumber: issueForm.documentNumber,
         documentMetadata: issueForm.metadata,
         expiryDate: issueForm.expiryDate || undefined,
-        documentFile: base64File,
       };
 
       const response = await documentService.issueDocument(issueData);
 
       if (response.success) {
-        setSuccess(`Document ${issueForm.documentNumber} issued successfully to ${selectedRequest.exporterName}`);
+        setSuccess(`Document ${issueForm.documentNumber} issued and signed with MSP certificate for ${selectedRequest.exporter_name}`);
         setIssueDialogOpen(false);
         setSelectedRequest(null);
         
@@ -201,6 +309,14 @@ const NetworkMemberDocumentIssuance: React.FC = () => {
     } finally {
       setSubmitting(false);
     }
+  };
+  
+  const calculateFileHash = async (file: File): Promise<string> => {
+    const arrayBuffer = await file.arrayBuffer();
+    const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return hashHex;
   };
 
   const handleRejectRequest = async () => {
@@ -215,12 +331,12 @@ const NetworkMemberDocumentIssuance: React.FC = () => {
       setSubmitting(true);
       setError(null);
 
-      const response = await documentService.rejectRequest(selectedRequest.requestId, {
+      const response = await documentService.rejectRequest(selectedRequest.request_id, {
         rejectionReason,
       });
 
       if (response.success) {
-        setSuccess(`Document request rejected for ${selectedRequest.exporterName}`);
+        setSuccess(`Document request rejected for ${selectedRequest.exporter_name}`);
         setRejectDialogOpen(false);
         setSelectedRequest(null);
         
@@ -317,37 +433,37 @@ const NetworkMemberDocumentIssuance: React.FC = () => {
             </TableHead>
             <TableBody>
               {requests.map((request) => (
-                <React.Fragment key={request.requestId}>
+                <React.Fragment key={request.request_id}>
                   <TableRow hover>
                     <TableCell>
                       <IconButton
                         size="small"
-                        onClick={() => handleExpandRequest(request.requestId)}
+                        onClick={() => handleExpandRequest(request.request_id)}
                       >
-                        {expandedRequest === request.requestId ? <ExpandLess /> : <ExpandMore />}
+                        {expandedRequest === request.request_id ? <ExpandLess /> : <ExpandMore />}
                       </IconButton>
                     </TableCell>
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Business fontSize="small" color="action" />
-                        <Typography variant="body2">{request.exporterName}</Typography>
+                        <Typography variant="body2">{request.exporter_name}</Typography>
                       </Box>
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2">
-                        {documentService.getDocumentTypeLabel(request.documentType)}
+                        {documentService.getDocumentTypeLabel(request.document_type)}
                       </Typography>
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2">
-                        {new Date(request.requestedAt).toLocaleDateString()}
+                        {new Date(request.requested_at).toLocaleDateString()}
                       </Typography>
                     </TableCell>
                     <TableCell>
                       <Chip
-                        label={request.requestStatus}
+                        label={request.status}
                         size="small"
-                        color={request.requestStatus === 'PENDING' ? 'warning' : 'default'}
+                        color={request.status === 'PENDING' ? 'warning' : 'default'}
                       />
                     </TableCell>
                     <TableCell align="right">
@@ -376,7 +492,7 @@ const NetworkMemberDocumentIssuance: React.FC = () => {
                   {/* Expanded Row - Exporter Qualification */}
                   <TableRow>
                     <TableCell colSpan={6} sx={{ py: 0, borderBottom: 'none' }}>
-                      <Collapse in={expandedRequest === request.requestId} timeout="auto" unmountOnExit>
+                      <Collapse in={expandedRequest === request.request_id} timeout="auto" unmountOnExit>
                         <Box sx={{ py: 2, px: 2 }}>
                           <Typography variant="subtitle2" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <Verified /> Exporter Qualification Profile
@@ -390,11 +506,11 @@ const NetworkMemberDocumentIssuance: React.FC = () => {
                                   Profile Status
                                 </Typography>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                                  {getQualificationStatusIcon(request.exporterQualification.profileStatus)}
+                                  {getQualificationStatusIcon(request.exporterQualification?.profileStatus || 'UNKNOWN')}
                                   <Chip
-                                    label={request.exporterQualification.profileStatus}
+                                    label={request.exporterQualification?.profileStatus || 'N/A'}
                                     size="small"
-                                    color={getQualificationStatusColor(request.exporterQualification.profileStatus)}
+                                    color={getQualificationStatusColor(request.exporterQualification?.profileStatus || 'UNKNOWN')}
                                   />
                                 </Box>
                               </Paper>
@@ -406,11 +522,11 @@ const NetworkMemberDocumentIssuance: React.FC = () => {
                                   Export License
                                 </Typography>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                                  {getQualificationStatusIcon(request.exporterQualification.licenseStatus)}
+                                  {getQualificationStatusIcon(request.exporterQualification?.licenseStatus || 'UNKNOWN')}
                                   <Chip
-                                    label={request.exporterQualification.licenseStatus}
+                                    label={request.exporterQualification?.licenseStatus || 'N/A'}
                                     size="small"
-                                    color={getQualificationStatusColor(request.exporterQualification.licenseStatus)}
+                                    color={getQualificationStatusColor(request.exporterQualification?.licenseStatus || 'UNKNOWN')}
                                   />
                                 </Box>
                               </Paper>
@@ -422,11 +538,11 @@ const NetworkMemberDocumentIssuance: React.FC = () => {
                                   Competence Certificate
                                 </Typography>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                                  {getQualificationStatusIcon(request.exporterQualification.competenceStatus)}
+                                  {getQualificationStatusIcon(request.exporterQualification?.competenceStatus || 'UNKNOWN')}
                                   <Chip
-                                    label={request.exporterQualification.competenceStatus}
+                                    label={request.exporterQualification?.competenceStatus || 'N/A'}
                                     size="small"
-                                    color={getQualificationStatusColor(request.exporterQualification.competenceStatus)}
+                                    color={getQualificationStatusColor(request.exporterQualification?.competenceStatus || 'UNKNOWN')}
                                   />
                                 </Box>
                               </Paper>
@@ -438,11 +554,11 @@ const NetworkMemberDocumentIssuance: React.FC = () => {
                                   Laboratory Status
                                 </Typography>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                                  {getQualificationStatusIcon(request.exporterQualification.laboratoryStatus)}
+                                  {getQualificationStatusIcon(request.exporterQualification?.laboratoryStatus || 'UNKNOWN')}
                                   <Chip
-                                    label={request.exporterQualification.laboratoryStatus}
+                                    label={request.exporterQualification?.laboratoryStatus || 'N/A'}
                                     size="small"
-                                    color={getQualificationStatusColor(request.exporterQualification.laboratoryStatus)}
+                                    color={getQualificationStatusColor(request.exporterQualification?.laboratoryStatus || 'UNKNOWN')}
                                   />
                                 </Box>
                               </Paper>
@@ -454,11 +570,11 @@ const NetworkMemberDocumentIssuance: React.FC = () => {
                                   Taster Status
                                 </Typography>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                                  {getQualificationStatusIcon(request.exporterQualification.tasterStatus)}
+                                  {getQualificationStatusIcon(request.exporterQualification?.tasterStatus || 'UNKNOWN')}
                                   <Chip
-                                    label={request.exporterQualification.tasterStatus}
+                                    label={request.exporterQualification?.tasterStatus || 'N/A'}
                                     size="small"
-                                    color={getQualificationStatusColor(request.exporterQualification.tasterStatus)}
+                                    color={getQualificationStatusColor(request.exporterQualification?.tasterStatus || 'UNKNOWN')}
                                   />
                                 </Box>
                               </Paper>
@@ -497,7 +613,7 @@ const NetworkMemberDocumentIssuance: React.FC = () => {
           Issue Document
           {selectedRequest && (
             <Typography variant="body2" color="text.secondary">
-              {documentService.getDocumentTypeLabel(selectedRequest.documentType)} for {selectedRequest.exporterName}
+              {documentService.getDocumentTypeLabel(selectedRequest.document_type)} for {selectedRequest.exporter_name}
             </Typography>
           )}
         </DialogTitle>
@@ -518,7 +634,7 @@ const NetworkMemberDocumentIssuance: React.FC = () => {
               label="Expiry Date"
               type="date"
               value={issueForm.expiryDate}
-              onChange={(e) => setIssueForm({ ...issueForm, expiryDate: e.target.value })}
+              onChange={(e) => handleExpiryDateChange(e.target.value)}
               InputLabelProps={{ shrink: true }}
               helperText="Leave empty if document does not expire"
             />
@@ -587,27 +703,8 @@ const NetworkMemberDocumentIssuance: React.FC = () => {
 
             <Divider />
 
-            <Box>
-              <Typography variant="subtitle2" gutterBottom>
-                Upload Signed Document (PDF) *
-              </Typography>
-              <FormControl fullWidth>
-                <Input
-                  type="file"
-                  inputProps={{ accept: 'application/pdf' }}
-                  onChange={handleFileChange}
-                  disabled={submitting}
-                />
-                <FormHelperText>
-                  {issueForm.documentFile
-                    ? `Selected: ${issueForm.documentFile.name} (${(issueForm.documentFile.size / 1024).toFixed(2)} KB)`
-                    : 'Upload a signed PDF document (max 10MB)'}
-                </FormHelperText>
-              </FormControl>
-            </Box>
-
-            <Alert severity="info">
-              The document will be recorded on blockchain with your digital signature for tamper-proof verification.
+            <Alert severity="info" icon={<Verified />}>
+              This document will be automatically signed with your organization's MSP certificate and recorded on the blockchain for tamper-proof verification.
             </Alert>
           </Box>
         </DialogContent>
@@ -618,10 +715,10 @@ const NetworkMemberDocumentIssuance: React.FC = () => {
           <Button
             onClick={handleIssueDocument}
             variant="contained"
-            disabled={submitting || !issueForm.documentNumber || !issueForm.documentFile}
+            disabled={submitting || !issueForm.documentNumber}
             startIcon={submitting ? <CircularProgress size={20} /> : <CheckCircle />}
           >
-            {submitting ? 'Issuing...' : 'Issue Document'}
+            {submitting ? 'Issuing & Signing...' : 'Issue & Sign Document'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -637,7 +734,7 @@ const NetworkMemberDocumentIssuance: React.FC = () => {
           Reject Document Request
           {selectedRequest && (
             <Typography variant="body2" color="text.secondary">
-              {documentService.getDocumentTypeLabel(selectedRequest.documentType)} for {selectedRequest.exporterName}
+              {documentService.getDocumentTypeLabel(selectedRequest.document_type)} for {selectedRequest.exporter_name}
             </Typography>
           )}
         </DialogTitle>

@@ -32,6 +32,9 @@ import certificateRenewalRoutes from "./routes/certificate-renewal.routes";
 import contractRoutes from "./routes/contract.routes";
 import buyerPortalRoutes from "./routes/buyer-portal.routes";
 import paymentRoutes from "./routes/payment.routes";
+import documentRoutes from "./routes/document.routes";
+import marketplaceRoutes from "./routes/marketplace.routes";
+import buyersRoutes from "./routes/buyers.routes";
 import { getPool } from "@shared/database/pool";
 import { errorHandler } from "@shared/middleware/error.middleware";
 import { monitoringMiddleware, errorMonitoringMiddleware } from "@shared/middleware/monitoring.middleware";
@@ -80,10 +83,13 @@ app.use("/api/auth/register", authLimiter);
 app.use("/api/auth", authRoutes);
 app.use("/api/exporter", apiLimiter, exporterRoutes);
 app.use("/api/exporter", apiLimiter, preregistrationRoutes);
+app.use("/api/exporter/documents", apiLimiter, documentRoutes);
 app.use("/api/exporter/certificate/renewal", apiLimiter, certificateRenewalRoutes);
 app.use("/api/exports", apiLimiter, exportRoutes);
 app.use("/api/contracts", apiLimiter, contractRoutes);
 app.use("/api/buyer", apiLimiter, buyerPortalRoutes);
+app.use("/api/marketplace", apiLimiter, marketplaceRoutes);
+app.use("/api/buyers", buyersRoutes); // Public buyer details - no rate limiting
 // Payment routes removed - now handled by gateway for all user roles
 // app.use("/api/payments", apiLimiter, paymentRoutes);
 

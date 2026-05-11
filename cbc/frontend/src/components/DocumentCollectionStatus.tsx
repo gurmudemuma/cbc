@@ -320,7 +320,7 @@ const DocumentCollectionStatus: React.FC<DocumentCollectionStatusProps> = ({
             <Grid item xs={4}>
               <Paper variant="outlined" sx={{ p: 2, textAlign: 'center' }}>
                 <Typography variant="h4" color="text.secondary">
-                  {collectionStatus.documents.filter(d => d.required && d.status === 'NOT_REQUESTED').length}
+                  {(collectionStatus.documents || []).filter(d => d.required && d.status === 'NOT_REQUESTED').length}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
                   Not Requested
@@ -338,8 +338,8 @@ const DocumentCollectionStatus: React.FC<DocumentCollectionStatusProps> = ({
           {!collectionStatus.isComplete && (
             <Alert severity="info" sx={{ mt: 2 }}>
               {collectionStatus.pendingDocuments > 0 && `${collectionStatus.pendingDocuments} document(s) pending. `}
-              {collectionStatus.documents.filter(d => d.required && d.status === 'NOT_REQUESTED').length > 0 && 
-                `${collectionStatus.documents.filter(d => d.required && d.status === 'NOT_REQUESTED').length} document(s) not yet requested.`}
+              {(collectionStatus.documents || []).filter(d => d.required && d.status === 'NOT_REQUESTED').length > 0 && 
+                `${(collectionStatus.documents || []).filter(d => d.required && d.status === 'NOT_REQUESTED').length} document(s) not yet requested.`}
             </Alert>
           )}
         </CardContent>
@@ -354,7 +354,7 @@ const DocumentCollectionStatus: React.FC<DocumentCollectionStatusProps> = ({
           <Divider sx={{ mb: 2 }} />
 
           <List>
-            {collectionStatus.documents
+            {(collectionStatus.documents || [])
               .filter(doc => doc.required)
               .map((document, index) => (
                 <React.Fragment key={`${document.documentType}-${document.issuer}`}>
@@ -467,14 +467,14 @@ const DocumentCollectionStatus: React.FC<DocumentCollectionStatusProps> = ({
           </List>
 
           {/* Optional Documents */}
-          {collectionStatus.documents.filter(doc => !doc.required).length > 0 && (
+          {(collectionStatus.documents || []).filter(doc => !doc.required).length > 0 && (
             <>
               <Divider sx={{ my: 3 }} />
               <Typography variant="h6" gutterBottom>
                 Optional Documents
               </Typography>
               <List>
-                {collectionStatus.documents
+                {(collectionStatus.documents || [])
                   .filter(doc => !doc.required)
                   .map((document) => (
                     <ListItem

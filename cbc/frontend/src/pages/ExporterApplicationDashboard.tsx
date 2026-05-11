@@ -40,6 +40,10 @@ const ExporterApplicationDashboard = ({ user, org }: ExporterApplicationDashboar
         const response = await ectaPreRegistrationService.getMyDashboard();
         const dashboard = response?.data || response;
         
+        console.log('[ExporterApplicationDashboard] Raw response:', response);
+        console.log('[ExporterApplicationDashboard] Dashboard data:', dashboard);
+        console.log('[ExporterApplicationDashboard] isFullyQualified:', dashboard?.compliance?.isFullyQualified);
+        
         if (dashboard) {
           setDashboardData(dashboard);
         } else {

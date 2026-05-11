@@ -119,7 +119,32 @@ const NetworkSubmission = ({ user, org }: NetworkSubmissionProps): JSX.Element =
           }
         } catch (error: any) {
           console.error('Failed to fetch prefill data:', error);
-          showNotification('Failed to load your information. Please try again.', 'error');
+          
+          // Check if it's an authentication error
+          if (error.response?.status === 401) {
+            console.error('🚨 Authentication error - user token may be invalid');
+            showNotification(
+              'Your session has expired. Please log in again.',
+              'error'
+            );
+            // Don't redirect here - let the API client handle it
+          } else if (error.response?.status === 404) {
+            // User doesn't have an exporter profile yet
+            showNotification(
+              'Please complete your exporter profile registration first.',
+              'warning'
+            );
+            setPrefillData({
+              isQualified: false,
+              exporterInfo: null,
+              qualificationStatus: null,
+            });
+          } else {
+            showNotification(
+              'Failed to load your information. Please try again.',
+              'error'
+            );
+          }
         } finally {
           setLoading(false);
         }
@@ -144,7 +169,7 @@ const NetworkSubmission = ({ user, org }: NetworkSubmissionProps): JSX.Element =
           
           // Extract issued documents that are not required for network submission
           // These can be added as optional supporting documents
-          const issuedDocs = response.data.documents
+          const issuedDocs = (response.data.documents || [])
             .filter((doc: any) => doc.status === 'ISSUED')
             .map((doc: any) => ({
               value: doc.documentType,
@@ -239,6 +264,11 @@ const NetworkSubmission = ({ user, org }: NetworkSubmissionProps): JSX.Element =
       return;
     }
 
+    // Debug: Check if token exists
+    const token = localStorage.getItem('token');
+    console.log('🔐 Token exists:', !!token);
+    console.log('🔐 Token preview:', token ? token.substring(0, 50) + '...' : 'NO TOKEN');
+
     setSubmitting(true);
     try {
       // Get issued document IDs
@@ -253,7 +283,8 @@ const NetworkSubmission = ({ user, org }: NetworkSubmissionProps): JSX.Element =
         supportingDocuments: supportingDocuments,
       };
 
-      console.log('Submitting to Network:', submissionData);
+      console.log('📤 Submitting to Network:', submissionData);
+      console.log('📤 Endpoint: /api/network/submissions');
 
       const response = await networkService.submitToNetwork(submissionData);
 
@@ -269,10 +300,19 @@ const NetworkSubmission = ({ user, org }: NetworkSubmissionProps): JSX.Element =
         setRefreshTrigger(prev => prev + 1);
       }
     } catch (error: any) {
-      console.error('Network submission error:', error);
-      console.error('Error response:', error.response?.data);
+      console.error('❌ Network submission error:', error);
+      console.error('❌ Error response:', error.response?.data);
+      console.error('❌ Error status:', error.response?.status);
+      console.error('❌ Error config:', error.config?.url);
+      
+      // Check if it's a 401 error
+      if (error.response?.status === 401) {
+        console.error('🚨 401 UNAUTHORIZED - Token is invalid or expired');
+        console.error('🚨 This will trigger redirect to login page');
+      }
+      
       showNotification(
-        `Failed to submit to Network: ${error.response?.data?.message || error.message}`,
+        `Failed to submit to Network: ${error.response?.data?.message || error.response?.data?.error || error.message}`,
         'error'
       );
     } finally {

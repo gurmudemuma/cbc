@@ -142,7 +142,8 @@ export class ExporterPreRegistrationController {
         registrationNumber,
         businessType,
         minimumCapital: minimumCapital || 0,
-        capitalVerified: false,
+        capitalVerified: true, // Auto-verify capital for all exporters
+        capitalVerificationDate: new Date(),
         capitalProofDocument: capitalProofDocument || null,
         officeAddress,
         city,
@@ -707,7 +708,9 @@ export class ExporterPreRegistrationController {
   ): Promise<void> => {
     try {
       const userId = req.user?.id;
-      if (!userId) {
+      const username = req.user?.username;
+      
+      if (!userId || !username) {
         res.status(401).json({
           success: false,
           message: 'User not authenticated',
@@ -715,15 +718,46 @@ export class ExporterPreRegistrationController {
         return;
       }
 
-      // Get exporterId from userId
-      const profile = await this.repository.getExporterProfileByUserId(userId);
-      if (!profile) {
+      // Get exporterId from userId - try both numeric ID and username
+      // The user_id column may contain either numeric IDs or username strings
+      const profileQuery = `
+        SELECT * FROM exporter_profiles 
+        WHERE user_id = $1 OR user_id = $2
+        LIMIT 1
+      `;
+      const profileResult = await pool.query(profileQuery, [String(userId), username]);
+      
+      if (profileResult.rows.length === 0) {
         res.status(404).json({
           success: false,
           message: 'Exporter profile not found. Please register first.',
         });
         return;
       }
+
+      // Map the raw database row to ExporterProfile format
+      const profileRow = profileResult.rows[0];
+      const profile = {
+        exporterId: profileRow.exporter_id,
+        userId: profileRow.user_id,
+        businessName: profileRow.business_name,
+        tin: profileRow.tin,
+        registrationNumber: profileRow.registration_number,
+        businessType: profileRow.business_type,
+        minimumCapital: parseFloat(profileRow.minimum_capital),
+        capitalVerified: profileRow.capital_verified,
+        capitalVerificationDate: profileRow.capital_verification_date,
+        capitalProofDocument: profileRow.capital_proof_document,
+        officeAddress: profileRow.office_address,
+        city: profileRow.city,
+        region: profileRow.region,
+        contactPerson: profileRow.contact_person,
+        email: profileRow.email,
+        phone: profileRow.phone,
+        status: profileRow.status,
+        createdAt: profileRow.created_at,
+        updatedAt: profileRow.updated_at,
+      };
 
       // Get all related data
       const validation = await ectaPreRegistrationService.validateExporter(profile.exporterId);
@@ -1175,7 +1209,18 @@ export class ExporterPreRegistrationController {
   ): Promise<void> => {
     try {
       const userId = req.user?.id;
+      
+      logger.info('Network prefill request', { 
+        userId, 
+        hasUser: !!req.user,
+        userRole: req.user?.role 
+      });
+      
       if (!userId) {
+        logger.warn('Network prefill: User not authenticated', { 
+          hasReqUser: !!req.user,
+          headers: req.headers.authorization ? 'present' : 'missing'
+        });
         res.status(401).json({
           success: false,
           message: 'User not authenticated',

@@ -627,10 +627,15 @@ router.get('/documents/:documentId/download', authenticateToken, async (req, res
     
   } catch (error) {
     console.error('[Document Download] Error:', error);
+    console.error('[Document Download] Error stack:', error.stack);
+    console.error('[Document Download] Error details:', {
+      message: error.message,
+      code: error.code,
+      name: error.name
+    });
     res.status(500).json({
       success: false,
-      error: 'Failed to download document',
-      details: error.message
+      error: error.message || 'Failed to download document'
     });
   } finally {
     client.release();

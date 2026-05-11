@@ -10,6 +10,7 @@ export declare class EctaPreRegistrationRepository {
     createExporterProfile(profile: Omit<ExporterProfile, 'exporterId' | 'createdAt' | 'updatedAt'>): Promise<ExporterProfile>;
     getExporterProfileById(exporterId: string): Promise<ExporterProfile | null>;
     getExporterProfileByUserId(userId: string): Promise<ExporterProfile | null>;
+    getExporterProfileByUsername(username: string): Promise<ExporterProfile | null>;
     getAllExporterProfiles(): Promise<ExporterProfile[]>;
     getPendingExporterProfiles(): Promise<ExporterProfile[]>;
     updateExporterProfileStatus(exporterId: string, status: string, approvedBy?: string, rejectionReason?: string): Promise<void>;

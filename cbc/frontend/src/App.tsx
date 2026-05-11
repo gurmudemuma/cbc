@@ -67,6 +67,10 @@ import ECTAContractApproval from './pages/ECTAContractApproval';
 import ECTALicenseApproval from './pages/ECTALicenseApproval';
 import ECXVerification from './pages/ECXVerification';
 import SalesContractDashboard from './pages/SalesContractDashboard';
+// Document Verification Workflow Pages (Phase 2)
+import DocumentSubmissionForVerification from './pages/DocumentSubmissionForVerification';
+import DocumentVerificationDashboard from './pages/DocumentVerificationDashboard';
+import CBEPaymentInitiation from './pages/CBEPaymentInitiation';
 // Network Pages
 import NetworkSubmission from './pages/NetworkSubmission';
 import NetworkMemberApprovalDashboard from './pages/NetworkMemberApprovalDashboard';
@@ -343,6 +347,11 @@ function App(): JSX.Element {
           { path: 'banking/reports', element: <BankingOperations user={user} org={org} /> },
           { path: 'banking/payments', element: <BankPaymentReview /> },
           { path: 'banking/payment-review', element: <BankPaymentReview /> },
+
+          // Document Verification Workflow Routes (Phase 2)
+          { path: 'documents/submit-verification', element: <DocumentSubmissionForVerification /> },
+          { path: 'documents/verify', element: <DocumentVerificationDashboard /> },
+          { path: 'cbe/payment-initiation', element: <CBEPaymentInitiation /> },
 
           // Shipment Routes
           { path: 'shipments', element: <ShipmentTracking user={user} org={org} /> },
