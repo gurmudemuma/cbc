@@ -115,8 +115,8 @@ const labelMap: Record<string, string> = {
   // Government Agencies
   'mot': 'Ministry of Trade (MOT)',
   'nbe-agency': 'National Bank of Ethiopia - Agency (NBE)',
-  'moa': 'Ministry of Agriculture (MOA)',
-  'moh': 'Ministry of Health (MOH)',
+  'moa': 'Ministry of Agriculture (MOA) - Phytosanitary Certificates',
+  'moh': 'Ministry of Health (MOH) - Health Certificates',
   'eic': 'Ethiopian Investment Commission (EIC)',
   'epa': 'Environment Protection Authority (EPA)',
   'ecta-agency': 'Coffee & Tea Authority - Agency (ECTA)',
@@ -157,18 +157,6 @@ export const LOGIN_ORGANIZATIONS: Organization[] = ORGANIZATIONS.filter(
 // Note: ERCA is already in SERVICES as 'custom-authorities', so we don't duplicate it here
 export const AGENCY_ORGANIZATIONS: Organization[] = [
   {
-    id: 'mot',
-    value: 'MOT',
-    label: 'Ministry of Trade (MOT)',
-    fullName: 'Ministry of Trade',
-    apiUrl: '/api',
-    port: 3008,
-    mspId: null,
-    description: 'Trade policy and regulation',
-    order: 100,
-    type: 'consortium'
-  },
-  {
     id: 'moa',
     value: 'MOA',
     label: 'Ministry of Agriculture (MOA)',
@@ -176,8 +164,8 @@ export const AGENCY_ORGANIZATIONS: Organization[] = [
     apiUrl: '/api',
     port: 3008,
     mspId: null,
-    description: 'Agricultural policy and development',
-    order: 101,
+    description: 'Agricultural policy and development - Phytosanitary Certificates',
+    order: 50,
     type: 'consortium'
   },
   {
@@ -188,8 +176,20 @@ export const AGENCY_ORGANIZATIONS: Organization[] = [
     apiUrl: '/api',
     port: 3008,
     mspId: null,
-    description: 'Health standards and regulations',
-    order: 102,
+    description: 'Health standards and regulations - Health Certificates',
+    order: 51,
+    type: 'consortium'
+  },
+  {
+    id: 'mot',
+    value: 'MOT',
+    label: 'Ministry of Trade (MOT)',
+    fullName: 'Ministry of Trade',
+    apiUrl: '/api',
+    port: 3008,
+    mspId: null,
+    description: 'Trade policy and regulation',
+    order: 100,
     type: 'consortium'
   },
   {

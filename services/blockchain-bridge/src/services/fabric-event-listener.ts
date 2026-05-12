@@ -49,7 +49,7 @@ export class FabricEventListener {
       await this.gateway.connect(ccp, {
         wallet,
         identity: 'admin',
-        discovery: { enabled: true, asLocalhost: true }
+        discovery: { enabled: false, asLocalhost: false }
       });
 
       // Get network and contract

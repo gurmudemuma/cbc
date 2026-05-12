@@ -83,7 +83,7 @@ export class NotificationService {
 
       const query = `
         INSERT INTO contract_notifications (
-          notification_id, draft_id, recipient_id, recipient_email,
+          notification_id, contract_id, recipient_id, recipient_email,
           notification_type, subject, message, action_link, is_read, sent_at
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         RETURNING *

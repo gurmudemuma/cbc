@@ -209,7 +209,7 @@ const ExportDetails = ({ user, org }: ExportDetailsProps): JSX.Element => {
               {getStatusIcon(exportData.status)}
               <Box>
                 <Typography variant="subtitle1" color={`${getStatusColor(exportData.status)}.main`}>
-                  Status: {exportData.status.replace(/_/g, ' ')}
+                  Status: {exportData.status ? exportData.status.replace(/_/g, ' ') : 'UNKNOWN'}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   Last updated: {new Date(exportData.updatedAt).toLocaleString()}

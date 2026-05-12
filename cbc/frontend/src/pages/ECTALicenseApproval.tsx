@@ -127,7 +127,7 @@ const ECTALicenseApproval = ({ user, org }: ECTALicenseApprovalProps): JSX.Eleme
                 <TableCell>{exp.exportLicenseNumber}</TableCell>
                 <TableCell>{exp.coffeeType}</TableCell>
                 <TableCell>{exp.destinationCountry}</TableCell>
-                <TableCell><Chip label={exp.status.replace(/_/g, ' ')} color={exp.status === 'ECTA_LICENSE_APPROVED' ? 'success' : exp.status === 'ECTA_LICENSE_REJECTED' ? 'error' : 'warning'} size="small" /></TableCell>
+                <TableCell><Chip label={exp.status ? exp.status.replace(/_/g, ' ') : 'UNKNOWN'} color={exp.status === 'ECTA_LICENSE_APPROVED' ? 'success' : exp.status === 'ECTA_LICENSE_REJECTED' ? 'error' : 'warning'} size="small" /></TableCell>
                 <TableCell>
                   {(exp.status === 'ECTA_LICENSE_PENDING' || exp.status === 'ECX_VERIFIED') && (
                     <>

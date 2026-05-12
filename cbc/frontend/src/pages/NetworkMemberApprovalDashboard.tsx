@@ -42,7 +42,7 @@ import {
 } from 'lucide-react';
 import networkService from '../services/network.service';
 import NetworkStatusTracker from '../components/NetworkStatusTracker';
-import NetworkMemberDocumentIssuance from '../components/NetworkMemberDocumentIssuance';
+import DocumentIssuanceDashboard from '../pages/DocumentIssuanceDashboard';
 import { ModernStatCard } from '../components/ModernUIKit';
 
 interface Agency {
@@ -267,7 +267,7 @@ const AgencyApprovalDashboard = (): JSX.Element => {
     try {
       // Load network approval statistics
       const response = await networkService.getAgencyStatistics(selectedAgency);
-      let stats = response.success ? {
+      let stats: any = response.success ? {
         pending: Number(response.data.pending || 0),
         approved: Number(response.data.approved || 0),
         rejected: Number(response.data.rejected || 0),
@@ -276,7 +276,11 @@ const AgencyApprovalDashboard = (): JSX.Element => {
       
       // Load document request statistics
       try {
-        const docService = (await import('../services/document.service')).documentService;
+        const docModule = await import('../services/document.service');
+        const docService = docModule.default || (docModule as any).documentService;
+        if (!docService || typeof docService.getPendingRequests !== 'function') {
+          throw new Error('Document service not available');
+        }
         const docResponse = await docService.getPendingRequests();
         if (docResponse.success) {
           const requests = docResponse.requests || [];
@@ -796,7 +800,13 @@ const AgencyApprovalDashboard = (): JSX.Element => {
 
           {tabValue === 3 && (
             <Box sx={{ mt: 2 }}>
-              <NetworkMemberDocumentIssuance />
+              <DocumentIssuanceDashboard 
+                user={(() => {
+                  const userStr = localStorage.getItem('user');
+                  return userStr ? JSON.parse(userStr) : { username: 'Agency User', email: 'user@agency.gov.et' };
+                })()} 
+                org={selectedAgency || 'AGENCY'} 
+              />
             </Box>
           )}
         </CardContent>
@@ -854,40 +864,40 @@ const AgencyApprovalDashboard = (): JSX.Element => {
                           <Typography variant="subtitle2" fontWeight="bold">Contract Information</Typography>
                           <strong>Reference:</strong> {contractData.referenceNumber}<br />
                           <strong>Status:</strong> {contractData.status}<br />
-                          <strong>Registered:</strong> {new Date(contractData.registeredAt).toLocaleDateString()}
+                          <strong>Registered:</strong> {contractData.registeredAt ? new Date(contractData.registeredAt).toLocaleDateString() : 'Not yet registered'}
                         </Grid>
                         
                         <Grid item xs={12} md={6}>
                           <Typography variant="subtitle2" fontWeight="bold" sx={{ mt: 1 }}>Exporter</Typography>
                           <strong>Name:</strong> {contractData.exporter?.name}<br />
                           <strong>TIN:</strong> {contractData.exporter?.tin}<br />
-                          <strong>Email:</strong> {contractData.exporter?.email}<br />
-                          <strong>Phone:</strong> {contractData.exporter?.phone}
+                          <strong>Registration:</strong> {contractData.exporter?.registration}<br />
+                          <strong>Email:</strong> {contractData.exporter?.email || 'Not provided'}<br />
+                          <strong>Phone:</strong> {contractData.exporter?.phone || 'Not provided'}
                         </Grid>
                         
                         <Grid item xs={12} md={6}>
                           <Typography variant="subtitle2" fontWeight="bold" sx={{ mt: 1 }}>Buyer/Importer</Typography>
                           <strong>Name:</strong> {contractData.buyer?.name}<br />
                           <strong>Country:</strong> {contractData.buyer?.country}<br />
-                          <strong>Email:</strong> {contractData.buyer?.email}<br />
-                          <strong>Phone:</strong> {contractData.buyer?.phone}
+                          <strong>Registration:</strong> {contractData.buyer?.registration || 'Not provided'}<br />
+                          <strong>Email:</strong> {contractData.buyer?.email || 'Not provided'}<br />
+                          <strong>Phone:</strong> {contractData.buyer?.phone || 'Not provided'}
                         </Grid>
                         
                         <Grid item xs={12} md={6}>
                           <Typography variant="subtitle2" fontWeight="bold" sx={{ mt: 1 }}>Coffee Details</Typography>
-                          <strong>Type:</strong> {contractData.coffee?.type}<br />
-                          {contractData.coffee?.grade && <><strong>Grade:</strong> {contractData.coffee.grade}<br /></>}
-                          <strong>Quantity:</strong> {contractData.coffee?.quantity}<br />
-                          <strong>Price/Unit:</strong> {contractData.contract?.currency} {contractData.coffee?.pricePerUnit}<br />
-                          {contractData.coffee?.qualityStandard && <><strong>Quality:</strong> {contractData.coffee.qualityStandard}<br /></>}
-                          {contractData.coffee?.originRegion && <><strong>Origin:</strong> {contractData.coffee.originRegion}</>}
+                          <strong>Type:</strong> {contractData.contract?.coffeeType}<br />
+                          <strong>Grade:</strong> {contractData.contract?.qualityGrade}<br />
+                          <strong>Origin:</strong> {contractData.contract?.originRegion}<br />
+                          <strong>Quantity:</strong> {contractData.contract?.quantity} bags (60kg each)<br />
+                          <strong>Price/Unit:</strong> {contractData.contract?.currency} {contractData.contract?.unitPrice}
                         </Grid>
                         
                         <Grid item xs={12} md={6}>
                           <Typography variant="subtitle2" fontWeight="bold" sx={{ mt: 1 }}>Payment Information</Typography>
-                          <strong>Method:</strong> {contractData.payment?.method || 'Not specified'}<br />
-                          <strong>Terms:</strong> {contractData.payment?.terms || 'Not specified'}<br />
-                          {contractData.payment?.dueDays && <><strong>Due Days:</strong> {contractData.payment.dueDays}<br /></>}
+                          <strong>Method:</strong> {contractData.contract?.paymentMethod}<br />
+                          <strong>Terms:</strong> {contractData.contract?.paymentTerms}<br />
                           <strong>Currency:</strong> {contractData.contract?.currency}<br />
                           <strong>Total Value:</strong> {contractData.contract?.currency} {contractData.contract?.totalValue?.toLocaleString()}
                         </Grid>
@@ -897,7 +907,7 @@ const AgencyApprovalDashboard = (): JSX.Element => {
                           <strong>Incoterms:</strong> {contractData.contract?.incoterms}<br />
                           <strong>Loading Port:</strong> {contractData.contract?.portOfLoading}<br />
                           <strong>Discharge Port:</strong> {contractData.contract?.portOfDischarge}<br />
-                          <strong>Delivery:</strong> {contractData.contract?.deliveryDeadline ? new Date(contractData.contract.deliveryDeadline).toLocaleDateString() : 'Not specified'}
+                          <strong>Delivery Date:</strong> {contractData.contract?.deliveryDate ? new Date(contractData.contract.deliveryDate).toLocaleDateString() : 'Not specified'}
                         </Grid>
                       </Grid>
                     </Box>

@@ -278,7 +278,7 @@ const ApplicationTracking = ({ user, org }: ApplicationTrackingProps): JSX.Eleme
                       <TableCell>
                         <Chip
                           icon={getStatusIcon(application.status)}
-                          label={application.status.replace('_', ' ')}
+                          label={application.status ? application.status.replace('_', ' ') : 'UNKNOWN'}
                           color={getStatusColor(application.status)}
                           size="small"
                         />
@@ -371,7 +371,7 @@ const ApplicationTracking = ({ user, org }: ApplicationTrackingProps): JSX.Eleme
                   </Typography>
                   <Chip
                     icon={getStatusIcon(selectedApplication.status)}
-                    label={selectedApplication.status.replace('_', ' ')}
+                    label={selectedApplication.status ? selectedApplication.status.replace('_', ' ') : 'UNKNOWN'}
                     color={getStatusColor(selectedApplication.status)}
                   />
                 </Grid>

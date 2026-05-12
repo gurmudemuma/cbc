@@ -35,6 +35,7 @@ import paymentRoutes from "./routes/payment.routes";
 import documentRoutes from "./routes/document.routes";
 import marketplaceRoutes from "./routes/marketplace.routes";
 import buyersRoutes from "./routes/buyers.routes";
+import lcRoutes from "./routes/lc.routes";
 import { getPool } from "@shared/database/pool";
 import { errorHandler } from "@shared/middleware/error.middleware";
 import { monitoringMiddleware, errorMonitoringMiddleware } from "@shared/middleware/monitoring.middleware";
@@ -90,8 +91,9 @@ app.use("/api/contracts", apiLimiter, contractRoutes);
 app.use("/api/buyer", apiLimiter, buyerPortalRoutes);
 app.use("/api/marketplace", apiLimiter, marketplaceRoutes);
 app.use("/api/buyers", buyersRoutes); // Public buyer details - no rate limiting
-// Payment routes removed - now handled by gateway for all user roles
-// app.use("/api/payments", apiLimiter, paymentRoutes);
+app.use("/api/lc", apiLimiter, lcRoutes); // Letter of Credit routes
+// Payment routes - handles payment workflow for all network members
+app.use("/api/payments", apiLimiter, paymentRoutes);
 
 // Health check
 app.get("/health", async (_req: Request, res: Response) => {

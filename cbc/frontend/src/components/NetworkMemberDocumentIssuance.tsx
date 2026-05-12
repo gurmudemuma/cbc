@@ -44,40 +44,41 @@ import {
 import documentService from '../services/document.service';
 
 interface ExporterQualification {
-  profileStatus: string;
-  licenseStatus: string;
-  competenceStatus: string;
-  laboratoryStatus: string;
-  tasterStatus: string;
+  profile_status: string;
+  license_status: string;
+  competence_status: string;
+  laboratory_status: string;
+  taster_status: string;
 }
 
 interface DocumentRequest {
-  requestId: string;
-  exporterId: string;
-  exporterName: string;
-  exporterTin: string;
-  exporterEmail: string;
-  exporterContactPerson?: string;
-  exporterPhone?: string;
-  laboratoryInspector?: string;
-  lastInspectionDate?: string;
-  laboratoryName?: string;
-  tasterName?: string;
-  proficiencyCertificateNumber?: string;
-  tasterCertificateDate?: string;
-  licenseNumber?: string;
-  licenseIssueDate?: string;
-  licenseExpiryDate?: string;
-  competenceCertificateNumber?: string;
-  competenceIssueDate?: string;
-  competenceExpiryDate?: string;
-  documentType: string;
-  requestNotes?: string;
-  requestedAt: string;
-  requestStatus: string;
-  exporterQualification: ExporterQualification;
-  ectaReferenceNumber?: string;
-  requiredData?: Record<string, any>;
+  request_id: string;
+  exporter_id: string;
+  exporter_name: string;
+  exporter_tin: string;
+  exporter_email: string;
+  exporter_contact_person?: string;
+  exporter_phone?: string;
+  laboratory_inspector?: string;
+  last_inspection_date?: string;
+  laboratory_name?: string;
+  taster_name?: string;
+  proficiency_certificate_number?: string;
+  taster_certificate_date?: string;
+  license_number?: string;
+  license_issue_date?: string;
+  license_expiry_date?: string;
+  competence_certificate_number?: string;
+  competence_issue_date?: string;
+  competence_expiry_date?: string;
+  document_type: string;
+  priority?: string;
+  request_notes?: string;
+  requested_at: string;
+  request_status: string;
+  exporter_qualification: ExporterQualification;
+  ecta_reference_number?: string;
+  required_data?: Record<string, any>;
 }
 
 interface IssueFormData {
@@ -424,10 +425,12 @@ const NetworkMemberDocumentIssuance: React.FC = () => {
             <TableHead>
               <TableRow>
                 <TableCell width="50px"></TableCell>
+                <TableCell>Reference</TableCell>
                 <TableCell>Exporter</TableCell>
                 <TableCell>Document Type</TableCell>
-                <TableCell>Requested Date</TableCell>
+                <TableCell>Priority</TableCell>
                 <TableCell>Status</TableCell>
+                <TableCell>Requested</TableCell>
                 <TableCell align="right">Actions</TableCell>
               </TableRow>
             </TableHead>
@@ -444,9 +447,17 @@ const NetworkMemberDocumentIssuance: React.FC = () => {
                       </IconButton>
                     </TableCell>
                     <TableCell>
+                      <Typography variant="body2" fontWeight="medium">
+                        {request.ecta_reference_number || request.request_id.substring(0, 8).toUpperCase()}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Business fontSize="small" color="action" />
-                        <Typography variant="body2">{request.exporter_name}</Typography>
+                        <Box>
+                          <Typography variant="body2" fontWeight="medium">{request.exporter_name}</Typography>
+                          <Typography variant="caption" color="text.secondary">{request.exporter_email}</Typography>
+                        </Box>
                       </Box>
                     </TableCell>
                     <TableCell>
@@ -455,37 +466,61 @@ const NetworkMemberDocumentIssuance: React.FC = () => {
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      <Typography variant="body2">
-                        {new Date(request.requested_at).toLocaleDateString()}
-                      </Typography>
+                      <Chip
+                        label={request.priority || 'MEDIUM'}
+                        size="small"
+                        color={
+                          request.priority === 'URGENT' ? 'error' :
+                          request.priority === 'HIGH' ? 'warning' :
+                          'default'
+                        }
+                      />
                     </TableCell>
                     <TableCell>
                       <Chip
-                        label={request.status}
+                        label={request.request_status ? request.request_status.replace(/_/g, ' ') : 'UNKNOWN'}
                         size="small"
-                        color={request.status === 'PENDING' ? 'warning' : 'default'}
+                        color={request.request_status === 'PENDING' ? 'warning' : 'default'}
                       />
                     </TableCell>
+                    <TableCell>
+                      <Typography variant="body2">
+                        {new Date(request.requested_at).toLocaleDateString()}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {new Date(request.requested_at).toLocaleTimeString()}
+                      </Typography>
+                    </TableCell>
                     <TableCell align="right">
-                      <Button
-                        size="small"
-                        variant="contained"
-                        color="primary"
-                        startIcon={<CheckCircle />}
-                        onClick={() => handleOpenIssueDialog(request)}
-                        sx={{ mr: 1 }}
-                      >
-                        Issue
-                      </Button>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        color="error"
-                        startIcon={<Cancel />}
-                        onClick={() => handleOpenRejectDialog(request)}
-                      >
-                        Reject
-                      </Button>
+                      <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          color="primary"
+                          startIcon={<ExpandMore />}
+                          onClick={() => handleExpandRequest(request.request_id)}
+                        >
+                          {expandedRequest === request.request_id ? 'Hide' : 'View'}
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="contained"
+                          color="success"
+                          startIcon={<CheckCircle />}
+                          onClick={() => handleOpenIssueDialog(request)}
+                        >
+                          Issue
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          color="error"
+                          startIcon={<Cancel />}
+                          onClick={() => handleOpenRejectDialog(request)}
+                        >
+                          Reject
+                        </Button>
+                      </Box>
                     </TableCell>
                   </TableRow>
                   
@@ -506,11 +541,11 @@ const NetworkMemberDocumentIssuance: React.FC = () => {
                                   Profile Status
                                 </Typography>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                                  {getQualificationStatusIcon(request.exporterQualification?.profileStatus || 'UNKNOWN')}
+                                  {getQualificationStatusIcon(request.exporter_qualification?.profile_status || 'UNKNOWN')}
                                   <Chip
-                                    label={request.exporterQualification?.profileStatus || 'N/A'}
+                                    label={request.exporter_qualification?.profile_status || 'N/A'}
                                     size="small"
-                                    color={getQualificationStatusColor(request.exporterQualification?.profileStatus || 'UNKNOWN')}
+                                    color={getQualificationStatusColor(request.exporter_qualification?.profile_status || 'UNKNOWN')}
                                   />
                                 </Box>
                               </Paper>
@@ -522,11 +557,11 @@ const NetworkMemberDocumentIssuance: React.FC = () => {
                                   Export License
                                 </Typography>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                                  {getQualificationStatusIcon(request.exporterQualification?.licenseStatus || 'UNKNOWN')}
+                                  {getQualificationStatusIcon(request.exporter_qualification?.license_status || 'UNKNOWN')}
                                   <Chip
-                                    label={request.exporterQualification?.licenseStatus || 'N/A'}
+                                    label={request.exporter_qualification?.license_status || 'N/A'}
                                     size="small"
-                                    color={getQualificationStatusColor(request.exporterQualification?.licenseStatus || 'UNKNOWN')}
+                                    color={getQualificationStatusColor(request.exporter_qualification?.license_status || 'UNKNOWN')}
                                   />
                                 </Box>
                               </Paper>
@@ -538,11 +573,11 @@ const NetworkMemberDocumentIssuance: React.FC = () => {
                                   Competence Certificate
                                 </Typography>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                                  {getQualificationStatusIcon(request.exporterQualification?.competenceStatus || 'UNKNOWN')}
+                                  {getQualificationStatusIcon(request.exporter_qualification?.competence_status || 'UNKNOWN')}
                                   <Chip
-                                    label={request.exporterQualification?.competenceStatus || 'N/A'}
+                                    label={request.exporter_qualification?.competence_status || 'N/A'}
                                     size="small"
-                                    color={getQualificationStatusColor(request.exporterQualification?.competenceStatus || 'UNKNOWN')}
+                                    color={getQualificationStatusColor(request.exporter_qualification?.competence_status || 'UNKNOWN')}
                                   />
                                 </Box>
                               </Paper>
@@ -554,11 +589,11 @@ const NetworkMemberDocumentIssuance: React.FC = () => {
                                   Laboratory Status
                                 </Typography>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                                  {getQualificationStatusIcon(request.exporterQualification?.laboratoryStatus || 'UNKNOWN')}
+                                  {getQualificationStatusIcon(request.exporter_qualification?.laboratory_status || 'UNKNOWN')}
                                   <Chip
-                                    label={request.exporterQualification?.laboratoryStatus || 'N/A'}
+                                    label={request.exporter_qualification?.laboratory_status || 'N/A'}
                                     size="small"
-                                    color={getQualificationStatusColor(request.exporterQualification?.laboratoryStatus || 'UNKNOWN')}
+                                    color={getQualificationStatusColor(request.exporter_qualification?.laboratory_status || 'UNKNOWN')}
                                   />
                                 </Box>
                               </Paper>
@@ -570,24 +605,24 @@ const NetworkMemberDocumentIssuance: React.FC = () => {
                                   Taster Status
                                 </Typography>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                                  {getQualificationStatusIcon(request.exporterQualification?.tasterStatus || 'UNKNOWN')}
+                                  {getQualificationStatusIcon(request.exporter_qualification?.taster_status || 'UNKNOWN')}
                                   <Chip
-                                    label={request.exporterQualification?.tasterStatus || 'N/A'}
+                                    label={request.exporter_qualification?.taster_status || 'N/A'}
                                     size="small"
-                                    color={getQualificationStatusColor(request.exporterQualification?.tasterStatus || 'UNKNOWN')}
+                                    color={getQualificationStatusColor(request.exporter_qualification?.taster_status || 'UNKNOWN')}
                                   />
                                 </Box>
                               </Paper>
                             </Grid>
                           </Grid>
                           
-                          {request.requestNotes && (
+                          {request.request_notes && (
                             <Box sx={{ mt: 2 }}>
                               <Typography variant="caption" color="text.secondary">
                                 Request Notes
                               </Typography>
                               <Paper variant="outlined" sx={{ p: 2, mt: 0.5, bgcolor: '#f5f5f5' }}>
-                                <Typography variant="body2">{request.requestNotes}</Typography>
+                                <Typography variant="body2">{request.request_notes}</Typography>
                               </Paper>
                             </Box>
                           )}

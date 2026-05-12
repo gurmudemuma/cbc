@@ -55,6 +55,9 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- Run migration 013: Add FULLY_QUALIFIED status to exporter_profiles
 \i /docker-entrypoint-initdb.d/migrations/013_add_fully_qualified_status.sql
 
+-- Run migration 034: Create network members table
+\i /docker-entrypoint-initdb.d/migrations/034_create_network_members_table.sql
+
 -- ============================================================================
 -- HYBRID BLOCKCHAIN SYSTEM MIGRATIONS
 -- ============================================================================

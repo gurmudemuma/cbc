@@ -128,7 +128,7 @@ class SalesContractService {
    * Accept a contract draft
    */
   async acceptDraft(draftId: string): Promise<{ draft: ContractDraft }> {
-    return this.request('POST', `/drafts/${draftId}/accept`, {});
+    return this.request('POST', `/drafts/${draftId}/accept`, { confirmation: true });
   }
 
   /**

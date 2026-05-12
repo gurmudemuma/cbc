@@ -74,6 +74,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/licenses", apiLimiter, licenseRoutes);
 app.use("/api/quality", apiLimiter, qualityRoutes);
 app.use("/api/contracts", apiLimiter, contractRoutes);
+app.use("/api/ecta/contracts", apiLimiter, contractRoutes); // Add /ecta prefix for sales contract registration
 app.use("/api/preregistration", apiLimiter, preregistrationRoutes);
 app.use("/api/ecta/preregistration", apiLimiter, preregistrationRoutes); // Add /ecta prefix for frontend compatibility
 app.use("/api/ecta/certificate/renewal", apiLimiter, certificateRenewalRoutes); // Certificate renewal management

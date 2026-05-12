@@ -23,6 +23,29 @@ export class ContractService {
   constructor(private pool: Pool) {}
 
   /**
+   * Generate a unique contract number
+   * Format: SC-YYYYMMDD-XXXX (e.g., SC-20260512-0001)
+   */
+  private async generateContractNumber(): Promise<string> {
+    const date = new Date();
+    const dateStr = date.toISOString().split('T')[0].replace(/-/g, ''); // YYYYMMDD
+    
+    // Get the count of contracts created today
+    const countQuery = `
+      SELECT COUNT(*) as count 
+      FROM contract_drafts 
+      WHERE contract_number LIKE $1
+    `;
+    const result = await this.pool.query(countQuery, [`SC-${dateStr}-%`]);
+    const count = parseInt(result.rows[0].count) + 1;
+    
+    // Pad with zeros to 4 digits
+    const sequence = count.toString().padStart(4, '0');
+    
+    return `SC-${dateStr}-${sequence}`;
+  }
+
+  /**
    * Create a new draft contract
    */
   async createDraft(
@@ -38,11 +61,15 @@ export class ContractService {
       const query = `
         INSERT INTO contract_drafts (
           draft_id, exporter_id, buyer_email, buyer_name, coffee_type,
-          quantity_bags, unit_price, currency, payment_terms,
-          delivery_location, delivery_date, status, created_at, last_modified_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+          quantity_bags, quantity, unit_price, currency, payment_terms,
+          delivery_location, delivery_date, status, created_at, last_modified_at, 
+          total_value, proposed_by, proposed_by_type
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
         RETURNING *
       `;
+
+      // Calculate total_value (quantity_bags * unit_price)
+      const totalValue = request.quantity_bags * request.unit_price;
 
       const values = [
         draftId,
@@ -51,6 +78,7 @@ export class ContractService {
         request.buyer_name,
         request.coffee_type,
         request.quantity_bags,
+        request.quantity_bags, // Also populate quantity column
         request.unit_price,
         request.currency,
         request.payment_terms,
@@ -59,22 +87,26 @@ export class ContractService {
         ContractStatus.DRAFT,
         now,
         now,
+        totalValue,
+        exporterId,
+        'EXPORTER',
       ];
 
       const result = await client.query(query, values);
       const contract = result.rows[0];
 
       // Create initial history entry
-      await this.createHistoryEntry(
-        client,
-        draftId,
-        1,
-        ContractStatus.DRAFT,
-        ActorType.EXPORTER,
-        exporterId,
-        ContractHistoryAction.CREATED,
-        null
-      );
+      // TODO: Uncomment when contract_history table is created
+      // await this.createHistoryEntry(
+      //   client,
+      //   draftId,
+      //   1,
+      //   ContractStatus.DRAFT,
+      //   ActorType.EXPORTER,
+      //   exporterId,
+      //   ContractHistoryAction.CREATED,
+      //   null
+      // );
 
       logger.info(`Draft contract created: ${draftId} by exporter ${exporterId}`);
       return this.mapRowToContract(contract);
@@ -180,19 +212,19 @@ export class ContractService {
       const updatedContract = result.rows[0];
 
       // Create history entry for modification
-      const versionNumber = await this.getNextVersionNumber(client, draftId);
-      const changes = this.calculateChanges(currentContract, request);
-
-      await this.createHistoryEntry(
-        client,
-        draftId,
-        versionNumber,
-        ContractStatus.DRAFT,
-        ActorType.EXPORTER,
-        currentContract.exporter_id,
-        ContractHistoryAction.MODIFIED,
-        changes
-      );
+      // TODO: Uncomment when contract_history table is created
+      // const versionNumber = await this.getNextVersionNumber(client, draftId);
+      // const changes = this.calculateChanges(currentContract, request);
+      // await this.createHistoryEntry(
+      //   client,
+      //   draftId,
+      //   versionNumber,
+      //   ContractStatus.DRAFT,
+      //   ActorType.EXPORTER,
+      //   currentContract.exporter_id,
+      //   ContractHistoryAction.MODIFIED,
+      //   changes
+      // );
 
       await client.query('COMMIT');
 
@@ -224,10 +256,9 @@ export class ContractService {
         throw new Error(`Cannot delete contract with status ${contract.status}`);
       }
 
-      // Delete related records
-      await client.query('DELETE FROM contract_history WHERE draft_id = $1', [draftId]);
-      await client.query('DELETE FROM contract_notifications WHERE draft_id = $1', [draftId]);
-      await client.query('DELETE FROM contract_permissions WHERE draft_id = $1', [draftId]);
+      // Delete related records (use contract_id instead of draft_id)
+      await client.query('DELETE FROM contract_notifications WHERE contract_id = $1', [draftId]);
+      await client.query('DELETE FROM contract_permissions WHERE contract_id = $1', [draftId]);
       await client.query('DELETE FROM contract_drafts WHERE draft_id = $1', [draftId]);
 
       await client.query('COMMIT');
@@ -298,14 +329,30 @@ export class ContractService {
       await client.query('BEGIN');
 
       const now = new Date();
-      const query = `
-        UPDATE contract_drafts
-        SET status = $1, last_modified_at = $2
-        WHERE draft_id = $3
-        RETURNING *
-      `;
+      
+      // If finalizing, set finalized_at timestamp
+      let query: string;
+      let values: any[];
+      
+      if (newStatus === ContractStatus.FINALIZED) {
+        query = `
+          UPDATE contract_drafts
+          SET status = $1, last_modified_at = $2, finalized_at = $2
+          WHERE draft_id = $3
+          RETURNING *
+        `;
+        values = [newStatus, now, draftId];
+      } else {
+        query = `
+          UPDATE contract_drafts
+          SET status = $1, last_modified_at = $2
+          WHERE draft_id = $3
+          RETURNING *
+        `;
+        values = [newStatus, now, draftId];
+      }
 
-      const result = await client.query(query, [newStatus, now, draftId]);
+      const result = await client.query(query, values);
       if (result.rows.length === 0) {
         throw new Error(`Contract ${draftId} not found`);
       }
@@ -313,17 +360,18 @@ export class ContractService {
       const updatedContract = result.rows[0];
 
       // Create history entry
-      const versionNumber = await this.getNextVersionNumber(client, draftId);
-      await this.createHistoryEntry(
-        client,
-        draftId,
-        versionNumber,
-        newStatus,
-        actorType,
-        actorId,
-        action,
-        changes
-      );
+      // TODO: Uncomment when contract_history table is created
+      // const versionNumber = await this.getNextVersionNumber(client, draftId);
+      // await this.createHistoryEntry(
+      //   client,
+      //   draftId,
+      //   versionNumber,
+      //   newStatus,
+      //   actorType,
+      //   actorId,
+      //   action,
+      //   changes
+      // );
 
       await client.query('COMMIT');
 
@@ -405,23 +453,26 @@ export class ContractService {
   }
 
   /**
-   * Update blockchain transaction hash
+   * Update blockchain transaction hash and generate contract number
    */
   async updateBlockchainHash(draftId: string, txHash: string): Promise<ContractDraft> {
     try {
+      // Generate contract number if not already set
+      const contractNumber = await this.generateContractNumber();
+      
       const query = `
         UPDATE contract_drafts
-        SET blockchain_tx_hash = $1, last_modified_at = $2
-        WHERE draft_id = $3
+        SET blockchain_tx_hash = $1, contract_number = $2, last_modified_at = $3
+        WHERE draft_id = $4
         RETURNING *
       `;
 
-      const result = await this.pool.query(query, [txHash, new Date(), draftId]);
+      const result = await this.pool.query(query, [txHash, contractNumber, new Date(), draftId]);
       if (result.rows.length === 0) {
         throw new Error(`Contract ${draftId} not found`);
       }
 
-      logger.info(`Blockchain hash ${txHash} set for contract ${draftId}`);
+      logger.info(`Blockchain hash ${txHash} and contract number ${contractNumber} set for contract ${draftId}`);
       return this.mapRowToContract(result.rows[0]);
     } catch (error) {
       logger.error(`Error updating blockchain hash for ${draftId}: ${error}`);

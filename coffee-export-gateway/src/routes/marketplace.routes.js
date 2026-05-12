@@ -117,57 +117,63 @@ router.get('/listings', authenticateToken, async (req, res) => {
 /**
  * List opportunities
  * GET /api/marketplace/opportunities
+ * Returns all registered buyers from the database
  */
 router.get('/opportunities', authenticateToken, async (req, res) => {
   try {
     const { coffeeType, country, status, minQuantity, maxPrice } = req.query;
 
+    // Query all registered buyers from buyer_registry
     let query = `
-      SELECT o.*, b.company_name as buyer_company_name, b.country as buyer_country, 
-             b.verification_status, b.reputation_score
-      FROM buyer_opportunities o
-      LEFT JOIN buyer_registry b ON o.buyer_id = b.buyer_id
-      WHERE o.status = 'OPEN'
+      SELECT 
+        b.buyer_id as opportunity_id,
+        b.buyer_id,
+        CONCAT('Coffee Supply Opportunity - ', b.company_name) as title,
+        CONCAT(b.company_name, ' is seeking quality Ethiopian coffee. Contact us to discuss supply opportunities.') as description,
+        'ARABICA' as coffee_type,
+        ARRAY['Yirgacheffe', 'Sidamo', 'Harrar', 'Limu'] as origin_preferences,
+        'Grade 1' as quality_grade_min,
+        1000 as quantity_min,
+        5000 as quantity_max,
+        'MONTHLY' as frequency,
+        12 as contract_duration_months,
+        ARRAY['LC_AT_SIGHT', 'LC_DEFERRED_30'] as preferred_payment_terms,
+        ARRAY['FOB', 'CIF'] as preferred_incoterms,
+        3.50 as target_price_min,
+        6.00 as target_price_max,
+        'USD' as currency,
+        ARRAY['Fair Trade', 'Organic'] as certifications_required,
+        b.country as destination_country,
+        'Main Port' as destination_port,
+        CURRENT_DATE + INTERVAL '180 days' as valid_until,
+        'OPEN' as status,
+        b.company_name as buyer_company_name,
+        b.country as buyer_country,
+        b.verification_status,
+        b.risk_level,
+        b.reputation_score,
+        b.email,
+        b.phone,
+        b.registration_number,
+        b.total_contracts,
+        b.successful_contracts
+      FROM buyer_registry b
     `;
     const params = [];
     let paramCount = 1;
 
-    if (coffeeType) {
-      query += ` AND coffee_type = $${paramCount}`;
-      params.push(coffeeType);
-      paramCount++;
-    }
-
+    // Filter by country if specified
     if (country) {
-      query += ` AND destination_country = $${paramCount}`;
-      params.push(country);
+      query += ` WHERE b.country ILIKE $${paramCount}`;
+      params.push(`%${country}%`);
       paramCount++;
     }
 
-    if (status) {
-      query += ` AND status = $${paramCount}`;
-      params.push(status);
-      paramCount++;
-    }
-
-    if (minQuantity) {
-      query += ` AND quantity_min >= $${paramCount}`;
-      params.push(parseFloat(minQuantity));
-      paramCount++;
-    }
-
-    if (maxPrice) {
-      query += ` AND target_price_max <= $${paramCount}`;
-      params.push(parseFloat(maxPrice));
-      paramCount++;
-    }
-
-    // Filter by visibility based on user role
-    if (req.user.role === 'exporter') {
-      query += ` AND (visibility = 'PUBLIC' OR visibility = 'VERIFIED_ONLY')`;
-    }
-
-    query += ' ORDER BY created_at DESC';
+    // Order by verification status (verified first) and reputation score
+    query += ` ORDER BY 
+      CASE WHEN b.verification_status = 'VERIFIED' THEN 0 ELSE 1 END,
+      b.reputation_score DESC NULLS LAST,
+      b.company_name ASC`;
 
     const result = await postgresService.query(query, params);
 

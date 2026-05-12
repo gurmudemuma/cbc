@@ -301,6 +301,295 @@ VALUES($1, $2, $3, $4, $5)`,
     }
   };
 
+  /**
+   * GET /api/ecta/contracts/pending-registration
+   * Get finalized sales contracts pending ECTA registration
+   */
+  public getPendingRegistrations = async (_req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
+    try {
+      const result = await getPool().query(
+        `SELECT 
+          cd.draft_id as "draftId",
+          cd.contract_number as "contractNumber",
+          cd.buyer_name,
+          cd.buyer_email,
+          cd.buyer_country,
+          cd.coffee_type,
+          cd.quantity_bags as quantity,
+          cd.unit_price as "unitPrice",
+          cd.total_value as "totalValue",
+          cd.currency,
+          cd.quality_grade as "qualityGrade",
+          cd.payment_terms as "paymentTerms",
+          cd.payment_method as "paymentMethod",
+          cd.incoterms,
+          cd.delivery_date as "deliveryDate",
+          cd.delivery_location as "deliveryLocation",
+          cd.port_of_loading as "portOfLoading",
+          cd.port_of_discharge as "portOfDischarge",
+          cd.status,
+          cd.created_at,
+          cd.finalized_at as "submittedAt",
+          cd.ecta_reference_number as "ectaReferenceNumber",
+          cd.blockchain_tx_hash as "blockchainTxHash",
+          ep.business_name as exporter_name,
+          ep.tin as exporter_tin
+         FROM contract_drafts cd
+         JOIN exporter_profiles ep ON cd.exporter_id = ep.exporter_id
+         WHERE cd.status = 'FINALIZED'
+         AND cd.ecta_reference_number IS NULL
+         ORDER BY cd.finalized_at DESC`
+      );
+
+      const pendingRegistrations = result.rows.map(row => ({
+        draftId: row.draftId,
+        contractNumber: row.contractNumber,
+        buyer: {
+          name: row.buyer_name,
+          email: row.buyer_email,
+          country: row.buyer_country || 'N/A'
+        },
+        exporter: {
+          name: row.exporter_name,
+          tin: row.exporter_tin
+        },
+        contract: {
+          coffeeType: row.coffee_type,
+          quantity: row.quantity,
+          unitPrice: row.unitPrice,
+          totalValue: row.totalValue,
+          currency: row.currency,
+          qualityGrade: row.qualityGrade,
+          paymentMethod: row.paymentMethod,
+          paymentTerms: row.paymentTerms,
+          incoterms: row.incoterms,
+          deliveryDate: row.deliveryDate,
+          deliveryLocation: row.deliveryLocation,
+          portOfLoading: row.portOfLoading,
+          portOfDischarge: row.portOfDischarge
+        },
+        submittedAt: row.submittedAt,
+        ectaReferenceNumber: row.ectaReferenceNumber,
+        blockchainTxHash: row.blockchainTxHash
+      }));
+      
+      logger.info('Fetched pending sales contract registrations', { count: pendingRegistrations.length });
+      
+      res.json({ 
+        success: true, 
+        pendingRegistrations,
+        count: pendingRegistrations.length 
+      });
+    } catch (error: any) {
+      logger.error('Failed to fetch pending registrations', { error: error.message });
+      this.handleError(error, res);
+    }
+  };
+
+  /**
+   * GET /api/ecta/contracts/registered
+   * Get registered sales contracts
+   */
+  public getRegisteredContracts = async (_req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
+    try {
+      const result = await getPool().query(
+        `SELECT 
+          cd.draft_id as "draftId",
+          cd.contract_number as "contractNumber",
+          cd.buyer_name,
+          cd.buyer_email,
+          cd.buyer_country,
+          cd.coffee_type,
+          cd.quantity_bags as quantity,
+          cd.unit_price as "unitPrice",
+          cd.total_value as "totalValue",
+          cd.currency,
+          cd.quality_grade as "qualityGrade",
+          cd.payment_terms as "paymentTerms",
+          cd.payment_method as "paymentMethod",
+          cd.incoterms,
+          cd.delivery_date as "deliveryDate",
+          cd.delivery_location as "deliveryLocation",
+          cd.port_of_loading as "portOfLoading",
+          cd.port_of_discharge as "portOfDischarge",
+          cd.status,
+          cd.created_at,
+          cd.finalized_at as "submittedAt",
+          cd.ecta_reference_number as "ectaReferenceNumber",
+          cd.ecta_registered_at as "registeredAt",
+          cd.ecta_registered_by as "registeredBy",
+          cd.ecta_registration_notes as "registrationNotes",
+          cd.lc_number as "lcNumber",
+          cd.blockchain_tx_hash as "blockchainTxHash",
+          ep.business_name as exporter_name,
+          ep.tin as exporter_tin
+         FROM contract_drafts cd
+         JOIN exporter_profiles ep ON cd.exporter_id = ep.exporter_id
+         WHERE cd.status = 'FINALIZED'
+         AND cd.ecta_reference_number IS NOT NULL
+         ORDER BY cd.ecta_registered_at DESC`
+      );
+
+      const registeredContracts = result.rows.map(row => ({
+        draftId: row.draftId,
+        contractNumber: row.contractNumber,
+        buyer: {
+          name: row.buyer_name,
+          email: row.buyer_email,
+          country: row.buyer_country || 'N/A'
+        },
+        exporter: {
+          name: row.exporter_name,
+          tin: row.exporter_tin
+        },
+        contract: {
+          coffeeType: row.coffee_type,
+          quantity: row.quantity,
+          unitPrice: row.unitPrice,
+          totalValue: row.totalValue,
+          currency: row.currency,
+          qualityGrade: row.qualityGrade,
+          paymentMethod: row.paymentMethod,
+          paymentTerms: row.paymentTerms,
+          incoterms: row.incoterms,
+          deliveryDate: row.deliveryDate,
+          deliveryLocation: row.deliveryLocation,
+          portOfLoading: row.portOfLoading,
+          portOfDischarge: row.portOfDischarge
+        },
+        submittedAt: row.submittedAt,
+        ectaReferenceNumber: row.ectaReferenceNumber,
+        lcNumber: row.lcNumber,
+        registeredAt: row.registeredAt,
+        registeredBy: row.registeredBy,
+        registrationNotes: row.registrationNotes,
+        blockchainTxHash: row.blockchainTxHash
+      }));
+      
+      logger.info('Fetched registered sales contracts', { count: registeredContracts.length });
+      
+      res.json({ 
+        success: true, 
+        registeredContracts,
+        count: registeredContracts.length 
+      });
+    } catch (error: any) {
+      logger.error('Failed to fetch registered contracts', { error: error.message });
+      this.handleError(error, res);
+    }
+  };
+
+  /**
+   * GET /api/ecta/contracts/registration-stats
+   * Get registration statistics
+   */
+  public getRegistrationStats = async (_req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
+    try {
+      const statsResult = await getPool().query(
+        `SELECT 
+          COUNT(*) FILTER (WHERE status = 'FINALIZED') as total_finalized,
+          COUNT(*) FILTER (WHERE status = 'FINALIZED' AND ecta_reference_number IS NULL) as pending_registration,
+          COUNT(*) FILTER (WHERE status = 'FINALIZED' AND ecta_reference_number IS NOT NULL) as registered
+         FROM contract_drafts`
+      );
+
+      const stats = {
+        totalFinalized: parseInt(statsResult.rows[0].total_finalized) || 0,
+        pendingRegistration: parseInt(statsResult.rows[0].pending_registration) || 0,
+        registered: parseInt(statsResult.rows[0].registered) || 0
+      };
+      
+      logger.info('Fetched registration stats', stats);
+      
+      res.json({ success: true, stats });
+    } catch (error: any) {
+      logger.error('Failed to fetch registration stats', { error: error.message });
+      this.handleError(error, res);
+    }
+  };
+
+  /**
+   * POST /api/ecta/contracts/:draftId/register
+   * Register a finalized sales contract with ECTA
+   */
+  public registerContract = async (req: RequestWithUser, res: Response, _next: NextFunction): Promise<void> => {
+    const client = await getPool().connect();
+    try {
+      const { draftId } = req.params;
+      const user = req.user;
+      const { referenceNumber, notes } = req.body;
+
+      if (!draftId) {
+        throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Draft ID is required', 400);
+      }
+
+      if (!referenceNumber) {
+        throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, 'Reference number is required', 400);
+      }
+
+      await client.query('BEGIN');
+
+      // Check if contract exists and is finalized
+      const contractResult = await client.query(
+        'SELECT * FROM contract_drafts WHERE draft_id = $1',
+        [draftId]
+      );
+
+      if (contractResult.rows.length === 0) {
+        throw new AppError(ErrorCode.NOT_FOUND, 'Contract not found', 404);
+      }
+
+      const contract = contractResult.rows[0];
+
+      if (contract.status !== 'FINALIZED') {
+        throw new AppError(ErrorCode.INVALID_STATUS_TRANSITION, 'Only finalized contracts can be registered', 400);
+      }
+
+      if (contract.ecta_reference_number) {
+        throw new AppError(ErrorCode.EXPORT_ALREADY_EXISTS, 'Contract already registered', 409);
+      }
+
+      // Generate LC number (Letter of Credit number)
+      const lcNumber = `LC-${referenceNumber.replace('ECTA-SC-', '')}`;
+
+      // Update contract with ECTA registration details
+      await client.query(
+        `UPDATE contract_drafts 
+         SET ecta_reference_number = $1,
+             lc_number = $2,
+             ecta_registered_at = NOW(),
+             ecta_registered_by = $3,
+             ecta_registration_notes = $4,
+             updated_at = NOW()
+         WHERE draft_id = $5`,
+        [referenceNumber, lcNumber, user?.id, notes, draftId]
+      );
+
+      await client.query('COMMIT');
+
+      logger.info('Sales contract registered with ECTA', { 
+        draftId, 
+        referenceNumber, 
+        lcNumber,
+        userId: user?.id 
+      });
+
+      res.json({
+        success: true,
+        message: 'Contract registered successfully',
+        draftId,
+        referenceNumber,
+        lcNumber
+      });
+    } catch (error: any) {
+      await client.query('ROLLBACK');
+      logger.error('Failed to register contract', { error: error.message });
+      this.handleError(error, res);
+    } finally {
+      client.release();
+    }
+  };
+
   private handleError(error: any, res: Response): void {
     if (error instanceof AppError) {
       res.status(error.httpStatus).json({

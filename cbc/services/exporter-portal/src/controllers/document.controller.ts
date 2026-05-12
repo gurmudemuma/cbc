@@ -399,6 +399,274 @@ export class DocumentController {
   }
 
   /**
+   * Get pending document requests for network members to issue
+   * GET /api/document-issuance/document-requests/pending
+   * This endpoint is for network members (ECTA, MOA, MOH, etc.) to see pending requests
+   */
+  async getPendingRequestsForIssuance(req: Request, res: Response): Promise<void> {
+    try {
+      const user = (req as any).user;
+      const networkMemberCode = user?.organizationCode || user?.org; // Network member code (ECTA, MOA, etc.)
+
+      logger.info('Getting pending requests for issuance', { 
+        networkMemberCode, 
+        userId: user?.id,
+        org: user?.org 
+      });
+
+      const pool = getPool();
+
+      // Get pending document requests for this network member
+      const query = `
+        SELECT 
+          dr.request_id,
+          dr.exporter_id,
+          dr.document_type,
+          dr.request_status as status,
+          dr.request_notes as request_notes,
+          dr.requested_at,
+          dr.priority,
+          dr.contract_reference as ecta_reference_number,
+          dr.required_data,
+          dr.issuer_agency,
+          ep.business_name as exporter_name,
+          ep.tin as exporter_tin,
+          ep.email as exporter_email,
+          ep.contact_person as exporter_contact_person,
+          ep.phone as exporter_phone,
+          ep.status as profile_status
+        FROM document_requests dr
+        LEFT JOIN exporter_profiles ep ON dr.exporter_id = ep.exporter_id
+        WHERE dr.request_status = 'PENDING'
+        ORDER BY 
+          CASE dr.priority
+            WHEN 'URGENT' THEN 1
+            WHEN 'HIGH' THEN 2
+            WHEN 'MEDIUM' THEN 3
+            WHEN 'LOW' THEN 4
+            ELSE 5
+          END,
+          dr.requested_at ASC
+      `;
+
+      const result = await pool.query(query);
+
+      logger.info('Database query executed', { rowCount: result.rows.length });
+      
+      // Log first row for debugging
+      if (result.rows.length > 0) {
+        logger.info('First row sample', { 
+          request_id: result.rows[0].request_id,
+          exporter_name: result.rows[0].exporter_name,
+          document_type: result.rows[0].document_type,
+          status: result.rows[0].status
+        });
+      }
+
+      // Format the response with exporter qualification
+      const requests = result.rows.map(row => ({
+        request_id: row.request_id,
+        exporter_id: row.exporter_id,
+        exporter_name: row.exporter_name || 'Unknown Exporter',
+        exporter_tin: row.exporter_tin || 'N/A',
+        exporter_email: row.exporter_email || 'N/A',
+        exporter_contact_person: row.exporter_contact_person,
+        exporter_phone: row.exporter_phone,
+        document_type: row.document_type,
+        priority: row.priority || 'MEDIUM',
+        request_status: row.status,
+        request_notes: row.request_notes,
+        requested_at: row.requested_at,
+        ecta_reference_number: row.ecta_reference_number,
+        required_data: row.required_data,
+        issuer_agency: row.issuer_agency,
+        exporter_qualification: {
+          profile_status: row.profile_status || 'PENDING_APPROVAL',
+          license_status: 'UNKNOWN',
+          competence_status: 'UNKNOWN',
+          laboratory_status: 'UNKNOWN',
+          taster_status: 'UNKNOWN',
+        },
+      }));
+
+      logger.info('Returning pending requests', { count: requests.length });
+
+      res.json({
+        success: true,
+        data: requests,
+        count: requests.length,
+      });
+    } catch (error) {
+      logger.error('Error fetching pending requests for issuance', { error });
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch pending document requests',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  /**
+   * Issue a document (for network members)
+   * POST /api/document-issuance/documents/issue
+   */
+  async issueDocument(req: Request, res: Response): Promise<void> {
+    try {
+      const user = (req as any).user;
+      const networkMemberCode = user?.organizationCode || user?.org || 'ECTA';
+      const issuedBy = user?.username || user?.email || 'system';
+      const {
+        requestId,
+        exporterId,
+        documentType,
+        documentNumber,
+        documentMetadata,
+        expiryDate,
+      } = req.body;
+
+      if (!requestId || !exporterId || !documentType || !documentNumber) {
+        res.status(400).json({
+          success: false,
+          message: 'Missing required fields: requestId, exporterId, documentType, documentNumber',
+        });
+        return;
+      }
+
+      const pool = getPool();
+
+      // Generate document hash
+      const crypto = require('crypto');
+      const documentContent = JSON.stringify({
+        documentNumber,
+        documentType,
+        exporterId,
+        issuedAt: new Date().toISOString(),
+        metadata: documentMetadata,
+      });
+      const documentHash = crypto.createHash('sha256').update(documentContent).digest('hex');
+
+      // Update the document request status
+      const updateRequestQuery = `
+        UPDATE document_requests
+        SET status = 'COMPLETED',
+            completed_at = NOW()
+        WHERE request_id = $1 AND exporter_id = $2
+        RETURNING *
+      `;
+
+      await pool.query(updateRequestQuery, [requestId, exporterId]);
+
+      // Insert the issued document
+      const insertDocumentQuery = `
+        INSERT INTO issued_documents (
+          request_id,
+          exporter_id,
+          document_type,
+          document_number,
+          document_hash,
+          issuer_member_code,
+          issued_by,
+          status,
+          issued_at,
+          expiry_date,
+          document_metadata
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, 'ACTIVE', NOW(), $8, $9)
+        RETURNING *
+      `;
+
+      const documentResult = await pool.query(insertDocumentQuery, [
+        requestId,
+        exporterId,
+        documentType,
+        documentNumber,
+        documentHash,
+        networkMemberCode,
+        issuedBy,
+        expiryDate || null,
+        JSON.stringify(documentMetadata || {}),
+      ]);
+
+      logger.info('Document issued successfully', {
+        documentNumber,
+        documentType,
+        exporterId,
+        requestId,
+        documentHash,
+      });
+
+      res.status(201).json({
+        success: true,
+        message: 'Document issued successfully',
+        data: documentResult.rows[0],
+      });
+    } catch (error) {
+      logger.error('Error issuing document', { error });
+      res.status(500).json({
+        success: false,
+        message: 'Failed to issue document',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  /**
+   * Reject a document request (for network members)
+   * POST /api/document-issuance/document-requests/:requestId/reject
+   */
+  async rejectDocumentRequest(req: Request, res: Response): Promise<void> {
+    try {
+      const user = (req as any).user;
+      const { requestId } = req.params;
+      const { rejectionReason } = req.body;
+
+      if (!rejectionReason) {
+        res.status(400).json({
+          success: false,
+          message: 'Rejection reason is required',
+        });
+        return;
+      }
+
+      const pool = getPool();
+
+      const updateQuery = `
+        UPDATE document_requests
+        SET status = 'REJECTED',
+            rejection_reason = $1,
+            completed_at = NOW()
+        WHERE request_id = $2
+        RETURNING *
+      `;
+
+      const result = await pool.query(updateQuery, [rejectionReason, requestId]);
+
+      if (result.rows.length === 0) {
+        res.status(404).json({
+          success: false,
+          message: 'Document request not found',
+        });
+        return;
+      }
+
+      logger.info('Document request rejected', { requestId, rejectionReason });
+
+      res.json({
+        success: true,
+        message: 'Document request rejected successfully',
+        data: result.rows[0],
+      });
+    } catch (error) {
+      logger.error('Error rejecting document request', { error });
+      res.status(500).json({
+        success: false,
+        message: 'Failed to reject document request',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  /**
    * Get all document requests for the logged-in exporter
    * GET /api/exporter/documents/requests
    */
@@ -448,6 +716,62 @@ export class DocumentController {
       res.status(500).json({
         success: false,
         message: 'Failed to fetch document requests',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  /**
+   * Get registered contracts for document requests
+   * GET /api/exporter/documents/registered-contracts
+   */
+  async getRegisteredContracts(req: Request, res: Response): Promise<void> {
+    try {
+      const user = (req as any).user;
+      const exporterId = user?.exporterId || user?.id;
+
+      if (!exporterId) {
+        res.status(401).json({
+          success: false,
+          message: 'Exporter ID not found in token',
+        });
+        return;
+      }
+
+      const pool = getPool();
+
+      // Get registered sales contracts for this exporter
+      const query = `
+        SELECT 
+          contract_id,
+          reference_number,
+          buyer_name,
+          coffee_type,
+          quantity,
+          unit_price,
+          total_value,
+          destination_country,
+          status,
+          created_at,
+          updated_at
+        FROM sales_contracts
+        WHERE exporter_id = $1
+          AND status IN ('REGISTERED', 'APPROVED', 'ACTIVE')
+        ORDER BY created_at DESC
+      `;
+
+      const result = await pool.query(query, [exporterId]);
+
+      res.json({
+        success: true,
+        data: result.rows,
+        count: result.rows.length,
+      });
+    } catch (error) {
+      logger.error('Error fetching registered contracts', { error });
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch registered contracts',
         error: error instanceof Error ? error.message : 'Unknown error',
       });
     }

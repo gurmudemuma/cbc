@@ -262,7 +262,7 @@ const QualityCertification = ({ user, org }: QualityCertificationProps): JSX.Ele
                         <TableCell>{exp.quantity.toLocaleString()}</TableCell>
                         <TableCell>
                           <Chip
-                            label={exp.status.replace(/_/g, ' ')}
+                            label={exp.status ? exp.status.replace(/_/g, ' ') : 'UNKNOWN'}
                             color={getStatusColor(exp.status)}
                             size="small"
                           />

@@ -128,7 +128,7 @@ const NetworkStatusTracker = ({ submission }: NetworkStatusTrackerProps): JSX.El
             <Grid item xs={12} md={6} sx={{ textAlign: { md: 'right' } }}>
               <Typography variant="body2">Overall Status</Typography>
               <Chip
-                label={overallStatus.replace(/_/g, ' ')}
+                label={overallStatus ? overallStatus.replace(/_/g, ' ') : 'UNKNOWN'}
                 color={getStatusColor(overallStatus)}
                 size="large"
                 sx={{ mt: 1, fontSize: '1rem', fontWeight: 'bold' }}

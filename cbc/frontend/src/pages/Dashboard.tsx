@@ -405,7 +405,7 @@ const Dashboard = ({ user, org }: DashboardProps): JSX.Element => {
                         </Avatar>
                       </ListItemAvatar>
                       <ListItemText
-                        primary={<Typography variant="subtitle2" sx={{ fontWeight: 600 }}>{activity.status.replace(/_/g, ' ')}</Typography>}
+                        primary={<Typography variant="subtitle2" sx={{ fontWeight: 600 }}>{activity.status ? activity.status.replace(/_/g, ' ') : 'UNKNOWN'}</Typography>}
                         secondary={<Typography variant="caption" color="text.secondary">{new Date(activity.updatedAt).toLocaleTimeString()}</Typography>}
                       />
                       <Chip label={activity.exporterId?.substring(0, 6)} size="small" variant="outlined" sx={{ borderRadius: 1 }} />

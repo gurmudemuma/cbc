@@ -277,8 +277,8 @@ export class AuthController {
       }
 
       // Verify user is an exporter, admin, or agency user
-      const userRole = user.role || 'unknown';
-      const allowedRoles = ['exporter', 'admin', 'AGENCY_USER', 'AGENCY_ADMIN'];
+      const userRole = (user.role || 'unknown').toLowerCase();
+      const allowedRoles = ['exporter', 'admin', 'agency_user', 'agency_admin', 'ecta', 'moa', 'moh', 'ecx', 'customs', 'nbe', 'bank', 'cbe'];
       if (!allowedRoles.includes(userRole)) {
         throw new AppError(
           ErrorCode.UNAUTHORIZED,
@@ -291,14 +291,44 @@ export class AuthController {
       let exporterId = null;
       let qualificationComplete = false;
 
+      logger.info('Checking for exporter profile', { 
+        userId: user.id, 
+        username: user.username, 
+        role: user.role 
+      });
+
       if (user.role === 'exporter') {
-        const profileResult = await client.query(
+        // Try to find exporter profile by user_id (could be numeric ID or username)
+        let profileResult = await client.query(
           'SELECT exporter_id as id FROM exporter_profiles WHERE user_id = $1',
-          [user.id]
+          [user.id.toString()]
         );
+
+        logger.info('Profile query result (by ID)', { 
+          rowCount: profileResult.rows.length,
+          userId: user.id.toString()
+        });
+
+        // If not found by numeric ID, try by username
+        if (profileResult.rows.length === 0) {
+          profileResult = await client.query(
+            'SELECT exporter_id as id FROM exporter_profiles WHERE user_id = $1',
+            [user.username]
+          );
+          
+          logger.info('Profile query result (by username)', { 
+            rowCount: profileResult.rows.length,
+            username: user.username
+          });
+        }
 
         if (profileResult.rows.length > 0) {
           exporterId = profileResult.rows[0].id;
+          
+          logger.info('Exporter profile found', { 
+            exporterId,
+            userId: user.id
+          });
 
           // Check if all pre-registration steps are complete
           const [profile, laboratory, taster, competence, license] = await Promise.all([

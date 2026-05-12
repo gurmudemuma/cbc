@@ -42,6 +42,8 @@ const hybridRouter = require('./routes/hybrid.routes');
 const paymentsRouter = require('./routes/payments.routes');
 const paymentsBankRouter = require('./routes/payments-bank.routes');
 const paymentsNbeRouter = require('./routes/payments-nbe.routes');
+// Blockchain routes
+const blockchainRouter = require('./routes/blockchain.routes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -133,6 +135,9 @@ app.use('/api/network-member', documentIssuanceRouter); // Alternative path for 
 app.use('/api/payments/bank', paymentsBankRouter); // Bank payment endpoints
 app.use('/api/payments/nbe', paymentsNbeRouter); // NBE FX approval endpoints
 app.use('/api/payments', paymentsRouter); // Exporter payment endpoints
+
+// Blockchain routes (for direct chaincode invocation)
+app.use('/', blockchainRouter); // Blockchain invoke/query endpoints at root level
 
 // Error handling middleware
 app.use((err, req, res, next) => {

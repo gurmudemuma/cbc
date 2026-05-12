@@ -840,7 +840,7 @@ router.get('/preregistration/licenses/pending', authenticateToken, requireRole('
  * Get all exporters (ECTA only)
  * Queries PostgreSQL for all exporter profiles
  */
-router.get('/preregistration/exporters', authenticateToken, requireRole('ecta', 'admin'), async (req, res) => {
+router.get('/preregistration/exporters', authenticateToken, requireRole('ecta', 'admin', 'bank'), async (req, res) => {
   try {
     // Query PostgreSQL for all exporter profiles with comprehensive qualification status
     const result = await postgresService.query(`

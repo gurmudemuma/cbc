@@ -35,21 +35,53 @@ export class ContractController {
   }
 
   /**
+   * Helper method to get exporter_id from user credentials
+   */
+  private async getExporterIdFromUser(userId: number, username?: string): Promise<string | null> {
+    const pool = getPool();
+    const exporterQuery = 'SELECT exporter_id FROM exporter_profiles WHERE user_id = $1';
+    const exporterResult = await pool.query(exporterQuery, [username || userId.toString()]);
+    
+    if (exporterResult.rows.length === 0) {
+      return null;
+    }
+    
+    return exporterResult.rows[0].exporter_id;
+  }
+
+  /**
    * POST /api/contracts/drafts
    * Create a new draft contract
    */
   createDraft = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const exporterId = (req as any).user?.id;
+      const userId = (req as any).user?.id;
+      const username = (req as any).user?.username;
 
-      if (!exporterId) {
+      if (!userId) {
         res.status(401).json({
           status: 'error',
           code: 'UNAUTHORIZED',
-          message: 'Exporter ID not found in authentication token',
+          message: 'User ID not found in authentication token',
         });
         return;
       }
+
+      // Look up the exporter_id from exporter_profiles using username (not numeric user_id)
+      const pool = getPool();
+      const exporterQuery = 'SELECT exporter_id FROM exporter_profiles WHERE user_id = $1';
+      const exporterResult = await pool.query(exporterQuery, [username || userId.toString()]);
+
+      if (exporterResult.rows.length === 0) {
+        res.status(404).json({
+          status: 'error',
+          code: 'NOT_FOUND',
+          message: 'Exporter profile not found for this user',
+        });
+        return;
+      }
+
+      const exporterId = exporterResult.rows[0].exporter_id;
 
       // Validate request body
       const validation = this.validationService.validateCreateRequest(req.body);
@@ -99,6 +131,7 @@ export class ContractController {
     try {
       const { draftId } = req.params;
       const userId = (req as any).user?.id;
+      const username = (req as any).user?.username;
       const userEmail = (req as any).user?.email;
 
       const draft = await this.contractService.getDraftById(draftId);
@@ -112,8 +145,11 @@ export class ContractController {
         return;
       }
 
+      // Look up exporter_id for authorization check
+      const exporterId = await this.getExporterIdFromUser(userId, username);
+
       // Authorization: exporter owns contract OR buyer email matches
-      if (draft.exporter_id !== userId && draft.buyer_email !== userEmail) {
+      if (draft.exporter_id !== exporterId && draft.buyer_email !== userEmail) {
         res.status(403).json({
           status: 'error',
           code: 'FORBIDDEN',
@@ -140,6 +176,7 @@ export class ContractController {
     try {
       const { draftId } = req.params;
       const userId = (req as any).user?.id;
+      const username = (req as any).user?.username;
 
       // Get existing draft
       const draft = await this.contractService.getDraftById(draftId);
@@ -153,8 +190,20 @@ export class ContractController {
         return;
       }
 
+      // Look up exporter_id for authorization check
+      const exporterId = await this.getExporterIdFromUser(userId, username);
+
+      if (!exporterId) {
+        res.status(404).json({
+          status: 'error',
+          code: 'NOT_FOUND',
+          message: 'Exporter profile not found for this user',
+        });
+        return;
+      }
+
       // Authorization: only exporter can edit
-      if (draft.exporter_id !== userId) {
+      if (draft.exporter_id !== exporterId) {
         res.status(403).json({
           status: 'error',
           code: 'FORBIDDEN',
@@ -221,6 +270,7 @@ export class ContractController {
     try {
       const { draftId } = req.params;
       const userId = (req as any).user?.id;
+      const username = (req as any).user?.username;
 
       // Get existing draft
       const draft = await this.contractService.getDraftById(draftId);
@@ -234,8 +284,20 @@ export class ContractController {
         return;
       }
 
+      // Look up exporter_id for authorization check
+      const exporterId = await this.getExporterIdFromUser(userId, username);
+
+      if (!exporterId) {
+        res.status(404).json({
+          status: 'error',
+          code: 'NOT_FOUND',
+          message: 'Exporter profile not found for this user',
+        });
+        return;
+      }
+
       // Authorization: only exporter can delete
-      if (draft.exporter_id !== userId) {
+      if (draft.exporter_id !== exporterId) {
         res.status(403).json({
           status: 'error',
           code: 'FORBIDDEN',
@@ -276,8 +338,27 @@ export class ContractController {
       const userId = (req as any).user?.id;
       const { status, page = '1', limit = '10' } = req.query;
 
-      // Authorization: only exporter can view their own contracts
-      if (exporterId !== userId) {
+      // Authorization: verify the user owns this exporter profile
+      // Look up the exporter_id for this user_id
+      const authQuery = `
+        SELECT exporter_id FROM exporter_profiles WHERE user_id = $1
+      `;
+      const pool = getPool();
+      const authResult = await pool.query(authQuery, [userId]);
+      
+      if (authResult.rows.length === 0) {
+        res.status(404).json({
+          status: 'error',
+          code: 'NOT_FOUND',
+          message: 'Exporter profile not found for this user',
+        });
+        return;
+      }
+      
+      const userExporterId = authResult.rows[0].exporter_id;
+      
+      // Check if the requested exporterId matches the user's exporterId
+      if (exporterId !== userExporterId) {
         res.status(403).json({
           status: 'error',
           code: 'FORBIDDEN',
@@ -321,6 +402,7 @@ export class ContractController {
     try {
       const { draftId } = req.params;
       const userId = (req as any).user?.id;
+      const username = (req as any).user?.username;
       const { confirmation } = req.body;
 
       if (!confirmation) {
@@ -331,6 +413,22 @@ export class ContractController {
         });
         return;
       }
+
+      // Look up the exporter_id from exporter_profiles using username
+      const pool = getPool();
+      const exporterQuery = 'SELECT exporter_id FROM exporter_profiles WHERE user_id = $1';
+      const exporterResult = await pool.query(exporterQuery, [username || userId.toString()]);
+
+      if (exporterResult.rows.length === 0) {
+        res.status(404).json({
+          status: 'error',
+          code: 'NOT_FOUND',
+          message: 'Exporter profile not found for this user',
+        });
+        return;
+      }
+
+      const exporterId = exporterResult.rows[0].exporter_id;
 
       // Get existing draft
       const draft = await this.contractService.getDraftById(draftId);
@@ -345,7 +443,7 @@ export class ContractController {
       }
 
       // Authorization: only exporter can send
-      if (draft.exporter_id !== userId) {
+      if (draft.exporter_id !== exporterId) {
         res.status(403).json({
           status: 'error',
           code: 'FORBIDDEN',
@@ -398,6 +496,7 @@ export class ContractController {
     try {
       const { draftId } = req.params;
       const userId = (req as any).user?.id;
+      const username = (req as any).user?.username;
       const { confirmation } = req.body;
 
       if (!confirmation) {
@@ -408,6 +507,22 @@ export class ContractController {
         });
         return;
       }
+
+      // Look up the exporter_id from exporter_profiles using username
+      const pool = getPool();
+      const exporterQuery = 'SELECT exporter_id FROM exporter_profiles WHERE user_id = $1';
+      const exporterResult = await pool.query(exporterQuery, [username || userId.toString()]);
+
+      if (exporterResult.rows.length === 0) {
+        res.status(404).json({
+          status: 'error',
+          code: 'NOT_FOUND',
+          message: 'Exporter profile not found for this user',
+        });
+        return;
+      }
+
+      const exporterId = exporterResult.rows[0].exporter_id;
 
       // Get existing draft
       const draft = await this.contractService.getDraftById(draftId);
@@ -422,7 +537,7 @@ export class ContractController {
       }
 
       // Authorization: only exporter can accept
-      if (draft.exporter_id !== userId) {
+      if (draft.exporter_id !== exporterId) {
         res.status(403).json({
           status: 'error',
           code: 'FORBIDDEN',
@@ -433,10 +548,12 @@ export class ContractController {
 
       // Verify status is COUNTERED
       if (draft.status !== ContractStatus.COUNTERED) {
+        logger.warn(`Cannot accept contract with status ${draft.status}`, { draftId, currentStatus: draft.status });
         res.status(409).json({
           status: 'error',
-          code: 'CONFLICT',
+          code: 'INVALID_STATUS',
           message: `Cannot accept counter-offer for contract with status ${draft.status}. Only COUNTERED contracts can be accepted.`,
+          currentStatus: draft.status,
         });
         return;
       }
@@ -474,6 +591,7 @@ export class ContractController {
     try {
       const { draftId } = req.params;
       const userId = (req as any).user?.id;
+      const username = (req as any).user?.username;
       const { reason } = req.body;
 
       if (!reason || typeof reason !== 'string' || reason.trim().length === 0) {
@@ -497,8 +615,20 @@ export class ContractController {
         return;
       }
 
+      // Look up exporter_id for authorization check
+      const exporterId = await this.getExporterIdFromUser(userId, username);
+
+      if (!exporterId) {
+        res.status(404).json({
+          status: 'error',
+          code: 'NOT_FOUND',
+          message: 'Exporter profile not found for this user',
+        });
+        return;
+      }
+
       // Authorization: only exporter can reject
-      if (draft.exporter_id !== userId) {
+      if (draft.exporter_id !== exporterId) {
         res.status(403).json({
           status: 'error',
           code: 'FORBIDDEN',
@@ -558,6 +688,7 @@ export class ContractController {
     try {
       const { draftId } = req.params;
       const userId = (req as any).user?.id;
+      const username = (req as any).user?.username;
       const { modifications } = req.body;
 
       if (!modifications || typeof modifications !== 'object' || Object.keys(modifications).length === 0) {
@@ -581,8 +712,20 @@ export class ContractController {
         return;
       }
 
+      // Look up exporter_id for authorization check
+      const exporterId = await this.getExporterIdFromUser(userId, username);
+
+      if (!exporterId) {
+        res.status(404).json({
+          status: 'error',
+          code: 'NOT_FOUND',
+          message: 'Exporter profile not found for this user',
+        });
+        return;
+      }
+
       // Authorization: only exporter can submit counter-offer
-      if (draft.exporter_id !== userId) {
+      if (draft.exporter_id !== exporterId) {
         res.status(403).json({
           status: 'error',
           code: 'FORBIDDEN',
@@ -666,6 +809,7 @@ export class ContractController {
     try {
       const { draftId } = req.params;
       const userId = (req as any).user?.id;
+      const username = (req as any).user?.username;
       const { confirmation } = req.body;
 
       if (!confirmation) {
@@ -689,8 +833,20 @@ export class ContractController {
         return;
       }
 
+      // Look up exporter_id for authorization check
+      const exporterId = await this.getExporterIdFromUser(userId, username);
+
+      if (!exporterId) {
+        res.status(404).json({
+          status: 'error',
+          code: 'NOT_FOUND',
+          message: 'Exporter profile not found for this user',
+        });
+        return;
+      }
+
       // Authorization: only exporter can finalize
-      if (draft.exporter_id !== userId) {
+      if (draft.exporter_id !== exporterId) {
         res.status(403).json({
           status: 'error',
           code: 'FORBIDDEN',
@@ -774,8 +930,16 @@ export class ContractController {
         logger.error(`Error triggering ECTA registration for ${draftId}`, { error });
       });
 
-      // Send notification to buyer
-      await this.notificationService.notifyContractFinalized(finalizedContract, blockchainTxHash);
+      // Send notification to buyer (skip if fails due to schema issues)
+      try {
+        await this.notificationService.notifyContractFinalized(
+          finalizedContract,
+          draft.buyer_email,
+          blockchainTxHash
+        );
+      } catch (notifError) {
+        logger.warn(`Failed to send notification (non-critical): ${notifError}`);
+      }
 
       logger.info(`Contract finalized: ${draftId} by exporter ${userId}, tx_hash: ${blockchainTxHash}`);
 

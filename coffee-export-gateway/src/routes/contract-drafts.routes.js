@@ -16,7 +16,7 @@ async function logNegotiationActivity(draftId, actorId, actorType, actionType, m
 }
 
 // Create draft
-router.post('/', authenticateToken, requireRole('exporter'), async (req, res) => {
+router.post('/', authenticateToken, requireRole('exporter', 'ecta', 'bank'), async (req, res) => {
   try {
     const exporterUsername = req.user.id; // username from JWT
     const { buyerId, coffeeType, originRegion, quantity, unitPrice, currency, paymentTerms, paymentMethod, incoterms, deliveryDate, portOfLoading, portOfDischarge, governingLaw, arbitrationLocation, arbitrationRules, contractLanguage, forceMajeureClause, qualityGrade, specialConditions, certificationsRequired } = req.body;
@@ -41,17 +41,32 @@ router.post('/', authenticateToken, requireRole('exporter'), async (req, res) =>
       return res.status(404).json({ error: 'Buyer not found in registry. Please select a valid buyer.' });
     }
     
-    // Get exporter UUID from username
-    const exporterResult = await postgresService.query(
-      'SELECT exporter_id FROM exporter_profiles WHERE user_id = $1 LIMIT 1',
-      [exporterUsername]
-    );
-    
-    if (exporterResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Exporter profile not found' });
+    // Get exporter UUID from username (for exporters) or request body (for ECTA/admin)
+    let exporterUUID;
+    if (req.user.role === 'exporter') {
+      const exporterResult = await postgresService.query(
+        'SELECT exporter_id FROM exporter_profiles WHERE user_id = $1 LIMIT 1',
+        [exporterUsername]
+      );
+      if (exporterResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Exporter profile not found' });
+      }
+      exporterUUID = exporterResult.rows[0].exporter_id;
+    } else {
+      // For ECTA/admin roles, require exporterId in request body
+      exporterUUID = req.body.exporterId;
+      if (!exporterUUID) {
+        return res.status(400).json({ error: 'exporterId is required for non-exporter roles' });
+      }
+      // Validate the exporter exists
+      const exporterCheck = await postgresService.query(
+        'SELECT exporter_id FROM exporter_profiles WHERE exporter_id = $1 LIMIT 1',
+        [exporterUUID]
+      );
+      if (exporterCheck.rows.length === 0) {
+        return res.status(404).json({ error: 'Specified exporter not found' });
+      }
     }
-    
-    const exporterUUID = exporterResult.rows[0].exporter_id;
     const totalValue = quantity * unitPrice;
     const contractNumber = `DRAFT-${Date.now()}`;
     

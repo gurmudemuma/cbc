@@ -230,20 +230,23 @@ class CoffeeExportContract extends Contract {
 
         const user = JSON.parse(userData.toString());
         
+        // Get timestamp once for deterministic behavior across all peers
+        const timestamp = this._getTxTimestamp(ctx);
+        
         // Update status
         user.status = statusData.status; // approved, rejected, suspended, active
-        user.updatedAt = this._getTxTimestamp(ctx);
+        user.updatedAt = timestamp;
         
         if (statusData.status === 'approved') {
-            user.approvedAt = this._getTxTimestamp(ctx);
+            user.approvedAt = timestamp;
             user.approvedBy = statusData.approvedBy || 'ECTA';
             user.approvalComments = statusData.comments || '';
         } else if (statusData.status === 'rejected') {
-            user.rejectedAt = this._getTxTimestamp(ctx);
+            user.rejectedAt = timestamp;
             user.rejectedBy = statusData.rejectedBy || 'ECTA';
             user.rejectionReason = statusData.reason || '';
         } else if (statusData.status === 'suspended') {
-            user.suspendedAt = this._getTxTimestamp(ctx);
+            user.suspendedAt = timestamp;
             user.suspendedBy = statusData.suspendedBy || 'ECTA';
             user.suspensionReason = statusData.reason || '';
         }
@@ -256,7 +259,7 @@ class CoffeeExportContract extends Contract {
             if (exporterData && exporterData.length > 0) {
                 const exporter = JSON.parse(exporterData.toString());
                 exporter.status = statusData.status;
-                exporter.updatedAt = this._getTxTimestamp(ctx);
+                exporter.updatedAt = timestamp;
                 await ctx.stub.putState(username, Buffer.from(JSON.stringify(exporter)));
             }
         }
@@ -264,7 +267,7 @@ class CoffeeExportContract extends Contract {
         ctx.stub.setEvent('UserStatusUpdated', Buffer.from(JSON.stringify({
             username,
             status: statusData.status,
-            timestamp: this._getTxTimestamp(ctx)
+            timestamp: timestamp
         })));
 
         return JSON.stringify({ success: true, username, status: statusData.status });
@@ -5091,6 +5094,20 @@ ft ID
             draftId,
             referenceNumber
         });
+    }
+
+    /**
+     * Get sales contract by ECTA reference number
+     * Used by network members to verify contract details
+     */
+    async GetSalesContractByReference(ctx, referenceNumber) {
+        const contractData = await ctx.stub.getState(`SC_${referenceNumber}`);
+        
+        if (!contractData || contractData.length === 0) {
+            throw new Error(`Sales contract not found with reference number: ${referenceNumber}`);
+        }
+
+        return contractData.toString();
     }
 }
 

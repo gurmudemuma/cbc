@@ -87,7 +87,7 @@ const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({
     };
 
     const formatStatus = (status: string) => {
-        return status.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+        return status ? status.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()) : 'UNKNOWN';
     };
 
     const formatTimestamp = (timestamp: string) => {

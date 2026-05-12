@@ -660,15 +660,14 @@ export class PreRegistrationController {
   ): Promise<void> => {
     try {
       // Join with exporter_profiles to get exporter name and details
-      // Use COALESCE to provide fallback values for location data
       const query = `
         SELECT 
           cl.*,
           ep.business_name as exporter_name,
           ep.tin as exporter_tin,
-          COALESCE(cl.city, ep.city, '') as city,
-          COALESCE(cl.region, ep.region, '') as region,
-          COALESCE(cl.address, ep.office_address, '') as address
+          ep.city as city,
+          ep.region as region,
+          ep.office_address as office_address
         FROM coffee_laboratories cl
         LEFT JOIN exporter_profiles ep ON cl.exporter_id = ep.exporter_id
         WHERE cl.status = 'PENDING'
@@ -685,7 +684,7 @@ export class PreRegistrationController {
         laboratoryName: row.laboratory_name,
         exporterName: row.exporter_name || 'Unknown',
         exporterTin: row.exporter_tin || '',
-        address: row.address || '',
+        address: row.address || row.office_address || '',
         city: row.city || '',
         region: row.region || '',
         hasRoastingFacility: row.has_roasting_facility,

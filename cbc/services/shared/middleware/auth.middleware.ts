@@ -19,6 +19,7 @@ export interface AuthenticatedRequest extends Request {
     mspId: string;
     role: string;
     permissions: string[];
+    exporterId?: string;  // Add exporterId for exporter portal
   };
 }
 
@@ -30,6 +31,7 @@ export interface JWTPayload {
   mspId?: string;
   role: string;
   permissions?: string[];
+  exporterId?: string;  // Add exporterId for exporter portal
   iat: number;
   exp: number;
   iss?: string;
@@ -72,6 +74,7 @@ export const authMiddleware = (req: AuthenticatedRequest, res: Response, next: N
       mspId: payload.mspId || 'DEFAULT',
       role: payload.role,
       permissions: payload.permissions || [],
+      exporterId: payload.exporterId,  // Include exporterId from JWT
     };
 
     return next();

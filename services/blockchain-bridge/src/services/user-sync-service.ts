@@ -247,14 +247,9 @@ export class UserSyncService {
         role: userData.role
       });
 
-      // 4. Update user status on blockchain if approved
-      if (userData.status === 'approved') {
-        await FabricClient.updateUserStatus(userData.username, {
-          status: 'approved',
-          approvedBy: 'system',
-          comments: 'Test user initialization'
-        });
-      }
+      // Note: RegisterUser already sets the status to 'approved' for non-exporter roles
+      // and performs auto-validation for exporters. No need to call UpdateUserStatus
+      // separately as it causes non-deterministic timestamp issues across peers.
 
       logger.info(`Created user ${userData.username} on Blockchain`);
     } catch (error: any) {
@@ -307,13 +302,8 @@ export class UserSyncService {
         role: user.role
       });
 
-      if (user.status === 'approved') {
-        await FabricClient.updateUserStatus(user.username, {
-          status: 'approved',
-          approvedBy: 'system',
-          comments: 'Synced from PostgreSQL'
-        });
-      }
+      // Note: RegisterUser already handles status setting based on role and validation
+      // No need to call UpdateUserStatus separately to avoid timestamp issues
 
       logger.info(`Synced user ${username} to blockchain`);
     } catch (error) {

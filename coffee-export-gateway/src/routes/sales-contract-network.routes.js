@@ -136,7 +136,7 @@ router.get('/ecta/contracts/registered',
           ecs.submission_id,
           ecs.draft_id,
           ecs.ecta_reference_number,
-          ecs.lc_number,
+          cd.lc_number,
           ecs.submission_status,
           ecs.submitted_at,
           ecs.registered_at,
@@ -768,9 +768,13 @@ router.get('/ecta/contracts/verify/:referenceNumber',
                 ep.business_name as exporter_name, 
                 ep.registration_number as exporter_registration,
                 ep.tin as exporter_tin,
+                ep.email as exporter_email,
+                ep.phone as exporter_phone,
                 br.company_name as buyer_name, 
                 br.country as buyer_country,
-                br.registration_number as buyer_registration
+                br.registration_number as buyer_registration,
+                br.email as buyer_email,
+                br.phone as buyer_phone
          FROM contract_drafts cd
          JOIN exporter_profiles ep ON cd.exporter_id = ep.exporter_id
          JOIN buyer_registry br ON cd.buyer_id = br.buyer_id
@@ -817,7 +821,9 @@ router.get('/ecta/contracts/verify/:referenceNumber',
             id: contract.exporter_id,
             name: contract.exporter_name,
             registration: contract.exporter_registration,
-            tin: contract.exporter_tin
+            tin: contract.exporter_tin,
+            email: contract.exporter_email,
+            phone: contract.exporter_phone
           },
           
           // Buyer details
@@ -825,7 +831,9 @@ router.get('/ecta/contracts/verify/:referenceNumber',
             id: contract.buyer_id,
             name: contract.buyer_name,
             country: contract.buyer_country,
-            registration: contract.buyer_registration
+            registration: contract.buyer_registration,
+            email: contract.buyer_email,
+            phone: contract.buyer_phone
           },
           
           // Contract details

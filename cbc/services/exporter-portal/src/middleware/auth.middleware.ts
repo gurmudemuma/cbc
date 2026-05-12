@@ -49,7 +49,7 @@ export const authenticateToken = (
     });
 
     // Verify user is an exporter or admin (case-insensitive)
-    const allowedRoles = ['exporter', 'admin'];
+    const allowedRoles = ['exporter', 'admin', 'agency_user', 'agency_admin', 'ecta', 'moa', 'moh', 'ecx', 'customs', 'nbe', 'bank', 'cbe'];
     const userRole = (decoded.role || '').toLowerCase();
     if (!allowedRoles.includes(userRole)) {
       logger.warn('Role not allowed', { role: decoded.role, url: req.url });

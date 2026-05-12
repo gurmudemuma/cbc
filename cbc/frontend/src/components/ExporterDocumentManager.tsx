@@ -37,7 +37,7 @@ import {
     Warning,
     Info,
 } from '@mui/icons-material';
-import { documentService } from '../services/document.service';
+import documentService from '../services/document.service';
 
 interface DocumentStatus {
     networkMemberCode: string;
@@ -265,7 +265,7 @@ const ExporterDocumentManager: React.FC<ExporterDocumentManagerProps> = ({ contr
                             </Typography>
                             <Box display="flex" gap={1} alignItems="center" flexWrap="wrap">
                                 <Chip
-                                    label={doc.status.replace('_', ' ')}
+                                    label={doc.status ? doc.status.replace('_', ' ') : 'UNKNOWN'}
                                     size="small"
                                     color={getStatusColor(doc.status)}
                                 />
@@ -622,7 +622,7 @@ const ExporterDocumentManager: React.FC<ExporterDocumentManagerProps> = ({ contr
                                                         </Typography>
                                                     </Box>
                                                     <Chip 
-                                                        label={request.status.replace('_', ' ')} 
+                                                        label={request.status ? request.status.replace('_', ' ') : 'UNKNOWN'} 
                                                         color={
                                                             request.status === 'COMPLETED' ? 'success' :
                                                             request.status === 'REJECTED' ? 'error' :

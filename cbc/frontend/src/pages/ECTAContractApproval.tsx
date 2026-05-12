@@ -125,7 +125,7 @@ const ECTAContractApproval = ({ user, org }: ECTAContractApprovalProps): JSX.Ele
                 <TableCell>{exp.coffeeType}</TableCell>
                 <TableCell>{exp.destinationCountry}</TableCell>
                 <TableCell>${exp.estimatedValue?.toLocaleString()}</TableCell>
-                <TableCell><Chip label={exp.status.replace(/_/g, ' ')} color={exp.status === 'ECTA_CONTRACT_APPROVED' ? 'success' : exp.status === 'ECTA_CONTRACT_REJECTED' ? 'error' : 'warning'} size="small" /></TableCell>
+                <TableCell><Chip label={exp.status ? exp.status.replace(/_/g, ' ') : 'UNKNOWN'} color={exp.status === 'ECTA_CONTRACT_APPROVED' ? 'success' : exp.status === 'ECTA_CONTRACT_REJECTED' ? 'error' : 'warning'} size="small" /></TableCell>
                 <TableCell>
                   {exp.status === 'ECTA_CONTRACT_PENDING' && (
                     <>

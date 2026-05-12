@@ -27,6 +27,7 @@ interface Draft {
 
 interface SalesContractNegotiationFormProps {
   draft: Draft;
+  onSend?: () => void;
   onAccept: () => void;
   onReject: (reason: string) => void;
   onCounter: (updates: any, notes: string) => void;
@@ -35,6 +36,7 @@ interface SalesContractNegotiationFormProps {
 
 const SalesContractNegotiationForm = ({
   draft,
+  onSend,
   onAccept,
   onReject,
   onCounter,
@@ -302,15 +304,20 @@ const SalesContractNegotiationForm = ({
         <Divider />
         <CardActions sx={{ justifyContent: 'flex-end', p: 2 }}>
           <Stack direction="row" spacing={1}>
-            <Button
-              variant="outlined"
-              color="error"
-              startIcon={<X size={18} />}
-              onClick={() => setShowRejectDialog(true)}
-              disabled={loading}
-            >
-              Reject
-            </Button>
+            {/* Reject button - available for COUNTERED status (buyer's counter-offer) */}
+            {draft.status === 'COUNTERED' && (
+              <Button
+                variant="outlined"
+                color="error"
+                startIcon={<X size={18} />}
+                onClick={() => setShowRejectDialog(true)}
+                disabled={loading}
+              >
+                Reject
+              </Button>
+            )}
+            
+            {/* Counter-Offer button - available for COUNTERED status */}
             {draft.status === 'COUNTERED' && (
               <Button
                 variant="outlined"
@@ -322,15 +329,32 @@ const SalesContractNegotiationForm = ({
                 Counter-Offer
               </Button>
             )}
-            <Button
-              variant="contained"
-              color="success"
-              startIcon={loading ? <CircularProgress size={18} color="inherit" /> : <CheckCircle size={18} />}
-              onClick={onAccept}
-              disabled={loading}
-            >
-              {loading ? 'Processing...' : 'Accept'}
-            </Button>
+            
+            {/* Accept button - available for COUNTERED status */}
+            {draft.status === 'COUNTERED' && (
+              <Button
+                variant="contained"
+                color="success"
+                startIcon={loading ? <CircularProgress size={18} color="inherit" /> : <CheckCircle size={18} />}
+                onClick={onAccept}
+                disabled={loading}
+              >
+                {loading ? 'Processing...' : 'Accept'}
+              </Button>
+            )}
+            
+            {/* Send to Buyer button - available for DRAFT status */}
+            {draft.status === 'DRAFT' && onSend && (
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={loading ? <CircularProgress size={18} color="inherit" /> : <Send size={18} />}
+                onClick={onSend}
+                disabled={loading}
+              >
+                {loading ? 'Sending...' : 'Send to Buyer'}
+              </Button>
+            )}
           </Stack>
         </CardActions>
       </Card>

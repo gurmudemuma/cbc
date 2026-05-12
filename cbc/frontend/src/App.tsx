@@ -82,6 +82,7 @@ import BankPaymentReview from './pages/BankPaymentReview';
 import PaymentManagement from './pages/PaymentManagement';
 import PaymentDashboard from './pages/PaymentDashboard';
 import NBEFXApproval from './pages/NBEFXApproval';
+import DocumentIssuanceDashboard from './pages/DocumentIssuanceDashboard';
 
 // Reports
 import Reports from './pages/Reports';
@@ -93,6 +94,9 @@ import ExportDashboard from './pages/ExportDashboard';
 import HelpSupport from './pages/HelpSupport';
 import ExporterDocumentManager from './components/ExporterDocumentManager';
 import Marketplace from './pages/Marketplace';
+import BuyerSelection from './components/BuyerSelection';
+import LCManagement from './pages/LCManagement';
+import BankLCManagement from './pages/BankLCManagement';
 
 // Consortium Member Pages
 import BankingOperations from './pages/BankingOperations';
@@ -259,7 +263,8 @@ function App(): JSX.Element {
       orgLower === 'banker' ||
       orgLower === 'banker-001' ||
       orgLower === 'national-bank' ||
-      orgLower === 'nationalbank'
+      orgLower === 'nationalbank' ||
+      orgLower === 'nbe'
     ) {
       return '/network/agency-dashboard';
     }
@@ -280,8 +285,53 @@ function App(): JSX.Element {
     }
 
     // Custom Authorities - Network approval dashboard (consortium member)
-    if (orgLower === 'custom-authorities') {
+    if (orgLower === 'custom-authorities' || orgLower === 'customs') {
       return '/network/agency-dashboard';
+    }
+
+    // Document Issuance Agencies - Route to Document Issuance Dashboard
+    if (orgLower === 'moa' || orgLower === 'ministry-of-agriculture') {
+      return '/documents/issuance';
+    }
+
+    if (orgLower === 'moh' || orgLower === 'ministry-of-health') {
+      return '/documents/issuance';
+    }
+
+    if (orgLower === 'mot' || orgLower === 'ministry-of-trade') {
+      return '/documents/issuance';
+    }
+
+    if (orgLower === 'eic' || orgLower === 'ethiopian-investment-commission') {
+      return '/documents/issuance';
+    }
+
+    if (orgLower === 'epa' || orgLower === 'environment-protection-authority') {
+      return '/documents/issuance';
+    }
+
+    if (orgLower === 'mofed' || orgLower === 'ministry-of-finance') {
+      return '/documents/issuance';
+    }
+
+    if (orgLower === 'moti' || orgLower === 'ministry-of-transport') {
+      return '/documents/issuance';
+    }
+
+    if (orgLower === 'midroc' || orgLower === 'ministry-of-industry') {
+      return '/documents/issuance';
+    }
+
+    if (orgLower === 'qsae' || orgLower === 'quality-standards-authority') {
+      return '/documents/issuance';
+    }
+
+    if (orgLower === 'fdre-customs' || orgLower === 'federal-customs') {
+      return '/documents/issuance';
+    }
+
+    if (orgLower === 'trade-remedy' || orgLower === 'trade-remedy-commission') {
+      return '/documents/issuance';
     }
 
     // Agency Users - Direct to Agency Dashboard
@@ -342,11 +392,30 @@ function App(): JSX.Element {
           { path: 'fx-rates', element: <FXRates user={user} org={org} /> },
           { path: 'banking', element: <BankingOperations user={user} org={org} /> },
           { path: 'banking/documents', element: <BankDocumentVerification user={user} org={org} /> },
+          { path: 'banking/lc', element: <BankLCManagement /> },
+          { path: 'banking/lc/create', element: <BankLCManagement /> },
           { path: 'banking/financing', element: <BankingOperations user={user} org={org} /> },
           { path: 'banking/compliance', element: <BankingOperations user={user} org={org} /> },
           { path: 'banking/reports', element: <BankingOperations user={user} org={org} /> },
           { path: 'banking/payments', element: <BankPaymentReview /> },
           { path: 'banking/payment-review', element: <BankPaymentReview /> },
+
+          // Document Issuance Routes (All Agencies)
+          { path: 'documents/issuance', element: <DocumentIssuanceDashboard user={user} org={org} /> },
+          { path: 'documents/issue', element: <DocumentIssuanceDashboard user={user} org={org} /> },
+          { path: 'certificates/issue', element: <DocumentIssuanceDashboard user={user} org={org} /> },
+          { path: 'phytosanitary/issue', element: <DocumentIssuanceDashboard user={user} org={org} /> },
+          { path: 'health/certificates', element: <DocumentIssuanceDashboard user={user} org={org} /> },
+          { path: 'export/licenses', element: <DocumentIssuanceDashboard user={user} org={org} /> },
+          { path: 'payment/certificates', element: <DocumentIssuanceDashboard user={user} org={org} /> },
+          { path: 'fx/certificates', element: <DocumentIssuanceDashboard user={user} org={org} /> },
+          { path: 'quality/certificates', element: <DocumentIssuanceDashboard user={user} org={org} /> },
+          { path: 'customs/certificates', element: <DocumentIssuanceDashboard user={user} org={org} /> },
+          { path: 'trade/licenses', element: <DocumentIssuanceDashboard user={user} org={org} /> },
+          { path: 'investment/certificates', element: <DocumentIssuanceDashboard user={user} org={org} /> },
+          { path: 'environmental/certificates', element: <DocumentIssuanceDashboard user={user} org={org} /> },
+          { path: 'standards/certificates', element: <DocumentIssuanceDashboard user={user} org={org} /> },
+          { path: 'financial/certificates', element: <DocumentIssuanceDashboard user={user} org={org} /> },
 
           // Document Verification Workflow Routes (Phase 2)
           { path: 'documents/submit-verification', element: <DocumentSubmissionForVerification /> },
@@ -400,6 +469,11 @@ function App(): JSX.Element {
           { path: 'documents', element: <ExporterDocumentManager /> },
           { path: 'marketplace', element: <Marketplace /> },
           { path: 'marketplace/opportunities', element: <Marketplace /> },
+          { path: 'buyers', element: <BuyerSelection /> },
+          { path: 'lc', element: <LCManagement /> },
+          { path: 'lc/pending', element: <LCManagement /> },
+          { path: 'lc/accepted', element: <LCManagement /> },
+          { path: 'lc/active', element: <LCManagement /> },
           { path: 'applications', element: <ApplicationTracking user={user} org={org} /> },
           { path: 'exports/new', element: <ExportDashboard user={user} org={org} /> },
           { path: 'exports/status', element: <ExportDashboard user={user} org={org} /> },

@@ -42,28 +42,30 @@ const SalesContractDashboard = () => {
 
   const API_BASE = '/api';
   const token = localStorage.getItem('token');
-  const userStr = localStorage.getItem('user');
-  const user = userStr ? JSON.parse(userStr) : null;
-  const userId = user?.id;
 
   // Fetch drafts
   useEffect(() => {
-    if (userId && token) {
+    if (token) {
       fetchDrafts();
     }
-  }, [userId, token]);
+  }, [token]);
 
   const fetchDrafts = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE}/contracts/drafts/exporter/${userId}`, {
+      const response = await fetch(`${API_BASE}/contracts/drafts`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.ok) {
         const data = await response.json();
-        setDrafts(data.drafts || []);
+        setDrafts(data.contracts || data.drafts || []);
+      } else {
+        const errorData = await response.json();
+        console.error('Failed to fetch contracts:', errorData);
+        setError(errorData.message || 'Failed to fetch drafts');
       }
     } catch (err) {
+      console.error('Error fetching drafts:', err);
       setError('Failed to fetch drafts');
     } finally {
       setLoading(false);
@@ -144,6 +146,36 @@ const SalesContractDashboard = () => {
     }
   };
 
+  const handleSend = async () => {
+    if (!selectedDraft) return;
+    try {
+      setLoading(true);
+      const response = await fetch(`${API_BASE}/contracts/drafts/${selectedDraft.draft_id}/send`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ confirmation: true }),
+      });
+
+      if (response.ok) {
+        setSuccess('Contract sent to buyer successfully');
+        fetchDrafts();
+        setSelectedDraft(null);
+        setCurrentPage(1);
+        setTimeout(() => setSuccess(''), 3000);
+      } else {
+        const data = await response.json();
+        setError(data.message || data.error || 'Failed to send contract');
+      }
+    } catch (err) {
+      setError('Error sending contract');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleAccept = async () => {
     if (!selectedDraft) return;
     try {
@@ -154,7 +186,7 @@ const SalesContractDashboard = () => {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: '{}',
+        body: JSON.stringify({ confirmation: true }),
       });
 
       if (response.ok) {
@@ -165,7 +197,7 @@ const SalesContractDashboard = () => {
         setTimeout(() => setSuccess(''), 3000);
       } else {
         const data = await response.json();
-        setError(data.error || 'Failed to accept contract');
+        setError(data.message || data.error || 'Failed to accept contract');
       }
     } catch (err) {
       setError('Error accepting contract');
@@ -244,19 +276,23 @@ const SalesContractDashboard = () => {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: '{}',
+        body: JSON.stringify({ confirmation: true }),
       });
 
       if (response.ok) {
         const data = await response.json();
-        setSuccess(`Contract finalized! Blockchain ID: ${data.blockchainContractId}`);
+        setSuccess(`Contract finalized! Redirecting to ECTA registration...`);
         fetchDrafts();
         setSelectedDraft(null);
         setCurrentPage(1);
-        setTimeout(() => setSuccess(''), 5000);
+        
+        // Redirect to ECTA Sales Contract Registration page after 2 seconds
+        setTimeout(() => {
+          window.location.href = '/ecta/sales-contracts/registration';
+        }, 2000);
       } else {
         const data = await response.json();
-        setError(data.error || 'Failed to finalize contract');
+        setError(data.message || data.error || 'Failed to finalize contract');
       }
     } catch (err) {
       setError('Error finalizing contract');
@@ -733,6 +769,7 @@ const SalesContractDashboard = () => {
           <Grid item xs={12}>
             <SalesContractNegotiationForm
               draft={selectedDraft}
+              onSend={handleSend}
               onAccept={handleAccept}
               onReject={handleReject}
               onCounter={handleCounter}

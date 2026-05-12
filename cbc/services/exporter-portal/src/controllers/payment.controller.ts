@@ -26,7 +26,7 @@ export const initiatePayment = async (req: Request, res: Response) => {
 
     await client.query('BEGIN');
 
-    // Get export details and documents
+    // Get export details
     const exportResult = await client.query(
       `SELECT e.*, ep.business_name as exporter_name 
        FROM exports e
@@ -41,6 +41,108 @@ export const initiatePayment = async (req: Request, res: Response) => {
     }
 
     const exportData = exportResult.rows[0];
+
+    // CRITICAL: Check if all required documents have been collected from network members
+    const docRequestCheck = await client.query(
+      `SELECT 
+        drb.batch_id,
+        drb.total_documents,
+        drb.completed_documents,
+        drb.status as batch_status,
+        COUNT(dr.request_id) as total_requests,
+        COUNT(dr.request_id) FILTER (WHERE dr.request_status = 'COMPLETED') as completed_requests,
+        COUNT(dr.request_id) FILTER (WHERE dr.request_status IN ('PENDING', 'ACKNOWLEDGED', 'IN_PROGRESS')) as pending_requests
+      FROM document_request_batches drb
+      LEFT JOIN document_requests dr ON drb.batch_id = dr.batch_id
+      WHERE drb.contract_reference = $1
+      GROUP BY drb.batch_id, drb.total_documents, drb.completed_documents, drb.status`,
+      [contractId]
+    );
+
+    // Verify all documents are collected
+    if (docRequestCheck.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ 
+        error: 'Document collection not started',
+        message: 'Exporter must first request and collect all required documents from network members (ECTA, ECX, Customs, Shipping, etc.) before bank can initiate payment.'
+      });
+    }
+
+    const docStatus = docRequestCheck.rows[0];
+    if (docStatus.batch_status !== 'COMPLETED') {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ 
+        error: 'Document collection incomplete',
+        message: `Cannot initiate payment. Document collection status: ${docStatus.batch_status}. Completed: ${docStatus.completed_requests}/${docStatus.total_requests} requests. Exporter must collect all required documents from network members before payment can be initiated.`,
+        details: {
+          batch_status: docStatus.batch_status,
+          total_requests: docStatus.total_requests,
+          completed_requests: docStatus.completed_requests,
+          pending_requests: docStatus.pending_requests
+        }
+      });
+    }
+
+    // Get all issued documents for this export
+    const issuedDocsResult = await client.query(
+      `SELECT id.*, dr.issuer_agency, dr.document_type as requested_type
+       FROM issued_documents id
+       INNER JOIN document_requests dr ON id.request_id = dr.request_id
+       WHERE dr.batch_id = $1 AND id.status = 'ACTIVE'
+       ORDER BY id.issued_at DESC`,
+      [docStatus.batch_id]
+    );
+
+    if (issuedDocsResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ 
+        error: 'No documents collected',
+        message: 'No issued documents found from network members. Exporter must collect documents before payment initiation.'
+      });
+    }
+
+    // CRITICAL: Verify ALL required network members have issued documents
+    const requiredAgencies = ['ECTA', 'ECX', 'CUSTOMS', 'SHIPPING', 'BANK'];
+    const issuedAgencies = [...new Set(issuedDocsResult.rows.map(doc => doc.issuer_agency))];
+    const missingAgencies = requiredAgencies.filter(agency => !issuedAgencies.includes(agency));
+
+    if (missingAgencies.length > 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ 
+        error: 'Missing required documents from network members',
+        message: `Cannot initiate payment. Missing documents from: ${missingAgencies.join(', ')}. All network members must issue their documents before payment can be initiated.`,
+        details: {
+          required_agencies: requiredAgencies,
+          issued_agencies: issuedAgencies,
+          missing_agencies: missingAgencies,
+          documents_collected: issuedDocsResult.rows.length
+        }
+      });
+    }
+
+    // Verify document types are complete
+    const requiredDocTypes = [
+      'EXPORT_LICENSE',
+      'QUALITY_CERTIFICATE', 
+      'CUSTOMS_CLEARANCE',
+      'SHIPPING_BOOKING',
+      'BANK_GUARANTEE'
+    ];
+    const issuedDocTypes = [...new Set(issuedDocsResult.rows.map(doc => doc.document_type))];
+    const missingDocTypes = requiredDocTypes.filter(type => !issuedDocTypes.includes(type));
+
+    if (missingDocTypes.length > 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ 
+        error: 'Missing required document types',
+        message: `Cannot initiate payment. Missing document types: ${missingDocTypes.join(', ')}. All required documents must be collected before payment initiation.`,
+        details: {
+          required_document_types: requiredDocTypes,
+          issued_document_types: issuedDocTypes,
+          missing_document_types: missingDocTypes
+        }
+      });
+    }
 
     // Create payment record
     const paymentId = uuidv4();
@@ -60,14 +162,8 @@ export const initiatePayment = async (req: Request, res: Response) => {
       ]
     );
 
-    // Get export documents to attach to payment
-    const docsResult = await client.query(
-      `SELECT * FROM documents WHERE entity_id = $1 AND entity_type = 'EXPORT'`,
-      [exportId]
-    );
-
-    // Copy export documents to payment_documents
-    for (const doc of docsResult.rows) {
+    // Attach all collected documents from network members to payment
+    for (const doc of issuedDocsResult.rows) {
       await client.query(
         `INSERT INTO payment_documents (
           payment_id, document_type, document_name, document_url, 
@@ -76,10 +172,10 @@ export const initiatePayment = async (req: Request, res: Response) => {
         [
           paymentId,
           doc.document_type,
-          doc.document_name,
+          doc.document_number,
           doc.document_url,
           doc.document_hash,
-          user.email || user.username,
+          `${doc.issuer_agency} (${doc.issued_by})`,
           'PENDING'
         ]
       );
@@ -94,7 +190,14 @@ export const initiatePayment = async (req: Request, res: Response) => {
         'PAYMENT_INITIATED',
         'INITIATED',
         user.email || user.username,
-        JSON.stringify({ export_id: exportId, amount, currency, payment_method: paymentMethod })
+        JSON.stringify({ 
+          export_id: exportId, 
+          amount, 
+          currency, 
+          payment_method: paymentMethod,
+          documents_collected: issuedDocsResult.rows.length,
+          batch_id: docStatus.batch_id
+        })
       ]
     );
 
@@ -102,8 +205,9 @@ export const initiatePayment = async (req: Request, res: Response) => {
 
     res.status(201).json({
       success: true,
-      message: 'Payment initiated successfully',
-      payment: paymentResult.rows[0]
+      message: `Payment initiated successfully with ${issuedDocsResult.rows.length} documents collected from network members`,
+      payment: paymentResult.rows[0],
+      documents_collected: issuedDocsResult.rows.length
     });
   } catch (error: any) {
     await client.query('ROLLBACK');
@@ -281,15 +385,65 @@ export const approvePayment = async (req: Request, res: Response) => {
   const client = await pool.connect();
   try {
     const { paymentId } = req.params;
-    const { bankReference, notes } = req.body;
+    const { bankReference, notes, contractVerified } = req.body;
     const user = (req as any).user;
 
     await client.query('BEGIN');
 
+    // Get payment details with contract information
+    const paymentInfo = await client.query(
+      `SELECT p.*, cd.total_value, cd.quantity, cd.coffee_type, cd.payment_terms, cd.delivery_terms
+       FROM payments p
+       LEFT JOIN contract_drafts cd ON p.contract_id = cd.draft_id
+       WHERE p.payment_id = $1`,
+      [paymentId]
+    );
+
+    if (paymentInfo.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Payment not found' });
+    }
+
+    const payment = paymentInfo.rows[0];
+
+    // CRITICAL: Verify sales contract terms match payment request
+    if (payment.contract_id) {
+      // Check if payment amount matches contract value
+      if (payment.amount > payment.total_value) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ 
+          error: 'Payment amount exceeds contract value',
+          message: `Payment amount (${payment.amount} ${payment.currency}) exceeds sales contract value (${payment.total_value}). Cannot approve payment.`,
+          details: {
+            payment_amount: payment.amount,
+            contract_value: payment.total_value,
+            currency: payment.currency
+          }
+        });
+      }
+
+      // Verify contract terms are met (require explicit confirmation from importer bank)
+      if (!contractVerified) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ 
+          error: 'Sales contract verification required',
+          message: 'Importer bank must verify that all sales contract terms and conditions are met before approving payment. Please review: payment terms, delivery terms, quantity, quality specifications, and all other contractual obligations.',
+          contract_details: {
+            total_value: payment.total_value,
+            quantity: payment.quantity,
+            coffee_type: payment.coffee_type,
+            payment_terms: payment.payment_terms,
+            delivery_terms: payment.delivery_terms
+          }
+        });
+      }
+    }
+
     // Check if all documents are approved
     const docsCheck = await client.query(
       `SELECT COUNT(*) as total, 
-              COUNT(*) FILTER (WHERE review_status = 'APPROVED') as approved
+              COUNT(*) FILTER (WHERE review_status = 'APPROVED') as approved,
+              COUNT(*) FILTER (WHERE review_status = 'REJECTED') as rejected
        FROM payment_documents WHERE payment_id = $1`,
       [paymentId]
     );
@@ -297,7 +451,12 @@ export const approvePayment = async (req: Request, res: Response) => {
     if (docsCheck.rows[0].total !== docsCheck.rows[0].approved) {
       await client.query('ROLLBACK');
       return res.status(400).json({ 
-        error: 'Cannot approve payment. Not all documents are approved.' 
+        error: 'Cannot approve payment. Not all documents are approved.',
+        details: {
+          total_documents: docsCheck.rows[0].total,
+          approved_documents: docsCheck.rows[0].approved,
+          rejected_documents: docsCheck.rows[0].rejected
+        }
       });
     }
 
@@ -314,7 +473,7 @@ export const approvePayment = async (req: Request, res: Response) => {
       [bankReference, notes, user.email || user.username, paymentId]
     );
 
-    // Log audit
+    // Log audit with contract verification details
     await client.query(
       `INSERT INTO payment_audit_log (payment_id, action, old_status, new_status, performed_by, details)
        VALUES ($1, $2, $3, $4, $5, $6)`,
@@ -324,7 +483,14 @@ export const approvePayment = async (req: Request, res: Response) => {
         'UNDER_REVIEW',
         'APPROVED',
         user.email || user.username,
-        JSON.stringify({ bank_reference: bankReference, notes })
+        JSON.stringify({ 
+          bank_reference: bankReference, 
+          notes,
+          contract_verified: true,
+          contract_value: payment.total_value,
+          payment_amount: payment.amount,
+          all_documents_approved: true
+        })
       ]
     );
 
@@ -332,7 +498,7 @@ export const approvePayment = async (req: Request, res: Response) => {
 
     res.json({
       success: true,
-      message: 'Payment approved successfully by Importer Bank'
+      message: 'Payment approved successfully by Importer Bank. All sales contract terms verified and all documents approved. Ready for SWIFT payment execution.'
     });
   } catch (error: any) {
     await client.query('ROLLBACK');
@@ -394,16 +560,46 @@ export const rejectPayment = async (req: Request, res: Response) => {
   }
 };
 
-// Complete Payment (Importer Bank)
+// Complete Payment (Execute SWIFT Payment - Importer Bank)
 export const completePayment = async (req: Request, res: Response) => {
   const client = await pool.connect();
   try {
     const { paymentId } = req.params;
-    const { transactionReference, completionNotes } = req.body;
+    const { swiftReference, transactionReference, completionNotes } = req.body;
     const user = (req as any).user;
 
     await client.query('BEGIN');
 
+    // Verify payment is approved before executing SWIFT
+    const paymentCheck = await client.query(
+      `SELECT status, amount, currency FROM payments WHERE payment_id = $1`,
+      [paymentId]
+    );
+
+    if (paymentCheck.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Payment not found' });
+    }
+
+    if (paymentCheck.rows[0].status !== 'APPROVED') {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ 
+        error: 'Payment not approved',
+        message: 'Cannot execute SWIFT payment. Payment must be approved by importer bank first.',
+        current_status: paymentCheck.rows[0].status
+      });
+    }
+
+    // Require SWIFT reference for completion
+    if (!swiftReference) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ 
+        error: 'SWIFT reference required',
+        message: 'SWIFT transaction reference is required to complete the payment.'
+      });
+    }
+
+    // Update payment status to COMPLETED with SWIFT details
     await client.query(
       `UPDATE payments 
        SET status = 'COMPLETED',
@@ -412,7 +608,25 @@ export const completePayment = async (req: Request, res: Response) => {
            notes = COALESCE(notes || E'\n\n', '') || $2,
            updated_by = $3
        WHERE payment_id = $4 AND status = 'APPROVED'`,
-      [transactionReference, completionNotes, user.email || user.username, paymentId]
+      [swiftReference || transactionReference, completionNotes, user.email || user.username, paymentId]
+    );
+
+    // Record SWIFT transaction
+    await client.query(
+      `INSERT INTO payment_transactions (
+        payment_id, transaction_type, transaction_reference, amount, currency,
+        transaction_status, processed_by, notes
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [
+        paymentId,
+        'SWIFT_PAYMENT',
+        swiftReference,
+        paymentCheck.rows[0].amount,
+        paymentCheck.rows[0].currency,
+        'COMPLETED',
+        user.email || user.username,
+        completionNotes || 'SWIFT payment executed successfully'
+      ]
     );
 
     // Log audit
@@ -421,11 +635,17 @@ export const completePayment = async (req: Request, res: Response) => {
        VALUES ($1, $2, $3, $4, $5, $6)`,
       [
         paymentId,
-        'PAYMENT_COMPLETED',
+        'SWIFT_PAYMENT_EXECUTED',
         'APPROVED',
         'COMPLETED',
         user.email || user.username,
-        JSON.stringify({ transaction_reference: transactionReference, notes: completionNotes })
+        JSON.stringify({ 
+          swift_reference: swiftReference,
+          transaction_reference: transactionReference, 
+          notes: completionNotes,
+          amount: paymentCheck.rows[0].amount,
+          currency: paymentCheck.rows[0].currency
+        })
       ]
     );
 
@@ -433,7 +653,10 @@ export const completePayment = async (req: Request, res: Response) => {
 
     res.json({
       success: true,
-      message: 'Payment completed successfully'
+      message: 'SWIFT payment executed successfully. Payment completed.',
+      swift_reference: swiftReference,
+      amount: paymentCheck.rows[0].amount,
+      currency: paymentCheck.rows[0].currency
     });
   } catch (error: any) {
     await client.query('ROLLBACK');

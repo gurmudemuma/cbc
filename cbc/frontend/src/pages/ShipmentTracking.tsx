@@ -300,7 +300,7 @@ const ShipmentTracking = ({ user, org }: ShipmentTrackingProps): JSX.Element => 
                         </TableCell>
                         <TableCell>
                           <Chip
-                            label={exp.status.replace(/_/g, ' ')}
+                            label={exp.status ? exp.status.replace(/_/g, ' ') : 'UNKNOWN'}
                             color={getStatusColor(exp.status)}
                             size="small"
                           />

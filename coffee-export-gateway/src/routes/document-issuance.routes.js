@@ -32,6 +32,12 @@ const NETWORK_MEMBER_MAP = {
   'ecx': 'ECX'
 };
 
+// Agencies that have MSP certificates and can use blockchain
+const MSP_ENABLED_AGENCIES = ['ECTA', 'BANK', 'SHIPPING', 'ERCA', 'NBE', 'ECX'];
+
+// Agencies that can issue documents without MSP (for now)
+const NON_MSP_AGENCIES = ['MOA', 'MOH'];
+
 /**
  * Generate SHA-256 hash of document content
  */
@@ -124,6 +130,10 @@ router.get('/document-requests/pending', authenticateToken, async (req, res) => 
       SELECT 
         dr.*,
         ep.business_name,
+        ep.tin,
+        ep.email,
+        ep.contact_person,
+        ep.phone,
         ep.status as profile_status,
         EXISTS(SELECT 1 FROM coffee_laboratories cl WHERE cl.exporter_id = ep.exporter_id AND cl.status = 'ACTIVE') as has_active_laboratory,
         EXISTS(SELECT 1 FROM coffee_tasters ct WHERE ct.exporter_id = ep.exporter_id AND ct.status = 'ACTIVE') as has_active_taster,
@@ -131,8 +141,8 @@ router.get('/document-requests/pending', authenticateToken, async (req, res) => 
         EXISTS(SELECT 1 FROM export_licenses el WHERE el.exporter_id = ep.exporter_id AND el.status = 'ACTIVE') as has_active_license
       FROM document_requests dr
       JOIN exporter_profiles ep ON dr.exporter_id = ep.exporter_id
-      WHERE dr.network_member_code = $1 
-        AND dr.request_status IN ('PENDING', 'UNDER_REVIEW')
+      WHERE dr.issuer_agency = $1 
+        AND dr.status IN ('PENDING', 'ACKNOWLEDGED', 'IN_PROGRESS')
       ORDER BY dr.requested_at ASC
     `;
 
@@ -144,10 +154,16 @@ router.get('/document-requests/pending', authenticateToken, async (req, res) => 
         requestId: row.request_id,
         exporterId: row.exporter_id,
         exporterName: row.business_name,
+        exporterTin: row.tin,
+        exporterEmail: row.email,
+        exporterContactPerson: row.contact_person,
+        exporterPhone: row.phone,
         documentType: row.document_type,
-        requestNotes: row.request_notes,
+        requestNotes: row.description,
         requestedAt: row.requested_at,
-        requestStatus: row.request_status,
+        requestStatus: row.status,
+        priority: row.priority,
+        requiredData: row.required_data,
         exporterQualification: {
           profileStatus: row.profile_status,
           licenseStatus: row.has_active_license ? 'ACTIVE' : 'MISSING',
@@ -229,9 +245,9 @@ router.post('/documents/issue', authenticateToken, async (req, res) => {
       const requestQuery = `
         SELECT * FROM document_requests 
         WHERE request_id = $1 
-          AND network_member_code = $2 
+          AND issuer_agency = $2 
           AND exporter_id = $3
-          AND request_status IN ('PENDING', 'UNDER_REVIEW')
+          AND status IN ('PENDING', 'ACKNOWLEDGED', 'IN_PROGRESS')
       `;
       const requestResult = await client.query(requestQuery, [requestId, issuerMemberCode, exporterId]);
 
@@ -295,56 +311,65 @@ router.post('/documents/issue', authenticateToken, async (req, res) => {
         userId
       ]);
 
-      // Update request status to ISSUED
+      // Update request status to COMPLETED
       await client.query(
-        'UPDATE document_requests SET request_status = $1, reviewed_at = CURRENT_TIMESTAMP, reviewed_by = $2 WHERE request_id = $3',
-        ['ISSUED', userId, requestId]
+        'UPDATE document_requests SET status = $1, acknowledged_at = CURRENT_TIMESTAMP, acknowledged_by = $2, issued_document_id = $3 WHERE request_id = $4',
+        ['COMPLETED', userId, docResult.rows[0].document_id, requestId]
       );
 
       await client.query('COMMIT');
 
       console.log(`[Document Issuance] Issued document ${documentNumber} to exporter ${exporterId}`);
 
-      // Record on blockchain asynchronously (don't block response)
-      setImmediate(async () => {
-        try {
-          const blockchainResult = await blockchainDocumentService.recordDocumentIssuance({
-            documentId: docResult.rows[0].document_id,
-            exporterId,
-            issuerMemberCode,
-            documentType,
-            documentNumber,
-            documentHash,
-            issuerSignature,
-            issuedAt: docResult.rows[0].issued_at,
-            expiryDate: expiryDate || null
-          });
+      // Record on blockchain asynchronously (only for MSP-enabled agencies)
+      if (MSP_ENABLED_AGENCIES.includes(issuerMemberCode)) {
+        setImmediate(async () => {
+          try {
+            const blockchainResult = await blockchainDocumentService.recordDocumentIssuance({
+              documentId: docResult.rows[0].document_id,
+              exporterId,
+              issuerMemberCode,
+              documentType,
+              documentNumber,
+              documentHash,
+              issuerSignature,
+              issuedAt: docResult.rows[0].issued_at,
+              expiryDate: expiryDate || null
+            });
 
-          if (blockchainResult.success) {
-            // Update blockchain transaction ID
-            await pool.query(
-              'UPDATE issued_documents SET blockchain_tx_id = $1 WHERE document_id = $2',
-              [blockchainResult.transactionId, docResult.rows[0].document_id]
-            );
-            console.log(`[Document Issuance] Blockchain recorded: ${blockchainResult.transactionId}`);
-          } else {
-            console.error(`[Document Issuance] Blockchain recording failed: ${blockchainResult.error}`);
+            if (blockchainResult.success) {
+              // Update blockchain transaction ID
+              await pool.query(
+                'UPDATE issued_documents SET blockchain_tx_id = $1 WHERE document_id = $2',
+                [blockchainResult.transactionId, docResult.rows[0].document_id]
+              );
+              console.log(`[Document Issuance] Blockchain recorded: ${blockchainResult.transactionId}`);
+            } else {
+              console.error(`[Document Issuance] Blockchain recording failed: ${blockchainResult.error}`);
+            }
+          } catch (blockchainError) {
+            console.error('[Document Issuance] Blockchain error:', blockchainError);
           }
-        } catch (blockchainError) {
-          console.error('[Document Issuance] Blockchain error:', blockchainError);
-        }
-      });
+        });
+      } else {
+        console.log(`[Document Issuance] Skipping blockchain recording for non-MSP agency: ${issuerMemberCode}`);
+      }
+
+      const responseMessage = MSP_ENABLED_AGENCIES.includes(issuerMemberCode) 
+        ? 'Document issued successfully and recorded on blockchain'
+        : 'Document issued successfully (blockchain recording skipped - no MSP certificate)';
 
       res.json({
         success: true,
-        message: 'Document issued successfully',
+        message: responseMessage,
         data: {
           documentId: docResult.rows[0].document_id,
           documentNumber: docResult.rows[0].document_number,
           documentHash: docResult.rows[0].document_hash,
           issuedAt: docResult.rows[0].issued_at,
           documentUrl: docResult.rows[0].document_url,
-          blockchainTxId: null // Will be updated asynchronously
+          blockchainEnabled: MSP_ENABLED_AGENCIES.includes(issuerMemberCode),
+          blockchainTxId: null // Will be updated asynchronously for MSP agencies
         }
       });
     } catch (error) {
@@ -396,8 +421,8 @@ router.post('/document-requests/:requestId/reject', authenticateToken, async (re
     const requestQuery = `
       SELECT * FROM document_requests 
       WHERE request_id = $1 
-        AND network_member_code = $2 
-        AND request_status IN ('PENDING', 'UNDER_REVIEW')
+        AND issuer_agency = $2 
+        AND status IN ('PENDING', 'ACKNOWLEDGED', 'IN_PROGRESS')
     `;
     const requestResult = await client.query(requestQuery, [requestId, networkMemberCode]);
 
@@ -411,10 +436,10 @@ router.post('/document-requests/:requestId/reject', authenticateToken, async (re
     // Update request status to REJECTED
     await client.query(
       `UPDATE document_requests 
-       SET request_status = 'REJECTED', 
+       SET status = 'REJECTED', 
            rejection_reason = $1, 
-           reviewed_at = CURRENT_TIMESTAMP, 
-           reviewed_by = $2 
+           acknowledged_at = CURRENT_TIMESTAMP, 
+           acknowledged_by = $2 
        WHERE request_id = $3`,
       [rejectionReason, userId, requestId]
     );

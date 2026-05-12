@@ -21,7 +21,7 @@ router.get('/opportunities', async (req: Request, res: Response, next: NextFunct
     const pool = getPool();
     const { coffeeType, country, minQuantity, maxPrice, page = 1, limit = 20 } = req.query;
 
-    // Fetch directly from buyer_registry - all verified buyers are potential opportunities
+    // Fetch directly from buyer_registry - all registered buyers are potential opportunities
     let query = `
       SELECT 
         b.buyer_id as opportunity_id,
@@ -51,7 +51,6 @@ router.get('/opportunities', async (req: Request, res: Response, next: NextFunct
         b.risk_level,
         b.reputation_score
       FROM buyer_registry b
-      WHERE b.verification_status = 'VERIFIED'
     `;
 
     const params: any[] = [];
@@ -64,8 +63,11 @@ router.get('/opportunities', async (req: Request, res: Response, next: NextFunct
       paramIndex++;
     }
 
-    // Add ordering - prioritize by reputation score
-    query += ` ORDER BY b.reputation_score DESC, b.company_name ASC`;
+    // Add ordering - verified buyers first, then by reputation score
+    query += ` ORDER BY 
+      CASE WHEN b.verification_status = 'VERIFIED' THEN 0 ELSE 1 END,
+      b.reputation_score DESC NULLS LAST,
+      b.company_name ASC`;
 
     // Add pagination
     const pageNum = parseInt(page as string, 10) || 1;
@@ -82,7 +84,6 @@ router.get('/opportunities', async (req: Request, res: Response, next: NextFunct
     let countQuery = `
       SELECT COUNT(*) as total
       FROM buyer_registry b
-      WHERE b.verification_status = 'VERIFIED'
     `;
 
     const countParams: any[] = [];

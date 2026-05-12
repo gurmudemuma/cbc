@@ -20,7 +20,7 @@ import {
   CircularProgress,
 } from '@mui/material';
 import apiClient, { setApiBaseUrl } from '../services/api';
-import { LOGIN_ORGANIZATIONS, getApiUrl } from '../config/api.config';
+import { LOGIN_ORGANIZATIONS, ALL_LOGIN_OPTIONS, getApiUrl } from '../config/api.config';
 import ectaPreRegistrationService from '../services/ectaPreRegistration';
 import {
   LoginPageContainer,
@@ -465,7 +465,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                     variant="outlined"
                     displayEmpty
                   >
-                    {LOGIN_ORGANIZATIONS.map((org) => (
+                    {ALL_LOGIN_OPTIONS.map((org) => (
                       <MenuItem key={org.value} value={org.value}>
                         {org.label}
                       </MenuItem>

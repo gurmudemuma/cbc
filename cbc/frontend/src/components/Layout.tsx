@@ -323,6 +323,17 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
           ]
         },
         {
+          name: 'Letters of Credit',
+          path: '/lc',
+          icon: DollarSign,
+          children: [
+            { name: 'All LCs', path: '/lc', icon: DollarSign },
+            { name: 'Pending', path: '/lc/pending', icon: Clock },
+            { name: 'Accepted', path: '/lc/accepted', icon: CheckCircle },
+            { name: 'Active', path: '/lc/active', icon: FileCheck },
+          ]
+        },
+        {
           name: 'Documents',
           path: '/documents',
           icon: FileText,
@@ -351,6 +362,15 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
               { name: 'Network Approval', path: '/network/agency-dashboard', icon: FileCheck, badge: badgeCounts.BANKING_PENDING },
               { name: 'Document Issuance', path: '/network/agency-dashboard', icon: FileText },
               { name: 'Network Statistics', path: '/network/statistics', icon: BarChart3 },
+            ]
+          },
+          {
+            name: 'LC Management',
+            path: '/banking/lc',
+            icon: DollarSign,
+            children: [
+              { name: 'All LCs', path: '/banking/lc', icon: DollarSign },
+              { name: 'Create LC', path: '/banking/lc/create', icon: Plus },
             ]
           },
           {
@@ -776,7 +796,7 @@ const Layout = ({ user, org, onLogout, exports = [] }) => {
             <Coffee size={32} />
             {!isMobile && (
               <Typography variant="h6" component="div" sx={{ fontWeight: 700, color: 'primary.main' }}>
-                Coffee Blockchain
+                Coffee Export Blockchain
               </Typography>
             )}
           </Box>

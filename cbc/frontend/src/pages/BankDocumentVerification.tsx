@@ -82,7 +82,7 @@ const BankDocumentVerification = ({ user, org }: BankDocumentVerificationProps):
                 <TableCell>{exp.exporterName}</TableCell>
                 <TableCell>${exp.estimatedValue?.toLocaleString()}</TableCell>
                 <TableCell>{exp.destinationCountry}</TableCell>
-                <TableCell><Chip label={exp.status.replace(/_/g, ' ')} color={exp.status === 'BANK_DOCUMENT_VERIFIED' ? 'success' : exp.status === 'BANK_DOCUMENT_REJECTED' ? 'error' : 'warning'} size="small" /></TableCell>
+                <TableCell><Chip label={exp.status ? exp.status.replace(/_/g, ' ') : 'UNKNOWN'} color={exp.status === 'BANK_DOCUMENT_VERIFIED' ? 'success' : exp.status === 'BANK_DOCUMENT_REJECTED' ? 'error' : 'warning'} size="small" /></TableCell>
                 <TableCell>
                   {exp.status === 'BANK_DOCUMENT_PENDING' && (
                     <Button size="small" variant="contained" startIcon={<Eye />} onClick={() => { setSelectedExport(exp); setIsModalOpen(true); }}>Verify Documents</Button>

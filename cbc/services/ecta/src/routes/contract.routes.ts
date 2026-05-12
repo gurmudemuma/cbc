@@ -35,4 +35,19 @@ router.post('/:exportId/approve', controller.approveContract);
 // Reject contract (ECTA_QUALITY_APPROVED → CONTRACT_REJECTED)
 router.post('/:exportId/reject', controller.rejectContract);
 
+// ===== SALES CONTRACT REGISTRATION =====
+// New sales contract system endpoints
+
+// Get finalized contracts pending ECTA registration
+router.get('/pending-registration', controller.getPendingRegistrations);
+
+// Get registered sales contracts
+router.get('/registered', controller.getRegisteredContracts);
+
+// Get registration statistics
+router.get('/registration-stats', controller.getRegistrationStats);
+
+// Register a finalized sales contract
+router.post('/:draftId/register', controller.registerContract);
+
 export default router;
